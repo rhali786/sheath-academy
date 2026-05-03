@@ -5,7 +5,7 @@
   "dependencies": [],
   "database": {
     "type": "json",
-    "path": "./data/login.json"
+    "path": "./features/login/data/login.json"
   },
   "ports": {
     "backend": 8000

@@ -7,7 +7,7 @@
   ],
   "database": {
     "type": "json",
-    "path": "./data/dashboard.json"
+    "path": "./features/dashboard/data/dashboard.json"
   },
   "ports": {
     "backend": 8001

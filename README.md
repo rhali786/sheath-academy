@@ -5,13 +5,42 @@ A modular web application built with Python backend and React frontend.
 ## Project Structure
 
 ```
-features/
-├── dashboard/      # Dashboard feature
-├── login/          # Authentication feature
-shared/
-├── config/         # Shared configuration
-└── utils/          # Shared utilities
+sheath-academy/
+├── features/                          # Feature modules
+│   ├── dashboard/                     # Dashboard feature
+│   │   ├── config.json               # Feature config and version
+│   │   ├── data/                     # Feature-specific JSON database
+│   │   ├── frontend/                 # React UI for dashboard
+│   │   │   └── src/
+│   │   └── backend/                  # Python API for dashboard
+│   │       └── app/
+│   └── login/                         # Authentication feature
+│       ├── config.json               # Feature config and version
+│       ├── data/                     # Feature-specific JSON database
+│       ├── frontend/                 # React UI for login
+│       │   └── src/
+│       └── backend/                  # Python API for login
+│           └── app/
+├── shared/                            # Shared resources
+│   ├── config/
+│   │   └── features.json             # Feature registry (for Claude discovery)
+│   └── utils/                        # Shared utilities
+├── config.json                        # Root application config
+├── README.md                          # This file
+└── CLAUDE.md                          # Development documentation
 ```
+
+### Feature Architecture
+
+Each feature is independent and self-contained:
+- **Config**: Version, dependencies, database location, port assignments
+- **Data**: JSON files stored in `features/[feature]/data/`
+- **Frontend**: React components in `features/[feature]/frontend/`
+- **Backend**: Python API in `features/[feature]/backend/`
+
+### Feature Discovery
+
+`shared/config/features.json` maps all features and their locations. When one feature needs to connect to another (e.g., dashboard calling login API), this config file provides the URL and path without runtime discovery.
 
 ## Features
 
