@@ -1,0 +1,15 @@
+{
+  "name": "dashboard",
+  "version": "0.0.1",
+  "description": "Main dashboard feature",
+  "dependencies": [
+    "login"
+  ],
+  "database": {
+    "type": "json",
+    "path": "./data/dashboard.json"
+  },
+  "ports": {
+    "backend": 8001
+  }
+}

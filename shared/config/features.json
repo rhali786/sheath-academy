@@ -1,0 +1,18 @@
+{
+  "features": {
+    "login": {
+      "path": "./features/login",
+      "backendPort": 8000,
+      "backendUrl": "http://localhost:8000",
+      "frontendPort": 3001,
+      "description": "Authentication and login"
+    },
+    "dashboard": {
+      "path": "./features/dashboard",
+      "backendPort": 8001,
+      "backendUrl": "http://localhost:8001",
+      "frontendPort": 3000,
+      "description": "Main dashboard"
+    }
+  }
+}
