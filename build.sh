@@ -3,8 +3,6 @@ set -e
 
 export PIP_NO_CACHE_DIR=1
 export PIP_DISABLE_PIP_VERSION_CHECK=1
-export CARGO_NET_OFFLINE=true
-export CARGO_HTTP_MULTIPLEXING=false
 export NPM_CONFIG_CACHE=/tmp/npm-cache
 export TMPDIR=/tmp
 
