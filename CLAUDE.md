@@ -240,10 +240,29 @@ features/dashboard/
 
 ## Testing & Verification
 
-### Before Committing
-- Run `npm run build` (catches TypeScript errors early)
-- Check console for warnings (unused imports, type issues)
-- Manual: Click checkboxes, open modal, switch tabs
+### Before Committing (REQUIRED)
+```bash
+cd features/dashboard/frontend
+npm run build  # Must pass with zero errors before pushing
+```
+
+**Why this matters**: TypeScript errors are caught locally, not on Render. Saves deployment time.
+
+### Predictable Error Patterns (Prevent These)
+
+| Error | Pattern | Fix |
+|-------|---------|-----|
+| `Record requires 2 type args` | `useState<Record[]>` | Use `DashboardRecord[]` (avoid built-in type names) |
+| `'env' does not exist` | Missing tsconfig include | Add `vite-env.d.ts` to tsconfig.json `include` |
+| Unused React import | `import React from 'react'` without `React.` calls | Remove it (JSX Transform doesn't need it) |
+| Unused hook import | `import { useState } from 'react'` if not used | Remove unused imports (TS6133) |
+| Cast blocks fallback | `(x as T) \|\| fallback` | Move cast: `(x \|\| fallback) as T` |
+
+### Common Errors & How to Avoid
+- **Always run `npm run build` before pushing** — catches 90% of issues
+- **Check tsconfig.json include** — files outside `include` aren't type-checked
+- **Avoid names that match TS built-ins** — Record, Partial, Pick, etc.
+- **Remove all unused imports** — TypeScript strict mode flags them (TS6133)
 
 ### On Render
 - Check `/api/health` endpoint (should return 200)
