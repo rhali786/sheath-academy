@@ -10,7 +10,11 @@ export TMPDIR=/tmp
 
 echo "Installing backend dependencies..."
 cd features/dashboard/backend
-pip install --no-cache-dir --no-build-isolation -r requirements.txt 2>&1 | grep -v "Uninstalling\|Running setup.py"
+pip install --prefer-binary --no-cache-dir -r requirements.txt 2>&1 | grep -v "Uninstalling\|Running setup.py"
+if [ $? -ne 0 ]; then
+  echo "ERROR: Backend dependencies failed to install"
+  exit 1
+fi
 cd ../../..
 
 echo "Installing frontend dependencies..."
