@@ -240,13 +240,35 @@ features/dashboard/
 
 ## Testing & Verification
 
-### Before Committing (REQUIRED)
+### Run All Tests (REQUIRED)
+
+**Backend Tests (Python):**
+```bash
+cd features/dashboard/backend
+pip install -r requirements.txt
+pytest test_app.py -v
+```
+- **24 tests** covering: endpoints, data shapes, integrity, persistence
+- Runs in ~0.5s
+- Must pass before pushing
+
+**Frontend Build (TypeScript):**
 ```bash
 cd features/dashboard/frontend
+npm install
 npm run build  # Must pass with zero errors before pushing
 ```
+- Catches TypeScript errors locally (not on Render)
+- Zero errors required
 
-**Why this matters**: TypeScript errors are caught locally, not on Render. Saves deployment time.
+**Summary**: Always run both before git push:
+```bash
+# Test backend
+cd features/dashboard/backend && pytest test_app.py
+
+# Build frontend
+cd features/dashboard/frontend && npm run build
+```
 
 ### Predictable Error Patterns (Prevent These)
 
