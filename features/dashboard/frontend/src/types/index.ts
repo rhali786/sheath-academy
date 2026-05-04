@@ -36,7 +36,7 @@ export interface QuranSession {
   lastLogged: string
 }
 
-export interface Record {
+export interface DashboardRecord {
   id: string
   title: string
   count: number

@@ -1,5 +1,4 @@
-import React, { useState } from 'react'
-import { Menu } from 'lucide-react'
+import { useState } from 'react'
 
 interface HeaderProps {
   onTabChange: (tab: string) => void

@@ -1,4 +1,3 @@
-import React from 'react'
 import { MetricCard } from './shared/MetricCard'
 import type { DashboardMetrics } from '../types'
 

@@ -1,9 +1,9 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { CheckCircle, TrendingUp, Folder, BookOpen } from 'lucide-react'
-import type { Record } from '../types'
+import type { DashboardRecord } from '../types'
 
 interface RecordsProofProps {
-  records: Record[]
+  records: DashboardRecord[]
 }
 
 const iconMap: Record<string, React.ReactNode> = {

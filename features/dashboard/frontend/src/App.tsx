@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react'
 import Dashboard from './pages/Dashboard'
 import { dashboardApi } from './services/api'
-import type { Task, Alert, QuranSession, Record, Child, DashboardMetrics } from './types'
+import type { Task, Alert, QuranSession, DashboardRecord, Child, DashboardMetrics } from './types'
 
 export interface DashboardContextType {
   children: Child[]
@@ -11,8 +11,8 @@ export interface DashboardContextType {
   setAlerts: (alerts: Alert[]) => void
   quranSessions: QuranSession[]
   setQuranSessions: (sessions: QuranSession[]) => void
-  records: Record[]
-  setRecords: (records: Record[]) => void
+  records: DashboardRecord[]
+  setRecords: (records: DashboardRecord[]) => void
   metrics: DashboardMetrics | null
   setMetrics: (metrics: DashboardMetrics) => void
   toggleTask: (taskId: string, completed: boolean) => Promise<void>

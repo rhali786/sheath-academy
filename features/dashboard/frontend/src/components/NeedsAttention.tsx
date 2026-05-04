@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { AlertItem } from './shared/AlertItem'
 import type { Alert } from '../types'
 

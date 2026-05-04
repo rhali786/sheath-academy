@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { ResponsiveBar } from '@nivo/bar'
 import { ChartContainer } from './shared/ChartContainer'
 import type { Child } from '../types'

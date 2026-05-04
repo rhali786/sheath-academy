@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { ResponsiveLine } from '@nivo/line'
 import { ChartContainer } from './shared/ChartContainer'
 import { X } from 'lucide-react'
@@ -118,7 +118,6 @@ export function QuranStudies({ children, quranSessions, onAddSession, chartData 
                 xScale={{ type: 'point' }}
                 yScale={{ type: 'linear', min: 0, max: 2 }}
                 axisBottom={{
-                  orient: 'bottom',
                   tickSize: 5,
                   tickPadding: 5,
                   tickRotation: 0,
@@ -127,7 +126,6 @@ export function QuranStudies({ children, quranSessions, onAddSession, chartData 
                   legendPosition: 'middle',
                 }}
                 axisLeft={{
-                  orient: 'left',
                   tickSize: 5,
                   tickPadding: 5,
                   tickRotation: 0,
