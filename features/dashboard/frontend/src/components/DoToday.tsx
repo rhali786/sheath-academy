@@ -1,5 +1,3 @@
-import React from 'react'
-import { TaskCheckbox } from './shared/TaskCheckbox'
 import type { Task, Child } from '../types'
 
 interface DoTodayProps {

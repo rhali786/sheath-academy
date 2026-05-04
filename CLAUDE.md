@@ -73,13 +73,17 @@ npm run dev  # Vite on port 3000
 
 **Don't:**
 - Import React if not directly using `React.createElement()` (JSX alone doesn't need it)
+- Import hooks like `useState` if the component doesn't use them
 - Use names that conflict with built-in types (`Record` is a TS utility type — use `DashboardRecord`)
-- Forget to define Vite environment variables in `vite-env.d.ts`
+- Cast before the OR operator: `(x as T) || fallback` becomes `("undefined") || fallback` (never triggers)
+- Use `interface ImportMeta { env: ... }` directly — causes TS2339
 
 **Do:**
 - Set `"moduleResolution": "node"` in tsconfig.json (required for JSON imports)
-- Explicitly type `import.meta.env` to avoid TS2339 errors
-- Keep imports minimal — remove unused ones (TS6133 warnings)
+- Cast AFTER the OR operator: `(x || fallback) as T` (allows fallback to work)
+- Declare Vite env via `declare module 'vite/client'` in `vite-env.d.ts`
+- Keep imports minimal — remove all unused ones (TS6133 warnings)
+- Run `npm run build` before pushing to catch type errors
 
 ### Nivo Charts
 

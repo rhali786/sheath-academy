@@ -1,7 +1,7 @@
 import axios from 'axios'
 import type { ApiResponse, Task, DashboardMetrics, QuranSession, DashboardRecord, Alert } from '../types'
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || window.location.origin) as string
 
 const api = axios.create({
   baseURL: API_BASE_URL,

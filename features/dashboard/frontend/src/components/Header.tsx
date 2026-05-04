@@ -1,5 +1,3 @@
-import { useState } from 'react'
-
 interface HeaderProps {
   onTabChange: (tab: string) => void
   selectedTab: string
