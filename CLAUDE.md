@@ -13,19 +13,24 @@ npm run build  # Must succeed with zero errors
 
 # 2. BACKEND TESTS
 cd features/dashboard/backend
-pytest test_app.py -v  # Must pass all tests
+pytest test_app.py -v  # Must pass all tests (including startup tests)
 
-# 3. COMMIT ONLY IF BOTH PASS
+# 3. TEST APP STARTUP LOCALLY
+cd features/dashboard/backend
+timeout 5 uvicorn app.main:app --host 127.0.0.1 --port 8001
+# Must show: "Application startup complete" and exit cleanly
+
+# 4. COMMIT ONLY IF ALL PASS
 cd /path/to/repo
 git add . && git commit -m "..."
 ```
 
-**Why the clean install matters:**
-- Transitive peer dependencies (like `prop-types` for Nivo) don't fail at runtime—they fail during bundling
-- A cached `node_modules` hides these issues until Render encounters them
-- Clean install = guaranteed fresh dependency resolution
+**Why each step matters:**
+- **Clean install**: Transitive peer dependencies (like `prop-types` for Nivo) fail during bundling, not runtime. Cached `node_modules` hides these.
+- **Backend tests**: Includes 3 startup tests that catch import errors, dependency issues, and initialization failures
+- **App startup**: Catches issues that only manifest when the app actually starts (e.g., missing Rust compilers for native builds on Python 3.14)
 
-**Non-negotiable rule:** Do not commit if build fails or tests fail. Render will catch it and redeploy repeatedly.
+**Non-negotiable rule:** Do not commit if build fails, tests fail, or app won't start. Render will catch it and redeploy repeatedly.
 
 ## Project Overview
 
@@ -392,29 +397,36 @@ cd features/dashboard/frontend && npm run build
    - [ ] `cd features/dashboard/frontend && npm install`
    - [ ] `npm run build` passes (zero TypeScript errors, zero bundling errors)
 
-2. **Test Coverage**
+2. **Backend Tests**
    - [ ] Tests written (TDD: red → green → refactor)
-   - [ ] `cd features/dashboard/backend && pytest test_app.py -v` passes (all tests green)
+   - [ ] `cd features/dashboard/backend && pytest test_app.py -v` passes (all tests green, including startup tests)
 
-3. **Code Quality**
+3. **App Startup Test**
+   - [ ] `timeout 5 uvicorn app.main:app --host 127.0.0.1 --port 8001` starts successfully
+   - [ ] See "Application startup complete" in output
+   - [ ] App exits cleanly when timeout fires
+
+4. **Code Quality**
    - [ ] No unused imports (TypeScript TS6133 warnings)
    - [ ] No TypeScript errors in build output
    - [ ] No broken tests in commit
 
-4. **Final Step**
+5. **Final Step**
    - [ ] `git add . && git commit -m "..."` only if all above pass
 
 **DO NOT commit if:**
 - ❌ Any tests fail
 - ❌ Any TypeScript errors in build
 - ❌ Build fails (bundler errors, rollup errors)
+- ❌ App fails to start (import errors, missing dependencies)
 - ❌ Unused imports remain
 - ❌ Fresh install reveals new issues
 
 **Why this order matters:**
-- Clean install catches peer dependencies missed by cached node_modules
+- Clean install catches peer dependencies missed by cached node_modules (e.g., prop-types, maturin failures)
+- Tests verify API endpoints work and startup succeeds
+- App startup test catches runtime dependency issues (e.g., Python 3.14 + pydantic-core source builds)
 - TypeScript errors caught early
-- Tests verify backend works
 - Only then is it safe to push
 
 This prevents: local error → push → Render fails → redeploy cycle
