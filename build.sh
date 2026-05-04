@@ -3,12 +3,12 @@ set -e
 
 echo "Installing backend dependencies..."
 cd features/dashboard/backend
-pip install -r requirements.txt
+pip install --prefer-binary -r requirements.txt
 cd ../../..
 
 echo "Installing frontend dependencies..."
 cd features/dashboard/frontend
-npm install
+npm install --legacy-peer-deps
 npm run build
 cd ../../..
 
