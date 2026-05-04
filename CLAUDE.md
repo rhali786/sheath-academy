@@ -2,26 +2,30 @@
 
 ## ⚠️ CRITICAL: TDD & Pre-Commit Validation
 
-**Before EVERY commit, you MUST:**
-1. Write tests for new features (backend: pytest, frontend: later)
-2. Run all tests locally and verify they pass
-3. Run frontend build check (TypeScript)
-4. Only then commit
-
-**This is non-negotiable.** Render builds discover errors too late. Catch them locally.
+**Before EVERY commit, you MUST run this exact sequence:**
 
 ```bash
-# Backend tests (REQUIRED)
-cd features/dashboard/backend && pytest test_app.py -v
+# 1. CLEAN INSTALL - Catch transitive dependency issues (peer deps, Rollup resolution)
+cd features/dashboard/frontend
+rm -rf node_modules package-lock.json
+npm install
+npm run build  # Must succeed with zero errors
 
-# Frontend build (REQUIRED)
-cd features/dashboard/frontend && npm run build
+# 2. BACKEND TESTS
+cd features/dashboard/backend
+pytest test_app.py -v  # Must pass all tests
 
-# Only commit if BOTH pass
+# 3. COMMIT ONLY IF BOTH PASS
+cd /path/to/repo
 git add . && git commit -m "..."
 ```
 
-If tests fail → fix code → re-run tests → commit. **Do not commit failing tests or broken builds.**
+**Why the clean install matters:**
+- Transitive peer dependencies (like `prop-types` for Nivo) don't fail at runtime—they fail during bundling
+- A cached `node_modules` hides these issues until Render encounters them
+- Clean install = guaranteed fresh dependency resolution
+
+**Non-negotiable rule:** Do not commit if build fails or tests fail. Render will catch it and redeploy repeatedly.
 
 ## Project Overview
 
@@ -381,21 +385,38 @@ cd features/dashboard/frontend && npm run build
 
 ## Pre-Commit Checklist
 
-**BEFORE EVERY `git commit`:**
-- [ ] Tests written (TDD: red → green → refactor)
-- [ ] `pytest test_app.py -v` passes (backend)
-- [ ] `npm run build` passes (frontend, zero TS errors)
-- [ ] No broken tests in commit
-- [ ] No TypeScript errors in build
-- [ ] All imports used (TS6133 warnings fixed)
-- [ ] `git commit` only if all above pass
+**BEFORE EVERY `git commit` (IN THIS EXACT ORDER):**
+
+1. **Fresh Build (catch transitive dependency issues)**
+   - [ ] `rm -rf features/dashboard/frontend/node_modules package-lock.json`
+   - [ ] `cd features/dashboard/frontend && npm install`
+   - [ ] `npm run build` passes (zero TypeScript errors, zero bundling errors)
+
+2. **Test Coverage**
+   - [ ] Tests written (TDD: red → green → refactor)
+   - [ ] `cd features/dashboard/backend && pytest test_app.py -v` passes (all tests green)
+
+3. **Code Quality**
+   - [ ] No unused imports (TypeScript TS6133 warnings)
+   - [ ] No TypeScript errors in build output
+   - [ ] No broken tests in commit
+
+4. **Final Step**
+   - [ ] `git add . && git commit -m "..."` only if all above pass
 
 **DO NOT commit if:**
 - ❌ Any tests fail
-- ❌ Any TypeScript errors
-- ❌ Build fails
+- ❌ Any TypeScript errors in build
+- ❌ Build fails (bundler errors, rollup errors)
 - ❌ Unused imports remain
+- ❌ Fresh install reveals new issues
 
-This prevents the endless cycle: local error → push → Render fails → fix → push again
+**Why this order matters:**
+- Clean install catches peer dependencies missed by cached node_modules
+- TypeScript errors caught early
+- Tests verify backend works
+- Only then is it safe to push
+
+This prevents: local error → push → Render fails → redeploy cycle
 
 
