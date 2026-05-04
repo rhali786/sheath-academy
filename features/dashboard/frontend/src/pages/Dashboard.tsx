@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Header } from '../components/Header'
 import { TodayState } from '../components/TodayState'
 import { DoToday } from '../components/DoToday'
@@ -14,9 +14,9 @@ export default function Dashboard() {
   const { children, tasks, alerts, quranSessions, records, metrics, loading, error, toggleTask, addQuranSession } = useContext_Dashboard()
 
   // Fetch progress data
-  const [progressData, setProgressData] = React.useState({})
+  const [progressData, setProgressData] = useState({})
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchProgress = async () => {
       try {
         const res = await dashboardApi.getProgress()
