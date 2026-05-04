@@ -9,5 +9,13 @@ services:
         value: 3.11
       - key: PIP_NO_CACHE_DIR
         value: "1"
+      - key: PIP_DISABLE_PIP_VERSION_CHECK
+        value: "1"
       - key: CARGO_NET_OFFLINE
+        value: "true"
+      - key: CARGO_HTTP_MULTIPLEXING
         value: "false"
+      - key: NPM_CONFIG_CACHE
+        value: "/tmp/npm-cache"
+      - key: TMPDIR
+        value: "/tmp"
