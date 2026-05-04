@@ -1,9 +1,8 @@
 import json
-import os
 from datetime import datetime
-from pathlib import Path
 
-DATA_FILE = Path(__file__).parent.parent.parent / "data" / "dashboard.json"
+# In-memory data store (no file persistence on read-only filesystems)
+_DATA_STORE = None
 
 MOCK_DATA = {
     "children": [
@@ -85,21 +84,15 @@ MOCK_DATA = {
     },
 }
 
-def ensure_data_file():
-    DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
-    if not DATA_FILE.exists():
-        with open(DATA_FILE, "w") as f:
-            json.dump(MOCK_DATA, f, indent=2)
-
 def load_data():
-    ensure_data_file()
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
+    global _DATA_STORE
+    if _DATA_STORE is None:
+        _DATA_STORE = json.loads(json.dumps(MOCK_DATA))  # Deep copy
+    return _DATA_STORE
 
 def save_data(data):
-    ensure_data_file()
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+    global _DATA_STORE
+    _DATA_STORE = data
 
 def get_tasks():
     data = load_data()

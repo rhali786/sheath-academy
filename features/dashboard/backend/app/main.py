@@ -23,10 +23,10 @@ frontend_build_path = Path(__file__).parent.parent.parent / "frontend" / "dist"
 if frontend_build_path.exists():
     app.mount("/assets", StaticFiles(directory=frontend_build_path / "assets"), name="assets")
 
-# Initialize mock data on startup
+# Initialize mock data on startup (in-memory)
 @app.on_event("startup")
 def startup_event():
-    crud.ensure_data_file()
+    crud.load_data()  # Populate in-memory store
 
 # Include routers
 app.include_router(tasks.router)
