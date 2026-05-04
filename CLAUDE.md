@@ -1,5 +1,28 @@
 # Claude Development Guide
 
+## ⚠️ CRITICAL: TDD & Pre-Commit Validation
+
+**Before EVERY commit, you MUST:**
+1. Write tests for new features (backend: pytest, frontend: later)
+2. Run all tests locally and verify they pass
+3. Run frontend build check (TypeScript)
+4. Only then commit
+
+**This is non-negotiable.** Render builds discover errors too late. Catch them locally.
+
+```bash
+# Backend tests (REQUIRED)
+cd features/dashboard/backend && pytest test_app.py -v
+
+# Frontend build (REQUIRED)
+cd features/dashboard/frontend && npm run build
+
+# Only commit if BOTH pass
+git add . && git commit -m "..."
+```
+
+If tests fail → fix code → re-run tests → commit. **Do not commit failing tests or broken builds.**
+
 ## Project Overview
 
 Sheath Academy is a modular homeschool dashboard for the Naeem family (3 students: Adam Gr5, Khadijah Gr3, Zayd Gr8). Built with Python FastAPI backend + React frontend, deployed on Render.
@@ -238,6 +261,57 @@ features/dashboard/
 - **Blue (#3b82f6)**: Primary actions, tabs, info
 - **Gray**: Secondary, disabled, neutral
 
+## Test-Driven Development (TDD) Workflow
+
+**For every feature or fix:**
+
+1. **Write the test first** (before code)
+   - Define what success looks like
+   - Test should fail initially (red)
+
+2. **Write minimal code to pass** (green)
+   - Only code needed to make test pass
+   - No extra features or cleanup yet
+
+3. **Refactor & improve** (refactor)
+   - Clean up code
+   - Remove duplication
+   - Keep tests passing
+
+4. **Run full test suite** (validation)
+   ```bash
+   pytest test_app.py -v
+   npm run build
+   ```
+
+5. **Commit only if tests pass**
+   - All tests green
+   - Build succeeds
+   - No TypeScript errors
+
+**Example: Adding a new endpoint**
+```python
+# Step 1: Write test in test_app.py
+def test_new_endpoint_returns_correct_data():
+    response = client.get("/api/new-endpoint")
+    assert response.status_code == 200
+    assert "expected_field" in response.json()["data"]
+
+# Step 2: Implement minimal endpoint in main.py
+@app.get("/api/new-endpoint")
+def new_endpoint():
+    return {"status": "success", "data": {"expected_field": "value"}}
+
+# Step 3: Run tests (must pass)
+pytest test_app.py::test_new_endpoint_returns_correct_data
+
+# Step 4: Full validation
+pytest test_app.py -v && npm run build
+
+# Step 5: Commit
+git commit -m "feat: Add new endpoint with test coverage"
+```
+
 ## Testing & Verification
 
 ### Run All Tests (REQUIRED)
@@ -302,5 +376,26 @@ cd features/dashboard/frontend && npm run build
 | Nivo axis `orient` error | Old API | Remove `orient`, use axes directly |
 | Render build fails on cache | Read-only filesystem | Use `--no-cache-dir`, `TMPDIR=/tmp` |
 | CORS errors in browser | Missing origin | Add frontend origin to FastAPI CORS |
+| Commit pushed with broken tests | Skipped pre-commit validation | **ALWAYS run tests first** |
+| Render build fails after push | Error not caught locally | **Run `pytest` + `npm run build` before commit** |
+
+## Pre-Commit Checklist
+
+**BEFORE EVERY `git commit`:**
+- [ ] Tests written (TDD: red → green → refactor)
+- [ ] `pytest test_app.py -v` passes (backend)
+- [ ] `npm run build` passes (frontend, zero TS errors)
+- [ ] No broken tests in commit
+- [ ] No TypeScript errors in build
+- [ ] All imports used (TS6133 warnings fixed)
+- [ ] `git commit` only if all above pass
+
+**DO NOT commit if:**
+- ❌ Any tests fail
+- ❌ Any TypeScript errors
+- ❌ Build fails
+- ❌ Unused imports remain
+
+This prevents the endless cycle: local error → push → Render fails → fix → push again
 
 
