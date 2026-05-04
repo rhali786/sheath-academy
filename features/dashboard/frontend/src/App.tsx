@@ -35,7 +35,7 @@ function App() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [quranSessions, setQuranSessions] = useState<QuranSession[]>([])
-  const [records, setRecords] = useState<Record[]>([])
+  const [records, setRecords] = useState<DashboardRecord[]>([])
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
