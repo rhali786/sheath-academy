@@ -1,0 +1,60 @@
+import axios from 'axios'
+import type { ApiResponse, Task, DashboardMetrics, QuranSession, Record, Alert } from '../types'
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001'
+
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+export const dashboardApi = {
+  health: async () => {
+    const response = await api.get('/api/health')
+    return response.data
+  },
+
+  getSummary: async (): Promise<ApiResponse<DashboardMetrics>> => {
+    const response = await api.get('/api/dashboard/summary')
+    return response.data
+  },
+
+  getTasks: async (): Promise<ApiResponse<Task[]>> => {
+    const response = await api.get('/api/dashboard/tasks')
+    return response.data
+  },
+
+  completeTask: async (taskId: string, completed: boolean): Promise<any> => {
+    const response = await api.post(`/api/dashboard/tasks/${taskId}/complete`, { completed })
+    return response.data
+  },
+
+  getProgress: async (): Promise<any> => {
+    const response = await api.get('/api/dashboard/progress')
+    return response.data
+  },
+
+  getQuran: async (): Promise<any> => {
+    const response = await api.get('/api/dashboard/quran')
+    return response.data
+  },
+
+  addQuranSession: async (session: any): Promise<ApiResponse<QuranSession>> => {
+    const response = await api.post('/api/dashboard/quran', session)
+    return response.data
+  },
+
+  getRecords: async (): Promise<ApiResponse<Record[]>> => {
+    const response = await api.get('/api/dashboard/records')
+    return response.data
+  },
+
+  getAlerts: async (): Promise<ApiResponse<Alert[]>> => {
+    const response = await api.get('/api/dashboard/alerts')
+    return response.data
+  },
+}
+
+export default api
