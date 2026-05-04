@@ -7,6 +7,25 @@ from app import crud
 client = TestClient(app)
 
 
+class TestStartup:
+    def test_app_imports_successfully(self):
+        """Verify app can be imported (catches missing dependencies early)."""
+        assert app is not None
+        assert app.title == "Sheath Academy Dashboard API"
+
+    def test_app_initializes_data_store(self):
+        """Verify data can be loaded from in-memory store."""
+        data = crud.load_data()
+        assert data is not None
+        assert "children" in data
+        assert "tasks" in data
+        assert len(data["children"]) == 3
+
+    def test_testclient_creates_successfully(self):
+        """Verify TestClient can instantiate (catches FastAPI/Starlette issues)."""
+        assert client is not None
+
+
 class TestHealth:
     def test_health_check(self):
         response = client.get("/api/health")
