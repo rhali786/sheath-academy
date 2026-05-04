@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+__pycache__/
+*.pyc
+.env.local
+.DS_Store
+*.log
+.venv
+venv/
+env/
+features/dashboard/frontend/node_modules
+features/dashboard/frontend/dist
+features/dashboard/backend/__pycache__
