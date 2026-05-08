@@ -5,38 +5,293 @@
 **Before EVERY commit, you MUST run this exact sequence:**
 
 ```bash
-# 1. CLEAN INSTALL - Catch transitive dependency issues (peer deps, Rollup resolution)
-cd features/dashboard/frontend
+# 1. CLEAN INSTALL - Catch transitive dependency issues
 rm -rf node_modules package-lock.json
 npm install
-npm run build  # Must succeed with zero errors
 
-# 2. BACKEND TESTS
-cd features/dashboard/backend
-pytest test_app.py -v  # Must pass all tests (including startup tests)
+# 2. BUILD FRONTEND & BACKEND (Next.js handles both)
+npm run build  # Must succeed with zero TypeScript errors
 
-# 3. TEST APP STARTUP LOCALLY
-cd features/dashboard/backend
-timeout 5 uvicorn app.main:app --host 127.0.0.1 --port 8001
-# Must show: "Application startup complete" and exit cleanly
+# 3. RUN TESTS
+npm test  # Must pass all 27 Jest tests
 
-# 4. COMMIT ONLY IF ALL PASS
-cd /path/to/repo
+# 4. TEST APP LOCALLY
+npm run dev &
+sleep 3
+curl http://localhost:3000/api/health  # Must return 200 with status: "healthy"
+pkill -f "next dev"
+
+# 5. COMMIT ONLY IF ALL PASS
 git add . && git commit -m "..."
 ```
 
 **Why each step matters:**
-- **Clean install**: Transitive peer dependencies (like `prop-types` for Nivo) fail during bundling, not runtime. Cached `node_modules` hides these.
-- **Backend tests**: Includes 3 startup tests that catch import errors, dependency issues, and initialization failures
-- **App startup**: Catches issues that only manifest when the app actually starts (e.g., missing Rust compilers for native builds on Python 3.14)
+- **Clean install**: Transitive peer dependencies fail during bundling, not runtime
+- **Build**: Catches TypeScript errors before they reach production
+- **Tests**: 27 Jest tests verify all API endpoints, CRUD operations, data integrity
+- **App startup**: Verifies Next.js server starts cleanly and endpoints respond
 
-**Non-negotiable rule:** Do not commit if build fails, tests fail, or app won't start. Render will catch it and redeploy repeatedly.
+**Non-negotiable rule:** Do not commit if build fails, tests fail, or app won't start.
 
 ## Project Overview
 
-Sheath Academy is a modular homeschool dashboard for the Naeem family (3 students: Adam Gr5, Khadijah Gr3, Zayd Gr8). Built with Python FastAPI backend + React frontend, deployed on Render.
+Sheath Academy is a modular homeschool dashboard for the Naeem family (3 students: Adam Gr5, Khadijah Gr3, Zayd Gr8). Built with **Next.js unified stack** (no separate backend/frontend), deployed on Render.
 
-**Current Status**: MVP complete. All 7 dashboard sections functional with mock data and in-memory persistence.
+**Current Status**: MVP complete. All 7 dashboard sections functional with mock data and in-memory persistence. Migrated from Python FastAPI + React Vite to Node.js Next.js (unified JavaScript stack).
+
+**Why the migration:** Python dependency management issues (pydantic-core native extensions fail on different Python versions, no wheels for Python 3.14) eliminated by using JavaScript which has universal wheel availability.
+
+## Architecture
+
+### Data Storage
+
+- **Type**: In-memory (no file I/O — Render has read-only filesystem)
+- **Location**: Loaded from TypeScript mock data on server startup (lib/server/mockData.ts)
+- **Persistence**: Session-only (resets on redeploy); persists across requests in same process
+- **Single process**: Next.js handles API routes + React frontend rendering
+
+### Backend Stack (Next.js API Routes)
+
+- **Framework**: Next.js 15 with App Router
+- **API Routes**: 8 endpoints in `app/api/` matching exact FastAPI response shapes
+  - GET `/api/health` - Health check
+  - GET `/api/dashboard/summary` - Summary metrics
+  - GET/POST `/api/dashboard/tasks` - Task list and completion
+  - GET `/api/dashboard/progress` - Child progress data
+  - GET/POST `/api/dashboard/quran` - Quran sessions + chart data
+  - GET `/api/dashboard/records` - Records (attendance, portfolio, etc.)
+  - GET `/api/dashboard/alerts` - Alerts
+- **Data Store**: TypeScript in-memory store (lib/server/dataStore.ts) - no Pydantic, no Python
+- **Type Safety**: Full TypeScript with strict mode
+
+### Frontend Stack
+
+- **Framework**: React 18.3 (kept from original implementation)
+- **Build**: Next.js (no separate Vite build)
+- **State Management**: React Context API (DashboardProvider in app/providers.tsx)
+- **Charts**: Nivo (ResponsiveLine for weekly Quran sessions, ResponsiveBar for subject completion)
+- **Styling**: Tailwind CSS + system fonts only (no decorative fonts)
+- **API Client**: Axios (app/frontend-src/services/api.ts) pointing to `/api/*` routes
+
+## Development Setup
+
+### Local Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start dev server (API + React on port 3000)
+npm run dev
+
+# Run tests (all 27 must pass)
+npm test
+
+# Build for production
+npm run build
+
+# Start production server
+npm run start
+```
+
+### Render Deployment
+
+**Build Command**: `npm run build`
+- Next.js compiles API routes and React frontend
+- Single build process, no separate steps
+
+**Start Command**: `npm run start`
+- Next.js starts single process serving:
+  - API routes on `/api/*`
+  - React frontend on `/`
+
+## Key Conventions
+
+### TypeScript
+
+**Don't:**
+- Import React if not directly using `React.createElement()` (JSX alone doesn't need it in Next.js)
+- Import hooks like `useState` if the component doesn't use them
+- Use names that conflict with built-in types (`Record` is a TS utility type — use `DashboardRecord`)
+- Cast before the OR operator: `(x as T) || fallback` becomes `("undefined") || fallback` (never triggers)
+
+**Do:**
+- Keep `"moduleResolution": "bundler"` in tsconfig.json (Next.js default)
+- Cast AFTER the OR operator: `(x || fallback) as T` (allows fallback to work)
+- Mark client components with `'use client'` directive at top of file
+- Keep imports minimal — remove all unused ones (TS6133 warnings)
+- Run `npm run build` before pushing to catch type errors
+
+### API Response Format (All Endpoints)
+
+Every endpoint returns this exact structure:
+```typescript
+{
+  status: "success",
+  data: T,
+  message: string,
+  timestamp: ISO8601 string
+}
+```
+
+Error responses use same format with status: "error" and 4xx/5xx HTTP code.
+
+### Data Handling
+
+**In-Memory Only:**
+- Task completion, Quran logging, etc. persist during session only
+- Data resets on app restart/redeploy
+- Modal data, form state use React useState (not persistent)
+- All updates modify the in-memory store in lib/server/dataStore.ts
+
+## File Structure Reference
+
+```
+├── app/
+│   ├── api/                          # Next.js API routes (replaces FastAPI)
+│   │   ├── health/route.ts
+│   │   └── dashboard/
+│   │       ├── summary/route.ts
+│   │       ├── tasks/route.ts
+│   │       ├── tasks/[id]/complete/route.ts
+│   │       ├── progress/route.ts
+│   │       ├── quran/route.ts
+│   │       ├── records/route.ts
+│   │       └── alerts/route.ts
+│   ├── frontend-src/                 # React components (from original frontend)
+│   │   ├── components/
+│   │   ├── pages/Dashboard.tsx
+│   │   ├── services/api.ts
+│   │   ├── types/
+│   │   └── styles/
+│   ├── layout.tsx                    # Root layout
+│   ├── page.tsx                      # Home page (renders Dashboard)
+│   ├── globals.css                   # Tailwind CSS
+│   └── providers.tsx                 # DashboardProvider context
+├── lib/
+│   ├── types.ts                      # TypeScript interfaces (replaces Pydantic)
+│   └── server/
+│       ├── mockData.ts               # MOCK_DATA (exact copy from Python)
+│       └── dataStore.ts              # In-memory store (replaces Python CRUD)
+├── __tests__/
+│   └── api/                          # Jest tests (27 tests, replaces pytest)
+│       ├── startup.test.ts
+│       ├── health.test.ts
+│       ├── tasks.test.ts
+│       ├── ... (etc.)
+├── package.json
+├── next.config.js
+├── tsconfig.json
+├── jest.config.js
+├── render.yaml                       # Deployment config (updated for Next.js)
+└── CLAUDE.md                         # This file
+```
+
+## Testing
+
+### Run All Tests
+```bash
+npm test
+```
+
+**Coverage:** 27 Jest tests covering:
+- API endpoints (health, summary, tasks, progress, quran, records, alerts)
+- CRUD operations (data store, persistence)
+- Data integrity (no duplicate IDs, valid child references)
+- Error handling (invalid task IDs, missing data)
+
+All tests must pass before committing.
+
+## Migration Notes (from FastAPI to Next.js)
+
+**What changed:**
+- Backend: Python FastAPI → Next.js API routes
+- Dependency management: pip + npm → npm only
+- Build process: build.sh (complex) → `npm run build` (single command)
+- Runtime: Python 3.12 → Node.js 22.22.2
+- Type validation: Pydantic models → TypeScript interfaces
+- Tests: pytest (Python) → Jest (JavaScript)
+
+**What stayed the same:**
+- React frontend code (no changes needed)
+- API response shapes (identical)
+- Mock data structure (exact copy)
+- In-memory data persistence
+- All 7 dashboard sections
+- Tailwind CSS styling
+- Nivo charts
+
+## Learned Lessons & Future Risks
+
+### Why Next.js Over FastAPI
+
+**Problem with Python:**
+- Python 3.14 (newly released) lacks wheels for pydantic-core native extension
+- Source builds fail on Render's read-only filesystem
+- Version mismatches between Python versions require different builds
+
+**Solution with JavaScript:**
+- Node.js prebuilds available for all versions
+- No native extensions (JavaScript is interpreted)
+- Single `npm install` works everywhere
+- Same npm ecosystem as existing frontend
+
+### What Could Break
+
+**Validation & Error Handling:**
+- No form validation on Quran logging modal (orphaned data possible)
+- No error boundaries on components (single error crashes entire app)
+- Minimal API error handling (connection failures not gracefully handled)
+
+**User Experience:**
+- No skeleton loading states (generic spinner only)
+- No pagination (large datasets render all at once)
+- No search/filter functionality
+- Mobile breakpoints not fully tested
+
+**Data & Persistence:**
+- In-memory only — data loss on redeploy expected
+- No export functionality actually works (mock endpoints)
+- No real database integration
+- No backup/recovery
+
+**Testing:**
+- All tests are unit/integration (Jest) - no e2e browser tests
+- No load testing
+- Manual QA during development required
+
+### Next Steps (Priority Order)
+
+1. **Verify Render deployment works** — Test all endpoints on production
+2. **Integrate Login feature** — Add authentication, protect dashboard routes
+3. **Add form validation** — Prevent orphaned Quran sessions
+4. **Error boundaries** — Catch component crashes
+5. **Real data persistence** — Migrate from in-memory to database
+6. **Tests** — Add e2e tests with Playwright
+7. **Performance** — Add caching, optimize Nivo charts
+8. **Accessibility** — ARIA labels, keyboard navigation
+9. **Dark mode** — Wire up Tailwind dark: variant
+10. **Advanced filtering** — Search, date range, student filtering
+
+## Troubleshooting
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| Build fails | Unused imports | Remove all `TS6133` warnings |
+| `npm install` hangs | Network issue | `npm cache clean --force` and retry |
+| Tests fail | API response mismatch | Check endpoint returns correct shape: `{status, data, message, timestamp}` |
+| Localhost:3000 won't connect | Port in use | `pkill -f "next dev"` then retry |
+| TypeScript errors | Type mismatch | Check `lib/types.ts` matches actual API responses |
+| Nivo charts not rendering | Missing data | Verify chart data is pre-formatted (x, y points) on backend |
+
+## Common Errors & How to Avoid
+
+- **Always run `npm run build` before pushing** — catches 99% of issues
+- **Run `npm test` before committing** — all 27 tests must pass
+- **Check `npm run dev` starts cleanly** — catches runtime dependency issues
+- **Never commit with unused imports** — `TS6133` warnings must be resolved
+- **Verify API endpoints with curl** — confirm response shape before assuming it works
+
 
 ## Architecture
 
