@@ -53,8 +53,11 @@ Sheath Academy is a modular homeschool dashboard for the Naeem family (3 student
 ### Backend Stack (Next.js API Routes)
 
 - **Framework**: Next.js 15 with App Router
-- **Location**: `/app/api/*` (thin wrappers that import from `/features/dashboard/back/`)
-- **Business Logic**: `/features/dashboard/back/` (data store, utilities)
+- **Routing**: 
+  - `/app/api/health/route.ts` - Global health check (standalone)
+  - `/app/api/[...slug]/route.ts` - Dynamic router for all dashboard endpoints
+- **Business Logic**: `/features/dashboard/api/routes/` (handler implementations)
+- **Route Mapper**: `/features/dashboard/api/router.ts` (maps slugs to handlers)
 - **8 REST Endpoints**:
   - GET `/api/health` - Health check
   - GET `/api/dashboard/summary` - Summary metrics
@@ -69,10 +72,10 @@ Sheath Academy is a modular homeschool dashboard for the Naeem family (3 student
 ### Frontend Stack
 
 - **Framework**: React 18.3 (kept from original implementation)
-- **Location**: `/features/dashboard/front/` (components, pages, services)
-- **Routing**: `/app/page.tsx` imports from `/features/dashboard/front/pages/Dashboard`
-- **State Management**: React Context API (DashboardProvider in app/providers.tsx)
-- **Charts**: Nivo (ResponsiveLine for weekly Quran sessions, ResponsiveBar for subject completion)
+- **Location**: `/features/dashboard/front/` (components, pages, services, context)
+- **Routing**: `/app/page.tsx` imports Dashboard and wraps it in DashboardProvider
+- **State Management**: React Context API (DashboardProvider in `/features/dashboard/front/context/DashboardProvider.tsx`)
+- **Charts**: Nivo 0.83.0 (ResponsiveLine for weekly Quran sessions, ResponsiveBar for subject completion)
 - **Styling**: Tailwind CSS + system fonts only (no decorative fonts)
 - **API Client**: Axios (features/dashboard/front/services/api.ts) pointing to `/api/*` routes
 
@@ -119,34 +122,35 @@ npm run start
       /dataStore.ts                    # In-memory store (replaces Python CRUD)
   /dashboard/                          # Self-contained feature
     /__tests__/                        # Feature-specific tests (27 tests)
-    /back/                             # API/business logic
-      /index.ts                        # Re-exports dataStore
+    /api/
+      /routes/                         # Handler implementations
+        /summary.ts
+        /tasks.ts
+        /tasks-complete.ts
+        /progress.ts
+        /quran.ts
+        /records.ts
+        /alerts.ts
+      /router.ts                       # Dynamic route mapper
     /front/                            # React components
+      /context/                        # State management
+        /DashboardProvider.tsx         # Dashboard context + hooks
       /components/                     # Reusable UI components
       /pages/Dashboard.tsx             # Main dashboard page
       /services/api.ts                 # Axios API client
-      /types/index.ts                  # Frontend types (imports from lib/types)
       /styles/globals.css              # CSS
   /login/                              # Future feature (same structure)
 
-/app/                                  # Next.js app (thin routing layer)
-  /api/                                # API routes (thin wrappers)
-    /health/route.ts                   # → imports from features/dashboard/back/
-    /dashboard/
-      /summary/route.ts
-      /tasks/route.ts
-      /tasks/[id]/complete/route.ts
-      /progress/route.ts
-      /quran/route.ts
-      /records/route.ts
-      /alerts/route.ts
-  /layout.tsx                          # Root layout
-  /page.tsx                            # Home page (→ imports Dashboard from features/)
-  /providers.tsx                       # DashboardProvider (uses features/ imports)
+/app/                                  # Next.js app (framing only)
+  /api/
+    /health/route.ts                   # Global health check (standalone)
+    /[...slug]/route.ts                # Dynamic router → delegates to /features/dashboard/api/router
+  /layout.tsx                          # Root layout (Server Component)
+  /page.tsx                            # Home page (wraps Dashboard in DashboardProvider)
   /globals.css                         # Tailwind imports
 
-/package.json                          # Single at root (all features)
-/tsconfig.json
+/package.json                          # Single at root (all dependencies)
+/tsconfig.json                         # TypeScript config (excludes abandoned dirs)
 /jest.config.js
 /render.yaml
 /CLAUDE.md
@@ -200,30 +204,41 @@ npm run start
 - Run `npm run build` before pushing to catch type errors
 - Import from `/features/*/` in `/app/api/` routes to keep them thin
 
-### API Routes (Thin Wrappers Pattern)
+### API Routes (Dynamic Routing Pattern)
 
-API routes in `/app/api/` should be **thin**, importing logic from `/features/dashboard/back/`:
+API routes in `/app/api/` are kept thin and delegate to `/features/`:
 
-**Bad (logic in API route):**
+**Global endpoints** stay in `/app/api/`:
 ```typescript
-// /app/api/health/route.ts
+// /app/api/health/route.ts (standalone, simple response)
 export async function GET() {
-  const response = { status: 'healthy', ... }  // Logic here
-  return NextResponse.json(response)
-}
-```
-
-**Good (logic in features, API just routes):**
-```typescript
-// /app/api/health/route.ts
-export async function GET() {
-  // Just delegate, don't compute
   return NextResponse.json({ status: 'healthy', ... })
 }
-
-// /features/dashboard/back/index.ts  (if logic needed)
-export function getHealthStatus() { ... }
 ```
+
+**Feature endpoints** use dynamic routing:
+```typescript
+// /app/api/[...slug]/route.ts (catches /api/dashboard/*)
+export async function GET(request, { params }) {
+  const { slug } = await params
+  if (slug[0] === 'dashboard') {
+    return handleDashboardRoute(slug.slice(1), request)
+  }
+  // 404
+}
+
+// /features/dashboard/api/router.ts (maps routes to handlers)
+export async function handleDashboardRoute(slug, request) {
+  // slug = ['summary'], ['tasks'], ['tasks', 'id123', 'complete'], etc.
+  // Maps to correct handler in /features/dashboard/api/routes/
+}
+```
+
+**Why dynamic routing?**
+- `/app/` stays thin (2 files: health.ts and [..slug].ts)
+- All feature logic lives in `/features/dashboard/api/routes/`
+- Easy to add new features (just add handler to routes/)
+- Clean separation: routing in /app, logic in /features
 
 ### API Response Format (All Endpoints)
 
