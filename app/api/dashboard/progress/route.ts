@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import type { ApiResponse, ProgressData, ChildProgress } from '@/lib/types'
-import { getProgressData, getChildren } from '@/lib/server/dataStore'
+import type { ApiResponse, ProgressData, ChildProgress } from '@/features/lib/types'
+import { getProgressData, getChildren } from '@/features/lib/server/dataStore'
 
 export async function GET(): Promise<NextResponse<ApiResponse<Record<string, ChildProgress>>>> {
   const progressDataRaw = getProgressData()

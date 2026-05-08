@@ -46,14 +46,16 @@ Sheath Academy is a modular homeschool dashboard for the Naeem family (3 student
 ### Data Storage
 
 - **Type**: In-memory (no file I/O — Render has read-only filesystem)
-- **Location**: Loaded from TypeScript mock data on server startup (lib/server/mockData.ts)
+- **Location**: Loaded from TypeScript mock data on server startup (features/lib/server/mockData.ts)
 - **Persistence**: Session-only (resets on redeploy); persists across requests in same process
 - **Single process**: Next.js handles API routes + React frontend rendering
 
 ### Backend Stack (Next.js API Routes)
 
 - **Framework**: Next.js 15 with App Router
-- **API Routes**: 8 endpoints in `app/api/` matching exact FastAPI response shapes
+- **Location**: `/app/api/*` (thin wrappers that import from `/features/dashboard/back/`)
+- **Business Logic**: `/features/dashboard/back/` (data store, utilities)
+- **8 REST Endpoints**:
   - GET `/api/health` - Health check
   - GET `/api/dashboard/summary` - Summary metrics
   - GET/POST `/api/dashboard/tasks` - Task list and completion
@@ -61,24 +63,25 @@ Sheath Academy is a modular homeschool dashboard for the Naeem family (3 student
   - GET/POST `/api/dashboard/quran` - Quran sessions + chart data
   - GET `/api/dashboard/records` - Records (attendance, portfolio, etc.)
   - GET `/api/dashboard/alerts` - Alerts
-- **Data Store**: TypeScript in-memory store (lib/server/dataStore.ts) - no Pydantic, no Python
+- **Data Store**: TypeScript in-memory store (features/lib/server/dataStore.ts)
 - **Type Safety**: Full TypeScript with strict mode
 
 ### Frontend Stack
 
 - **Framework**: React 18.3 (kept from original implementation)
-- **Build**: Next.js (no separate Vite build)
+- **Location**: `/features/dashboard/front/` (components, pages, services)
+- **Routing**: `/app/page.tsx` imports from `/features/dashboard/front/pages/Dashboard`
 - **State Management**: React Context API (DashboardProvider in app/providers.tsx)
 - **Charts**: Nivo (ResponsiveLine for weekly Quran sessions, ResponsiveBar for subject completion)
 - **Styling**: Tailwind CSS + system fonts only (no decorative fonts)
-- **API Client**: Axios (app/frontend-src/services/api.ts) pointing to `/api/*` routes
+- **API Client**: Axios (features/dashboard/front/services/api.ts) pointing to `/api/*` routes
 
 ## Development Setup
 
 ### Local Development
 
 ```bash
-# Install dependencies
+# Install dependencies (single package.json at root)
 npm install
 
 # Start dev server (API + React on port 3000)
@@ -105,6 +108,80 @@ npm run start
   - API routes on `/api/*`
   - React frontend on `/`
 
+## File Structure (Non-Standard but Intentional)
+
+```
+/features/                             # Modular feature structure
+  /lib/                                # Shared across all features
+    /types.ts                          # TypeScript interfaces
+    /server/
+      /mockData.ts                     # Mock data (exact copy from Python)
+      /dataStore.ts                    # In-memory store (replaces Python CRUD)
+  /dashboard/                          # Self-contained feature
+    /__tests__/                        # Feature-specific tests (27 tests)
+    /back/                             # API/business logic
+      /index.ts                        # Re-exports dataStore
+    /front/                            # React components
+      /components/                     # Reusable UI components
+      /pages/Dashboard.tsx             # Main dashboard page
+      /services/api.ts                 # Axios API client
+      /types/index.ts                  # Frontend types (imports from lib/types)
+      /styles/globals.css              # CSS
+  /login/                              # Future feature (same structure)
+
+/app/                                  # Next.js app (thin routing layer)
+  /api/                                # API routes (thin wrappers)
+    /health/route.ts                   # → imports from features/dashboard/back/
+    /dashboard/
+      /summary/route.ts
+      /tasks/route.ts
+      /tasks/[id]/complete/route.ts
+      /progress/route.ts
+      /quran/route.ts
+      /records/route.ts
+      /alerts/route.ts
+  /layout.tsx                          # Root layout
+  /page.tsx                            # Home page (→ imports Dashboard from features/)
+  /providers.tsx                       # DashboardProvider (uses features/ imports)
+  /globals.css                         # Tailwind imports
+
+/package.json                          # Single at root (all features)
+/tsconfig.json
+/jest.config.js
+/render.yaml
+/CLAUDE.md
+```
+
+### Why This Structure?
+
+**Standard Next.js** puts everything in `/app/`, which gets messy with multiple features:
+```
+/app/                  ← Becomes bloated
+  /api/health
+  /api/dashboard/...
+  /api/login/...
+  /components/health
+  /components/dashboard
+  /components/login
+  /...
+```
+
+**Our Structure** separates features cleanly:
+```
+/features/dashboard/   ← Self-contained, could move to separate monorepo
+/features/login/
+/features/...
+
+/app/                  ← Just the Next.js routing layer (thin)
+```
+
+**Benefits:**
+- Easy to add new features (copy /features/dashboard/ structure)
+- Clear separation: API logic in `/features/*/back/`, UI in `/features/*/front/`
+- Single package.json makes dependencies explicit
+- Tests live with the feature (`/features/dashboard/__tests__/`)
+- Could eventually split into separate repositories
+
 ## Key Conventions
 
 ### TypeScript
@@ -121,6 +198,32 @@ npm run start
 - Mark client components with `'use client'` directive at top of file
 - Keep imports minimal — remove all unused ones (TS6133 warnings)
 - Run `npm run build` before pushing to catch type errors
+- Import from `/features/*/` in `/app/api/` routes to keep them thin
+
+### API Routes (Thin Wrappers Pattern)
+
+API routes in `/app/api/` should be **thin**, importing logic from `/features/dashboard/back/`:
+
+**Bad (logic in API route):**
+```typescript
+// /app/api/health/route.ts
+export async function GET() {
+  const response = { status: 'healthy', ... }  // Logic here
+  return NextResponse.json(response)
+}
+```
+
+**Good (logic in features, API just routes):**
+```typescript
+// /app/api/health/route.ts
+export async function GET() {
+  // Just delegate, don't compute
+  return NextResponse.json({ status: 'healthy', ... })
+}
+
+// /features/dashboard/back/index.ts  (if logic needed)
+export function getHealthStatus() { ... }
+```
 
 ### API Response Format (All Endpoints)
 
@@ -142,50 +245,7 @@ Error responses use same format with status: "error" and 4xx/5xx HTTP code.
 - Task completion, Quran logging, etc. persist during session only
 - Data resets on app restart/redeploy
 - Modal data, form state use React useState (not persistent)
-- All updates modify the in-memory store in lib/server/dataStore.ts
-
-## File Structure Reference
-
-```
-├── app/
-│   ├── api/                          # Next.js API routes (replaces FastAPI)
-│   │   ├── health/route.ts
-│   │   └── dashboard/
-│   │       ├── summary/route.ts
-│   │       ├── tasks/route.ts
-│   │       ├── tasks/[id]/complete/route.ts
-│   │       ├── progress/route.ts
-│   │       ├── quran/route.ts
-│   │       ├── records/route.ts
-│   │       └── alerts/route.ts
-│   ├── frontend-src/                 # React components (from original frontend)
-│   │   ├── components/
-│   │   ├── pages/Dashboard.tsx
-│   │   ├── services/api.ts
-│   │   ├── types/
-│   │   └── styles/
-│   ├── layout.tsx                    # Root layout
-│   ├── page.tsx                      # Home page (renders Dashboard)
-│   ├── globals.css                   # Tailwind CSS
-│   └── providers.tsx                 # DashboardProvider context
-├── lib/
-│   ├── types.ts                      # TypeScript interfaces (replaces Pydantic)
-│   └── server/
-│       ├── mockData.ts               # MOCK_DATA (exact copy from Python)
-│       └── dataStore.ts              # In-memory store (replaces Python CRUD)
-├── __tests__/
-│   └── api/                          # Jest tests (27 tests, replaces pytest)
-│       ├── startup.test.ts
-│       ├── health.test.ts
-│       ├── tasks.test.ts
-│       ├── ... (etc.)
-├── package.json
-├── next.config.js
-├── tsconfig.json
-├── jest.config.js
-├── render.yaml                       # Deployment config (updated for Next.js)
-└── CLAUDE.md                         # This file
-```
+- All updates modify the in-memory store in features/lib/server/dataStore.ts
 
 ## Testing
 
@@ -200,6 +260,8 @@ npm test
 - Data integrity (no duplicate IDs, valid child references)
 - Error handling (invalid task IDs, missing data)
 
+Tests live in `/features/dashboard/__tests__/api/` (co-located with the feature).
+
 All tests must pass before committing.
 
 ## Migration Notes (from FastAPI to Next.js)
@@ -211,6 +273,7 @@ All tests must pass before committing.
 - Runtime: Python 3.12 → Node.js 22.22.2
 - Type validation: Pydantic models → TypeScript interfaces
 - Tests: pytest (Python) → Jest (JavaScript)
+- **Project structure**: /features/ as the source of truth, /app/ as thin routing layer
 
 **What stayed the same:**
 - React frontend code (no changes needed)
@@ -235,6 +298,19 @@ All tests must pass before committing.
 - No native extensions (JavaScript is interpreted)
 - Single `npm install` works everywhere
 - Same npm ecosystem as existing frontend
+
+### Why /features/ Over /app/
+
+**Monolithic /app/ problem:**
+- Single feature directory gets bloated with multiple features
+- Hard to separate concerns (API, UI, types, tests)
+- Difficult to move features to separate monorepo later
+
+**/features/ solution:**
+- Each feature self-contained (dashboard, login, etc.)
+- Clear structure: `back/`, `front/`, `__tests__/`, `lib/`
+- `/app/` stays thin (just routing, imports from /features/)
+- Easy to add new features (copy /features/dashboard/)
 
 ### What Could Break
 
@@ -279,9 +355,9 @@ All tests must pass before committing.
 |-------|-------|-----|
 | Build fails | Unused imports | Remove all `TS6133` warnings |
 | `npm install` hangs | Network issue | `npm cache clean --force` and retry |
-| Tests fail | API response mismatch | Check endpoint returns correct shape: `{status, data, message, timestamp}` |
+| Tests fail | Import path mismatch | Check imports use `/features/lib/` and `/features/dashboard/front/` |
 | Localhost:3000 won't connect | Port in use | `pkill -f "next dev"` then retry |
-| TypeScript errors | Type mismatch | Check `lib/types.ts` matches actual API responses |
+| TypeScript errors | Type mismatch | Check `features/lib/types.ts` matches actual API responses |
 | Nivo charts not rendering | Missing data | Verify chart data is pre-formatted (x, y points) on backend |
 
 ## Common Errors & How to Avoid
@@ -291,399 +367,5 @@ All tests must pass before committing.
 - **Check `npm run dev` starts cleanly** — catches runtime dependency issues
 - **Never commit with unused imports** — `TS6133` warnings must be resolved
 - **Verify API endpoints with curl** — confirm response shape before assuming it works
-
-
-## Architecture
-
-### Data Storage
-
-- **Type**: In-memory (no file I/O — Render has read-only filesystem)
-- **Location**: Loaded from Python mock data on startup
-- **Persistence**: Session-only (resets on redeploy)
-- **Each feature**: Has own backend port and independent API
-  - Login feature: port 8000
-  - Dashboard feature: port 8001
-
-### Feature Discovery
-
-- **Static Configuration**: Use `shared/config/features.json` to find other features
-- **No Runtime Discovery**: Feature locations determined at Claude time via config files
-- **Feature Interdependencies**: Defined in each feature's `config.json` under `dependencies`
-
-### Frontend Stack (Dashboard)
-
-- **Build Tool**: Vite (not Next.js) — faster, zero-config, ideal for React SPA
-- **State Management**: React Context API (lightweight, sufficient for dashboard scope)
-- **Charts**: Nivo (ResponsiveLine for weekly Quran sessions, ResponsiveBar for subject completion)
-- **Styling**: Tailwind CSS + system fonts only (no decorative fonts)
-- **Type Safety**: TypeScript with strict mode enabled
-
-### Backend Stack (Dashboard)
-
-- **Framework**: FastAPI with Pydantic validation
-- **Data Format**: Mock Python objects (no file I/O)
-- **Endpoints**: 8 REST endpoints (health, summary, tasks, progress, quran, records, alerts, + POST variants)
-- **CORS**: Configured for frontend origin + production wildcard
-
-## Development Setup
-
-### Local Development
-
-**Backend:**
-```bash
-cd features/dashboard/backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8001
-```
-
-**Frontend:**
-```bash
-cd features/dashboard/frontend
-npm install
-npm run dev  # Vite on port 3000
-```
-
-### Render Deployment
-
-**Build Command**: `chmod +x build.sh && ./build.sh`
-- Compiles React to static files (`dist/`)
-- Installs backend dependencies
-- Uses `--prefer-binary` and `--no-cache-dir` (read-only filesystem safe)
-
-**Start Command**: `cd features/dashboard/backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-- Single process serves both API and static React files
-- No separate frontend/backend services needed
-
-## Key Conventions
-
-### TypeScript
-
-**Don't:**
-- Import React if not directly using `React.createElement()` (JSX alone doesn't need it)
-- Import hooks like `useState` if the component doesn't use them
-- Use names that conflict with built-in types (`Record` is a TS utility type — use `DashboardRecord`)
-- Cast before the OR operator: `(x as T) || fallback` becomes `("undefined") || fallback` (never triggers)
-- Use `interface ImportMeta { env: ... }` directly — causes TS2339
-
-**Do:**
-- Set `"moduleResolution": "node"` in tsconfig.json (required for JSON imports)
-- Cast AFTER the OR operator: `(x || fallback) as T` (allows fallback to work)
-- Declare Vite env via `declare module 'vite/client'` in `vite-env.d.ts`
-- Keep imports minimal — remove all unused ones (TS6133 warnings)
-- Run `npm run build` before pushing to catch type errors
-
-### Nivo Charts
-
-**API Changes Between Versions:**
-- Don't use `orient` property on axes (old API)
-- Use `axisBottom` and `axisLeft` without `orient`
-- Pre-format data on backend, pass directly to Nivo (no transformation on frontend)
-
-### Data Handling
-
-**In-Memory Only:**
-- Task completion, Quran logging, etc. persist during session only
-- Data resets on app restart/redeploy
-- No JSON file writes — Render filesystem is read-only
-- Modal data, form state use React useState (not persistent)
-
-## Feature Dependencies
-
-### Dashboard Feature
-- Depends on: None (self-contained MVP)
-- Will depend on: Login feature (for authentication, when implemented)
-- Consumed by: Future features that need homeschool data
-
-### Login Feature
-- Depends on: None
-- Provides: User authentication (not yet integrated with dashboard)
-
-## Learned Lessons & Future Risks
-
-### What Went Wrong (Fixed)
-
-1. **TypeScript Defaults**
-   - `moduleResolution` defaults to "classic" (doesn't support JSON imports)
-   - Solution: Explicitly set to "node"
-
-2. **Name Collisions**
-   - Naming a custom interface `Record` conflicts with TS built-in `Record<K,V>` type
-   - Solution: Renamed to `DashboardRecord`
-
-3. **Vite Environment Variables**
-   - `import.meta.env` not typed by default → TS2339 error
-   - Solution: Create `vite-env.d.ts` with type definitions
-
-4. **Nivo API**
-   - Axis configuration changed between versions (removed `orient` property)
-   - Solution: Check Nivo docs for current API, avoid old examples
-
-5. **Render Filesystem**
-   - Read-only filesystem prevents file I/O and cache writes
-   - Solution: Use in-memory data, disable pip/npm caches via environment variables
-
-### What Could Break (Not Yet Implemented)
-
-**Validation & Error Handling:**
-- No form validation on Quran logging modal (orphaned data possible)
-- No error boundaries on components (single error crashes entire app)
-- Minimal API error handling (connection failures not gracefully handled)
-- No timeout handling for slow backends
-
-**User Experience:**
-- No skeleton loading states (only generic spinner)
-- No pagination (large datasets will render all at once)
-- No search/filter functionality
-- No dark mode (Tailwind configured but not wired)
-- No accessibility improvements (forms lack proper labels, focus management missing)
-- Mobile breakpoints not fully tested
-
-**Data & Persistence:**
-- In-memory only — data loss on redeploy expected and acceptable
-- No export functionality actually works (mock endpoints only)
-- No real database integration
-- No backup/recovery mechanism
-
-**Testing:**
-- Zero unit tests
-- Zero integration tests
-- Manual QA only
-
-**Scaling:**
-- Single FastAPI process (no load balancing)
-- No caching layer (Nivo charts recalculated on every request)
-- No database query optimization (irrelevant now, but needed for real data)
-
-## Next Steps (Priority Order)
-
-1. **Integrate Login Feature** — Add authentication, protect dashboard routes
-2. **Add Form Validation** — Prevent orphaned Quran sessions, invalid task data
-3. **Error Boundaries** — Catch component crashes, show fallback UI
-4. **Real Data Persistence** — Migrate from in-memory to database (if feature survives MVP)
-5. **Tests** — Unit tests for hooks, integration tests for API calls
-6. **Accessibility** — ARIA labels, keyboard navigation, focus management
-7. **Dark Mode** — Wire up Tailwind dark: variant
-8. **Advanced Filtering** — Search, date range, student filtering on records
-
-## File Structure Reference
-
-```
-features/dashboard/
-├── backend/
-│   ├── app/
-│   │   ├── main.py          # FastAPI app, CORS, routes
-│   │   ├── models.py         # Pydantic models
-│   │   ├── crud.py           # In-memory data store
-│   │   └── routes/
-│   │       ├── tasks.py
-│   │       ├── progress.py
-│   │       ├── quran.py
-│   │       └── records.py
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── pages/
-│   │   │   └── Dashboard.tsx      # Main page orchestrator
-│   │   ├── components/
-│   │   │   ├── Header.tsx
-│   │   │   ├── TodayState.tsx
-│   │   │   ├── DoToday.tsx
-│   │   │   ├── NeedsAttention.tsx
-│   │   │   ├── PerChildProgress.tsx
-│   │   │   ├── QuranStudies.tsx
-│   │   │   ├── RecordsProof.tsx
-│   │   │   └── shared/
-│   │   │       ├── MetricCard.tsx
-│   │   │       ├── TaskCheckbox.tsx
-│   │   │       ├── AlertItem.tsx
-│   │   │       └── ChartContainer.tsx
-│   │   ├── services/
-│   │   │   └── api.ts              # Axios client
-│   │   ├── types/
-│   │   │   └── index.ts            # TypeScript interfaces
-│   │   ├── styles/
-│   │   │   └── globals.css         # Tailwind + custom CSS
-│   │   ├── App.tsx                 # Context provider
-│   │   └── main.tsx                # Vite entry
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── tsconfig.json
-│   ├── vite-env.d.ts              # Vite env types
-│   ├── tailwind.config.js
-│   ├── postcss.config.js
-│   └── index.html
-├── data/
-│   └── (no files — in-memory storage)
-└── config.json                     # Feature version & dependencies
-```
-
-## Color Scheme (Functional Only)
-
-- **Green (#10b981)**: Ready, on track, complete ✓
-- **Amber (#f59e0b)**: Needs attention, warning ⚠
-- **Red (#ef4444)**: Overdue, error ✗
-- **Blue (#3b82f6)**: Primary actions, tabs, info
-- **Gray**: Secondary, disabled, neutral
-
-## Test-Driven Development (TDD) Workflow
-
-**For every feature or fix:**
-
-1. **Write the test first** (before code)
-   - Define what success looks like
-   - Test should fail initially (red)
-
-2. **Write minimal code to pass** (green)
-   - Only code needed to make test pass
-   - No extra features or cleanup yet
-
-3. **Refactor & improve** (refactor)
-   - Clean up code
-   - Remove duplication
-   - Keep tests passing
-
-4. **Run full test suite** (validation)
-   ```bash
-   pytest test_app.py -v
-   npm run build
-   ```
-
-5. **Commit only if tests pass**
-   - All tests green
-   - Build succeeds
-   - No TypeScript errors
-
-**Example: Adding a new endpoint**
-```python
-# Step 1: Write test in test_app.py
-def test_new_endpoint_returns_correct_data():
-    response = client.get("/api/new-endpoint")
-    assert response.status_code == 200
-    assert "expected_field" in response.json()["data"]
-
-# Step 2: Implement minimal endpoint in main.py
-@app.get("/api/new-endpoint")
-def new_endpoint():
-    return {"status": "success", "data": {"expected_field": "value"}}
-
-# Step 3: Run tests (must pass)
-pytest test_app.py::test_new_endpoint_returns_correct_data
-
-# Step 4: Full validation
-pytest test_app.py -v && npm run build
-
-# Step 5: Commit
-git commit -m "feat: Add new endpoint with test coverage"
-```
-
-## Testing & Verification
-
-### Run All Tests (REQUIRED)
-
-**Backend Tests (Python):**
-```bash
-cd features/dashboard/backend
-pip install -r requirements.txt
-pytest test_app.py -v
-```
-- **24 tests** covering: endpoints, data shapes, integrity, persistence
-- Runs in ~0.5s
-- Must pass before pushing
-
-**Frontend Build (TypeScript):**
-```bash
-cd features/dashboard/frontend
-npm install
-npm run build  # Must pass with zero errors before pushing
-```
-- Catches TypeScript errors locally (not on Render)
-- Zero errors required
-
-**Summary**: Always run both before git push:
-```bash
-# Test backend
-cd features/dashboard/backend && pytest test_app.py
-
-# Build frontend
-cd features/dashboard/frontend && npm run build
-```
-
-### Predictable Error Patterns (Prevent These)
-
-| Error | Pattern | Fix |
-|-------|---------|-----|
-| `Record requires 2 type args` | `useState<Record[]>` | Use `DashboardRecord[]` (avoid built-in type names) |
-| `'env' does not exist` | Missing tsconfig include | Add `vite-env.d.ts` to tsconfig.json `include` |
-| Unused React import | `import React from 'react'` without `React.` calls | Remove it (JSX Transform doesn't need it) |
-| Unused hook import | `import { useState } from 'react'` if not used | Remove unused imports (TS6133) |
-| Cast blocks fallback | `(x as T) \|\| fallback` | Move cast: `(x \|\| fallback) as T` |
-
-### Common Errors & How to Avoid
-- **Always run `npm run build` before pushing** — catches 90% of issues
-- **Check tsconfig.json include** — files outside `include` aren't type-checked
-- **Avoid names that match TS built-ins** — Record, Partial, Pick, etc.
-- **Remove all unused imports** — TypeScript strict mode flags them (TS6133)
-
-### On Render
-- Check `/api/health` endpoint (should return 200)
-- Verify build logs for cache/permission errors
-- Open app URL, inspect network tab for API calls
-- Check browser console for errors
-
-## Common Issues & Solutions
-
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| TS2339: `'env' does not exist` | Vite env types missing | Create `vite-env.d.ts` |
-| TS2315: `Type 'Record' not generic` | Name collision | Rename to `DashboardRecord` |
-| TS6133: Unused imports | Modern React doesn't need import | Remove `import React` |
-| Nivo axis `orient` error | Old API | Remove `orient`, use axes directly |
-| Render build fails on cache | Read-only filesystem | Use `--no-cache-dir`, `TMPDIR=/tmp` |
-| CORS errors in browser | Missing origin | Add frontend origin to FastAPI CORS |
-| Commit pushed with broken tests | Skipped pre-commit validation | **ALWAYS run tests first** |
-| Render build fails after push | Error not caught locally | **Run `pytest` + `npm run build` before commit** |
-
-## Pre-Commit Checklist
-
-**BEFORE EVERY `git commit` (IN THIS EXACT ORDER):**
-
-1. **Fresh Build (catch transitive dependency issues)**
-   - [ ] `rm -rf features/dashboard/frontend/node_modules package-lock.json`
-   - [ ] `cd features/dashboard/frontend && npm install`
-   - [ ] `npm run build` passes (zero TypeScript errors, zero bundling errors)
-
-2. **Backend Tests**
-   - [ ] Tests written (TDD: red → green → refactor)
-   - [ ] `cd features/dashboard/backend && pytest test_app.py -v` passes (all tests green, including startup tests)
-
-3. **App Startup Test**
-   - [ ] `timeout 5 uvicorn app.main:app --host 127.0.0.1 --port 8001` starts successfully
-   - [ ] See "Application startup complete" in output
-   - [ ] App exits cleanly when timeout fires
-
-4. **Code Quality**
-   - [ ] No unused imports (TypeScript TS6133 warnings)
-   - [ ] No TypeScript errors in build output
-   - [ ] No broken tests in commit
-
-5. **Final Step**
-   - [ ] `git add . && git commit -m "..."` only if all above pass
-
-**DO NOT commit if:**
-- ❌ Any tests fail
-- ❌ Any TypeScript errors in build
-- ❌ Build fails (bundler errors, rollup errors)
-- ❌ App fails to start (import errors, missing dependencies)
-- ❌ Unused imports remain
-- ❌ Fresh install reveals new issues
-
-**Why this order matters:**
-- Clean install catches peer dependencies missed by cached node_modules (e.g., prop-types, maturin failures)
-- Tests verify API endpoints work and startup succeeds
-- App startup test catches runtime dependency issues (e.g., Python 3.14 + pydantic-core source builds)
-- TypeScript errors caught early
-- Only then is it safe to push
-
-This prevents: local error → push → Render fails → redeploy cycle
-
-
+- **Keep /app/api/ routes thin** — delegate to /features/dashboard/back/ for logic
+- **Import from /features/ consistently** — avoid circular imports by keeping /app/ as thin routing layer

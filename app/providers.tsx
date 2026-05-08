@@ -1,8 +1,8 @@
 'use client'
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react'
-import type { Task, Alert, QuranSession, DashboardRecord, Child, DashboardMetrics } from '@/app/frontend-src/types'
-import { dashboardApi } from '@/app/frontend-src/services/api'
+import type { Task, Alert, QuranSession, DashboardRecord, Child, DashboardMetrics } from '@/features/lib/types'
+import { dashboardApi } from '@/features/dashboard/front/services/api'
 
 export interface DashboardContextType {
   children: Child[]

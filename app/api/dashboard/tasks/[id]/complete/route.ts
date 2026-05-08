@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import type { ApiResponse, Task } from '@/lib/types'
-import { getTasks, updateTask } from '@/lib/server/dataStore'
+import type { ApiResponse, Task } from '@/features/lib/types'
+import { getTasks, updateTask } from '@/features/lib/server/dataStore'
 
 export async function POST(
   request: Request,

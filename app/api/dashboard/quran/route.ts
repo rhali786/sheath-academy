@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import type { ApiResponse, ChartSeries, QuranSessionRequest } from '@/lib/types'
+import type { ApiResponse, ChartSeries, QuranSessionRequest } from '@/features/lib/types'
 import {
   getQuranSessions,
   addQuranSession,
   getChildren,
-} from '@/lib/server/dataStore'
+} from '@/features/lib/server/dataStore'
 
 const CHILD_COLORS: Record<string, string> = {
   adam_001: '#3b82f6',

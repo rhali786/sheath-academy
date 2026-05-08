@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import type { ApiResponse, DashboardMetrics } from '@/lib/types'
+import type { ApiResponse, DashboardMetrics } from '@/features/lib/types'
 
 export async function GET(): Promise<NextResponse<ApiResponse<DashboardMetrics>>> {
   const metrics: DashboardMetrics = {
