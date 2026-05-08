@@ -6,6 +6,7 @@ import { NeedsAttention } from '../components/NeedsAttention'
 import { PerChildProgress } from '../components/PerChildProgress'
 import { QuranStudies } from '../components/QuranStudies'
 import { RecordsProof } from '../components/RecordsProof'
+import { ConsoleOverlay } from '../components/ConsoleOverlay'
 import { useContext_Dashboard } from '../App'
 import { dashboardApi } from '../services/api'
 
@@ -109,6 +110,8 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      <ConsoleOverlay />
     </div>
   )
 }
