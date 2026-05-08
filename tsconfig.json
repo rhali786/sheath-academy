@@ -41,6 +41,9 @@
     ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "features/dashboard/frontend",
+    "features/dashboard/backend",
+    "features/dashboard/back"
   ]
 }
