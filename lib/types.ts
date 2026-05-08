@@ -63,6 +63,9 @@ export interface SubjectProgress {
 export interface ChildProgress {
   childName: string
   subjects: SubjectProgress[]
+  quranCurrent?: string
+  streak?: number
+  lastLogged?: string
 }
 
 export interface ProgressData {
@@ -106,6 +109,12 @@ export interface ChartDataPoint {
 }
 
 export interface ChartSeries {
+  id: string
+  color: string
+  data: ChartDataPoint[]
+}
+
+export interface NivoLineSeries {
   id: string
   color: string
   data: ChartDataPoint[]

@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   description: 'Homeschool Dashboard',
 }
 
+export const dynamic = 'force-dynamic'
+
 export default function RootLayout({
   children,
 }: {

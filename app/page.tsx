@@ -1,8 +1,12 @@
+'use client'
+
+import { DashboardProvider } from '@/app/providers'
+import Dashboard from '@/app/frontend-src/pages/Dashboard'
+
 export default function Home() {
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Sheath Academy Dashboard</h1>
-      <p>Next.js backend in progress...</p>
-    </div>
+    <DashboardProvider>
+      <Dashboard />
+    </DashboardProvider>
   )
 }
