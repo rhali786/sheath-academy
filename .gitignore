@@ -9,6 +9,8 @@ __pycache__/
 .venv
 venv/
 env/
+.next/
+package-lock.json
 features/dashboard/frontend/node_modules
 features/dashboard/frontend/dist
 features/dashboard/backend/__pycache__
