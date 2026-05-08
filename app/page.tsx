@@ -1,6 +1,6 @@
 'use client'
 
-import { DashboardProvider } from '@/app/providers'
+import { DashboardProvider } from '@/features/dashboard/front/context'
 import Dashboard from '@/features/dashboard/front/pages/Dashboard'
 
 export default function Home() {

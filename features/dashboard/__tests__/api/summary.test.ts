@@ -1,4 +1,4 @@
-import { GET } from '@/app/api/dashboard/summary/route'
+import { GET } from '@/features/dashboard/api/routes/summary'
 
 describe('TestSummary', () => {
   test('get summary returns all required fields', async () => {

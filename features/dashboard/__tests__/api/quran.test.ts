@@ -1,4 +1,4 @@
-import { GET, POST } from '@/app/api/dashboard/quran/route'
+import { GET, POST } from '@/features/dashboard/api/routes/quran'
 import { resetDataStore } from '@/features/lib/server/dataStore'
 
 describe('TestQuran', () => {

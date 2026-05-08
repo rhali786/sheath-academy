@@ -1,4 +1,4 @@
-import { GET } from '@/app/api/dashboard/alerts/route'
+import { GET } from '@/features/dashboard/api/routes/alerts'
 import { resetDataStore } from '@/features/lib/server/dataStore'
 
 describe('TestAlerts', () => {

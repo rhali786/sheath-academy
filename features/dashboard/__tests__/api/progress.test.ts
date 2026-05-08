@@ -1,4 +1,4 @@
-import { GET } from '@/app/api/dashboard/progress/route'
+import { GET } from '@/features/dashboard/api/routes/progress'
 import { resetDataStore } from '@/features/lib/server/dataStore'
 
 describe('TestProgress', () => {

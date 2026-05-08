@@ -1,4 +1,4 @@
-import { POST } from '@/app/api/dashboard/tasks/[id]/complete/route'
+import { POST } from '@/features/dashboard/api/routes/tasks-complete'
 import { resetDataStore } from '@/features/lib/server/dataStore'
 
 describe('TestAPIErrorHandling', () => {

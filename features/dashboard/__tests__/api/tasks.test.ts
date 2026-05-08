@@ -1,5 +1,5 @@
-import { GET, POST } from '@/app/api/dashboard/tasks/route'
-import { POST as completeTask } from '@/app/api/dashboard/tasks/[id]/complete/route'
+import { GET, POST } from '@/features/dashboard/api/routes/tasks'
+import { POST as completeTask } from '@/features/dashboard/api/routes/tasks-complete'
 import { resetDataStore, getTasks, updateTask } from '@/features/lib/server/dataStore'
 
 describe('TestTasks', () => {
