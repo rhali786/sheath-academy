@@ -1,0 +1,12 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/api/dashboard/alerts/route": "/api/dashboard/alerts",
+  "/api/dashboard/progress/route": "/api/dashboard/progress",
+  "/api/dashboard/quran/route": "/api/dashboard/quran",
+  "/api/dashboard/summary/route": "/api/dashboard/summary",
+  "/api/dashboard/tasks/[id]/complete/route": "/api/dashboard/tasks/[id]/complete",
+  "/api/dashboard/records/route": "/api/dashboard/records",
+  "/api/dashboard/tasks/route": "/api/dashboard/tasks",
+  "/api/health/route": "/api/health",
+  "/page": "/"
+}
