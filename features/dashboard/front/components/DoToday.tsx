@@ -55,10 +55,13 @@ export function DoToday({ tasks, children, onTaskToggle }: DoTodayProps) {
             <div key={task.id} className="flex items-start gap-3 py-2 px-2 rounded hover:bg-gray-50">
               <div className="flex-shrink-0 pt-1">
                 <input
+                  id={`task-${task.id}`}
                   type="checkbox"
+                  name={`task-${task.id}`}
                   checked={task.completed}
                   onChange={() => onTaskToggle(task.id, !task.completed)}
                   className="w-5 h-5 rounded border-gray-300 text-green-600 cursor-pointer"
+                  aria-label={`Toggle ${task.description}`}
                 />
               </div>
               <div className="flex-grow">

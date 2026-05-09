@@ -23,9 +23,12 @@ export function NeedsAttention({ alerts }: NeedsAttentionProps) {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900">Needs Attention</h2>
         <select
+          id="sortBy"
+          name="sortBy"
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as 'priority' | 'date')}
           className="text-sm px-3 py-1 border border-gray-200 rounded-lg bg-white text-gray-700"
+          autoComplete="off"
         >
           <option value="priority">Priority</option>
           <option value="date">Date</option>
