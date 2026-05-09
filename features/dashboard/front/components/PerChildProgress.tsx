@@ -12,11 +12,12 @@ export function PerChildProgress({ children, progressData }: PerChildProgressPro
   const [selectedChildId, setSelectedChildId] = useState(children[0]?.id)
 
   const selectedChild = children.find(c => c.id === selectedChildId)
-  const childProgress = progressData[selectedChildId]
+  const childProgress = progressData[selectedChildId as keyof typeof progressData]
 
   if (!selectedChild || !childProgress) return null
 
-  const chartData = childProgress.subjects.map((subject: any) => ({
+  const subjects = Array.isArray(childProgress.subjects) ? childProgress.subjects : []
+  const chartData = subjects.map((subject: any) => ({
     subject: subject.subject,
     completion: subject.completion,
   }))
@@ -49,7 +50,7 @@ export function PerChildProgress({ children, progressData }: PerChildProgressPro
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Subject Completion</h3>
             <ChartContainer height={300}>
               <ResponsiveBar
-                data={chartData}
+                data={Array.isArray(chartData) ? chartData : []}
                 keys={['completion']}
                 indexBy="subject"
                 layout="horizontal"

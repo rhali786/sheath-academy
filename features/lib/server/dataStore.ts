@@ -1,7 +1,7 @@
 import { MOCK_DATA } from './mockData'
 import type { DataStore, Task, QuranSession, QuranSessionRequest } from '../types'
 
-// In-memory data store (replaces Python _DATA_STORE)
+// In-memory data store (session lifetime; resets on redeploy)
 let dataStore: DataStore | null = null
 
 export function initializeDataStore(): DataStore {

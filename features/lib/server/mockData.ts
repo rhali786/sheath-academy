@@ -1,6 +1,6 @@
 import type { DataStore } from '../types'
 
-// Exact copy of MOCK_DATA from Python crud.py
+// Canonical mock seed for the in-memory store
 export const MOCK_DATA: DataStore = {
   children: [
     { id: 'adam_001', name: 'Adam', age: 11, grade: 5, avatar: 'A' },

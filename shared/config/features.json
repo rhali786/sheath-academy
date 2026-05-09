@@ -2,17 +2,15 @@
   "features": {
     "login": {
       "path": "./features/login",
-      "backendPort": 8000,
-      "backendUrl": "http://localhost:8000",
-      "frontendPort": 3001,
-      "description": "Authentication and login"
+      "description": "Authentication (planned; not wired in MVP)"
     },
     "dashboard": {
       "path": "./features/dashboard",
-      "backendPort": 8001,
-      "backendUrl": "http://localhost:8001",
-      "frontendPort": 3000,
-      "description": "Main dashboard"
+      "description": "Dashboard UI + REST handlers (Next.js App Router)"
     }
+  },
+  "nextApp": {
+    "devUrl": "http://localhost:3000",
+    "note": "Single Next.js process serves pages and /api/*"
   }
 }

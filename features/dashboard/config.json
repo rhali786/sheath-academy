@@ -1,15 +1,6 @@
 {
   "name": "dashboard",
   "version": "0.0.1",
-  "description": "Main dashboard feature",
-  "dependencies": [
-    "login"
-  ],
-  "database": {
-    "type": "json",
-    "path": "./features/dashboard/data/dashboard.json"
-  },
-  "ports": {
-    "backend": 8001
-  }
+  "description": "Main dashboard feature (Next.js: front + API under features/dashboard)",
+  "dependencies": ["login"]
 }

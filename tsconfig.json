@@ -43,7 +43,6 @@
   "exclude": [
     "node_modules",
     "features/dashboard/frontend",
-    "features/dashboard/backend",
     "features/dashboard/back"
   ]
 }

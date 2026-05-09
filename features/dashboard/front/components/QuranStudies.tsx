@@ -4,6 +4,20 @@ import { ChartContainer } from './shared/ChartContainer'
 import { X } from 'lucide-react'
 import type { QuranSession, Child, NivoLineSeries } from '../types'
 
+/** Nivo Line: pass layers, legends, markers, defs, fill explicitly — Line.defaultProps is unreliable with React 18.3+/Next 15 (undefined → .map / .length in Nivo internals). */
+const NIVO_LINE_LAYERS = [
+  'grid',
+  'markers',
+  'axes',
+  'areas',
+  'crosshair',
+  'lines',
+  'points',
+  'slices',
+  'mesh',
+  'legends',
+] as const
+
 interface QuranStudiesProps {
   children: Child[]
   quranSessions: QuranSession[]
@@ -57,6 +71,9 @@ export function QuranStudies({ children, quranSessions, onAddSession, chartData 
       ]
     },
   ]
+
+  const rawLineData = chartData ?? defaultChartData
+  const safeLineData: NivoLineSeries[] = Array.isArray(rawLineData) ? rawLineData : defaultChartData
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -113,7 +130,12 @@ export function QuranStudies({ children, quranSessions, onAddSession, chartData 
           <div className="lg:col-span-2">
             <ChartContainer height={350} title="Weekly Sessions">
               <ResponsiveLine
-                data={chartData || defaultChartData}
+                data={safeLineData}
+                layers={[...NIVO_LINE_LAYERS]}
+                legends={[]}
+                markers={[]}
+                defs={[]}
+                fill={[]}
                 margin={{ top: 20, right: 20, bottom: 60, left: 60 }}
                 xScale={{ type: 'point' }}
                 yScale={{ type: 'linear', min: 0, max: 2 }}

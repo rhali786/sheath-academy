@@ -1,4 +1,4 @@
-// TypeScript interfaces for all data models (replacing Pydantic)
+// TypeScript interfaces for all dashboard data models
 
 export interface Child {
   id: string

@@ -1,13 +1,6 @@
 {
   "name": "login",
   "version": "0.0.1",
-  "description": "Authentication and login feature",
-  "dependencies": [],
-  "database": {
-    "type": "json",
-    "path": "./features/login/data/login.json"
-  },
-  "ports": {
-    "backend": 8000
-  }
+  "description": "Authentication feature (planned)",
+  "dependencies": []
 }

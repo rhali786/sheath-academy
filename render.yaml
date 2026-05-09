@@ -1,3 +1,5 @@
+# NPM_CONFIG_CACHE + TMPDIR: Render filesystem can be tight/read-only in places;
+# point npm cache and temp files at /tmp so installs/builds succeed.
 services:
   - type: web
     name: sheath-academy-dashboard

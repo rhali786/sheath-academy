@@ -1,8 +1,18 @@
 import axios from 'axios'
 import type { ApiResponse, Task, DashboardMetrics, QuranSession, DashboardRecord, Alert } from '@/features/lib/types'
 
-// Use window.location.origin for client-side, or default to localhost for server-side
-const API_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
+function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    return window.location.origin
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`
+  }
+  const port = process.env.PORT || '3000'
+  return `http://127.0.0.1:${port}`
+}
+
+const API_BASE_URL = getApiBaseUrl()
 
 const api = axios.create({
   baseURL: API_BASE_URL,
