@@ -164,11 +164,14 @@ export function QuranStudies({ children, quranSessions, onAddSession, chartData 
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
+                  <label htmlFor="student" className="block text-sm font-medium text-gray-700 mb-1">Student</label>
                   <select
+                    id="student"
+                    name="childId"
                     value={formData.childId}
                     onChange={(e) => setFormData({ ...formData, childId: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                    required
                   >
                     {children.map((child) => (
                       <option key={child.id} value={child.id}>{child.name}</option>
@@ -177,11 +180,14 @@ export function QuranStudies({ children, quranSessions, onAddSession, chartData 
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                  <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">Type</label>
                   <select
+                    id="type"
+                    name="type"
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                    required
                   >
                     <option>New memorization</option>
                     <option>Revision</option>
@@ -190,43 +196,58 @@ export function QuranStudies({ children, quranSessions, onAddSession, chartData 
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Surah</label>
+                  <label htmlFor="surah" className="block text-sm font-medium text-gray-700 mb-1">Surah</label>
                   <input
+                    id="surah"
                     type="text"
+                    name="surah"
                     value={formData.surah}
                     onChange={(e) => setFormData({ ...formData, surah: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                    required
+                    autoComplete="off"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">From Ayah</label>
+                    <label htmlFor="fromAyah" className="block text-sm font-medium text-gray-700 mb-1">From Ayah</label>
                     <input
+                      id="fromAyah"
                       type="number"
+                      name="fromAyah"
                       value={formData.fromAyah}
                       onChange={(e) => setFormData({ ...formData, fromAyah: Number(e.target.value) })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                      required
+                      min="1"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">To Ayah</label>
+                    <label htmlFor="toAyah" className="block text-sm font-medium text-gray-700 mb-1">To Ayah</label>
                     <input
+                      id="toAyah"
                       type="number"
+                      name="toAyah"
                       value={formData.toAyah}
                       onChange={(e) => setFormData({ ...formData, toAyah: Number(e.target.value) })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                      required
+                      min="1"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
                   <textarea
+                    id="notes"
+                    name="notes"
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
                     rows={3}
+                    autoComplete="off"
                   />
                 </div>
 
