@@ -474,9 +474,53 @@ moduleNameMapper: {
 ## Common Errors & How to Avoid
 
 - **Always run `npm run build` before pushing** — catches 99% of issues
-- **Run `npm test` before committing** — all 27 tests must pass
+- **Run `npm test` before committing** — all 33 tests must pass
 - **Check `npm run dev` starts cleanly** — catches runtime dependency issues
 - **Never commit with unused imports** — `TS6133` warnings must be resolved
 - **Verify API endpoints with curl** — confirm response shape before assuming it works
 - **Keep /app/api/ routes thin** — delegate to /features/dashboard/back/ for logic
 - **Import from /features/ consistently** — avoid circular imports by keeping /app/ as thin routing layer
+
+## Critical Error to Watch For: Context Provider Mismatch
+
+### The Error
+```
+Error: useDashboard must be used within DashboardProvider
+```
+
+### Why It Happens
+- Component imports hook from wrong module (e.g., importing from `App.tsx` instead of `context/DashboardProvider.tsx`)
+- Multiple context instances exist in codebase (one in App.tsx, one in DashboardProvider.tsx)
+- Hook is used in component but provider instance is different
+
+### How to Prevent It
+1. **Use custom render function in tests**: Always render components within their providers
+   ```typescript
+   import { render } from '@testing-library/react/__tests__/utils/renderWithProvider'
+   // Automatically wraps component in DashboardProvider
+   ```
+
+2. **Check import paths**: When using `useContext_Dashboard()`, verify it's imported from:
+   ```typescript
+   // ✓ CORRECT
+   import { useContext_Dashboard } from '../context'
+   
+   // ✗ WRONG
+   import { useContext_Dashboard } from '../App'
+   ```
+
+3. **Run integration tests before committing**: Tests catch this error immediately
+   ```bash
+   npm test -- integration  # Runs all UI component tests
+   ```
+
+4. **When adding new components**: 
+   - Write integration test FIRST (renders component within DashboardProvider)
+   - Test will fail if component uses wrong hook instance
+   - Fix import paths until test passes
+   - Only then add component code
+
+### Why Tests Are Essential
+- **'node' environment**: Can't render components with providers → errors slip through
+- **'jsdom' environment**: Simulates browser DOM → component tree errors caught immediately
+- **Example**: "useDashboard must be used within DashboardProvider" error NOT caught in 'node' but IS caught in 'jsdom' tests
