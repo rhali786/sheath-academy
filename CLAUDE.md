@@ -2,6 +2,14 @@
 
 ## ⚠️ CRITICAL: TDD & Pre-Commit Validation
 
+**Git pre-commit hook is ACTIVE.** Every commit automatically runs the full validation sequence. ✅
+
+### Automatic Pre-Commit Validation
+
+The `.git/hooks/pre-commit` hook enforces all 4 steps below automatically. If ANY step fails, the commit is rejected.
+
+### Manual Verification (if needed)
+
 **Before EVERY commit, you MUST run this exact sequence:**
 
 ```bash
@@ -13,7 +21,7 @@ npm install
 npm run build  # Must succeed with zero TypeScript errors
 
 # 3. RUN TESTS
-npm test  # Must pass all 27 Jest tests
+npm test  # Must pass all 33 Jest tests
 
 # 4. TEST APP LOCALLY
 npm run dev &
