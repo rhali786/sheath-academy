@@ -4,6 +4,9 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Sheath Academy',
   description: 'Homeschool Dashboard',
+  icons: {
+    icon: '/favicon.svg',
+  },
 }
 
 export const dynamic = 'force-dynamic'
