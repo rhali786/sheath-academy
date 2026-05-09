@@ -2,7 +2,9 @@
 
 ## ⚠️ CRITICAL: TDD & Pre-Commit Validation
 
-**Git pre-commit hook is ACTIVE.** Every commit automatically runs the full validation sequence. ✅
+**Git hooks are ACTIVE:**
+- ✅ **Pre-commit hook** (`.git/hooks/pre-commit`): Validates build, tests, and server before allowing commit
+- ✅ **Post-commit hook** (`.git/hooks/post-commit`): Automatically triggers Render deployment after successful commit
 
 ### Automatic Pre-Commit Validation
 
