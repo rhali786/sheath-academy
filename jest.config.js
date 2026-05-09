@@ -5,9 +5,13 @@ const createJestConfig = nextJest({
 })
 
 const customJestConfig = {
-  testEnvironment: 'node',
+  testEnvironment: 'jsdom',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    '^@nivo/line$': '<rootDir>/features/dashboard/__tests__/mocks/nivo.tsx',
+    '^@nivo/bar$': '<rootDir>/features/dashboard/__tests__/mocks/nivo.tsx',
+    '^@nivo/core$': '<rootDir>/features/dashboard/__tests__/mocks/nivo.tsx',
   },
   testMatch: [
     '**/__tests__/**/*.test.ts',
@@ -28,6 +32,9 @@ const customJestConfig = {
       },
     }],
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(@nivo|d3-.*|internmap|delaunay|robust-predicates)/)',
+  ],
 }
 
 module.exports = createJestConfig(customJestConfig)

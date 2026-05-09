@@ -28,7 +28,7 @@ git add . && git commit -m "..."
 **Why each step matters:**
 - **Clean install**: Transitive peer dependencies fail during bundling, not runtime
 - **Build**: Catches TypeScript errors before they reach production
-- **Tests**: 27 Jest tests verify all API endpoints, CRUD operations, data integrity
+- **Tests**: 33 Jest tests verify all API endpoints, CRUD operations, data integrity, and UI component integration
 - **App startup**: Verifies Next.js server starts cleanly and endpoints respond
 
 **Non-negotiable rule:** Do not commit if build fails, tests fail, or app won't start.
@@ -278,6 +278,102 @@ npm test
 Tests live in `/features/dashboard/__tests__/api/` (co-located with the feature).
 
 All tests must pass before committing.
+
+## TDD for UI Components (Critical)
+
+**MANDATORY: Every UI component must have an integration test BEFORE any component code is written.**
+
+### Why This Matters
+
+A "useDashboard must be used within DashboardProvider" error was not caught until it crashed on Render because no integration tests existed. The component tests only tested isolated functions, not the actual component tree with providers.
+
+### The Problem That Was Caught by TDD
+
+- **Old approach**: Test individual functions → Test fails? → Fix code → Deploy
+- **Real world**: Component tree broken → Works locally (luck, import order) → Crashes on Render
+- **TDD approach**: Write integration test first → Test catches context/provider errors IMMEDIATELY
+
+### Test Architecture
+
+**UI Tests Location**: `/features/dashboard/__tests__/integration/`
+
+```
+__tests__/
+├── fixtures/
+│   └── mockData.ts              # Realistic mock data for all tests
+├── utils/
+│   └── renderWithProvider.tsx   # Custom render() that wraps with DashboardProvider
+├── integration/
+│   ├── Dashboard.test.tsx       # Full page integration (catches context errors)
+│   └── components/
+│       ├── TodayState.test.tsx  # Simple presentational component
+│       └── DashboardComponents.test.tsx  # Multi-component integration tests
+└── mocks/
+    └── nivo.tsx                 # Mocked Nivo chart components (avoid ES6 module issues)
+```
+
+### Custom Render Function (renderWithProvider)
+
+All component tests use this render function to automatically wrap components in DashboardProvider:
+
+```typescript
+// Import this custom render, NOT from @testing-library/react directly
+import { render, screen } from '@testing-library/react/__tests__/utils/renderWithProvider'
+
+// Now Dashboard's useContext_Dashboard() hook will work correctly
+test('Dashboard renders within provider', () => {
+  render(<Dashboard />)  // DashboardProvider is automatic
+  expect(screen.getByText(/Today/i)).toBeInTheDocument()
+})
+```
+
+### Test Requirements for New Components
+
+Before writing any React component, write tests that verify:
+
+1. **Component renders without crashing** — If it uses a hook, test with provider
+2. **Props are handled correctly** — Empty state, null values, data present
+3. **Child components render** — Hooks don't throw context errors
+4. **User interactions work** — Click handlers, form inputs, state changes
+
+### Running Tests
+
+```bash
+# Run all 33 tests (UI + API)
+npm test
+
+# Run only UI integration tests
+npm test -- integration
+
+# Run specific component test
+npm test -- DashboardComponents.test.tsx
+
+# Watch mode (re-run on file change)
+npm test -- --watch
+```
+
+### Why jsdom Environment
+
+Tests run with `testEnvironment: 'jsdom'` (not 'node') because:
+- jsdom simulates a real browser DOM
+- React Testing Library can query elements like `screen.getByText()`
+- Can test component rendering, event handling, hooks
+- Catches context provider errors (the original problem)
+
+### Nivo Charts in Tests
+
+Nivo components are mocked to avoid ES6 module parsing errors in Jest:
+
+```typescript
+// jest.config.js
+moduleNameMapper: {
+  '^@nivo/line$': '<rootDir>/features/dashboard/__tests__/mocks/nivo.tsx',
+  '^@nivo/bar$': '<rootDir>/features/dashboard/__tests__/mocks/nivo.tsx',
+}
+
+// Mocks render <div data-testid="mocked-line-chart">
+// Tests can verify chart is rendering without DOM errors
+```
 
 ## Migration Notes (from FastAPI to Next.js)
 

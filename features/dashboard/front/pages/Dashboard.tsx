@@ -6,7 +6,7 @@ import { NeedsAttention } from '../components/NeedsAttention'
 import { PerChildProgress } from '../components/PerChildProgress'
 import { QuranStudies } from '../components/QuranStudies'
 import { RecordsProof } from '../components/RecordsProof'
-import { useContext_Dashboard } from '../App'
+import { useContext_Dashboard } from '../context'
 import { dashboardApi } from '../services/api'
 
 export default function Dashboard() {
