@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Header } from '../components/Header'
+import { Header } from '@/features/layout/front/components/Header'
 import { TodayState } from '../components/TodayState'
 import { DoToday } from '../components/DoToday'
 import { NeedsAttention } from '../components/NeedsAttention'

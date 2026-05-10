@@ -1,5 +1,6 @@
 /**
- * After `npm run build`, starts production server briefly and checks /api/health + /api/dashboard/summary.
+ * After `npm run build`, starts production server briefly and checks /api/health.
+ * /api/dashboard/* is auth-protected (returns 307 → /login) and is no longer checked here.
  * Defaults to port 3010 so it does not collide with `next dev` on 3000. Override: SMOKE_PORT=3005 npm run smoke
  */
 const { spawn } = require('child_process')
@@ -77,14 +78,7 @@ async function main() {
     return
   }
 
-  const summary = await getJson('/api/dashboard/summary')
-  if (summary.status !== 'success') {
-    console.error('Smoke: /api/dashboard/summary unexpected body', summary)
-    shutdown(1)
-    return
-  }
-
-  console.log('Smoke: OK (health + dashboard/summary)')
+  console.log('Smoke: OK (health)')
   shutdown(0)
 }
 
