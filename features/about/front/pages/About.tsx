@@ -44,29 +44,14 @@ const wave1 = [
 
 const changelog = [
   {
-    version: '0.1.4',
-    label: 'Parent sign-in',
-    detail: 'Magic-link email auth, dev bypass, in-memory session adapter, route middleware.',
+    version: '0.2.0',
+    label: 'Planned — Wave 1B',
+    detail: "Weekly planner, lesson creation, lesson status states, today's lessons card.",
   },
   {
-    version: '0.1.3',
-    label: 'Wave 1 specification',
-    detail: '35 feature specs scaffolded; full Wave 1 specification document.',
-  },
-  {
-    version: '0.1.2',
-    label: 'Design system & nav',
-    detail: 'Madinah green palette, STYLES.md, responsive hamburger nav, favicon.',
-  },
-  {
-    version: '0.1.1',
-    label: 'Next.js stack',
-    detail: 'Migrated from Python prototype. TypeScript, API routes, Jest suite, Render deploy.',
-  },
-  {
-    version: '0.1.0',
-    label: 'Project foundation',
-    detail: 'Modular features/ architecture, dashboard UI, CI pipeline.',
+    version: '0.1.x',
+    label: 'Foundation (current)',
+    detail: 'Project setup, Next.js stack, dashboard UI, design system, responsive nav, Wave 1 specs, parent sign-in, About page.',
   },
 ]
 
