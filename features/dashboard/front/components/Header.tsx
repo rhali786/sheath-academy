@@ -1,10 +1,20 @@
+'use client'
+
+import { useState } from 'react'
+
 interface HeaderProps {
   onTabChange: (tab: string) => void
   selectedTab: string
 }
 
 export function Header({ onTabChange, selectedTab }: HeaderProps) {
+  const [menuOpen, setMenuOpen] = useState(false)
   const tabs = ['Today', 'Weekly', 'Reports', 'Settings']
+
+  function handleTabChange(tab: string) {
+    onTabChange(tab)
+    setMenuOpen(false)
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-slate-100 shadow-sm">
@@ -13,7 +23,6 @@ export function Header({ onTabChange, selectedTab }: HeaderProps) {
         {/* Brand row */}
         <div className="flex items-center justify-between py-4">
           <div className="flex items-center gap-3">
-            {/* Islamic star brand mark — ش (shin) in a green circle */}
             <div className="w-9 h-9 rounded-xl bg-forest-900 flex items-center justify-center flex-shrink-0 shadow-sm">
               <span className="text-white text-base font-bold leading-none" aria-hidden="true">ش</span>
             </div>
@@ -23,21 +32,41 @@ export function Header({ onTabChange, selectedTab }: HeaderProps) {
             </div>
           </div>
 
-          {/* Hijri date — featured, not an afterthought */}
-          <div className="text-right">
-            <div className="text-base font-bold text-forest-900 leading-tight" lang="ar" dir="rtl">
-              ١٧ ذو القعدة
+          <div className="flex items-center gap-3">
+            {/* Hijri date — hidden on small screens */}
+            <div className="hidden sm:block text-right">
+              <div className="text-base font-bold text-forest-900 leading-tight" lang="ar" dir="rtl">
+                ١٧ ذو القعدة
+              </div>
+              <div className="text-xs text-slate-400 mt-0.5">1447 AH · Sun, 10 May 2026</div>
             </div>
-            <div className="text-xs text-slate-400 mt-0.5">1447 AH · Sun, 10 May 2026</div>
+
+            {/* Hamburger — mobile only */}
+            <button
+              className="md:hidden p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
+            >
+              {menuOpen ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
 
-        {/* Tab nav */}
-        <div className="flex gap-0.5 -mb-px">
+        {/* Desktop tab nav */}
+        <div className="hidden md:flex gap-0.5 -mb-px">
           {tabs.map((tab) => (
             <button
               key={tab}
-              onClick={() => onTabChange(tab)}
+              onClick={() => handleTabChange(tab)}
               className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
                 selectedTab === tab
                   ? 'bg-forest-900 text-white'
@@ -49,6 +78,32 @@ export function Header({ onTabChange, selectedTab }: HeaderProps) {
           ))}
         </div>
       </div>
+
+      {/* Mobile dropdown menu */}
+      {menuOpen && (
+        <div className="md:hidden border-t border-slate-100 bg-white">
+          {/* Hijri date on mobile */}
+          <div className="px-4 py-3 border-b border-slate-100">
+            <div className="text-sm font-bold text-forest-900" lang="ar" dir="rtl">١٧ ذو القعدة</div>
+            <div className="text-xs text-slate-400 mt-0.5">1447 AH · Sun, 10 May 2026</div>
+          </div>
+          <nav className="py-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => handleTabChange(tab)}
+                className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${
+                  selectedTab === tab
+                    ? 'bg-forest-50 text-forest-900'
+                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </nav>
+        </div>
+      )}
     </header>
   )
 }
