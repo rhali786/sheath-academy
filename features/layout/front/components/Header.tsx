@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 
 interface HeaderProps {
@@ -12,6 +13,7 @@ interface HeaderProps {
 export function Header({ onTabChange, selectedTab }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const { data: session } = useSession()
+  const pathname = usePathname()
   const tabs = ['Today', 'Weekly', 'Reports', 'Settings']
 
   function handleTabChange(tab: string) {
@@ -105,6 +107,16 @@ export function Header({ onTabChange, selectedTab }: HeaderProps) {
               {tab}
             </button>
           ))}
+          <Link
+            href="/about"
+            className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
+              pathname === '/about'
+                ? 'bg-forest-900 text-white'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            About
+          </Link>
         </div>
       </div>
 
@@ -130,6 +142,17 @@ export function Header({ onTabChange, selectedTab }: HeaderProps) {
                 {tab}
               </button>
             ))}
+            <Link
+              href="/about"
+              onClick={() => setMenuOpen(false)}
+              className={`block px-4 py-3 text-sm font-medium transition-colors ${
+                pathname === '/about'
+                  ? 'bg-forest-50 text-forest-900'
+                  : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              About
+            </Link>
           </nav>
           {/* Mobile auth controls */}
           <div className="px-4 py-3 border-t border-slate-100">
