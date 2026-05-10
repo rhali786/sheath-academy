@@ -10,7 +10,7 @@ export function TodayState({ metrics }: TodayStateProps) {
 
   return (
     <section className="bg-slate-50 border-b border-slate-100">
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-5">
           Today's State
         </p>
