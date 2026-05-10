@@ -4,19 +4,30 @@ Homeschool dashboard (Next.js 15 App Router, React, TypeScript). Business logic 
 
 ---
 
+## Obligatory
+
+**Do these before anything else. They are not optional and do not appear again below.**
+
+- **`npm run setup-hooks`** — run once after cloning. Installs `scripts/hooks/pre-commit` into `.git/hooks/`. Without it the patch version in `package.json` (shown in the app header) will not increment on commit.
+- **`npm install`** — required before dev, build, or test.
+- **Check `.env.example`** before running locally. At minimum `AUTH_SECRET` and `RESEND_API_KEY` must be set in `.env.local` (or Render → Environment) or auth is silently broken.
+- **`npm run build` and `npm test` must pass before merging.** CI enforces this; don't skip it locally.
+- **Never commit secrets.** `.env.local`, deploy hook URLs, API keys. Rotate immediately if any were ever exposed.
+
+---
+
 ## Commands
 
 | Command | Purpose |
 |--------|---------|
 | `npm install` | Dependencies (single root `package.json`) |
+| `npm run setup-hooks` | Install git hooks (see Obligatory above) |
 | `npm run dev` | Dev server (port 3000) |
 | `npm run dev:clean` | Delete `.next` then dev — fixes stale/mixed build artifacts |
 | `npm run build` | Production build (must pass before merge) |
 | `npm run start` | Production server after build |
 | `npm test` | Jest (API + integration; `jsdom` for UI) |
-| `npm run smoke` | After build: brief `next start`, checks `/api/health` + `/api/dashboard/summary`. Default port **3010** (`SMOKE_PORT` to override) so it does not clash with dev on 3000 |
-
-**Before merging:** `npm run build` and `npm test` must pass. Run `npm run smoke` locally to mirror CI.
+| `npm run smoke` | After build: brief `next start`, checks `/api/health`. Default port **3010** (`SMOKE_PORT` to override) so it does not clash with dev on 3000 |
 
 **Dependency / install issues:** occasional full reinstall is useful (`rm -rf node_modules` + lockfile + `npm install`); not required on every change.
 
@@ -41,6 +52,8 @@ Homeschool dashboard (Next.js 15 App Router, React, TypeScript). Business logic 
 ```
 features/
   lib/                    # types, mockData, dataStore (shared)
+  auth/                   # sign-in feature (NextAuth, magic link, dev bypass)
+  layout/                 # shared layout components (Header)
   dashboard/
     api/router.ts         # maps /api/dashboard/* → route handlers
     api/routes/           # handlers (summary, tasks, …)
@@ -48,8 +61,15 @@ features/
     __tests__/            # api/, integration/, utils, mocks
 app/
   api/health/route.ts
+  api/auth/[...nextauth]/route.ts → NextAuth handlers
   api/[...slug]/route.ts → dashboard router
+  login/                  # login page (thin wrapper over features/auth)
   layout.tsx, page.tsx, globals.css
+middleware.ts             # route protection — redirects unauthenticated to /login
+scripts/
+  hooks/pre-commit        # committed hook source; copied to .git/hooks/ by setup-hooks
+  bump-version.cjs        # increments patch version in package.json
+  setup-hooks.sh          # installs hooks (npm run setup-hooks)
 ```
 
 New REST surface: extend the dynamic slug handler and the feature router consistently. Keep `app/api` imports thin.
@@ -88,11 +108,12 @@ New REST surface: extend the dynamic slug handler and the feature router consist
 
 ## Testing
 
-- Tests live in `features/dashboard/__tests__/` (API + integration; **33** cases — `npm test` is the source of truth if this drifts).
+- Tests live under `features/*/___tests__/` (currently **69** cases — `npm test` is the source of truth if this drifts).
 - UI tests use **`jsdom`** and **`@/features/dashboard/__tests__/utils/renderWithProvider`** so components sit under `DashboardProvider` (avoids `useDashboard must be used within DashboardProvider` at runtime).
 - **New UI:** add or extend integration coverage with the provider; chart-heavy changes warrant a quick **browser** check.
 
-Jest maps `@nivo/line` and `@nivo/bar` to `__tests__/mocks/nivo.tsx`.
+Jest maps `@nivo/line`, `@nivo/bar`, and `@nivo/core` to `__tests__/mocks/nivo.tsx`.
+Jest maps `next-auth/react` to `__mocks__/next-auth/react.ts` (default unauthenticated stub; override per-test with `jest.mock`).
 
 ---
 
@@ -101,6 +122,7 @@ Jest maps `@nivo/line` and `@nivo/bar` to `__tests__/mocks/nivo.tsx`.
 - Do not force `dynamic = 'force-dynamic'` on root `app/layout.tsx` unless there is a specific need.
 - Webpack tweaks that change **`optimization.minimize`** must **not** apply to the client bundle in **dev** (breaks Fast Refresh).
 - `outputFileTracingRoot` helps `next build` / `next start` when a parent folder has another lockfile; dev behavior and static 404s are documented below.
+- `env.NEXT_PUBLIC_APP_VERSION` is injected from `package.json` at build time — shown in the header. It updates automatically via the pre-commit hook.
 
 ---
 
@@ -110,14 +132,17 @@ Jest maps `@nivo/line` and `@nivo/bar` to `__tests__/mocks/nivo.tsx`.
 |--------|----------------|------------|
 | `/_next/static/...` 404 in dev | Stale or mixed `.next` (build/start vs dev, or interrupted compile) | Stop servers, `npm run dev:clean`, hard refresh. Do not run `next build` while `next dev` is running. |
 | Edits not hot-reloading | Client minify enabled in dev | Keep minimize changes behind `!dev` in webpack config. |
-| “Unstyled” dashboard | Tailwind `content` missing `features/**` | Fix root `tailwind.config.js`. |
+| "Unstyled" dashboard | Tailwind `content` missing `features/**` | Fix root `tailwind.config.js`. |
 | Nivo crash (`undefined.map` / `.length`) | Missing explicit array props | Pass empty arrays / default layers as in `QuranStudies` / similar. |
 | Smoke or prod 500 / missing chunk | Corrupt `.next` or port conflict | `node scripts/clean-next.mjs`, `npm run build`, ensure `SMOKE_PORT` is free. |
 | Tests pass, prod chart breaks | Nivo not exercised in Jest | Browser smoke after chart edits. |
 | Type / import errors | Path aliases or wrong feature folder | Use `@/` and `features/` consistently; check `tsconfig` `paths` / `exclude`. |
+| All routes redirect to `/login` unexpectedly | `AUTH_SECRET` not set | Add `AUTH_SECRET` to `.env.local` or Render environment (see `.env.example`). |
+| Magic link email never arrives | `RESEND_API_KEY` not set or domain unverified | Check `.env.example`; verify sending domain in Resend dashboard. |
+| Version in header stuck / not incrementing | Pre-commit hook not installed | Run `npm run setup-hooks`. |
 
 ---
 
 ## Known product gaps (not bugs)
 
-In-memory data only; limited validation and error boundaries; no e2e suite. Backlog examples: auth, persistence, Playwright, accessibility pass, richer filtering.
+In-memory data only; limited validation and error boundaries; no e2e suite. Backlog examples: persistence, Playwright, accessibility pass, richer filtering, email allow-list, user-to-household binding.
