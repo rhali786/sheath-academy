@@ -11,30 +11,30 @@ export function NeedsAttention({ alerts }: NeedsAttentionProps) {
 
   const sorted = [...alerts].sort((a, b) => {
     if (sortBy === 'priority') {
-      const priorityOrder = { amber: 0, red: 1, gray: 2 }
-      return (priorityOrder[a.priority as keyof typeof priorityOrder] || 3) -
-             (priorityOrder[b.priority as keyof typeof priorityOrder] || 3)
+      const order = { red: 0, amber: 1, gray: 2 }
+      return (order[a.priority as keyof typeof order] ?? 3) -
+             (order[b.priority as keyof typeof order] ?? 3)
     }
     return 0
   })
 
   return (
-    <section className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 lg:col-span-1">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">Needs Attention</h2>
+    <section>
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-xl font-bold text-slate-900">Needs Attention</h2>
         <select
           id="sortBy"
           name="sortBy"
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as 'priority' | 'date')}
-          className="text-sm px-3 py-1 border border-gray-200 rounded-lg bg-white text-gray-700"
+          className="text-xs font-medium px-3 py-1.5 border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-2 focus:ring-forest-900"
           autoComplete="off"
         >
-          <option value="priority">Priority</option>
-          <option value="date">Date</option>
+          <option value="priority">By Priority</option>
+          <option value="date">By Date</option>
         </select>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-2">
         {sorted.map((alert) => (
           <AlertItem key={alert.id} alert={alert} />
         ))}

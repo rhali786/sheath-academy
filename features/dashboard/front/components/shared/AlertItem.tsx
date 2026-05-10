@@ -1,45 +1,39 @@
-import { AlertCircle } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import type { Alert } from '../../types'
 
 interface AlertItemProps {
   alert: Alert
 }
 
-const priorityColors = {
-  amber: 'bg-amber-50 border-amber-200',
-  red: 'bg-red-50 border-red-200',
-  gray: 'bg-gray-50 border-gray-200',
+const priorityStyles = {
+  amber: { border: 'border-l-amber-400', icon: 'text-amber-500' },
+  red:   { border: 'border-l-red-400',   icon: 'text-red-500' },
+  gray:  { border: 'border-l-slate-300', icon: 'text-slate-400' },
 }
 
-const badgeColors = {
-  amber: 'badge-amber',
-  red: 'badge-red',
-  gray: 'badge-gray',
+const childNames: Record<string, string> = {
+  adam_001:     'Adam',
+  khadijah_001: 'Khadijah',
+  zayd_001:     'Zayd',
 }
 
 export function AlertItem({ alert }: AlertItemProps) {
-  const bgColor = priorityColors[alert.priority as keyof typeof priorityColors] || priorityColors.gray
-  const badgeColor = badgeColors[alert.priority as keyof typeof badgeColors] || badgeColors.gray
+  const style = priorityStyles[alert.priority as keyof typeof priorityStyles] || priorityStyles.gray
 
   return (
-    <div className={`rounded-lg border p-4 ${bgColor}`}>
+    <div className={`rounded-xl border-l-4 ${style.border} bg-white shadow-sm p-4`}>
       <div className="flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-        <div className="flex-grow">
-          <div className="flex items-center gap-2 mb-1">
-            {alert.childId && alert.childId !== 'family' && (
-              <span className={`badge text-xs ${badgeColor}`}>
-                {alert.childId === 'adam_001' ? 'Adam' : alert.childId === 'khadijah_001' ? 'Khadijah' : 'Zayd'}
-              </span>
-            )}
-            {!alert.childId && (
-              <span className="badge badge-gray text-xs">—</span>
-            )}
-          </div>
-          <h3 className="font-semibold text-gray-900">{alert.title}</h3>
-          <p className="text-sm text-gray-600 mt-1">{alert.detail}</p>
+        <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${style.icon}`} />
+        <div className="flex-grow min-w-0">
+          {alert.childId && alert.childId !== 'family' && (
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">
+              {childNames[alert.childId] || alert.childId}
+            </p>
+          )}
+          <h3 className="text-sm font-semibold text-slate-900 leading-snug">{alert.title}</h3>
+          <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{alert.detail}</p>
         </div>
-        <button className="text-sm font-medium text-blue-600 hover:text-blue-700 whitespace-nowrap">
+        <button className="text-xs font-semibold text-sky-600 hover:text-sky-700 whitespace-nowrap flex-shrink-0 mt-0.5">
           {alert.actionButton}
         </button>
       </div>

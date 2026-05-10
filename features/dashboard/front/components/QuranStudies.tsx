@@ -1,22 +1,9 @@
 import { useState } from 'react'
-import { ResponsiveLine } from '@nivo/line'
+import { ResponsiveBar } from '@nivo/bar'
 import { ChartContainer } from './shared/ChartContainer'
 import { X } from 'lucide-react'
+import { nivoTheme, childColors } from '../theme'
 import type { QuranSession, Child, NivoLineSeries } from '../types'
-
-/** Nivo Line: pass layers, legends, markers, defs, fill explicitly — Line.defaultProps is unreliable with React 18.3+/Next 15 (undefined → .map / .length in Nivo internals). */
-const NIVO_LINE_LAYERS = [
-  'grid',
-  'markers',
-  'axes',
-  'areas',
-  'crosshair',
-  'lines',
-  'points',
-  'slices',
-  'mesh',
-  'legends',
-] as const
 
 interface QuranStudiesProps {
   children: Child[]
@@ -24,6 +11,37 @@ interface QuranStudiesProps {
   onAddSession: (session: any) => void
   chartData?: NivoLineSeries[]
 }
+
+const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+
+function buildBarData(lineData: NivoLineSeries[]) {
+  return WEEK_DAYS.map(day => {
+    const row: Record<string, any> = { day }
+    lineData.forEach(series => {
+      const point = series.data.find(d => d.x === day)
+      row[series.id as string] = point ? point.y : 0
+    })
+    return row
+  })
+}
+
+const defaultChartData: NivoLineSeries[] = [
+  {
+    id: 'Adam',
+    color: childColors[0],
+    data: [{ x: 'Mon', y: 1 }, { x: 'Tue', y: 1 }, { x: 'Wed', y: 0 }, { x: 'Thu', y: 1 }, { x: 'Fri', y: 0 }],
+  },
+  {
+    id: 'Khadijah',
+    color: childColors[1],
+    data: [{ x: 'Mon', y: 1 }, { x: 'Tue', y: 0 }, { x: 'Wed', y: 1 }, { x: 'Thu', y: 1 }, { x: 'Fri', y: 0 }],
+  },
+  {
+    id: 'Zayd',
+    color: childColors[2],
+    data: [{ x: 'Mon', y: 0 }, { x: 'Tue', y: 1 }, { x: 'Wed', y: 1 }, { x: 'Thu', y: 0 }, { x: 'Fri', y: 0 }],
+  },
+]
 
 export function QuranStudies({ children, quranSessions, onAddSession, chartData }: QuranStudiesProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -36,44 +54,10 @@ export function QuranStudies({ children, quranSessions, onAddSession, chartData 
     notes: '',
   })
 
-  const defaultChartData: NivoLineSeries[] = [
-    {
-      id: 'Adam',
-      color: '#3b82f6',
-      data: [
-        { x: 'Mon', y: 1 },
-        { x: 'Tue', y: 1 },
-        { x: 'Wed', y: 0 },
-        { x: 'Thu', y: 1 },
-        { x: 'Fri', y: 0 },
-      ]
-    },
-    {
-      id: 'Khadijah',
-      color: '#10b981',
-      data: [
-        { x: 'Mon', y: 1 },
-        { x: 'Tue', y: 0 },
-        { x: 'Wed', y: 1 },
-        { x: 'Thu', y: 1 },
-        { x: 'Fri', y: 0 },
-      ]
-    },
-    {
-      id: 'Zayd',
-      color: '#f59e0b',
-      data: [
-        { x: 'Mon', y: 0 },
-        { x: 'Tue', y: 1 },
-        { x: 'Wed', y: 1 },
-        { x: 'Thu', y: 0 },
-        { x: 'Fri', y: 0 },
-      ]
-    },
-  ]
-
-  const rawLineData = chartData ?? defaultChartData
-  const safeLineData: NivoLineSeries[] = Array.isArray(rawLineData) ? rawLineData : defaultChartData
+  const rawData = Array.isArray(chartData) ? chartData : defaultChartData
+  const barData = buildBarData(rawData)
+  const childKeys = rawData.map(s => s.id as string)
+  const barColors = rawData.map((_, i) => childColors[i] || childColors[0])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -90,209 +74,246 @@ export function QuranStudies({ children, quranSessions, onAddSession, chartData 
   }
 
   return (
-    <section className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-      <div className="card-lg">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Quran, Arabic & Islamic Studies</h2>
+    <section className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-slate-900">Quran, Arabic & Islamic Studies</h2>
+        <p className="text-sm text-slate-400 mt-1">Weekly session tracking</p>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Left Column: Quran Logging */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quran Logging</h3>
-            <div className="space-y-4">
-              {children.map((child) => {
-                const childSession = quranSessions.find(s => s.childId === child.id)
-                return (
-                  <div key={child.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <p className="font-bold text-gray-900">{child.name}</p>
-                    {childSession && (
-                      <>
-                        <p className="text-sm text-gray-600 mt-1">{childSession.surah} {childSession.fromAyah}–{childSession.toAyah}</p>
-                        <p className="text-xs text-gray-500 mt-1">Type: {childSession.type}</p>
-                        <p className="text-xs text-gray-500">Last: {childSession.lastLogged}</p>
-                      </>
-                    )}
-                    <button
-                      onClick={() => {
-                        setFormData({ ...formData, childId: child.id })
-                        setIsModalOpen(true)
-                      }}
-                      className="mt-3 w-full px-3 py-2 bg-blue-50 text-blue-600 rounded-lg font-medium text-sm hover:bg-blue-100 transition"
-                    >
-                      Log Session
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Middle Column: Chart */}
-          <div className="lg:col-span-2">
-            <ChartContainer height={350} title="Weekly Sessions">
-              <ResponsiveLine
-                data={safeLineData}
-                layers={[...NIVO_LINE_LAYERS]}
-                legends={[]}
-                markers={[]}
-                defs={[]}
-                fill={[]}
-                margin={{ top: 20, right: 20, bottom: 60, left: 60 }}
-                xScale={{ type: 'point' }}
-                yScale={{ type: 'linear', min: 0, max: 2 }}
-                axisBottom={{
-                  tickSize: 5,
-                  tickPadding: 5,
-                  tickRotation: 0,
-                  legend: 'Day',
-                  legendOffset: 36,
-                  legendPosition: 'middle',
-                }}
-                axisLeft={{
-                  tickSize: 5,
-                  tickPadding: 5,
-                  tickRotation: 0,
-                  legend: 'Sessions',
-                  legendOffset: -40,
-                  legendPosition: 'middle',
-                }}
-                colors={{ datum: 'color' }}
-                enableArea={true}
-                pointSize={6}
-                pointBorderWidth={2}
-                pointBorderColor={{ from: 'serieColor', modifiers: [['darker', 0.3]] }}
-                tooltip={({ point }: any) => (
-                  <div className="bg-white rounded-lg shadow-lg p-2 text-xs">
-                    <strong>{point.serieId}:</strong> {point.data.y} sessions
+        {/* Per-child logging cards */}
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1">
+            Quran Logging
+          </p>
+          {children.map((child, i) => {
+            const session = quranSessions.find(s => s.childId === child.id)
+            const dotColor = childColors[i] || childColors[0]
+            return (
+              <div key={child.id} className="bg-white rounded-xl shadow-sm p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: dotColor }}
+                  />
+                  <p className="font-semibold text-slate-900 text-sm">{child.name}</p>
+                </div>
+                {session ? (
+                  <div className="space-y-0.5 mb-3">
+                    <p className="text-sm font-medium text-slate-700">
+                      {session.surah} {session.fromAyah}–{session.toAyah}
+                    </p>
+                    <p className="text-xs text-slate-400">{session.type} · Last: {session.lastLogged}</p>
                   </div>
+                ) : (
+                  <p className="text-sm text-slate-400 mb-3">No session logged</p>
                 )}
-              />
-            </ChartContainer>
-          </div>
-        </div>
-
-        {/* Modal */}
-        {isModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg max-w-md w-full p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900">Log Quran Session</h3>
                 <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  onClick={() => {
+                    setFormData(f => ({ ...f, childId: child.id }))
+                    setIsModalOpen(true)
+                  }}
+                  className="w-full py-2 text-xs font-semibold rounded-lg border border-forest-200 text-forest-900 hover:bg-forest-50 transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  Log Session
                 </button>
               </div>
+            )
+          })}
+        </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label htmlFor="student" className="block text-sm font-medium text-gray-700 mb-1">Student</label>
-                  <select
-                    id="student"
-                    name="childId"
-                    value={formData.childId}
-                    onChange={(e) => setFormData({ ...formData, childId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
-                    required
-                  >
-                    {children.map((child) => (
-                      <option key={child.id} value={child.id}>{child.name}</option>
-                    ))}
-                  </select>
-                </div>
+        {/* Grouped horizontal bar chart — one cluster per day, one bar per child */}
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">
+            Weekly Sessions
+          </p>
 
-                <div>
-                  <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                  <select
-                    id="type"
-                    name="type"
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
-                    required
-                  >
-                    <option>New memorization</option>
-                    <option>Revision</option>
-                    <option>Recitation practice</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="surah" className="block text-sm font-medium text-gray-700 mb-1">Surah</label>
-                  <input
-                    id="surah"
-                    type="text"
-                    name="surah"
-                    value={formData.surah}
-                    onChange={(e) => setFormData({ ...formData, surah: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
-                    required
-                    autoComplete="off"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="fromAyah" className="block text-sm font-medium text-gray-700 mb-1">From Ayah</label>
-                    <input
-                      id="fromAyah"
-                      type="number"
-                      name="fromAyah"
-                      value={formData.fromAyah}
-                      onChange={(e) => setFormData({ ...formData, fromAyah: Number(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
-                      required
-                      min="1"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="toAyah" className="block text-sm font-medium text-gray-700 mb-1">To Ayah</label>
-                    <input
-                      id="toAyah"
-                      type="number"
-                      name="toAyah"
-                      value={formData.toAyah}
-                      onChange={(e) => setFormData({ ...formData, toAyah: Number(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
-                      required
-                      min="1"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
-                  <textarea
-                    id="notes"
-                    name="notes"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
-                    rows={3}
-                    autoComplete="off"
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
-                  >
-                    Save
-                  </button>
-                </div>
-              </form>
-            </div>
+          {/* Legend */}
+          <div className="flex gap-5 mb-4 flex-wrap">
+            {childKeys.map((key, i) => (
+              <div key={key} className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: barColors[i] }} />
+                <span className="text-xs text-slate-500 font-medium">{key}</span>
+              </div>
+            ))}
           </div>
-        )}
+
+          <ChartContainer height={280}>
+            <ResponsiveBar
+              data={barData}
+              keys={childKeys}
+              indexBy="day"
+              layout="horizontal"
+              groupMode="grouped"
+              margin={{ top: 10, right: 20, bottom: 20, left: 50 }}
+              colors={barColors}
+              theme={nivoTheme}
+              maxValue={2}
+              axisLeft={{
+                tickSize: 0,
+                tickPadding: 10,
+              }}
+              axisBottom={{
+                tickSize: 0,
+                tickPadding: 8,
+                tickValues: [0, 1, 2],
+                format: (v: number) => Number.isInteger(v) ? String(v) : '',
+              }}
+              enableLabel={false}
+              enableGridX={true}
+              enableGridY={false}
+              borderRadius={3}
+              padding={0.35}
+              innerPadding={3}
+              legends={[]}
+              tooltip={({ id, value, color: c }) => (
+                <div className="bg-white rounded-lg shadow-lg px-3 py-2 text-xs border border-slate-100">
+                  <span className="font-semibold" style={{ color: c }}>{id as string}</span>
+                  <span className="text-slate-500 ml-1.5">
+                    — {value} session{value !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              )}
+            />
+          </ChartContainer>
+        </div>
       </div>
+
+      {/* Log session modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-bold text-slate-900">Log Quran Session</h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="student" className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                  Student
+                </label>
+                <select
+                  id="student"
+                  name="childId"
+                  value={formData.childId}
+                  onChange={(e) => setFormData(f => ({ ...f, childId: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-900"
+                  required
+                >
+                  {children.map((child) => (
+                    <option key={child.id} value={child.id}>{child.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="type" className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                  Type
+                </label>
+                <select
+                  id="type"
+                  name="type"
+                  value={formData.type}
+                  onChange={(e) => setFormData(f => ({ ...f, type: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-900"
+                  required
+                >
+                  <option>New memorization</option>
+                  <option>Revision</option>
+                  <option>Recitation practice</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="surah" className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                  Surah
+                </label>
+                <input
+                  id="surah"
+                  type="text"
+                  name="surah"
+                  value={formData.surah}
+                  onChange={(e) => setFormData(f => ({ ...f, surah: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-900"
+                  required
+                  autoComplete="off"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="fromAyah" className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                    From Ayah
+                  </label>
+                  <input
+                    id="fromAyah"
+                    type="number"
+                    name="fromAyah"
+                    value={formData.fromAyah}
+                    onChange={(e) => setFormData(f => ({ ...f, fromAyah: Number(e.target.value) }))}
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-900"
+                    required
+                    min="1"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="toAyah" className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                    To Ayah
+                  </label>
+                  <input
+                    id="toAyah"
+                    type="number"
+                    name="toAyah"
+                    value={formData.toAyah}
+                    onChange={(e) => setFormData(f => ({ ...f, toAyah: Number(e.target.value) }))}
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-900"
+                    required
+                    min="1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="notes" className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                  Notes
+                </label>
+                <textarea
+                  id="notes"
+                  name="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData(f => ({ ...f, notes: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-900 resize-none"
+                  rows={3}
+                  autoComplete="off"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2.5 bg-forest-900 text-white rounded-lg text-sm font-medium hover:bg-forest-800 transition-colors"
+                >
+                  Save Session
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

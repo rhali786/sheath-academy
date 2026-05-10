@@ -1,14 +1,15 @@
-
 interface ChartContainerProps {
   children: React.ReactNode
   height?: number
   title?: string
 }
 
-export function ChartContainer({ children, height = 350, title }: ChartContainerProps) {
+export function ChartContainer({ children, height = 280, title }: ChartContainerProps) {
   return (
     <div className="w-full">
-      {title && <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>}
+      {title && (
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">{title}</p>
+      )}
       <div style={{ height: `${height}px` }} className="w-full">
         {children}
       </div>

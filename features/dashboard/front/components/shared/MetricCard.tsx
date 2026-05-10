@@ -1,4 +1,3 @@
-
 interface MetricCardProps {
   label: string
   value: string | number
@@ -6,22 +5,25 @@ interface MetricCardProps {
 }
 
 const colorMap = {
-  green: { bg: 'bg-green-50', badge: 'badge-green', icon: 'text-green-600' },
-  amber: { bg: 'bg-amber-50', badge: 'badge-amber', icon: 'text-amber-600' },
-  red: { bg: 'bg-red-50', badge: 'badge-red', icon: 'text-red-600' },
-  blue: { bg: 'bg-blue-50', badge: 'badge-blue', icon: 'text-blue-600' },
-  gray: { bg: 'bg-gray-50', badge: 'badge-gray', icon: 'text-gray-600' },
+  green: { numeral: 'text-forest-900', bar: 'bg-forest-700' },
+  amber: { numeral: 'text-amber-700',  bar: 'bg-amber-500' },
+  red:   { numeral: 'text-red-600',    bar: 'bg-red-500' },
+  blue:  { numeral: 'text-sky-600',    bar: 'bg-sky-500' },
+  gray:  { numeral: 'text-slate-500',  bar: 'bg-slate-400' },
 }
 
 export function MetricCard({ label, value, statusColor }: MetricCardProps) {
-  const colors = colorMap[statusColor]
+  const c = colorMap[statusColor]
 
   return (
-    <div className={`card ${colors.bg}`}>
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-gray-600">{label}</p>
-        <p className={`text-2xl font-bold ${colors.icon}`}>{value}</p>
-      </div>
+    <div className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
+      <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3 leading-none">
+        {label}
+      </p>
+      <p className={`text-4xl font-bold leading-none tabular-nums ${c.numeral}`}>
+        {value}
+      </p>
+      <div className={`mt-4 h-0.5 w-8 rounded-full ${c.bar}`} />
     </div>
   )
 }
