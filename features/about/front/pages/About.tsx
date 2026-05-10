@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { Header } from '@/features/layout/front/components/Header'
 
 const pains = [
   {
@@ -58,27 +61,7 @@ const changelog = [
 export function AboutPage() {
   return (
     <div className="bg-slate-50 min-h-screen">
-
-      {/* Nav bar */}
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-100 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-forest-900 flex items-center justify-center flex-shrink-0 shadow-sm">
-              <span className="text-white text-base font-bold leading-none" aria-hidden="true">ش</span>
-            </div>
-            <div>
-              <p className="text-base font-bold text-slate-900 leading-tight tracking-tight">Sheath Academy</p>
-              <p className="text-xs text-slate-400">Home Education</p>
-            </div>
-          </Link>
-          <Link
-            href="/login"
-            className="px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800 transition-colors"
-          >
-            Sign in
-          </Link>
-        </div>
-      </header>
+      <Header />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-20">
 
