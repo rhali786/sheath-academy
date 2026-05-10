@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
+import { useSession, signOut } from 'next-auth/react'
 
 interface HeaderProps {
   onTabChange: (tab: string) => void
@@ -9,6 +11,7 @@ interface HeaderProps {
 
 export function Header({ onTabChange, selectedTab }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { data: session } = useSession()
   const tabs = ['Today', 'Weekly', 'Reports', 'Settings']
 
   function handleTabChange(tab: string) {
@@ -28,7 +31,7 @@ export function Header({ onTabChange, selectedTab }: HeaderProps) {
             </div>
             <div>
               <h1 className="text-base font-bold text-slate-900 leading-tight tracking-tight">Sheath Academy</h1>
-              <p className="text-xs text-slate-400">Naeem Family · Home Education</p>
+              <p className="text-xs text-slate-400">Home Education</p>
             </div>
           </div>
 
@@ -40,6 +43,27 @@ export function Header({ onTabChange, selectedTab }: HeaderProps) {
               </div>
               <div className="text-xs text-slate-400 mt-0.5">1447 AH · Sun, 10 May 2026</div>
             </div>
+
+            {/* Auth controls */}
+            {session ? (
+              <div className="hidden md:flex items-center gap-2">
+                <span className="text-xs text-slate-500 max-w-[160px] truncate">{session.user?.email}</span>
+                <button
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+                  aria-label="Sign out"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="hidden md:inline-flex px-3 py-1.5 text-xs font-medium rounded-lg bg-forest-900 text-white hover:bg-forest-800 transition-colors"
+              >
+                Sign in
+              </Link>
+            )}
 
             {/* Hamburger — mobile only */}
             <button
@@ -102,6 +126,25 @@ export function Header({ onTabChange, selectedTab }: HeaderProps) {
               </button>
             ))}
           </nav>
+          {/* Mobile auth controls */}
+          <div className="px-4 py-3 border-t border-slate-100">
+            {session ? (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-500 truncate max-w-[180px]">{session.user?.email}</span>
+                <button
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                  className="text-xs font-medium text-slate-600 hover:text-slate-900"
+                  aria-label="Sign out"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <Link href="/login" className="text-xs font-medium text-forest-900 hover:underline">
+                Sign in
+              </Link>
+            )}
+          </div>
         </div>
       )}
     </header>

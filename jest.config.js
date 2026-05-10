@@ -9,6 +9,7 @@ const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    '^next-auth/react$': '<rootDir>/__mocks__/next-auth/react.ts',
     '^@nivo/line$': '<rootDir>/features/dashboard/__tests__/mocks/nivo.tsx',
     '^@nivo/bar$': '<rootDir>/features/dashboard/__tests__/mocks/nivo.tsx',
     '^@nivo/core$': '<rootDir>/features/dashboard/__tests__/mocks/nivo.tsx',
@@ -33,7 +34,7 @@ const customJestConfig = {
     }],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(@nivo|d3-.*|internmap|delaunay|robust-predicates)/)',
+    'node_modules/(?!(@nivo|d3-.*|internmap|delaunay|robust-predicates|next-auth|@auth)/)',
   ],
 }
 
