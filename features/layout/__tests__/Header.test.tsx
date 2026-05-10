@@ -67,6 +67,18 @@ describe('Header — authenticated', () => {
   })
 })
 
+describe('Header — version display', () => {
+  beforeEach(() => {
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
+  })
+
+  test('renders version string next to brand name', () => {
+    render(<Header {...defaultProps} />)
+    // NEXT_PUBLIC_APP_VERSION is undefined in tests; fallback is "0.1.0"
+    expect(screen.getByText(/v0\.\d+\.\d+/)).toBeInTheDocument()
+  })
+})
+
 describe('Header — tab navigation', () => {
   beforeEach(() => {
     mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })

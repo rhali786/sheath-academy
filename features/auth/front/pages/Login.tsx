@@ -3,6 +3,8 @@
 import { useState, FormEvent } from 'react'
 import { signIn } from 'next-auth/react'
 
+const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === 'true'
+
 export default function Login() {
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
@@ -38,12 +40,12 @@ export default function Login() {
             <div className="text-center py-4">
               <div className="w-12 h-12 rounded-full bg-forest-50 flex items-center justify-center mx-auto mb-4">
                 <svg className="w-6 h-6 text-forest-900" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
               <h2 className="text-base font-semibold text-slate-900 mb-1">Check your email</h2>
               <p className="text-sm text-slate-500">
-                We sent a sign-in link to <span className="font-medium text-slate-700">{email}</span>. It expires in 15 minutes.
+                We sent a sign-in link to <span className="font-medium text-slate-700">{email}</span>. It expires in 24 hours.
               </p>
             </div>
           ) : (
@@ -117,10 +119,59 @@ export default function Login() {
                   Continue with Facebook
                 </button>
               </div>
+
+              {/* Dev bypass — only visible when NEXT_PUBLIC_DEV_MODE=true at build time */}
+              {DEV_MODE && <DevBypassSection />}
             </>
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+export function DevBypassSection() {
+  const [token, setToken] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
+
+  async function handleBypass(e: FormEvent) {
+    e.preventDefault()
+    if (!token.trim()) return
+    setLoading(true)
+    setError(false)
+    const result = await signIn('bypass', { secret: token.trim(), redirect: false })
+    if (result?.ok) {
+      window.location.href = '/'
+    } else {
+      setError(true)
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="mt-5 pt-4 border-t border-dashed border-slate-200">
+      <p className="text-xs text-slate-400 mb-2 text-center font-mono">dev access</p>
+      {error && (
+        <p role="alert" className="text-xs text-red-600 mb-2 text-center">Invalid bypass token</p>
+      )}
+      <form onSubmit={handleBypass} className="flex gap-2">
+        <input
+          type="password"
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+          placeholder="Bypass token"
+          aria-label="Dev bypass token"
+          className="flex-1 px-3 py-2 text-xs rounded-lg border border-dashed border-slate-300 text-slate-900 placeholder-slate-300 focus:outline-none focus:border-slate-400"
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-4 py-2 text-xs font-medium rounded-lg border border-dashed border-slate-300 text-slate-500 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+        >
+          {loading ? '…' : 'Go'}
+        </button>
+      </form>
     </div>
   )
 }

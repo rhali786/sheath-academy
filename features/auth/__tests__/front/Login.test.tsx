@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import Login from '@/features/auth/front/pages/Login'
+import Login, { DevBypassSection } from '@/features/auth/front/pages/Login'
 
 jest.mock('next-auth/react', () => ({
   signIn: jest.fn(),
@@ -106,5 +106,67 @@ describe('Login page — magic link flow', () => {
 
     expect(screen.getByRole('button', { name: /sending/i })).toBeInTheDocument()
     resolve!({ ok: true })
+  })
+})
+
+describe('Login page — dev bypass section hidden by default', () => {
+  test('bypass section is not rendered when NEXT_PUBLIC_DEV_MODE is not set', () => {
+    render(<Login />)
+    expect(screen.queryByPlaceholderText(/bypass token/i)).not.toBeInTheDocument()
+  })
+})
+
+// DevBypassSection is tested in isolation (exported) so we avoid jest.resetModules
+// which causes React instance conflicts in jsdom.
+describe('DevBypassSection', () => {
+  beforeEach(() => {
+    mockSignIn.mockClear()
+  })
+
+  test('renders token input and Go button', () => {
+    render(<DevBypassSection />)
+    expect(screen.getByPlaceholderText(/bypass token/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^go$/i })).toBeInTheDocument()
+  })
+
+  test('calls signIn with bypass provider and entered token', async () => {
+    mockSignIn.mockResolvedValue({ ok: true })
+    const { location } = window
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { href: '' },
+    })
+
+    render(<DevBypassSection />)
+    fireEvent.change(screen.getByPlaceholderText(/bypass token/i), {
+      target: { value: 'my-secret' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^go$/i }))
+
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledWith('bypass', { secret: 'my-secret', redirect: false })
+    })
+
+    Object.defineProperty(window, 'location', { writable: true, value: location })
+  })
+
+  test('shows error alert on wrong token', async () => {
+    mockSignIn.mockResolvedValue({ ok: false, error: 'CredentialsSignin' })
+    render(<DevBypassSection />)
+
+    fireEvent.change(screen.getByPlaceholderText(/bypass token/i), {
+      target: { value: 'wrong' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^go$/i }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+    })
+  })
+
+  test('does not call signIn when token is empty', () => {
+    render(<DevBypassSection />)
+    fireEvent.click(screen.getByRole('button', { name: /^go$/i }))
+    expect(mockSignIn).not.toHaveBeenCalled()
   })
 })

@@ -1,4 +1,5 @@
 const path = require('path')
+const { version } = require('./package.json')
 
 // Only apply outside `next dev`. With tracing root set, some setups saw repeated
 // `/_next/static/*` 404s in development (mixed/stale client manifests). Production
@@ -7,6 +8,8 @@ const isDevServer = process.argv.includes('dev')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Expose the package.json version to client components at build time.
+  env: { NEXT_PUBLIC_APP_VERSION: version },
   ...(!isDevServer
     ? {
         outputFileTracingRoot: path.join(__dirname),

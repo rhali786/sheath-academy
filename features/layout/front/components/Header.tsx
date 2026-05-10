@@ -30,7 +30,12 @@ export function Header({ onTabChange, selectedTab }: HeaderProps) {
               <span className="text-white text-base font-bold leading-none" aria-hidden="true">ش</span>
             </div>
             <div>
-              <h1 className="text-base font-bold text-slate-900 leading-tight tracking-tight">Sheath Academy</h1>
+              <h1 className="text-base font-bold text-slate-900 leading-tight tracking-tight">
+                Sheath Academy{' '}
+                <span className="text-xs font-normal text-slate-400">
+                  v{process.env.NEXT_PUBLIC_APP_VERSION ?? '0.1.0'}
+                </span>
+              </h1>
               <p className="text-xs text-slate-400">Home Education</p>
             </div>
           </div>
