@@ -181,3 +181,17 @@ Wave 1A–1D: **In progress**
 Live: [sheathacademy.onrender.com](https://sheathacademy.onrender.com)
 
 The family on the dashboard is real. The pains are real. The build is one feature at a time.
+
+---
+
+## Feature 01 — Login (in progress)
+
+Magic-link email sign-in is built and deployed on branch `claude/login-feature-pKzOt`. Remaining before this feature is closed:
+
+- [ ] **Provision env vars on Render** — `AUTH_SECRET` (generate: `openssl rand -base64 32`) and `RESEND_API_KEY` (resend.com free tier). Without these the app starts but auth is broken.
+- [ ] **Verify sending domain in Resend** — magic-link emails send from `no-reply@sheathacademy.com`; domain must be verified in the Resend dashboard first.
+- [ ] **Remove dev bypass before public launch** — delete `DEV_BYPASS_SECRET` and `NEXT_PUBLIC_DEV_MODE` from Render environment when real sign-in is working.
+- [ ] **Add email allow-list** — currently any email address can sign in. Add a `signIn` callback in `features/auth/auth.ts` that checks against an allowed list before the session is granted.
+- [ ] **Wire OAuth providers** — Google and Facebook buttons are on the login page but disabled. Set `AUTH_GOOGLE_ID` + `AUTH_GOOGLE_SECRET` (and/or Facebook equivalents) in Render to activate them. See `.env.example` for redirect URI setup.
+- [ ] **Tie identity to household data** — the dashboard currently shows hardcoded Naeem Family data regardless of who signs in. Once Feature 02 (household workspace) lands, session user must map to their own household record.
+- [ ] **User persistence** — auth users are stored in-memory and reset on every deploy. Needs a database adapter (Render Postgres) before this is production-safe for real families.
