@@ -14,7 +14,8 @@ Homeschool dashboard (Next.js 15 App Router, React, TypeScript). Business logic 
 | `npm run build` | Production build (must pass before merge) |
 | `npm run start` | Production server after build |
 | `npm test` | Jest (API + integration; `jsdom` for UI) |
-| `npm run smoke` | After build: brief `next start`, checks `/api/health` + `/api/dashboard/summary`. Default port **3010** (`SMOKE_PORT` to override) so it does not clash with dev on 3000 |
+| `npm run smoke` | After build: brief `next start`, checks `/api/health`. Default port **3010** (`SMOKE_PORT` to override) so it does not clash with dev on 3000 |
+| `npm run setup-hooks` | **Run once after cloning.** Installs the git pre-commit hook that auto-increments the patch version in `package.json` on every commit. Without this the version shown in the header will not update. |
 
 **Before merging:** `npm run build` and `npm test` must pass. Run `npm run smoke` locally to mirror CI.
 
