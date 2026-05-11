@@ -79,6 +79,23 @@ describe('Header — version display', () => {
   })
 })
 
+describe('Header — household name', () => {
+  beforeEach(() => {
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
+  })
+
+  test('shows "Home Education" when no householdName is provided', () => {
+    render(<Header {...defaultProps} />)
+    expect(screen.getByText('Home Education')).toBeInTheDocument()
+  })
+
+  test('shows the household name when householdName prop is provided', () => {
+    render(<Header {...defaultProps} householdName="Ahmed Academy" />)
+    expect(screen.getByText('Ahmed Academy')).toBeInTheDocument()
+    expect(screen.queryByText('Home Education')).not.toBeInTheDocument()
+  })
+})
+
 describe('Header — tab navigation', () => {
   beforeEach(() => {
     mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })

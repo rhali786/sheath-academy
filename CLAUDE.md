@@ -108,12 +108,21 @@ New REST surface: extend the dynamic slug handler and the feature router consist
 
 ## Testing
 
-- Tests live under `features/*/___tests__/` (currently **69** cases — `npm test` is the source of truth if this drifts).
+- Tests live under `features/*/___tests__/` (currently **82** cases — `npm test` is the source of truth if this drifts).
 - UI tests use **`jsdom`** and **`@/features/dashboard/__tests__/utils/renderWithProvider`** so components sit under `DashboardProvider` (avoids `useDashboard must be used within DashboardProvider` at runtime).
 - **New UI:** add or extend integration coverage with the provider; chart-heavy changes warrant a quick **browser** check.
 
 Jest maps `@nivo/line`, `@nivo/bar`, and `@nivo/core` to `__tests__/mocks/nivo.tsx`.
 Jest maps `next-auth/react` to `__mocks__/next-auth/react.ts` (default unauthenticated stub; override per-test with `jest.mock`).
+
+**`app/(public)` pages — provider coverage rule**
+
+Pages under `app/(public)/` (About, Login, etc.) sit outside the dashboard provider tree. Any component in those pages that consumes a context (`useHousehold`, `useDashboard`, etc.) **must**:
+
+1. Be wrapped with the relevant provider in its `app/(public)/*/page.tsx` route file.
+2. Have a test in `features/<feature>/__tests__/` that renders it *inside that provider* and asserts both the happy path (data loaded) and the fallback (no data). The test is the regression guard — if the wrapper is removed, the context will throw and the test will catch it.
+
+This pattern exists in `features/about/__tests__/About.test.tsx` — follow it when adding new public pages.
 
 ---
 
