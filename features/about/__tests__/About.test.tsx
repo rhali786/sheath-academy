@@ -19,10 +19,10 @@ describe('About page', () => {
 
   test('renders the four Wave 1 sections', () => {
     render(<AboutPage />)
-    expect(screen.getByText(/1A — Foundation/i)).toBeInTheDocument()
-    expect(screen.getByText(/1B — Planning spine/i)).toBeInTheDocument()
-    expect(screen.getByText(/1C — Records spine/i)).toBeInTheDocument()
-    expect(screen.getByText(/1D — Proof and export/i)).toBeInTheDocument()
+    expect(screen.getByText('1A — Foundation')).toBeInTheDocument()
+    expect(screen.getByText('1B — Planning spine')).toBeInTheDocument()
+    expect(screen.getByText('1C — Records spine')).toBeInTheDocument()
+    expect(screen.getByText('1D — Proof and export')).toBeInTheDocument()
   })
 
   test('renders the sign-in link in the footer', () => {

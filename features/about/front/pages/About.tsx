@@ -50,8 +50,8 @@ const changelog = [
   },
   {
     version: '0.1.x',
-    label: 'Foundation (current)',
-    detail: 'Project setup, Next.js stack, dashboard UI, design system, responsive nav, Wave 1 specs, parent sign-in, About page.',
+    label: 'Wave 1A — Foundation (current)',
+    detail: 'Project setup, Next.js stack, design system, responsive nav, magic-link parent sign-in, household workspace with setup flow, family name in header, household settings (rename), dashboard shell with Today / Weekly / Reports / Settings tabs.',
   },
 ]
 
