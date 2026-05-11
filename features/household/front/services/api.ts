@@ -1,0 +1,23 @@
+import type { ApiResponse, Workspace, HouseholdProfile } from '@/features/lib/types'
+
+function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    return window.location.origin
+  }
+  const port = process.env.PORT || '3000'
+  return `http://127.0.0.1:${port}`
+}
+
+async function get<T>(path: string): Promise<ApiResponse<T>> {
+  const res = await fetch(`${getApiBaseUrl()}${path}`)
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  return res.json()
+}
+
+export const householdApi = {
+  getWorkspace: (): Promise<ApiResponse<Workspace | null>> =>
+    get('/api/household/workspace'),
+
+  getProfile: (): Promise<ApiResponse<HouseholdProfile | null>> =>
+    get('/api/household/profile'),
+}

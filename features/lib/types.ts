@@ -92,7 +92,23 @@ export interface ApiResponse<T> {
   timestamp: string
 }
 
+export interface Workspace {
+  id: string
+  name: string
+  ownerId: string
+  createdAt: string
+}
+
+export interface HouseholdProfile {
+  id: string
+  workspaceId: string
+  familyName: string
+  createdAt: string
+}
+
 export interface DataStore {
+  workspaces: Workspace[]
+  householdProfiles: HouseholdProfile[]
   children: Child[]
   tasks: Task[]
   alerts: Alert[]

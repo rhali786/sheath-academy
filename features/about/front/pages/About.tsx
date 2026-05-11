@@ -180,7 +180,7 @@ export function AboutPage() {
 
       <footer className="border-t border-slate-100 mt-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-slate-400">© 2026 Sheath Academy · Naeem Family</p>
+          <p className="text-xs text-slate-400">© 2026 Sheath Academy</p>
           <div className="flex gap-4 text-xs">
             <Link href="/login" className="text-slate-400 hover:text-forest-900 transition-colors">Sign in</Link>
             <a href="https://sheathacademy.onrender.com" className="text-slate-400 hover:text-forest-900 transition-colors">Live site</a>

@@ -7,6 +7,7 @@ import { PerChildProgress } from '../components/PerChildProgress'
 import { QuranStudies } from '../components/QuranStudies'
 import { RecordsProof } from '../components/RecordsProof'
 import { useContext_Dashboard } from '../context'
+import { useHousehold } from '@/features/household/front/context'
 import { dashboardApi } from '../services/api'
 
 export default function Dashboard() {
@@ -15,6 +16,7 @@ export default function Dashboard() {
     children, tasks, alerts, quranSessions, records, metrics,
     loading, error, toggleTask, addQuranSession,
   } = useContext_Dashboard()
+  const { familyName } = useHousehold()
 
   const [progressData, setProgressData] = useState({})
 
@@ -58,6 +60,13 @@ export default function Dashboard() {
 
       {selectedTab === 'Today' && (
         <>
+          {familyName && (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+              <p className="text-sm text-slate-500">
+                Household: <span className="font-medium text-slate-700">{familyName}</span>
+              </p>
+            </div>
+          )}
           <TodayState metrics={metrics} />
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

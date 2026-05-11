@@ -1,5 +1,5 @@
 import { MOCK_DATA } from './mockData'
-import type { DataStore, Task, QuranSession, QuranSessionRequest } from '../types'
+import type { DataStore, Task, QuranSession, QuranSessionRequest, Workspace, HouseholdProfile } from '../types'
 
 // In-memory data store (session lifetime; resets on redeploy)
 let dataStore: DataStore | null = null
@@ -76,6 +76,16 @@ export function getRecords() {
 export function getProgressData() {
   const store = getDataStore()
   return store.progressData
+}
+
+export function getWorkspace(): Workspace | null {
+  const store = getDataStore()
+  return store.workspaces[0] ?? null
+}
+
+export function getHouseholdProfile(): HouseholdProfile | null {
+  const store = getDataStore()
+  return store.householdProfiles[0] ?? null
 }
 
 export function resetDataStore(): void {

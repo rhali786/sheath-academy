@@ -13,9 +13,9 @@
 
 import { render, screen, waitFor } from '@testing-library/react'
 import { DashboardProvider } from '@/features/dashboard/front/context'
+import { HouseholdProvider } from '@/features/household/front/context'
 import Dashboard from '@/features/dashboard/front/pages/Dashboard'
 
-// Mock the API calls
 jest.mock('@/features/dashboard/front/services/api', () => ({
   dashboardApi: {
     getTasks: jest.fn(() => Promise.resolve({ data: [] })),
@@ -37,38 +37,45 @@ jest.mock('@/features/dashboard/front/services/api', () => ({
   }
 }))
 
-describe('Dashboard Page Integration', () => {
-  test('Dashboard renders within DashboardProvider without context errors', async () => {
-    // This is the critical test - if Dashboard is trying to use context outside of provider,
-    // it will throw "useDashboard must be used within DashboardProvider"
-    render(
+jest.mock('@/features/household/front/services/api', () => ({
+  householdApi: {
+    getWorkspace: jest.fn(() => Promise.resolve({
+      data: { id: 'workspace_001', name: 'Naeem Household', ownerId: 'user_001', createdAt: '2026-01-01T00:00:00.000Z' }
+    })),
+    getProfile: jest.fn(() => Promise.resolve({
+      data: { id: 'household_001', workspaceId: 'workspace_001', familyName: 'Naeem Family', createdAt: '2026-01-01T00:00:00.000Z' }
+    })),
+  }
+}))
+
+function renderDashboard() {
+  return render(
+    <HouseholdProvider>
       <DashboardProvider>
         <Dashboard />
       </DashboardProvider>
-    )
+    </HouseholdProvider>
+  )
+}
 
-    // Should show loading state initially
+describe('Dashboard Page Integration', () => {
+  test('Dashboard renders within DashboardProvider without context errors', async () => {
+    renderDashboard()
+
     expect(screen.getByText(/loading dashboard/i)).toBeInTheDocument()
 
-    // Wait for data to load
     await waitFor(() => {
       expect(screen.queryByText(/loading dashboard/i)).not.toBeInTheDocument()
     }, { timeout: 3000 })
   })
 
   test('Dashboard shows Today tab content by default', async () => {
-    render(
-      <DashboardProvider>
-        <Dashboard />
-      </DashboardProvider>
-    )
+    renderDashboard()
 
-    // Wait for loading to finish
     await waitFor(() => {
       expect(screen.queryByText(/loading dashboard/i)).not.toBeInTheDocument()
     })
 
-    // Today tab content should be visible (check for content unique to Today tab)
     expect(screen.getByText(/Today's State/i)).toBeInTheDocument()
   })
 })
