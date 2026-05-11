@@ -1,31 +1,62 @@
-import { getHouseholdProfile, resetDataStore } from '@/features/lib/server/dataStore'
+import {
+  getHouseholdProfile,
+  createWorkspace,
+  createHouseholdProfile,
+  updateHouseholdProfile,
+  resetDataStore,
+} from '@/features/lib/server/dataStore'
 
 beforeEach(() => {
   resetDataStore()
 })
 
-describe('getHouseholdProfile (household data layer)', () => {
-  test('returns a household profile from the seeded store', () => {
+describe('household profile (household data layer)', () => {
+  test('returns null when no profile has been created', () => {
     const profile = getHouseholdProfile()
-    expect(profile).not.toBeNull()
+    expect(profile).toBeNull()
   })
 
-  test('household profile has all required fields', () => {
-    const profile = getHouseholdProfile()!
+  test('createHouseholdProfile returns a profile with all required fields', () => {
+    const workspace = createWorkspace('Ahmed Academy')
+    const profile = createHouseholdProfile(workspace.id, 'Ahmed Family')
     expect(typeof profile.id).toBe('string')
     expect(typeof profile.workspaceId).toBe('string')
     expect(typeof profile.familyName).toBe('string')
     expect(typeof profile.createdAt).toBe('string')
   })
 
-  test('profile links to the seeded workspace', () => {
-    const profile = getHouseholdProfile()!
-    expect(profile.familyName).toBe('Naeem Family')
-    expect(profile.workspaceId).toBe('workspace_001')
+  test('createHouseholdProfile links to the workspace', () => {
+    const workspace = createWorkspace('Ahmed Academy')
+    const profile = createHouseholdProfile(workspace.id, 'Ahmed Family')
+    expect(profile.workspaceId).toBe(workspace.id)
+    expect(profile.familyName).toBe('Ahmed Family')
   })
 
-  test('returns the profile id correctly', () => {
-    const profile = getHouseholdProfile()!
-    expect(profile.id).toBe('household_001')
+  test('getHouseholdProfile returns the profile after creation', () => {
+    const workspace = createWorkspace('Ahmed Academy')
+    createHouseholdProfile(workspace.id, 'Ahmed Family')
+    const profile = getHouseholdProfile()
+    expect(profile).not.toBeNull()
+    expect(profile!.familyName).toBe('Ahmed Family')
+  })
+
+  test('updateHouseholdProfile returns null when no profile exists', () => {
+    const result = updateHouseholdProfile('New Name')
+    expect(result).toBeNull()
+  })
+
+  test('updateHouseholdProfile changes the family name', () => {
+    const workspace = createWorkspace('Ahmed Academy')
+    createHouseholdProfile(workspace.id, 'Ahmed Family')
+    const updated = updateHouseholdProfile('Ahmed Academy')
+    expect(updated!.familyName).toBe('Ahmed Academy')
+    expect(getHouseholdProfile()!.familyName).toBe('Ahmed Academy')
+  })
+
+  test('resetDataStore clears the profile', () => {
+    const workspace = createWorkspace('Ahmed Academy')
+    createHouseholdProfile(workspace.id, 'Ahmed Family')
+    resetDataStore()
+    expect(getHouseholdProfile()).toBeNull()
   })
 })

@@ -1,33 +1,49 @@
-import { getWorkspace, resetDataStore } from '@/features/lib/server/dataStore'
+import {
+  getWorkspace,
+  createWorkspace,
+  resetDataStore,
+} from '@/features/lib/server/dataStore'
 
 beforeEach(() => {
   resetDataStore()
 })
 
-describe('getWorkspace (household data layer)', () => {
-  test('returns a workspace from the seeded store', () => {
+describe('workspace (household data layer)', () => {
+  test('returns null when no workspace has been created', () => {
     const workspace = getWorkspace()
-    expect(workspace).not.toBeNull()
+    expect(workspace).toBeNull()
   })
 
-  test('workspace has all required fields', () => {
-    const workspace = getWorkspace()!
+  test('createWorkspace returns a workspace with all required fields', () => {
+    const workspace = createWorkspace('Ahmed Academy')
     expect(typeof workspace.id).toBe('string')
     expect(typeof workspace.name).toBe('string')
     expect(typeof workspace.ownerId).toBe('string')
     expect(typeof workspace.createdAt).toBe('string')
   })
 
-  test('returns the seeded Naeem Household workspace', () => {
-    const workspace = getWorkspace()!
-    expect(workspace.name).toBe('Naeem Household')
-    expect(workspace.id).toBe('workspace_001')
+  test('createWorkspace stores the provided name', () => {
+    const workspace = createWorkspace('Ahmed Academy')
+    expect(workspace.name).toBe('Ahmed Academy')
   })
 
-  test('returns a fresh copy after resetDataStore', () => {
-    const first = getWorkspace()
+  test('getWorkspace returns the workspace after creation', () => {
+    createWorkspace('Ahmed Academy')
+    const workspace = getWorkspace()
+    expect(workspace).not.toBeNull()
+    expect(workspace!.name).toBe('Ahmed Academy')
+  })
+
+  test('createWorkspace replaces any previous workspace', () => {
+    createWorkspace('First Family')
+    createWorkspace('Second Family')
+    const workspace = getWorkspace()
+    expect(workspace!.name).toBe('Second Family')
+  })
+
+  test('resetDataStore clears the workspace', () => {
+    createWorkspace('Ahmed Academy')
     resetDataStore()
-    const second = getWorkspace()
-    expect(second?.id).toBe(first?.id)
+    expect(getWorkspace()).toBeNull()
   })
 })

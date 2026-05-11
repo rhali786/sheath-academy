@@ -14,10 +14,36 @@ async function get<T>(path: string): Promise<ApiResponse<T>> {
   return res.json()
 }
 
+async function post<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
+  const res = await fetch(`${getApiBaseUrl()}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  return res.json()
+}
+
+async function put<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
+  const res = await fetch(`${getApiBaseUrl()}${path}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  return res.json()
+}
+
 export const householdApi = {
   getWorkspace: (): Promise<ApiResponse<Workspace | null>> =>
     get('/api/household/workspace'),
 
   getProfile: (): Promise<ApiResponse<HouseholdProfile | null>> =>
     get('/api/household/profile'),
+
+  setup: (familyName: string): Promise<ApiResponse<{ workspace: Workspace; profile: HouseholdProfile }>> =>
+    post('/api/household/workspace', { familyName }),
+
+  updateProfile: (familyName: string): Promise<ApiResponse<HouseholdProfile>> =>
+    put('/api/household/profile', { familyName }),
 }

@@ -8,9 +8,10 @@ import { useSession, signOut } from 'next-auth/react'
 interface HeaderProps {
   onTabChange?: (tab: string) => void
   selectedTab?: string
+  householdName?: string
 }
 
-export function Header({ onTabChange, selectedTab = '' }: HeaderProps) {
+export function Header({ onTabChange, selectedTab = '', householdName }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const { data: session } = useSession()
   const pathname = usePathname()
@@ -38,7 +39,7 @@ export function Header({ onTabChange, selectedTab = '' }: HeaderProps) {
                   v{process.env.NEXT_PUBLIC_APP_VERSION ?? '0.1.0'}
                 </span>
               </h1>
-              <p className="text-xs text-slate-400">Home Education</p>
+              <p className="text-xs text-slate-400">{householdName || 'Home Education'}</p>
             </div>
           </div>
 

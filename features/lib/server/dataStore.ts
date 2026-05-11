@@ -88,6 +88,38 @@ export function getHouseholdProfile(): HouseholdProfile | null {
   return store.householdProfiles[0] ?? null
 }
 
+export function createWorkspace(name: string, ownerId: string = 'user_current'): Workspace {
+  const store = getDataStore()
+  const workspace: Workspace = {
+    id: `workspace_${Date.now()}`,
+    name,
+    ownerId,
+    createdAt: new Date().toISOString(),
+  }
+  store.workspaces = [workspace]
+  return workspace
+}
+
+export function createHouseholdProfile(workspaceId: string, familyName: string): HouseholdProfile {
+  const store = getDataStore()
+  const profile: HouseholdProfile = {
+    id: `household_${Date.now()}`,
+    workspaceId,
+    familyName,
+    createdAt: new Date().toISOString(),
+  }
+  store.householdProfiles = [profile]
+  return profile
+}
+
+export function updateHouseholdProfile(familyName: string): HouseholdProfile | null {
+  const store = getDataStore()
+  const profile = store.householdProfiles[0]
+  if (!profile) return null
+  profile.familyName = familyName
+  return profile
+}
+
 export function resetDataStore(): void {
   dataStore = null
 }

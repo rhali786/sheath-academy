@@ -45,6 +45,8 @@ jest.mock('@/features/household/front/services/api', () => ({
     getProfile: jest.fn(() => Promise.resolve({
       data: { id: 'household_001', workspaceId: 'workspace_001', familyName: 'Naeem Family', createdAt: '2026-01-01T00:00:00.000Z' }
     })),
+    setup: jest.fn(() => Promise.resolve({ data: {} })),
+    updateProfile: jest.fn(() => Promise.resolve({ data: {} })),
   }
 }))
 

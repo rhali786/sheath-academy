@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import type { Workspace, HouseholdProfile } from '@/features/lib/types'
 import { householdApi } from '../services/api'
 
@@ -8,8 +8,10 @@ export interface HouseholdContextType {
   workspace: Workspace | null
   householdProfile: HouseholdProfile | null
   familyName: string
+  needsSetup: boolean
   loading: boolean
   error: string | null
+  refetch: () => void
 }
 
 export const HouseholdContext = createContext<HouseholdContextType | undefined>(undefined)
@@ -28,7 +30,8 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const fetchHousehold = useCallback(() => {
+    setLoading(true)
     Promise.all([householdApi.getWorkspace(), householdApi.getProfile()])
       .then(([wsRes, profileRes]) => {
         setWorkspace(wsRes.data)
@@ -41,14 +44,21 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       })
   }, [])
 
+  useEffect(() => {
+    fetchHousehold()
+  }, [fetchHousehold])
+
   const familyName = householdProfile?.familyName ?? workspace?.name ?? ''
+  const needsSetup = !loading && !workspace && !householdProfile
 
   const value: HouseholdContextType = {
     workspace,
     householdProfile,
     familyName,
+    needsSetup,
     loading,
     error,
+    refetch: fetchHousehold,
   }
 
   return (
