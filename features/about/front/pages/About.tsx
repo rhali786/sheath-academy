@@ -50,8 +50,8 @@ const changelog = [
   },
   {
     version: '0.1.x',
-    label: 'Wave 1A — Foundation (current)',
-    detail: 'Project setup, Next.js stack, design system, responsive nav, magic-link parent sign-in, household workspace with setup flow, family name in header, household settings (rename), dashboard shell with Today / Weekly / Reports / Settings tabs.',
+    label: '1A — Foundation (in progress)',
+    detail: 'Project setup, Next.js stack, design system, responsive nav, magic-link parent sign-in, household workspace with setup flow, household settings (rename), dashboard shell. Remaining: child profiles, subject setup, school year.',
   },
 ]
 
