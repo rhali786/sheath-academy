@@ -22,6 +22,11 @@ jest.mock('next-auth/react', () => ({
   signOut: jest.fn(),
 }))
 
+jest.mock('next/navigation', () => ({
+  usePathname: jest.fn(() => '/'),
+  useRouter: jest.fn(() => ({ push: jest.fn() })),
+}))
+
 jest.mock('@/features/household/front/services/api', () => ({
   householdApi: {
     getWorkspace: jest.fn(() => Promise.resolve({

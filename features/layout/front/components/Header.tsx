@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useHousehold } from '@/features/household/front/context'
 import { useNavigation } from '@/features/layout/front/context/NavigationContext'
@@ -12,11 +12,13 @@ export function Header() {
   const { data: session } = useSession()
   const { familyName } = useHousehold()
   const pathname = usePathname()
+  const router = useRouter()
   const { selectedTab, setSelectedTab } = useNavigation()
   const tabs = ['Today', 'Weekly', 'Reports', 'Settings']
 
   function handleTabChange(tab: string) {
     setSelectedTab(tab)
+    if (pathname !== '/') router.push('/')
     setMenuOpen(false)
   }
 
@@ -98,7 +100,7 @@ export function Header() {
               key={tab}
               onClick={() => handleTabChange(tab)}
               className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
-                selectedTab === tab
+                pathname === '/' && selectedTab === tab
                   ? 'bg-forest-900 text-white'
                   : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
               }`}
@@ -133,7 +135,7 @@ export function Header() {
                 key={tab}
                 onClick={() => handleTabChange(tab)}
                 className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${
-                  selectedTab === tab
+                  pathname === '/' && selectedTab === tab
                     ? 'bg-forest-50 text-forest-900'
                     : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
                 }`}

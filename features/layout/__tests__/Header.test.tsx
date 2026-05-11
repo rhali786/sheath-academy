@@ -7,6 +7,11 @@ jest.mock('next-auth/react', () => ({
   signOut: jest.fn(),
 }))
 
+jest.mock('next/navigation', () => ({
+  usePathname: jest.fn(() => '/'),
+  useRouter: jest.fn(() => ({ push: jest.fn() })),
+}))
+
 jest.mock('@/features/household/front/context', () => ({
   useHousehold: jest.fn(() => ({
     familyName: '',
@@ -25,10 +30,13 @@ jest.mock('@/features/layout/front/context/NavigationContext', () => ({
 }))
 
 import { useSession, signOut } from 'next-auth/react'
+import { usePathname, useRouter } from 'next/navigation'
 import { useHousehold } from '@/features/household/front/context'
 import { useNavigation } from '@/features/layout/front/context/NavigationContext'
 const mockUseSession = useSession as jest.Mock
 const mockSignOut = signOut as jest.Mock
+const mockUsePathname = usePathname as jest.Mock
+const mockUseRouter = useRouter as jest.Mock
 const mockUseHousehold = useHousehold as jest.Mock
 const mockUseNavigation = useNavigation as jest.Mock
 
@@ -111,9 +119,10 @@ describe('Header — household name', () => {
   })
 })
 
-describe('Header — tab navigation', () => {
+describe('Header — tab navigation on dashboard page', () => {
   beforeEach(() => {
     mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
+    mockUsePathname.mockReturnValue('/')
   })
 
   test('renders all four nav tabs on desktop', () => {
@@ -130,12 +139,44 @@ describe('Header — tab navigation', () => {
     expect(weeklyButtons.some((b) => b.className.includes('bg-forest-900'))).toBe(true)
   })
 
-  test('clicking a desktop tab calls setSelectedTab', () => {
+  test('clicking a tab calls setSelectedTab and does NOT push router when already on /', () => {
     const setSelectedTab = jest.fn()
+    const push = jest.fn()
     mockUseNavigation.mockReturnValueOnce({ selectedTab: 'Today', setSelectedTab })
+    mockUseRouter.mockReturnValueOnce({ push })
     render(<Header />)
-    const reportsButtons = screen.getAllByRole('button', { name: 'Reports' })
-    fireEvent.click(reportsButtons[0])
+    fireEvent.click(screen.getAllByRole('button', { name: 'Reports' })[0])
     expect(setSelectedTab).toHaveBeenCalledWith('Reports')
+    expect(push).not.toHaveBeenCalled()
+  })
+})
+
+describe('Header — tab navigation from non-dashboard page', () => {
+  beforeEach(() => {
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
+    mockUsePathname.mockReturnValue('/about')
+  })
+
+  test('clicking a tab from /about calls setSelectedTab AND navigates to /', () => {
+    const setSelectedTab = jest.fn()
+    const push = jest.fn()
+    mockUseNavigation.mockReturnValueOnce({ selectedTab: 'Today', setSelectedTab })
+    mockUseRouter.mockReturnValueOnce({ push })
+    render(<Header />)
+    fireEvent.click(screen.getAllByRole('button', { name: 'Weekly' })[0])
+    expect(setSelectedTab).toHaveBeenCalledWith('Weekly')
+    expect(push).toHaveBeenCalledWith('/')
+  })
+
+  test('About link is highlighted when on /about', () => {
+    render(<Header />)
+    const aboutLink = screen.getByRole('link', { name: 'About' })
+    expect(aboutLink.className).toContain('bg-forest-900')
+  })
+
+  test('dashboard tabs are NOT highlighted when on /about', () => {
+    render(<Header />)
+    const todayButton = screen.getAllByRole('button', { name: 'Today' })[0]
+    expect(todayButton.className).not.toContain('bg-forest-900')
   })
 })
