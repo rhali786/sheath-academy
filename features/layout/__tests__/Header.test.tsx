@@ -2,15 +2,26 @@ import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Header } from '@/features/layout/front/components/Header'
 
-// next-auth/react is mocked per-test via jest.mock overrides
 jest.mock('next-auth/react', () => ({
   useSession: jest.fn(),
   signOut: jest.fn(),
 }))
 
+jest.mock('@/features/household/front/context', () => ({
+  useHousehold: jest.fn(() => ({
+    familyName: '',
+    needsSetup: false,
+    loading: false,
+    error: null,
+    refetch: jest.fn(),
+  })),
+}))
+
 import { useSession, signOut } from 'next-auth/react'
+import { useHousehold } from '@/features/household/front/context'
 const mockUseSession = useSession as jest.Mock
 const mockSignOut = signOut as jest.Mock
+const mockUseHousehold = useHousehold as jest.Mock
 
 const defaultProps = {
   onTabChange: jest.fn(),
@@ -74,7 +85,6 @@ describe('Header — version display', () => {
 
   test('renders version string next to brand name', () => {
     render(<Header {...defaultProps} />)
-    // NEXT_PUBLIC_APP_VERSION is undefined in tests; fallback is "0.1.0"
     expect(screen.getByText(/v0\.\d+\.\d+/)).toBeInTheDocument()
   })
 })
@@ -84,13 +94,14 @@ describe('Header — household name', () => {
     mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
   })
 
-  test('shows "Home Education" when no householdName is provided', () => {
+  test('shows "Home Education" when no household is set up', () => {
     render(<Header {...defaultProps} />)
     expect(screen.getByText('Home Education')).toBeInTheDocument()
   })
 
-  test('shows the household name when householdName prop is provided', () => {
-    render(<Header {...defaultProps} householdName="Ahmed Academy" />)
+  test('shows the household name from context when set up', () => {
+    mockUseHousehold.mockReturnValueOnce({ familyName: 'Ahmed Academy', needsSetup: false, loading: false, error: null, refetch: jest.fn() })
+    render(<Header {...defaultProps} />)
     expect(screen.getByText('Ahmed Academy')).toBeInTheDocument()
     expect(screen.queryByText('Home Education')).not.toBeInTheDocument()
   })
@@ -104,7 +115,6 @@ describe('Header — tab navigation', () => {
   test('renders all four nav tabs on desktop', () => {
     render(<Header {...defaultProps} />)
     ;['Today', 'Weekly', 'Reports', 'Settings'].forEach((tab) => {
-      // tabs appear in both desktop and mobile markup — getAllByRole
       expect(screen.getAllByRole('button', { name: tab }).length).toBeGreaterThan(0)
     })
   })
@@ -112,7 +122,6 @@ describe('Header — tab navigation', () => {
   test('active tab has distinct active styling', () => {
     render(<Header {...defaultProps} selectedTab="Weekly" />)
     const weeklyButtons = screen.getAllByRole('button', { name: 'Weekly' })
-    // at least one button must carry active class
     expect(weeklyButtons.some((b) => b.className.includes('bg-forest-900'))).toBe(true)
   })
 

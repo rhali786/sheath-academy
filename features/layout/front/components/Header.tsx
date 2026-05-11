@@ -4,16 +4,17 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
+import { useHousehold } from '@/features/household/front/context'
 
 interface HeaderProps {
   onTabChange?: (tab: string) => void
   selectedTab?: string
-  householdName?: string
 }
 
-export function Header({ onTabChange, selectedTab = '', householdName }: HeaderProps) {
+export function Header({ onTabChange, selectedTab = '' }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const { data: session } = useSession()
+  const { familyName } = useHousehold()
   const pathname = usePathname()
   const tabs = ['Today', 'Weekly', 'Reports', 'Settings']
 
@@ -39,7 +40,7 @@ export function Header({ onTabChange, selectedTab = '', householdName }: HeaderP
                   v{process.env.NEXT_PUBLIC_APP_VERSION ?? '0.1.0'}
                 </span>
               </h1>
-              <p className="text-xs text-slate-400">{householdName || 'Home Education'}</p>
+              <p className="text-xs text-slate-400">{familyName || 'Home Education'}</p>
             </div>
           </div>
 

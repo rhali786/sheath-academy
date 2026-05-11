@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Header } from '@/features/layout/front/components/Header'
 import { TodayState } from '../components/TodayState'
 import { DoToday } from '../components/DoToday'
 import { NeedsAttention } from '../components/NeedsAttention'
@@ -20,7 +19,7 @@ export default function Dashboard() {
     children, tasks, alerts, quranSessions, records, metrics,
     loading, error, toggleTask, addQuranSession,
   } = useContext_Dashboard()
-  const { familyName, needsSetup, loading: householdLoading, refetch } = useHousehold()
+  const { familyName, needsSetup, refetch } = useHousehold()
 
   const [progressData, setProgressData] = useState({})
   const [renameName, setRenameName] = useState('')
@@ -55,7 +54,7 @@ export default function Dashboard() {
     }
   }
 
-  if (loading || householdLoading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-50">
         <div className="text-center">
@@ -89,8 +88,6 @@ export default function Dashboard() {
 
   return (
     <div className="bg-slate-50 min-h-screen">
-      <Header onTabChange={setSelectedTab} selectedTab={selectedTab} householdName={familyName} />
-
       {selectedTab === 'Today' && (
         <>
           <TodayState metrics={metrics} />

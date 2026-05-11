@@ -1,8 +1,4 @@
-'use client'
-
 import Link from 'next/link'
-import { Header } from '@/features/layout/front/components/Header'
-import { useHousehold } from '@/features/household/front/context'
 
 const pains = [
   {
@@ -60,10 +56,8 @@ const changelog = [
 ]
 
 export function AboutPage() {
-  const { familyName } = useHousehold()
   return (
     <div className="bg-slate-50 min-h-screen">
-      <Header householdName={familyName} />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-20">
 
