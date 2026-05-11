@@ -1,8 +1,10 @@
+import { NavigationProvider } from '@/features/layout/front/context/NavigationContext'
 import { HouseholdProvider } from '@/features/household/front/context'
 import { Header } from './Header'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
+    <NavigationProvider>
     <HouseholdProvider>
       <a
         href="#main-content"
@@ -15,5 +17,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
     </HouseholdProvider>
+    </NavigationProvider>
   )
 }

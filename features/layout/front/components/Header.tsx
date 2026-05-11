@@ -5,21 +5,18 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useHousehold } from '@/features/household/front/context'
+import { useNavigation } from '@/features/layout/front/context/NavigationContext'
 
-interface HeaderProps {
-  onTabChange?: (tab: string) => void
-  selectedTab?: string
-}
-
-export function Header({ onTabChange, selectedTab = '' }: HeaderProps) {
+export function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { data: session } = useSession()
   const { familyName } = useHousehold()
   const pathname = usePathname()
+  const { selectedTab, setSelectedTab } = useNavigation()
   const tabs = ['Today', 'Weekly', 'Reports', 'Settings']
 
   function handleTabChange(tab: string) {
-    onTabChange?.(tab)
+    setSelectedTab(tab)
     setMenuOpen(false)
   }
 
@@ -97,27 +94,17 @@ export function Header({ onTabChange, selectedTab = '' }: HeaderProps) {
         {/* Desktop tab nav */}
         <div className="hidden md:flex gap-0.5 -mb-px">
           {tabs.map((tab) => (
-            onTabChange ? (
-              <button
-                key={tab}
-                onClick={() => handleTabChange(tab)}
-                className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
-                  selectedTab === tab
-                    ? 'bg-forest-900 text-white'
-                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                }`}
-              >
-                {tab}
-              </button>
-            ) : (
-              <Link
-                key={tab}
-                href="/"
-                className="px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-              >
-                {tab}
-              </Link>
-            )
+            <button
+              key={tab}
+              onClick={() => handleTabChange(tab)}
+              className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
+                selectedTab === tab
+                  ? 'bg-forest-900 text-white'
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              {tab}
+            </button>
           ))}
           <Link
             href="/about"
@@ -142,28 +129,17 @@ export function Header({ onTabChange, selectedTab = '' }: HeaderProps) {
           </div>
           <nav className="py-1">
             {tabs.map((tab) => (
-              onTabChange ? (
-                <button
-                  key={tab}
-                  onClick={() => handleTabChange(tab)}
-                  className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${
-                    selectedTab === tab
-                      ? 'bg-forest-50 text-forest-900'
-                      : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ) : (
-                <Link
-                  key={tab}
-                  href="/"
-                  onClick={() => setMenuOpen(false)}
-                  className="block px-4 py-3 text-sm font-medium transition-colors text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-                >
-                  {tab}
-                </Link>
-              )
+              <button
+                key={tab}
+                onClick={() => handleTabChange(tab)}
+                className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${
+                  selectedTab === tab
+                    ? 'bg-forest-50 text-forest-900'
+                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+              >
+                {tab}
+              </button>
             ))}
             <Link
               href="/about"

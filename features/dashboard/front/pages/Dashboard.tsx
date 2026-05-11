@@ -10,11 +10,12 @@ import { RecordsProof } from '../components/RecordsProof'
 import { useContext_Dashboard } from '../context'
 import { useHousehold } from '@/features/household/front/context'
 import { HouseholdSetup } from '@/features/household/front/components/HouseholdSetup'
+import { useNavigation } from '@/features/layout/front/context/NavigationContext'
 import { dashboardApi } from '../services/api'
 import { householdApi } from '@/features/household/front/services/api'
 
 export default function Dashboard() {
-  const [selectedTab, setSelectedTab] = useState('Today')
+  const { selectedTab } = useNavigation()
   const {
     children, tasks, alerts, quranSessions, records, metrics,
     loading, error, toggleTask, addQuranSession,
