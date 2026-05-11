@@ -1,0 +1,18 @@
+#!/bin/sh
+# Reads the commit message and bumps package.json version based on prefix:
+#   feat!: or BREAKING CHANGE → major
+#   feat:                     → minor
+#   anything else             → patch
+
+MSG=$(head -1 "$1")
+
+if echo "$MSG" | grep -qE '^feat(\(.+\))?!:|^BREAKING CHANGE'; then
+  BUMP=major
+elif echo "$MSG" | grep -qE '^feat(\(.+\))?:'; then
+  BUMP=minor
+else
+  BUMP=patch
+fi
+
+node scripts/bump-version.cjs "$BUMP"
+git add package.json
