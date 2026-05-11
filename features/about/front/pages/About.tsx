@@ -46,12 +46,27 @@ const changelog = [
   {
     version: '0.2.0',
     label: 'Planned — Wave 1B',
-    detail: "Weekly planner, lesson creation, lesson status states, today's lessons card.",
+    detail: "Weekly planner, lesson creation, lesson status states, recurring patterns, today's lessons card.",
   },
   {
-    version: '0.1.x',
-    label: '1A — Foundation (in progress)',
-    detail: 'Project setup, Next.js stack, design system, responsive nav, magic-link parent sign-in, household workspace with setup flow, household settings (rename), dashboard shell. Remaining: child profiles, subject setup, school year.',
+    version: '0.1.17',
+    label: 'Shell & navigation (current)',
+    detail: 'AppShell architecture — header and household context live in one shell component shared by all pages. NavigationContext keeps tab state in sync between header and dashboard. Tab buttons navigate back to the dashboard from any page.',
+  },
+  {
+    version: '0.1.10',
+    label: 'Household workspace',
+    detail: 'Workspace and household profile API. First-login setup flow — new accounts name their household before the dashboard loads. Family name in the header. Household settings tab to rename at any time.',
+  },
+  {
+    version: '0.1.4',
+    label: 'Parent sign-in',
+    detail: 'Magic-link email authentication via Resend. Session management with NextAuth. Route protection — unauthenticated requests redirect to the login page. Dev bypass for local testing.',
+  },
+  {
+    version: '0.1.0',
+    label: 'Foundation',
+    detail: 'Next.js 15 App Router, TypeScript, Tailwind design system, in-memory data store, dashboard shell with four tab panels, responsive navigation, About page.',
   },
 ]
 
@@ -158,7 +173,7 @@ export function AboutPage() {
         {/* Changelog */}
         <section>
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Changelog</p>
-          <p className="text-sm text-slate-500 mb-6">Updated each time the minor version increments (0.1.x → 0.2.0).</p>
+          <p className="text-sm text-slate-500 mb-6">One entry per meaningful milestone. Version shown is where that milestone landed.</p>
           <div className="space-y-2">
             {changelog.map((entry) => (
               <div key={entry.version} className="bg-white rounded-xl px-5 py-4 shadow-sm flex items-start gap-4">
