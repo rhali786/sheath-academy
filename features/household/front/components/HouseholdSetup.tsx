@@ -138,7 +138,7 @@ export function HouseholdSetup({ onComplete }: HouseholdSetupProps = {}) {
                   onChildAdded={fetchSetupStatus}
                 />
               )}
-              {showSubjects && <SetupCard_Subjects />}
+              {showSubjects && <SetupCard_Subjects onSubjectAdded={fetchSetupStatus} />}
               {showStubs && <SetupCard_Lessons />}
               {showStubs && <SetupCard_Portfolio />}
             </div>

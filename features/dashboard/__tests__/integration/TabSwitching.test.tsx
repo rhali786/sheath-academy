@@ -62,6 +62,21 @@ jest.mock('@/features/children/front/services/api', () => ({
   },
 }))
 
+beforeAll(() => {
+  // JSDOM: Tailwind `md:` nav uses matchMedia; default viewport hides desktop tabs.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window as any).matchMedia = jest.fn().mockImplementation(() => ({
+    matches: true,
+    media: '',
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  }))
+})
+
 function renderWithShell() {
   return render(
     <NavigationProvider>
@@ -82,6 +97,18 @@ async function waitForDashboard() {
 }
 
 describe('Tab switching — NavigationContext regression', () => {
+  beforeEach(() => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 'success',
+        data: { nextStep: null, completed: [] },
+        message: '',
+        timestamp: new Date().toISOString(),
+      }),
+    })
+  })
+
   test('Weekly tab shows Weekly content', async () => {
     renderWithShell()
     await waitForDashboard()

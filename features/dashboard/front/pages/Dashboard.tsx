@@ -14,6 +14,8 @@ import { HouseholdSetup } from '@/features/household/front/components/HouseholdS
 import { dashboardApi } from '../services/api'
 import { useNavigation } from '@/features/layout/front/context/NavigationContext'
 import type { Child } from '../types'
+import { ChildSelector } from '../components/ChildSelector'
+import { NextSetupStrip } from '@/features/setup/front/components/NextSetupStrip'
 
 export default function Dashboard() {
   const { selectedTab } = useNavigation()
@@ -77,6 +79,10 @@ export default function Dashboard() {
 
       {selectedTab === 'Today' && (
         <>
+          <NextSetupStrip />
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 flex justify-end">
+            <ChildSelector />
+          </div>
           <TodayState metrics={metrics} />
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

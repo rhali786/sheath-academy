@@ -76,6 +76,18 @@ function renderDashboard() {
 }
 
 describe('Dashboard Page Integration', () => {
+  beforeEach(() => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 'success',
+        data: { nextStep: null, completed: [] },
+        message: '',
+        timestamp: new Date().toISOString(),
+      }),
+    })
+  })
+
   test('Dashboard renders within DashboardProvider without context errors', async () => {
     renderDashboard()
 

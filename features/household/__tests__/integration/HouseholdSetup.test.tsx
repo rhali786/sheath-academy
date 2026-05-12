@@ -31,6 +31,7 @@ jest.mock('@/features/household/front/services/api', () => ({
 jest.mock('@/features/children/front/services/api', () => ({
   childrenApi: {
     createChild: jest.fn(),
+    getAllChildren: jest.fn(() => Promise.resolve({ data: [] })),
   },
 }))
 
