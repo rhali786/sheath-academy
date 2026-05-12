@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, HouseholdProfile } from '@/features/lib/types'
-import { getHouseholdProfile, updateHouseholdProfile } from '@/features/lib/server/dataStore'
+import { getHouseholdProfile, updateHouseholdProfile } from '@/features/household/server/service'
 
 export async function GET(): Promise<NextResponse<ApiResponse<HouseholdProfile | null>>> {
   const profile = getHouseholdProfile()
