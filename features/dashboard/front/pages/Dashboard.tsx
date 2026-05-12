@@ -9,9 +9,10 @@ import { QuranStudies } from '../components/QuranStudies'
 import { RecordsProof } from '../components/RecordsProof'
 import { useContext_Dashboard } from '../context'
 import { dashboardApi } from '../services/api'
+import { useNavigation } from '@/features/layout/front/context/NavigationContext'
 
 export default function Dashboard() {
-  const [selectedTab, setSelectedTab] = useState('Today')
+  const { selectedTab } = useNavigation()
   const {
     children, tasks, alerts, quranSessions, records, metrics,
     loading, error, toggleTask, addQuranSession,
@@ -55,7 +56,7 @@ export default function Dashboard() {
 
   return (
     <div className="bg-slate-50 min-h-screen">
-      <Header onTabChange={setSelectedTab} selectedTab={selectedTab} />
+      <Header />
 
       {selectedTab === 'Today' && (
         <>
@@ -108,7 +109,7 @@ export default function Dashboard() {
       {selectedTab === 'Settings' && (
         <div className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
           <div className="bg-white rounded-xl shadow-sm p-8">
-            <h2 className="text-2xl font-bold text-slate-900">Settings</h2>
+            <h2 className="text-2xl font-bold text-slate-900">Household settings</h2>
             <p className="text-slate-400 mt-2 text-sm">Settings coming soon.</p>
           </div>
         </div>

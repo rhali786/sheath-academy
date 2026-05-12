@@ -17,6 +17,11 @@ import { HouseholdProvider } from '@/features/household/front/context'
 import { NavigationProvider } from '@/features/layout/front/context/NavigationContext'
 import Dashboard from '@/features/dashboard/front/pages/Dashboard'
 
+jest.mock('next/navigation', () => ({
+  usePathname: jest.fn(() => '/'),
+  useRouter: jest.fn(() => ({ push: jest.fn() })),
+}))
+
 jest.mock('@/features/dashboard/front/services/api', () => ({
   dashboardApi: {
     getTasks: jest.fn(() => Promise.resolve({ data: [] })),
