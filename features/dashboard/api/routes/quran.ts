@@ -4,7 +4,7 @@ import {
   getQuranSessions,
   addQuranSession,
   getChildren,
-} from '@/features/lib/server/dataStore'
+} from '@/features/dashboard/server/service'
 
 const CHILD_COLORS: Record<string, string> = {
   adam_001: '#3b82f6',

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, Task } from '@/features/lib/types'
-import { getTasks } from '@/features/lib/server/dataStore'
+import { getTasks } from '@/features/dashboard/server/service'
 
 export async function GET(): Promise<NextResponse<ApiResponse<Task[]>>> {
   const tasks = getTasks()

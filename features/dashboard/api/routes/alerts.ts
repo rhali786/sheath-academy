@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, Alert } from '@/features/lib/types'
-import { getAlerts } from '@/features/lib/server/dataStore'
+import { getAlerts } from '@/features/dashboard/server/service'
 
 export async function GET(): Promise<NextResponse<ApiResponse<Alert[]>>> {
   const alerts = getAlerts()
