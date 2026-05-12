@@ -1,0 +1,3 @@
+{
+  "ignore": [".next", ".git", "node_modules", ".turbo", "dist", "build"]
+}
