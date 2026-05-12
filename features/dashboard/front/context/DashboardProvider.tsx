@@ -1,11 +1,12 @@
 'use client'
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react'
-import type { Task, Alert, QuranSession, DashboardRecord, Child, DashboardMetrics } from '@/features/lib/types'
+import type { Task, Alert, QuranSession, DashboardRecord, DashboardMetrics, StudentProfile } from '@/features/lib/types'
 import { dashboardApi } from '@/features/dashboard/front/services/api'
+import { childrenApi } from '@/features/children/front/services/api'
 
 export interface DashboardContextType {
-  children: Child[]
+  children: StudentProfile[]
   tasks: Task[]
   setTasks: (tasks: Task[]) => void
   alerts: Alert[]
@@ -33,6 +34,7 @@ export function useContext_Dashboard() {
 }
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
+  const [studentProfiles, setStudentProfiles] = useState<StudentProfile[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [quranSessions, setQuranSessions] = useState<QuranSession[]>([])
@@ -41,21 +43,16 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const childrenData: Child[] = [
-    { id: 'adam_001', name: 'Adam', age: 11, grade: 5, avatar: 'A' },
-    { id: 'khadijah_001', name: 'Khadijah', age: 8, grade: 3, avatar: 'K' },
-    { id: 'zayd_001', name: 'Zayd', age: 14, grade: 8, avatar: 'Z' },
-  ]
-
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [tasksRes, alertsRes, quranRes, recordsRes, summaryRes] = await Promise.all([
+        const [tasksRes, alertsRes, quranRes, recordsRes, summaryRes, childrenRes] = await Promise.all([
           dashboardApi.getTasks(),
           dashboardApi.getAlerts(),
           dashboardApi.getQuran(),
           dashboardApi.getRecords(),
           dashboardApi.getSummary(),
+          childrenApi.getAllChildren(),
         ])
 
         setTasks(tasksRes.data)
@@ -63,6 +60,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         setQuranSessions(quranRes.data.sessions)
         setRecords(recordsRes.data)
         setMetrics(summaryRes.data)
+        setStudentProfiles(childrenRes.data)
         setLoading(false)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load dashboard')
@@ -92,7 +90,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }
 
   const value: DashboardContextType = {
-    children: childrenData,
+    children: studentProfiles,
     tasks,
     setTasks,
     alerts,

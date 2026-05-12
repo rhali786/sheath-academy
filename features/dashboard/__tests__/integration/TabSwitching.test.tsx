@@ -55,6 +55,13 @@ jest.mock('@/features/dashboard/front/services/api', () => ({
   },
 }))
 
+jest.mock('@/features/children/front/services/api', () => ({
+  childrenApi: {
+    getAllChildren: jest.fn(() => Promise.resolve({ data: [] })),
+    getChildren: jest.fn(() => Promise.resolve({ data: [] })),
+  },
+}))
+
 function renderWithShell() {
   return render(
     <NavigationProvider>

@@ -13,13 +13,23 @@ import { useHousehold } from '@/features/household/front/context'
 import { HouseholdSetup } from '@/features/household/front/components/HouseholdSetup'
 import { dashboardApi } from '../services/api'
 import { useNavigation } from '@/features/layout/front/context/NavigationContext'
+import type { Child } from '../types'
 
 export default function Dashboard() {
   const { selectedTab } = useNavigation()
   const {
-    children, tasks, alerts, quranSessions, records, metrics,
+    children: studentProfiles, tasks, alerts, quranSessions, records, metrics,
     loading, error, toggleTask, addQuranSession,
   } = useContext_Dashboard()
+
+  // Map StudentProfile[] to legacy Child[] for existing components
+  const children: Child[] = studentProfiles.map(p => ({
+    id: p.id,
+    name: p.name,
+    age: 0,
+    grade: parseInt(p.gradeLabel.replace(/\D/g, '')) || 0,
+    avatar: p.avatarInitials || p.name.charAt(0).toUpperCase(),
+  }))
   const { needsSetup, loading: householdLoading } = useHousehold()
 
   const [progressData, setProgressData] = useState({})
