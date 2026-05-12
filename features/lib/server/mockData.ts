@@ -9,6 +9,7 @@ export const MOCK_DATA: DataStore = {
     { id: 'khadijah_001', name: 'Khadijah', age: 8, grade: 3, avatar: 'K' },
     { id: 'zayd_001', name: 'Zayd', age: 14, grade: 8, avatar: 'Z' },
   ],
+  studentProfiles: [],
   tasks: [
     // Adam's tasks
     {

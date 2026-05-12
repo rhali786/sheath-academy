@@ -8,6 +8,20 @@ export interface Child {
   avatar: string
 }
 
+export interface StudentProfile {
+  id: string
+  householdId: string
+  name: string
+  gradeLabel: string
+  dob?: string
+  teacherName?: string
+  username: string
+  password: string
+  isActive: boolean
+  avatarInitials?: string
+  createdAt: string
+}
+
 export interface Task {
   id: string
   childId: string
@@ -110,6 +124,7 @@ export interface DataStore {
   workspaces: Workspace[]
   householdProfiles: HouseholdProfile[]
   children: Child[]
+  studentProfiles: StudentProfile[]
   tasks: Task[]
   alerts: Alert[]
   quranSessions: QuranSession[]

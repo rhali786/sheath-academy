@@ -16,6 +16,36 @@ Homeschool dashboard (Next.js 15 App Router, React, TypeScript). Business logic 
 
 ---
 
+## Planning requirements (obligatory for every feature plan)
+
+Every implementation plan must include these two checks before writing any code. Skipping them produces bugs that only surface during manual testing or in production.
+
+**1. Integration test coverage for all UI components**
+
+For every new component, the plan must identify:
+- Which context(s) does it consume? Mock them in tests, don't render the full provider tree.
+- What user interactions does it expose (clicks, form submits, toggles)? Each must have a corresponding test.
+- What states does it render (loading, empty, error, populated)? Each must have a corresponding test.
+- Are the tests in `features/*/___tests__/integration/` alongside the component?
+
+Write the integration tests in the plan before writing the component. A component that has no test plan is incomplete.
+
+**2. End-to-end data flow trace**
+
+Before writing any code, trace the full lifecycle of each entity:
+
+| Question | Must be answered in the plan |
+|---|---|
+| Where are IDs generated? | `dataStore.ts` function name + format |
+| Do IDs from the store match what the API returns and what the UI passes back? | Confirm at each layer boundary |
+| Is the new page reachable from the navigation? | Name the Header link, tab, or route that reaches it |
+| Does the form appear without extra clicks on arrival? | State what the user sees on first load |
+| Are seed/fixture IDs (`householdId`, `workspaceId`, etc.) consistent from the store through to the UI? | Confirm fixture values match what the runtime produces |
+
+If any layer boundary is unverified in the plan, do not proceed to implementation.
+
+---
+
 ## Commands
 
 | Command | Purpose |

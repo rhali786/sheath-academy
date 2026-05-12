@@ -92,12 +92,11 @@ describe('Tab switching — NavigationContext regression', () => {
     expect(screen.getByText('Detailed reports coming soon.')).toBeInTheDocument()
   })
 
-  test('Settings tab shows Settings content', async () => {
+  test('Settings link is present in navigation', async () => {
     renderWithShell()
     await waitForDashboard()
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Settings' })[0])
-    expect(screen.getByText('Household settings')).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'Settings' })[0]).toBeInTheDocument()
   })
 
   test('Today tab is active by default', async () => {

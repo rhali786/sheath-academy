@@ -14,7 +14,7 @@ export function Header() {
   const pathname = usePathname()
   const router = useRouter()
   const { selectedTab, setSelectedTab } = useNavigation()
-  const tabs = ['Today', 'Weekly', 'Reports', 'Settings']
+  const tabs = ['Today', 'Weekly', 'Reports']
 
   function handleTabChange(tab: string) {
     setSelectedTab(tab)
@@ -109,6 +109,16 @@ export function Header() {
             </button>
           ))}
           <Link
+            href="/settings/children"
+            className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
+              pathname.startsWith('/settings')
+                ? 'bg-forest-900 text-white'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            Settings
+          </Link>
+          <Link
             href="/about"
             className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
               pathname === '/about'
@@ -143,6 +153,17 @@ export function Header() {
                 {tab}
               </button>
             ))}
+            <Link
+              href="/settings/children"
+              onClick={() => setMenuOpen(false)}
+              className={`block px-4 py-3 text-sm font-medium transition-colors ${
+                pathname.startsWith('/settings')
+                  ? 'bg-forest-50 text-forest-900'
+                  : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              Settings
+            </Link>
             <Link
               href="/about"
               onClick={() => setMenuOpen(false)}
