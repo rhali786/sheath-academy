@@ -1,28 +1,154 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, useCallback, FormEvent } from 'react'
 import { householdApi } from '../services/api'
 import { useHousehold } from '../context'
+import { SetupCard_SchoolYear } from './SetupCard_SchoolYear'
+import { SetupCard_Children } from './SetupCard_Children'
+import { SetupCard_Subjects } from './SetupCard_Subjects'
+import { SetupCard_Lessons } from './SetupCard_Lessons'
+import { SetupCard_Portfolio } from './SetupCard_Portfolio'
 
-export function HouseholdSetup() {
-  const { refetch } = useHousehold()
+interface SetupStatus {
+  hasSchoolYear: boolean
+  hasChildren: boolean
+  hasSubjects: boolean
+}
+
+interface HouseholdSetupProps {
+  /** Called when all required setup steps are satisfied. */
+  onComplete?: () => void
+}
+
+export function HouseholdSetup({ onComplete }: HouseholdSetupProps = {}) {
+  const { workspace, householdProfile, refetch } = useHousehold()
+
+  // Household name form state
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  // Whether we are in the setup-cards phase (household exists either from
+  // context on mount, or because it was just created in this session).
+  const [inCardsPhase, setInCardsPhase] = useState(() => Boolean(workspace))
+
+  // Status of the three required setup steps — null while still fetching.
+  const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null)
+  const [checkingStatus, setCheckingStatus] = useState(false)
+
+  // Fetch the current setup status from the three relevant endpoints.
+  // Using a single useEffect with all three calls in parallel (documented choice).
+  const fetchSetupStatus = useCallback(async () => {
+    setCheckingStatus(true)
+    try {
+      const [childrenRes, schoolYearRes, subjectsRes] = await Promise.all([
+        fetch('/api/children/children').then((r) => r.json()),
+        fetch('/api/school-years/active').then((r) => r.json()).catch(() => ({ data: null })),
+        fetch('/api/subjects').then((r) => r.json()).catch(() => ({ data: [] })),
+      ])
+
+      const activeChildren = Array.isArray(childrenRes.data)
+        ? (childrenRes.data as { isActive?: boolean }[]).filter((c) => c.isActive !== false)
+        : []
+      const hasSchoolYear = Boolean(schoolYearRes.data)
+      const activeSubjects = Array.isArray(subjectsRes.data)
+        ? (subjectsRes.data as { isActive?: boolean }[]).filter((s) => s.isActive !== false)
+        : []
+
+      setSetupStatus({
+        hasChildren: activeChildren.length > 0,
+        hasSchoolYear,
+        hasSubjects: activeSubjects.length > 0,
+      })
+    } catch {
+      setSetupStatus({ hasChildren: false, hasSchoolYear: false, hasSubjects: false })
+    } finally {
+      setCheckingStatus(false)
+    }
+  }, [])
+
+  // Enter cards phase and start fetching status when appropriate.
+  useEffect(() => {
+    if (inCardsPhase) {
+      fetchSetupStatus()
+    }
+  }, [inCardsPhase, fetchSetupStatus])
+
+  // When all required (non-stub) steps are satisfied, signal completion.
+  useEffect(() => {
+    if (!setupStatus) return
+    if (setupStatus.hasSchoolYear && setupStatus.hasChildren && setupStatus.hasSubjects) {
+      refetch()
+      onComplete?.()
+    }
+  }, [setupStatus, refetch, onComplete])
+
+  // ── Household name form ────────────────────────────────────────────────────
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!name.trim()) return
     setSaving(true)
-    setError(null)
+    setFormError(null)
     try {
       await householdApi.setup(name.trim())
-      refetch()
+      // Do NOT call refetch() yet — we stay on screen to show setup cards.
+      setInCardsPhase(true)
     } catch {
-      setError('Something went wrong. Please try again.')
+      setFormError('Something went wrong. Please try again.')
       setSaving(false)
     }
   }
+
+  // ── Cards phase ────────────────────────────────────────────────────────────
+
+  if (inCardsPhase) {
+    const showSchoolYear = !setupStatus?.hasSchoolYear
+    const showChildren = !setupStatus?.hasChildren
+    // Subjects card only shown when children exist but no subjects yet.
+    const showSubjects = Boolean(setupStatus?.hasChildren && !setupStatus?.hasSubjects)
+    // Stub cards shown once children exist (even if subjects still missing).
+    const showStubs = Boolean(setupStatus?.hasChildren)
+
+    return (
+      <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div className="w-full max-w-lg my-8">
+          <div className="mb-8">
+            <div className="w-12 h-12 rounded-xl bg-forest-900 flex items-center justify-center mb-4">
+              <span className="text-white text-xl font-bold leading-none" aria-hidden="true">ش</span>
+            </div>
+            <h1 className="text-xl font-bold text-slate-900">Complete your setup</h1>
+            <p className="text-sm text-slate-500 mt-1">
+              A few more steps to get your dashboard ready.
+            </p>
+          </div>
+
+          {checkingStatus && !setupStatus ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-8 h-8 rounded-full border-4 border-forest-100 border-t-forest-900 animate-spin" />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {showSchoolYear && (
+                <SetupCard_SchoolYear onSchoolYearCreated={fetchSetupStatus} />
+              )}
+              {showChildren && workspace && (
+                <SetupCard_Children
+                  householdId={workspace.id}
+                  onChildAdded={fetchSetupStatus}
+                />
+              )}
+              {showSubjects && <SetupCard_Subjects />}
+              {showStubs && <SetupCard_Lessons />}
+              {showStubs && <SetupCard_Portfolio />}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Household name form (existing behaviour — no household yet) ────────────
 
   return (
     <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-4 z-50">
@@ -52,7 +178,7 @@ export function HouseholdSetup() {
             autoFocus
             maxLength={80}
           />
-          {error && <p className="text-red-500 text-xs mb-3">{error}</p>}
+          {formError && <p className="text-red-500 text-xs mb-3">{formError}</p>}
           <button
             type="submit"
             disabled={!name.trim() || saving}
