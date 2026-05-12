@@ -1,6 +1,6 @@
 # Sheath Academy — development guide
 
-Homeschool dashboard (Next.js 15 App Router, React, TypeScript). Business logic and UI live under `features/`; `app/` is a thin routing layer. Data is in-memory (mock seed + `dataStore`), session-only on Render.
+Homeschool dashboard (Next.js 15 App Router, React, TypeScript). Business logic and UI live under `features/`; `app/` is a thin routing layer. Data is in-memory (mock seed + `features/lib/server/dataStore`), session-only on Render.
 
 ---
 
@@ -11,14 +11,17 @@ Homeschool dashboard (Next.js 15 App Router, React, TypeScript). Business logic 
 - **`npm run setup-hooks`** — run once after cloning. Installs `scripts/hooks/pre-commit` into `.git/hooks/`. Without it the patch version in `package.json` (shown in the app header) will not increment on commit.
 - **`npm install`** — required before dev, build, or test.
 - **Check `.env.example`** before running locally. At minimum `AUTH_SECRET` and `RESEND_API_KEY` must be set in `.env.local` (or Render → Environment) or auth is silently broken.
+- **Test-driven development (TDD):** For new behavior, write a **failing automated test first**, then implement until it passes, then refactor. Use **unit tests** (red–green) for API route handlers, `dataStore` helpers, and other pure or isolated logic. Do not merge implementation-only changes that should have been test-driven.
+- **Integration tests:** New or materially changed **UI** must ship with **integration tests** under `features/<feature>/__tests__/` (e.g. `integration/`), covering the interactions and states called out in the feature plan (loading, empty, error, populated as applicable). Same for user-visible flows that are not adequately covered by lower-level tests.
 - **`npm run build` and `npm test` must pass before merging.** CI enforces this; don't skip it locally.
 - **Never commit secrets.** `.env.local`, deploy hook URLs, API keys. Rotate immediately if any were ever exposed.
+- **Env files:** Next.js loads `.env` then `.env.local` (later overrides). Keep real secrets out of git — **`.env.local`** and **`.env`** are gitignored; **`.env.example`** stays committed as the template.
 
 ---
 
 ## Planning requirements (obligatory for every feature plan)
 
-Every implementation plan must include these two checks before writing any code. Skipping them produces bugs that only surface during manual testing or in production.
+Every implementation plan must include these two checks before writing any code. Skipping them produces bugs that only surface during manual testing or in production. Merged code must also satisfy **TDD** and **integration-test** rules in **Obligatory** above.
 
 **1. Integration test coverage for all UI components**
 
@@ -26,7 +29,7 @@ For every new component, the plan must identify:
 - Which context(s) does it consume? Mock them in tests, don't render the full provider tree.
 - What user interactions does it expose (clicks, form submits, toggles)? Each must have a corresponding test.
 - What states does it render (loading, empty, error, populated)? Each must have a corresponding test.
-- Are the tests in `features/*/___tests__/integration/` alongside the component?
+- Are the tests in `features/<feature>/__tests__/integration/` (or the feature’s `__tests__/` tree) alongside the component?
 
 Write the integration tests in the plan before writing the component. A component that has no test plan is incomplete.
 
@@ -36,11 +39,11 @@ Before writing any code, trace the full lifecycle of each entity:
 
 | Question | Must be answered in the plan |
 |---|---|
-| Where are IDs generated? | `dataStore.ts` function name + format |
+| Where are IDs generated? | `features/lib/server/dataStore.ts` function name + format |
 | Do IDs from the store match what the API returns and what the UI passes back? | Confirm at each layer boundary |
 | Is the new page reachable from the navigation? | Name the Header link, tab, or route that reaches it |
 | Does the form appear without extra clicks on arrival? | State what the user sees on first load |
-| Are seed/fixture IDs (`householdId`, `workspaceId`, etc.) consistent from the store through to the UI? | Confirm fixture values match what the runtime produces |
+| Are seed/fixture IDs (`householdId`, `workspaceId`, etc.) consistent from the store through to the UI? | `householdId` on students is **`HouseholdProfile.id`**, not `Workspace.id`. Confirm fixture values match what the runtime produces. |
 
 If any layer boundary is unverified in the plan, do not proceed to implementation.
 
@@ -57,7 +60,9 @@ If any layer boundary is unverified in the plan, do not proceed to implementatio
 | `npm run build` | Production build (must pass before merge) |
 | `npm run start` | Production server after build |
 | `npm test` | Jest (API + integration; `jsdom` for UI) |
-| `npm run smoke` | After build: brief `next start`, checks `/api/health`. Default port **3010** (`SMOKE_PORT` to override) so it does not clash with dev on 3000 |
+| `npm run smoke` | After build: brief `next start`, checks `/api/health` and that `/login`’s linked `/_next/static` CSS/JS return 200. Uses a **random free port** by default so a stale process on 3010 cannot fake success; set **`SMOKE_PORT=3010`** only if that port is free |
+
+**Dev vs production server:** Use **`npm run dev`** for day-to-day work. Use **`npm run build`** then **`npm run start`** only for production-style checks. Mixing dev and prod on the same `.next` folder causes `/_next/static` 404s and broken CSS/JS — see Troubleshooting.
 
 **Dependency / install issues:** occasional full reinstall is useful (`rm -rf node_modules` + lockfile + `npm install`); not required on every change.
 
@@ -81,7 +86,7 @@ If any layer boundary is unverified in the plan, do not proceed to implementatio
 
 ```
 features/
-  lib/                    # types, mockData, dataStore (shared)
+  lib/                    # types; `server/` — mockData, dataStore (shared)
   auth/                   # sign-in feature (NextAuth, magic link, dev bypass)
   layout/                 # AppShell, Header — product shell components
     front/components/AppShell.tsx   # owns HouseholdProvider + Header; used by (shell) layout
@@ -146,9 +151,10 @@ New REST surface: extend the dynamic slug handler and the feature router consist
 
 ## Testing
 
-- Tests live under `features/*/___tests__/` (currently **82** cases — `npm test` is the source of truth if this drifts).
+- Tests live under `features/<feature>/__tests__/` (`api/`, `integration/`, etc.). **`npm test` is the source of truth** for the current case count.
 - UI tests use **`jsdom`** and **`@/features/dashboard/__tests__/utils/renderWithProvider`** so components sit under `DashboardProvider` (avoids `useDashboard must be used within DashboardProvider` at runtime).
 - **New UI:** add or extend integration coverage with the provider; chart-heavy changes warrant a quick **browser** check.
+- **React 18 + `jest.mock`:** `mockReturnValueOnce` on context hooks (`useHousehold`, `useNavigation`, etc.) often fails because the component runs **more than one** render (Strict Mode or re-renders). Use **`mockImplementation(() => ({ ... }))`** and reset to defaults in **`afterEach`** (see `features/layout/__tests__/Header.test.tsx`).
 
 Jest maps `@nivo/line`, `@nivo/bar`, and `@nivo/core` to `__tests__/mocks/nivo.tsx`.
 Jest maps `next-auth/react` to `__mocks__/next-auth/react.ts` (default unauthenticated stub; override per-test with `jest.mock`).
@@ -183,6 +189,10 @@ Jest maps `next-auth/react` to `__mocks__/next-auth/react.ts` (default unauthent
 | Tests pass, prod chart breaks | Nivo not exercised in Jest | Browser smoke after chart edits. |
 | Type / import errors | Path aliases or wrong feature folder | Use `@/` and `features/` consistently; check `tsconfig` `paths` / `exclude`. |
 | All routes redirect to `/login` unexpectedly | `AUTH_SECRET` not set | Add `AUTH_SECRET` to `.env.local` or Render environment (see `.env.example`). |
+| `[auth][error] MissingSecret` / middleware auth errors | No Auth.js secret | Set **`AUTH_SECRET`** in `.env.local` (or Render). Restart the dev server after adding env vars. |
+| Dev bypass UI missing on `/login` | `NEXT_PUBLIC_DEV_MODE` not `true` when the client bundle was built | Set **`NEXT_PUBLIC_DEV_MODE=true`** and **`DEV_BYPASS_SECRET`** in `.env.local`. Restart **`npm run dev`** so `NEXT_PUBLIC_*` is inlined. |
+| Child picker empty / wrong children / subjects for wrong kid | **`householdId` for children APIs is `HouseholdProfile.id`, not `Workspace.id`**. Seeded students use `householdId: SEED_IDS.household`. | Use **`householdProfile?.id ?? workspace?.id`** when calling `childrenApi.getChildren` / `ChildForm` / subject flows. Keep household seed (`features/household/server/seed.ts`) aligned with `SEED_IDS` used by `features/children/server/seed.ts`. |
+| `PUT /api/household/profile` HTTP 404 | No household profile row in the store | Route returns 404 when there is nothing to update; setup flow creates profile with workspace. `resetStore()` in tests clears both stores to `[]`. |
 | Magic link email never arrives | `RESEND_API_KEY` not set or domain unverified | Check `.env.example`; verify sending domain in Resend dashboard. |
 | Version in header stuck / not incrementing | Pre-commit hook not installed | Run `npm run setup-hooks`. |
 

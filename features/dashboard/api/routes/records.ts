@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, DashboardRecord } from '@/features/lib/types'
-import { getRecords } from '@/features/lib/server/dataStore'
+import { getRecords } from '@/features/dashboard/server/service'
 
 export async function GET(): Promise<NextResponse<ApiResponse<DashboardRecord[]>>> {
   const records = getRecords()

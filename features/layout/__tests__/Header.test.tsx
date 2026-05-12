@@ -15,6 +15,8 @@ jest.mock('next/navigation', () => ({
 jest.mock('@/features/household/front/context', () => ({
   useHousehold: jest.fn(() => ({
     familyName: '',
+    workspace: null,
+    householdProfile: null,
     needsSetup: false,
     loading: false,
     error: null,
@@ -39,6 +41,27 @@ const mockUsePathname = usePathname as jest.Mock
 const mockUseRouter = useRouter as jest.Mock
 const mockUseHousehold = useHousehold as jest.Mock
 const mockUseNavigation = useNavigation as jest.Mock
+
+const defaultHousehold = () => ({
+  familyName: '',
+  workspace: null,
+  householdProfile: null,
+  needsSetup: false,
+  loading: false,
+  error: null,
+  refetch: jest.fn(),
+})
+
+const defaultNavigation = () => ({
+  selectedTab: 'Today',
+  setSelectedTab: jest.fn(),
+})
+
+afterEach(() => {
+  mockUseHousehold.mockImplementation(defaultHousehold)
+  mockUseNavigation.mockImplementation(defaultNavigation)
+  mockUseRouter.mockImplementation(() => ({ push: jest.fn() }))
+})
 
 describe('Header — unauthenticated', () => {
   beforeEach(() => {
@@ -112,7 +135,10 @@ describe('Header — household name', () => {
   })
 
   test('shows the household name from context when set up', () => {
-    mockUseHousehold.mockReturnValueOnce({ familyName: 'Ahmed Academy', needsSetup: false, loading: false, error: null, refetch: jest.fn() })
+    mockUseHousehold.mockImplementation(() => ({
+      ...defaultHousehold(),
+      familyName: 'Ahmed Academy',
+    }))
     render(<Header />)
     expect(screen.getByText('Ahmed Academy')).toBeInTheDocument()
     expect(screen.queryByText('Home Education')).not.toBeInTheDocument()
@@ -135,7 +161,10 @@ describe('Header — tab navigation on dashboard page', () => {
   })
 
   test('active tab has distinct active styling', () => {
-    mockUseNavigation.mockReturnValueOnce({ selectedTab: 'Weekly', setSelectedTab: jest.fn() })
+    mockUseNavigation.mockImplementation(() => ({
+      ...defaultNavigation(),
+      selectedTab: 'Weekly',
+    }))
     render(<Header />)
     const weeklyButtons = screen.getAllByRole('button', { name: 'Weekly' })
     expect(weeklyButtons.some((b) => b.className.includes('bg-forest-900'))).toBe(true)
@@ -144,8 +173,11 @@ describe('Header — tab navigation on dashboard page', () => {
   test('clicking a tab calls setSelectedTab and does NOT push router when already on /', () => {
     const setSelectedTab = jest.fn()
     const push = jest.fn()
-    mockUseNavigation.mockReturnValueOnce({ selectedTab: 'Today', setSelectedTab })
-    mockUseRouter.mockReturnValueOnce({ push })
+    mockUseNavigation.mockImplementation(() => ({
+      ...defaultNavigation(),
+      setSelectedTab,
+    }))
+    mockUseRouter.mockImplementation(() => ({ push }))
     render(<Header />)
     fireEvent.click(screen.getAllByRole('button', { name: 'Reports' })[0])
     expect(setSelectedTab).toHaveBeenCalledWith('Reports')
@@ -162,8 +194,11 @@ describe('Header — tab navigation from non-dashboard page', () => {
   test('clicking a tab from /about calls setSelectedTab AND navigates to /', () => {
     const setSelectedTab = jest.fn()
     const push = jest.fn()
-    mockUseNavigation.mockReturnValueOnce({ selectedTab: 'Today', setSelectedTab })
-    mockUseRouter.mockReturnValueOnce({ push })
+    mockUseNavigation.mockImplementation(() => ({
+      ...defaultNavigation(),
+      setSelectedTab,
+    }))
+    mockUseRouter.mockImplementation(() => ({ push }))
     render(<Header />)
     fireEvent.click(screen.getAllByRole('button', { name: 'Weekly' })[0])
     expect(setSelectedTab).toHaveBeenCalledWith('Weekly')

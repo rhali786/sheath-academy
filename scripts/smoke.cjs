@@ -1,24 +1,36 @@
 /**
- * After `npm run build`, starts production server briefly and checks /api/health.
- * /api/dashboard/* is auth-protected (returns 307 → /login) and is no longer checked here.
- * Defaults to port 3010 so it does not collide with `next dev` on 3000. Override: SMOKE_PORT=3005 npm run smoke
+ * After `npm run build`, starts production server briefly and checks /api/health,
+ * then verifies a stylesheet linked from /login actually loads (same build id).
+ *
+ * Default port is an ephemeral free port so this never talks to a stale `next start`
+ * left on 3010 (which causes ChunkLoadError / 4xx on /_next/static/*).
+ * Pin a port: SMOKE_PORT=3010 npm run smoke — must be free or spawn will fail.
  */
 const { spawn } = require('child_process')
 const http = require('http')
+const net = require('net')
 const path = require('path')
 
-const port = process.env.SMOKE_PORT || '3010'
 const root = path.join(__dirname, '..')
 const isWin = process.platform === 'win32'
 
-const child = spawn(isWin ? 'npx.cmd' : 'npx', ['next', 'start', '-p', port], {
-  cwd: root,
-  stdio: 'inherit',
-  shell: isWin,
-  env: { ...process.env, PORT: port },
-})
+/** @type {import('child_process').ChildProcess | null} */
+let child = null
 
-function getJson(p) {
+function getFreePort() {
+  return new Promise((resolve, reject) => {
+    const s = net.createServer()
+    s.unref()
+    s.listen(0, '127.0.0.1', () => {
+      const addr = s.address()
+      const p = typeof addr === 'object' && addr ? addr.port : 0
+      s.close(() => resolve(String(p)))
+    })
+    s.on('error', reject)
+  })
+}
+
+function getJson(port, p) {
   return new Promise((resolve, reject) => {
     const req = http.get(`http://127.0.0.1:${port}${p}`, (res) => {
       let body = ''
@@ -41,13 +53,28 @@ function getJson(p) {
   })
 }
 
+function getStatusAndBody(port, p) {
+  return new Promise((resolve, reject) => {
+    const req = http.get(`http://127.0.0.1:${port}${p}`, (res) => {
+      let body = ''
+      res.on('data', (c) => {
+        body += c
+      })
+      res.on('end', () => {
+        resolve({ statusCode: res.statusCode, body })
+      })
+    })
+    req.on('error', reject)
+  })
+}
+
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms))
 }
 
 function shutdown(code) {
   try {
-    child.kill(isWin ? undefined : 'SIGTERM')
+    if (child) child.kill(isWin ? undefined : 'SIGTERM')
   } catch {
     /* ignore */
   }
@@ -55,10 +82,19 @@ function shutdown(code) {
 }
 
 async function main() {
+  const port = process.env.SMOKE_PORT || (await getFreePort())
+
+  child = spawn(isWin ? 'npx.cmd' : 'npx', ['next', 'start', '-p', port], {
+    cwd: root,
+    stdio: 'inherit',
+    shell: isWin,
+    env: { ...process.env, PORT: port },
+  })
+
   let ok = false
   for (let i = 0; i < 60; i++) {
     try {
-      await getJson('/api/health')
+      await getJson(port, '/api/health')
       ok = true
       break
     } catch {
@@ -71,14 +107,49 @@ async function main() {
     return
   }
 
-  const health = await getJson('/api/health')
+  const health = await getJson(port, '/api/health')
   if (health.status !== 'healthy') {
     console.error('Smoke: /api/health unexpected body', health)
     shutdown(1)
     return
   }
 
-  console.log('Smoke: OK (health)')
+  const login = await getStatusAndBody(port, '/login')
+  if (login.statusCode !== 200) {
+    console.error('Smoke: GET /login expected 200, got', login.statusCode)
+    shutdown(1)
+    return
+  }
+  const cssHref = login.body.match(/href="(\/_next\/static\/css\/[^"]+\.css)"/)
+  if (!cssHref) {
+    console.error('Smoke: no /_next/static/css/*.css link in /login HTML')
+    shutdown(1)
+    return
+  }
+  const cssPath = cssHref[1]
+  const cssRes = await getStatusAndBody(port, cssPath)
+  if (cssRes.statusCode !== 200) {
+    console.error(
+      `Smoke: GET ${cssPath} returned ${cssRes.statusCode} (stale .next or HTML not from this server?)`,
+    )
+    shutdown(1)
+    return
+  }
+
+  const chunkHref = login.body.match(/src="(\/_next\/static\/chunks\/[^"]+\.js)"/)
+  if (chunkHref) {
+    const chunkPath = chunkHref[1]
+    const chunkRes = await getStatusAndBody(port, chunkPath)
+    if (chunkRes.statusCode !== 200) {
+      console.error(
+        `Smoke: GET ${chunkPath} returned ${chunkRes.statusCode} (stale .next or HTML not from this server?)`,
+      )
+      shutdown(1)
+      return
+    }
+  }
+
+  console.log(`Smoke: OK (health + static assets on port ${port})`)
   shutdown(0)
 }
 

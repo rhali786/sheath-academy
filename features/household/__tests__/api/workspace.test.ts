@@ -1,11 +1,11 @@
 import {
   getWorkspace,
   createWorkspace,
-  resetDataStore,
-} from '@/features/lib/server/dataStore'
+  resetStore,
+} from '@/features/household/server/service'
 
 beforeEach(() => {
-  resetDataStore()
+  resetStore()
 })
 
 describe('workspace (household data layer)', () => {
@@ -41,9 +41,9 @@ describe('workspace (household data layer)', () => {
     expect(workspace!.name).toBe('Second Family')
   })
 
-  test('resetDataStore clears the workspace', () => {
+  test('resetStore clears the workspace', () => {
     createWorkspace('Ahmed Academy')
-    resetDataStore()
+    resetStore()
     expect(getWorkspace()).toBeNull()
   })
 })

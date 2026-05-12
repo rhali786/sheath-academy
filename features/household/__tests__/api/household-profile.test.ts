@@ -3,11 +3,11 @@ import {
   createWorkspace,
   createHouseholdProfile,
   updateHouseholdProfile,
-  resetDataStore,
-} from '@/features/lib/server/dataStore'
+  resetStore,
+} from '@/features/household/server/service'
 
 beforeEach(() => {
-  resetDataStore()
+  resetStore()
 })
 
 describe('household profile (household data layer)', () => {
@@ -53,10 +53,10 @@ describe('household profile (household data layer)', () => {
     expect(getHouseholdProfile()!.familyName).toBe('Ahmed Academy')
   })
 
-  test('resetDataStore clears the profile', () => {
+  test('resetStore clears the profile', () => {
     const workspace = createWorkspace('Ahmed Academy')
     createHouseholdProfile(workspace.id, 'Ahmed Family')
-    resetDataStore()
+    resetStore()
     expect(getHouseholdProfile()).toBeNull()
   })
 })

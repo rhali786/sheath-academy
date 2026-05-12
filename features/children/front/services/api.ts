@@ -45,6 +45,9 @@ async function patch<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
 }
 
 export const childrenApi = {
+  getAllChildren: (includeArchived: boolean = false): Promise<ApiResponse<StudentProfile[]>> =>
+    get(`/api/children/children?includeArchived=${includeArchived}`),
+
   getChildren: (householdId: string, includeArchived: boolean = false): Promise<ApiResponse<StudentProfile[]>> =>
     get(`/api/children/children?householdId=${householdId}&includeArchived=${includeArchived}`),
 

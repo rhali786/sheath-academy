@@ -1,31 +1,37 @@
-import { getDataStore, resetDataStore } from '@/features/lib/server/dataStore'
-import type { DataStore } from '@/features/lib/types'
+import {
+  getTasks,
+  getChildren,
+  getAlerts,
+  getQuranSessions,
+  getRecords,
+  getProgressData,
+  resetStore,
+} from '@/features/dashboard/server/service'
 
 describe('TestStartup', () => {
   beforeEach(() => {
-    resetDataStore()
+    resetStore()
   })
 
-  test('should initialize data store successfully', () => {
-    const data = getDataStore()
-    expect(data).not.toBeNull()
-    expect(data).toBeDefined()
+  test('should initialize dashboard data successfully', () => {
+    const tasks = getTasks()
+    expect(tasks).not.toBeNull()
+    expect(tasks).toBeDefined()
   })
 
   test('should load data with all required fields', () => {
-    const data = getDataStore()
-    expect(data.children).toBeDefined()
-    expect(data.tasks).toBeDefined()
-    expect(data.alerts).toBeDefined()
-    expect(data.quranSessions).toBeDefined()
-    expect(data.records).toBeDefined()
-    expect(data.progressData).toBeDefined()
+    expect(getChildren()).toBeDefined()
+    expect(getTasks()).toBeDefined()
+    expect(getAlerts()).toBeDefined()
+    expect(getQuranSessions()).toBeDefined()
+    expect(getRecords()).toBeDefined()
+    expect(getProgressData()).toBeDefined()
   })
 
   test('should initialize with correct number of children', () => {
-    const data = getDataStore()
-    expect(data.children).toHaveLength(3)
-    const childNames = data.children.map(c => c.name)
+    const children = getChildren()
+    expect(children).toHaveLength(3)
+    const childNames = children.map(c => c.name)
     expect(childNames).toContain('Adam')
     expect(childNames).toContain('Khadijah')
     expect(childNames).toContain('Zayd')

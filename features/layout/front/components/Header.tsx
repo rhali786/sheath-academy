@@ -1,14 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useHousehold } from '@/features/household/front/context'
 import { useNavigation } from '@/features/layout/front/context/NavigationContext'
+import { formatHeaderDates, type HeaderDateDisplay } from '@/features/layout/lib/formatHeaderDates'
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [headerDates, setHeaderDates] = useState<HeaderDateDisplay | null>(null)
+
+  useEffect(() => {
+    setHeaderDates(formatHeaderDates(new Date()))
+  }, [])
   const { data: session } = useSession()
   const { familyName } = useHousehold()
   const pathname = usePathname()
@@ -47,9 +53,11 @@ export function Header() {
             {/* Hijri date — hidden on small screens */}
             <div className="hidden sm:block text-right">
               <div className="text-base font-bold text-forest-900 leading-tight" lang="ar" dir="rtl">
-                ١٧ ذو القعدة
+                {headerDates?.hijriDayMonthAr ?? '\u2014'}
               </div>
-              <div className="text-xs text-slate-400 mt-0.5">1447 AH · Sun, 10 May 2026</div>
+              <div className="text-xs text-slate-400 mt-0.5">
+                {headerDates?.hijriYearAndGregorian ?? '\u2014'}
+              </div>
             </div>
 
             {/* Auth controls */}
@@ -109,7 +117,7 @@ export function Header() {
             </button>
           ))}
           <Link
-            href="/settings/children"
+            href="/settings"
             className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
               pathname.startsWith('/settings')
                 ? 'bg-forest-900 text-white'
@@ -136,8 +144,12 @@ export function Header() {
         <div className="md:hidden border-t border-slate-100 bg-white">
           {/* Hijri date on mobile */}
           <div className="px-4 py-3 border-b border-slate-100">
-            <div className="text-sm font-bold text-forest-900" lang="ar" dir="rtl">١٧ ذو القعدة</div>
-            <div className="text-xs text-slate-400 mt-0.5">1447 AH · Sun, 10 May 2026</div>
+            <div className="text-sm font-bold text-forest-900" lang="ar" dir="rtl">
+              {headerDates?.hijriDayMonthAr ?? '\u2014'}
+            </div>
+            <div className="text-xs text-slate-400 mt-0.5">
+              {headerDates?.hijriYearAndGregorian ?? '\u2014'}
+            </div>
           </div>
           <nav className="py-1">
             {tabs.map((tab) => (
@@ -154,7 +166,7 @@ export function Header() {
               </button>
             ))}
             <Link
-              href="/settings/children"
+              href="/settings"
               onClick={() => setMenuOpen(false)}
               className={`block px-4 py-3 text-sm font-medium transition-colors ${
                 pathname.startsWith('/settings')

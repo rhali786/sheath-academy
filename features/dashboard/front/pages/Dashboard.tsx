@@ -13,13 +13,25 @@ import { useHousehold } from '@/features/household/front/context'
 import { HouseholdSetup } from '@/features/household/front/components/HouseholdSetup'
 import { dashboardApi } from '../services/api'
 import { useNavigation } from '@/features/layout/front/context/NavigationContext'
+import type { Child } from '../types'
+import { ChildSelector } from '../components/ChildSelector'
+import { NextSetupStrip } from '@/features/setup/front/components/NextSetupStrip'
 
 export default function Dashboard() {
   const { selectedTab } = useNavigation()
   const {
-    children, tasks, alerts, quranSessions, records, metrics,
+    children: studentProfiles, tasks, alerts, quranSessions, records, metrics,
     loading, error, toggleTask, addQuranSession,
   } = useContext_Dashboard()
+
+  // Map StudentProfile[] to legacy Child[] for existing components
+  const children: Child[] = studentProfiles.map(p => ({
+    id: p.id,
+    name: p.name,
+    age: 0,
+    grade: parseInt(p.gradeLabel.replace(/\D/g, '')) || 0,
+    avatar: p.avatarInitials || p.name.charAt(0).toUpperCase(),
+  }))
   const { needsSetup, loading: householdLoading } = useHousehold()
 
   const [progressData, setProgressData] = useState({})
@@ -67,6 +79,10 @@ export default function Dashboard() {
 
       {selectedTab === 'Today' && (
         <>
+          <NextSetupStrip />
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 flex justify-end">
+            <ChildSelector />
+          </div>
           <TodayState metrics={metrics} />
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

@@ -1,15 +1,14 @@
 import {
-  getDataStore,
   getTasks,
   getChildren,
   getQuranSessions,
   getProgressData,
-  resetDataStore,
-} from '@/features/lib/server/dataStore'
+  resetStore,
+} from '@/features/dashboard/server/service'
 
 describe('TestDataIntegrity', () => {
   beforeEach(() => {
-    resetDataStore()
+    resetStore()
   })
 
   test('no duplicate task ids', () => {
@@ -48,6 +47,16 @@ describe('TestDataIntegrity', () => {
 
     Object.keys(progress).forEach(childId => {
       expect(childIds.has(childId)).toBe(true)
+    })
+  })
+
+  test('every task childId in seed matches a seeded child or is "family"', () => {
+    const tasks = getTasks()
+    const children = getChildren()
+    const validIds = new Set([...children.map(c => c.id), 'family'])
+
+    tasks.forEach(task => {
+      expect(validIds.has(task.childId)).toBe(true)
     })
   })
 })

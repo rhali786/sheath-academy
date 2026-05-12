@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, Workspace } from '@/features/lib/types'
-import { getWorkspace, createWorkspace, createHouseholdProfile } from '@/features/lib/server/dataStore'
+import { getWorkspace, createWorkspace, createHouseholdProfile } from '@/features/household/server/service'
 
 export async function GET(): Promise<NextResponse<ApiResponse<Workspace | null>>> {
   const workspace = getWorkspace()

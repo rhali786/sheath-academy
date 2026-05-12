@@ -1,27 +1,24 @@
 import {
-  getDataStore,
   getTasks,
   updateTask,
   getChildren,
+  getAlerts,
   getQuranSessions,
-  addQuranSession,
   getRecords,
-  resetDataStore,
-} from '@/features/lib/server/dataStore'
+  resetStore,
+} from '@/features/dashboard/server/service'
 
 describe('TestCRUDOperations', () => {
   beforeEach(() => {
-    resetDataStore()
+    resetStore()
   })
 
   test('load data initializes with all required fields', () => {
-    const data = getDataStore()
-    expect(data).toBeDefined()
-    expect(data.children).toBeDefined()
-    expect(data.tasks).toBeDefined()
-    expect(data.alerts).toBeDefined()
-    expect(data.quranSessions).toBeDefined()
-    expect(data.records).toBeDefined()
+    expect(getChildren()).toBeDefined()
+    expect(getTasks()).toBeDefined()
+    expect(getAlerts()).toBeDefined()
+    expect(getQuranSessions()).toBeDefined()
+    expect(getRecords()).toBeDefined()
   })
 
   test('get children returns all three children', () => {
@@ -45,7 +42,7 @@ describe('TestCRUDOperations', () => {
   })
 
   test('update task persists in memory', () => {
-    resetDataStore()
+    resetStore()
 
     const initialTasks = getTasks()
     const taskToUpdate = initialTasks.find(t => !t.completed) || initialTasks[0]

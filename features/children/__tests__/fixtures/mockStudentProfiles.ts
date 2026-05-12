@@ -1,8 +1,9 @@
 import type { StudentProfile } from '@/features/lib/types'
+import { SEED_IDS } from '@/features/lib/seedIds'
 
 export const mockStudentProfiles: StudentProfile[] = [
   {
-    id: 'student_001',
+    id: SEED_IDS.adam,
     householdId: 'workspace_test',
     name: 'Adam',
     gradeLabel: 'Grade 5',
@@ -15,7 +16,7 @@ export const mockStudentProfiles: StudentProfile[] = [
     createdAt: '2026-01-10T10:00:00Z',
   },
   {
-    id: 'student_002',
+    id: SEED_IDS.khadijah,
     householdId: 'workspace_test',
     name: 'Khadijah',
     gradeLabel: 'Grade 3',
@@ -28,7 +29,7 @@ export const mockStudentProfiles: StudentProfile[] = [
     createdAt: '2026-01-10T10:00:00Z',
   },
   {
-    id: 'student_003',
+    id: SEED_IDS.zayd,
     householdId: 'workspace_test',
     name: 'Zayd',
     gradeLabel: 'Grade 8',
