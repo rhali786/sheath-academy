@@ -1,6 +1,7 @@
+'use client'
+
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Header } from '@/features/layout/front/components/Header'
 import { TodayState } from '../components/TodayState'
 import { DoToday } from '../components/DoToday'
 import { NeedsAttention } from '../components/NeedsAttention'
@@ -8,7 +9,10 @@ import { PerChildProgress } from '../components/PerChildProgress'
 import { QuranStudies } from '../components/QuranStudies'
 import { RecordsProof } from '../components/RecordsProof'
 import { useContext_Dashboard } from '../context'
+import { useHousehold } from '@/features/household/front/context'
+import { HouseholdSetup } from '@/features/household/front/components/HouseholdSetup'
 import { dashboardApi } from '../services/api'
+import { householdApi } from '@/features/household/front/services/api'
 import { useNavigation } from '@/features/layout/front/context/NavigationContext'
 
 export default function Dashboard() {
@@ -17,8 +21,13 @@ export default function Dashboard() {
     children, tasks, alerts, quranSessions, records, metrics,
     loading, error, toggleTask, addQuranSession,
   } = useContext_Dashboard()
+  const { familyName, needsSetup, loading: householdLoading, refetch } = useHousehold()
 
   const [progressData, setProgressData] = useState({})
+  const [renameName, setRenameName] = useState('')
+  const [renaming, setRenaming] = useState(false)
+  const [renameError, setRenameError] = useState<string | null>(null)
+  const [renameSuccess, setRenameSuccess] = useState(false)
 
   useEffect(() => {
     dashboardApi.getProgress()
@@ -26,7 +35,28 @@ export default function Dashboard() {
       .catch(err => console.error('Failed to fetch progress data:', err))
   }, [])
 
-  if (loading) {
+  useEffect(() => {
+    if (familyName) setRenameName(familyName)
+  }, [familyName])
+
+  async function handleRename(e: React.FormEvent) {
+    e.preventDefault()
+    if (!renameName.trim() || renameName.trim() === familyName) return
+    setRenaming(true)
+    setRenameError(null)
+    setRenameSuccess(false)
+    try {
+      await householdApi.updateProfile(renameName.trim())
+      refetch()
+      setRenameSuccess(true)
+    } catch {
+      setRenameError('Could not save. Please try again.')
+    } finally {
+      setRenaming(false)
+    }
+  }
+
+  if (loading || householdLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-50">
         <div className="text-center">
@@ -54,9 +84,12 @@ export default function Dashboard() {
     )
   }
 
+  if (needsSetup) {
+    return <HouseholdSetup />
+  }
+
   return (
     <div className="bg-slate-50 min-h-screen">
-      <Header />
 
       {selectedTab === 'Today' && (
         <>
@@ -76,16 +109,13 @@ export default function Dashboard() {
           <PerChildProgress children={children} progressData={progressData} />
           <QuranStudies children={children} quranSessions={quranSessions} onAddSession={addQuranSession} />
           <RecordsProof records={records} />
-        </>
-      )}
 
-      {/* hidden footer — not in nav */}
-      {selectedTab === 'Today' && (
-        <div className="pb-6 text-center">
-          <Link href="/worklog" className="text-xs text-slate-300 hover:text-slate-400 transition-colors">
-            worklog
-          </Link>
-        </div>
+          <div className="pb-6 text-center">
+            <Link href="/worklog" className="text-xs text-slate-300 hover:text-slate-400 transition-colors">
+              worklog
+            </Link>
+          </div>
+        </>
       )}
 
       {selectedTab === 'Weekly' && (
@@ -108,9 +138,32 @@ export default function Dashboard() {
 
       {selectedTab === 'Settings' && (
         <div className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-xl shadow-sm p-8">
-            <h2 className="text-2xl font-bold text-slate-900">Household settings</h2>
-            <p className="text-slate-400 mt-2 text-sm">Settings coming soon.</p>
+          <div className="bg-white rounded-xl shadow-sm p-8 max-w-lg">
+            <h2 className="text-xl font-bold text-slate-900 mb-1">Household settings</h2>
+            <p className="text-sm text-slate-400 mb-6">Rename your household. This name appears in the header and throughout your dashboard.</p>
+
+            <form onSubmit={handleRename}>
+              <label htmlFor="rename-household" className="block text-xs font-medium text-slate-600 mb-1.5">
+                Household name
+              </label>
+              <input
+                id="rename-household"
+                type="text"
+                value={renameName}
+                onChange={(e) => { setRenameName(e.target.value); setRenameSuccess(false) }}
+                className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900 mb-4"
+                maxLength={80}
+              />
+              {renameError && <p className="text-red-500 text-xs mb-3">{renameError}</p>}
+              {renameSuccess && <p className="text-green-600 text-xs mb-3">Household name updated.</p>}
+              <button
+                type="submit"
+                disabled={!renameName.trim() || renameName.trim() === familyName || renaming}
+                className="px-5 py-2.5 bg-forest-900 text-white rounded-lg text-sm font-medium hover:bg-forest-800 disabled:opacity-50 transition-colors"
+              >
+                {renaming ? 'Saving…' : 'Save'}
+              </button>
+            </form>
           </div>
         </div>
       )}

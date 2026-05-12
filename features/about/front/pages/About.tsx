@@ -195,6 +195,7 @@ export function AboutPage() {
           <div className="flex gap-4 text-xs">
             <Link href="/login" className="text-slate-400 hover:text-forest-900 transition-colors">Sign in</Link>
             <a href="https://sheathacademy.onrender.com" className="text-slate-400 hover:text-forest-900 transition-colors">Live site</a>
+            <Link href="/worklog" className="text-slate-400 hover:text-forest-900 transition-colors">Worklog</Link>
           </div>
         </div>
       </footer>
