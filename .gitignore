@@ -1,6 +1,8 @@
 node_modules/
 dist/
 build/
+# Secrets & local overrides — copy from .env.example; never commit real values.
+.env
 .env.local
 .DS_Store
 *.log

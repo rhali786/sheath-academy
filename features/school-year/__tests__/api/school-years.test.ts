@@ -1,4 +1,4 @@
-import { getSchoolYears, createSchoolYear, resetStore } from '@/features/school-year/server/service'
+import { getSchoolYears, getSchoolYear, createSchoolYear, resetStore } from '@/features/school-year/server/service'
 import { SEED_SCHOOL_YEARS } from '@/features/school-year/server/seed'
 import { resetStore as resetHouseholdStore } from '@/features/household/server/service'
 import { SEED_IDS } from '@/features/lib/seedIds'
@@ -103,6 +103,27 @@ describe('School Years - List and Create', () => {
         isActive: true,
       })
       expect(year.isActive).toBe(true)
+    })
+
+    it('deactivates other years when creating with isActive: true', () => {
+      const { schoolYearsStore } = require('@/features/school-year/server/store')
+      schoolYearsStore.reset([])
+      const first = createSchoolYear({
+        name: 'First',
+        startDate: '2025-08-01',
+        endDate: '2026-05-31',
+        isActive: true,
+      })
+      const second = createSchoolYear({
+        name: 'Second',
+        startDate: '2026-08-01',
+        endDate: '2027-05-31',
+        isActive: true,
+      })
+      expect(getSchoolYear(first.id)?.isActive).toBe(false)
+      expect(getSchoolYear(second.id)?.isActive).toBe(true)
+      const activeCount = getSchoolYears().filter((y) => y.isActive).length
+      expect(activeCount).toBe(1)
     })
   })
 })

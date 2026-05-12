@@ -29,13 +29,22 @@ export function createSchoolYear(
   const workspace = getWorkspace()
   const workspaceId = workspace?.id ?? ''
 
+  const isActive = data.isActive ?? false
+  if (isActive) {
+    for (const existing of [...schoolYearsStore.getAll()]) {
+      if (existing.isActive) {
+        schoolYearsStore.update(existing.id, { isActive: false })
+      }
+    }
+  }
+
   const year: SchoolYear = {
     id: generateSchoolYearId(),
     workspaceId,
     name: data.name.trim(),
     startDate: data.startDate,
     endDate: data.endDate,
-    isActive: data.isActive ?? false,
+    isActive,
     createdAt: new Date().toISOString(),
   }
   return schoolYearsStore.insert(year)

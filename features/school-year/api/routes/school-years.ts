@@ -63,7 +63,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     )
   }
 
-  const year = createSchoolYear({ name: name.trim(), startDate, endDate, isActive })
+  const effectiveActive = typeof isActive === 'boolean' ? isActive : true
+
+  const year = createSchoolYear({
+    name: name.trim(),
+    startDate,
+    endDate,
+    isActive: effectiveActive,
+  })
 
   return NextResponse.json(
     {

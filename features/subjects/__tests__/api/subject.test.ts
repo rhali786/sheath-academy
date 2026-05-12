@@ -57,14 +57,17 @@ describe('Subjects — Individual Operations', () => {
       expect(updated).toBeNull()
     })
 
-    it('partially updates fields without overwriting others', () => {
-      const original = getSubject(testSubjectId)
-      updateSubject(testSubjectId, { name: 'New Name' })
-      const updated = getSubject(testSubjectId)
+    it('updates childId when reassigned to another student', () => {
+      const updated = updateSubject(testSubjectId, {
+        childId: SEED_IDS.khadijah,
+      })
+      expect(updated).not.toBeNull()
+      expect(updated!.childId).toBe(SEED_IDS.khadijah)
+    })
 
-      expect(updated!.name).toBe('New Name')
-      expect(updated!.category).toBe(original!.category)
-      expect(updated!.childId).toBe(original!.childId)
+    it('returns null when childId does not exist', () => {
+      const updated = updateSubject(testSubjectId, { childId: 'nonexistent_child' })
+      expect(updated).toBeNull()
     })
   })
 

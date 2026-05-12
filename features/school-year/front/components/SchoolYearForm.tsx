@@ -19,9 +19,11 @@ function getDefaultEndDate(): string {
 
 interface SchoolYearFormProps {
   onSuccess?: () => void
+  /** Flat bordered panel for embedded contexts (e.g. Settings) instead of shadow card. */
+  embedded?: boolean
 }
 
-export function SchoolYearForm({ onSuccess }: SchoolYearFormProps) {
+export function SchoolYearForm({ onSuccess, embedded }: SchoolYearFormProps) {
   const [name, setName] = useState('')
   const [startDate, setStartDate] = useState(getDefaultStartDate())
   const [endDate, setEndDate] = useState(getDefaultEndDate())
@@ -44,16 +46,29 @@ export function SchoolYearForm({ onSuccess }: SchoolYearFormProps) {
 
     setSaving(true)
     try {
-      await schoolYearApi.createSchoolYear({ name: name.trim(), startDate, endDate })
+      await schoolYearApi.createSchoolYear({
+        name: name.trim(),
+        startDate,
+        endDate,
+        isActive: true,
+      })
+      setName('')
       onSuccess?.()
     } catch {
       setError('Something went wrong. Please try again.')
+    } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
+    <div
+      className={
+        embedded
+          ? 'bg-white rounded-xl border border-slate-200 p-6 w-full max-w-md'
+          : 'bg-white rounded-2xl shadow-lg p-8 w-full max-w-md'
+      }
+    >
       <div className="mb-6">
         <h2 className="text-xl font-bold text-slate-900">Set up your school year</h2>
         <p className="text-sm text-slate-500 mt-1">

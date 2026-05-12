@@ -83,6 +83,7 @@ describe('SchoolYearForm component', () => {
         name: 'Test Year',
         startDate: '2026-08-01',
         endDate: '2027-05-31',
+        isActive: true,
       })
       expect(onSuccess).toHaveBeenCalled()
     })

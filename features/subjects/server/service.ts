@@ -41,14 +41,20 @@ export function createSubject(data: {
 
 export function updateSubject(
   id: string,
-  patch: Partial<SubjectCourse>
+  patch: Partial<Pick<SubjectCourse, 'name' | 'category' | 'order' | 'childId'>>
 ): SubjectCourse | null {
   if (!subjectsStore.getById(id)) return null
+
+  if (patch.childId !== undefined) {
+    const child = getStudentProfile(patch.childId)
+    if (!child) return null
+  }
 
   const allowedPatch: Partial<SubjectCourse> = {}
   if (patch.name !== undefined) allowedPatch.name = patch.name
   if (patch.category !== undefined) allowedPatch.category = patch.category
   if (patch.order !== undefined) allowedPatch.order = patch.order
+  if (patch.childId !== undefined) allowedPatch.childId = patch.childId
 
   return subjectsStore.update(id, allowedPatch)
 }

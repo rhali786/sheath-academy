@@ -3,29 +3,22 @@
 import { useEffect, useState, FormEvent } from 'react'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourseCategory } from '@/features/subjects/types'
+import { SUBJECT_COURSE_CATEGORIES } from '@/features/subjects/front/lib/categories'
 import { childrenApi } from '@/features/children/front/services/api'
 import { subjectsApi } from '@/features/subjects/front/services/api'
 
-const CATEGORIES: SubjectCourseCategory[] = [
-  'Quran',
-  'Arabic',
-  'IslamicStudies',
-  'Math',
-  'Reading',
-  'Science',
-  'History',
-  'English',
-  'Other',
-]
-
 export interface SubjectFormProps {
+  /** Matches `StudentProfile.householdId` (household profile id, not workspace id). */
+  householdId: string
   /** Called after a subject is created successfully */
   onSuccess?: () => void
-  /** When only one child exists, pre-select and hide picker */
+  /** When set, keeps `childId` in sync (e.g. Settings child tabs). */
   defaultChildId?: string
+  /** Hide the child dropdown — parent UI owns child selection (tabs only). */
+  hideChildSelect?: boolean
 }
 
-export function SubjectForm({ onSuccess, defaultChildId }: SubjectFormProps) {
+export function SubjectForm({ householdId, onSuccess, defaultChildId, hideChildSelect }: SubjectFormProps) {
   const [children, setChildren] = useState<StudentProfile[]>([])
   const [loadingChildren, setLoadingChildren] = useState(true)
   const [childId, setChildId] = useState(defaultChildId ?? '')
@@ -36,9 +29,15 @@ export function SubjectForm({ onSuccess, defaultChildId }: SubjectFormProps) {
 
   useEffect(() => {
     let cancelled = false
+    if (!householdId.trim()) {
+      setChildren([])
+      setChildId('')
+      setLoadingChildren(false)
+      return
+    }
     setLoadingChildren(true)
     childrenApi
-      .getAllChildren(false)
+      .getChildren(householdId, false)
       .then((res) => {
         if (cancelled) return
         const list = (res.data ?? []).filter((c) => c.isActive !== false)
@@ -47,6 +46,8 @@ export function SubjectForm({ onSuccess, defaultChildId }: SubjectFormProps) {
           setChildId(defaultChildId)
         } else if (list.length === 1) {
           setChildId(list[0].id)
+        } else {
+          setChildId('')
         }
       })
       .catch(() => {
@@ -58,13 +59,17 @@ export function SubjectForm({ onSuccess, defaultChildId }: SubjectFormProps) {
     return () => {
       cancelled = true
     }
-  }, [defaultChildId])
+  }, [defaultChildId, householdId])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
     if (!childId || !name.trim()) {
-      setError('Choose a child and enter a subject name.')
+      setError(
+        hideChildSelect && children.length > 1
+          ? 'Pick a child using the tabs above, then enter a subject name.'
+          : 'Choose a child and enter a subject name.'
+      )
       return
     }
     setSubmitting(true)
@@ -91,22 +96,30 @@ export function SubjectForm({ onSuccess, defaultChildId }: SubjectFormProps) {
     )
   }
 
-  if (children.length === 0) {
+  if (!householdId.trim()) {
     return (
-      <p className="text-sm text-amber-700" data-testid="subject-form-no-children">
-        Add a child first, then you can add subjects here.
+      <p className="text-sm text-amber-700" data-testid="subject-form-no-household">
+        Household is not ready yet. Finish setup, then add subjects here.
       </p>
     )
   }
 
-  const showPicker = children.length > 1 && !defaultChildId
+  if (children.length === 0) {
+    return (
+      <p className="text-sm text-amber-700" data-testid="subject-form-no-children">
+        No children in this household yet. Add a child in the Children tab first.
+      </p>
+    )
+  }
+
+  const needsChildPlaceholder = !hideChildSelect && children.length > 1
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3" data-testid="subject-form">
-      {showPicker && (
+      {!hideChildSelect && (
         <div>
           <label htmlFor="subject-child" className="block text-xs font-medium text-slate-600 mb-1">
-            Child
+            Subject for (child)
           </label>
           <select
             id="subject-child"
@@ -114,14 +127,21 @@ export function SubjectForm({ onSuccess, defaultChildId }: SubjectFormProps) {
             value={childId}
             onChange={(e) => setChildId(e.target.value)}
           >
-            <option value="">Select child</option>
+            {needsChildPlaceholder && <option value="">Select child</option>}
             {children.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}
           </select>
+          <p className="text-xs text-slate-400 mt-1">Each subject is stored for one child.</p>
         </div>
+      )}
+
+      {hideChildSelect && children.length > 1 && (
+        <p className="text-xs text-slate-500" data-testid="subject-form-tabs-hint">
+          New subjects are added for the child selected in the tabs above.
+        </p>
       )}
 
       <div>
@@ -149,7 +169,7 @@ export function SubjectForm({ onSuccess, defaultChildId }: SubjectFormProps) {
           value={category}
           onChange={(e) => setCategory(e.target.value as SubjectCourseCategory)}
         >
-          {CATEGORIES.map((c) => (
+          {SUBJECT_COURSE_CATEGORIES.map((c) => (
             <option key={c} value={c}>
               {c}
             </option>

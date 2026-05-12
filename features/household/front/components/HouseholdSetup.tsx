@@ -41,8 +41,13 @@ export function HouseholdSetup({ onComplete }: HouseholdSetupProps = {}) {
   const fetchSetupStatus = useCallback(async () => {
     setCheckingStatus(true)
     try {
+      const hid = householdProfile?.id ?? workspace?.id
+      const childrenUrl =
+        hid != null && hid !== ''
+          ? `/api/children/children?householdId=${encodeURIComponent(hid)}&includeArchived=false`
+          : '/api/children/children?includeArchived=false'
       const [childrenRes, schoolYearRes, subjectsRes] = await Promise.all([
-        fetch('/api/children/children').then((r) => r.json()),
+        fetch(childrenUrl).then((r) => r.json()),
         fetch('/api/school-years/active').then((r) => r.json()).catch(() => ({ data: null })),
         fetch('/api/subjects').then((r) => r.json()).catch(() => ({ data: [] })),
       ])
@@ -65,7 +70,7 @@ export function HouseholdSetup({ onComplete }: HouseholdSetupProps = {}) {
     } finally {
       setCheckingStatus(false)
     }
-  }, [])
+  }, [workspace?.id, householdProfile?.id])
 
   // Enter cards phase and start fetching status when appropriate.
   useEffect(() => {
@@ -92,10 +97,11 @@ export function HouseholdSetup({ onComplete }: HouseholdSetupProps = {}) {
     setFormError(null)
     try {
       await householdApi.setup(name.trim())
-      // Do NOT call refetch() yet — we stay on screen to show setup cards.
+      await refetch()
       setInCardsPhase(true)
     } catch {
       setFormError('Something went wrong. Please try again.')
+    } finally {
       setSaving(false)
     }
   }
@@ -134,7 +140,7 @@ export function HouseholdSetup({ onComplete }: HouseholdSetupProps = {}) {
               )}
               {showChildren && workspace && (
                 <SetupCard_Children
-                  householdId={workspace.id}
+                  householdId={householdProfile?.id ?? workspace.id}
                   onChildAdded={fetchSetupStatus}
                 />
               )}

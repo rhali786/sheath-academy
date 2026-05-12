@@ -5,6 +5,7 @@ import type { Task, Alert, QuranSession, DashboardRecord, DashboardMetrics, Stud
 import { dashboardApi } from '@/features/dashboard/front/services/api'
 import { childrenApi } from '@/features/children/front/services/api'
 import { useSelectedChild } from '@/features/dashboard/front/hooks/useSelectedChild'
+import { useHousehold } from '@/features/household/front/context'
 
 export interface DashboardContextType {
   children: StudentProfile[]
@@ -37,6 +38,7 @@ export function useContext_Dashboard() {
 }
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
+  const { workspace, householdProfile, loading: householdLoading } = useHousehold()
   const [studentProfiles, setStudentProfiles] = useState<StudentProfile[]>([])
   const [allTasks, setAllTasks] = useState<Task[]>([])
   const [allAlerts, setAllAlerts] = useState<Alert[]>([])
@@ -48,15 +50,27 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [selectedChildId, setSelectedChildId] = useSelectedChild()
 
   useEffect(() => {
+    if (householdLoading) return
+
     const fetchData = async () => {
       try {
+        const householdId = householdProfile?.id ?? workspace?.id
+        const childrenPromise = householdId
+          ? childrenApi.getChildren(householdId, false)
+          : Promise.resolve({
+              data: [] as StudentProfile[],
+              status: 'success' as const,
+              message: '',
+              timestamp: '',
+            })
+
         const [tasksRes, alertsRes, quranRes, recordsRes, summaryRes, childrenRes] = await Promise.all([
           dashboardApi.getTasks(),
           dashboardApi.getAlerts(),
           dashboardApi.getQuran(),
           dashboardApi.getRecords(),
           dashboardApi.getSummary(),
-          childrenApi.getAllChildren(),
+          childrenPromise,
         ])
 
         setAllTasks(tasksRes.data)
@@ -64,7 +78,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         setQuranSessions(quranRes.data.sessions)
         setRecords(recordsRes.data)
         setMetrics(summaryRes.data)
-        setStudentProfiles(childrenRes.data)
+        setStudentProfiles(childrenRes.data ?? [])
         setLoading(false)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load dashboard')
@@ -72,8 +86,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    fetchData()
-  }, [])
+    void fetchData()
+  }, [workspace?.id, householdProfile?.id, householdLoading])
 
   const tasks = useMemo(() => {
     if (!selectedChildId) {

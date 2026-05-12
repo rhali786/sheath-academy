@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { SubjectCourse, SubjectCourseCategory } from '@/features/subjects/types'
+import { getStudentProfile } from '@/features/children/server/service'
 import {
   getSubject,
   updateSubject,
@@ -53,11 +54,38 @@ export async function PUT(id: string, request: Request): Promise<NextResponse> {
 
   const body = await request.json()
 
+  if (body.childId !== undefined && typeof body.childId === 'string') {
+    if (!getStudentProfile(body.childId)) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          data: null,
+          message: 'Child not found',
+          timestamp: new Date().toISOString(),
+        },
+        { status: 400 }
+      )
+    }
+  }
+
   const updated = updateSubject(id, {
-    name: body.name !== undefined ? body.name.trim() : undefined,
+    name: body.name !== undefined ? String(body.name).trim() : undefined,
     category: body.category as SubjectCourseCategory | undefined,
     order: body.order !== undefined ? Number(body.order) : undefined,
+    childId: typeof body.childId === 'string' ? body.childId : undefined,
   })
+
+  if (!updated) {
+    return NextResponse.json(
+      {
+        status: 'error',
+        data: null,
+        message: 'Subject not found',
+        timestamp: new Date().toISOString(),
+      },
+      { status: 404 }
+    )
+  }
 
   return NextResponse.json({
     status: 'success',

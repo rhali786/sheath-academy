@@ -39,7 +39,8 @@ export function updateHouseholdProfile(familyName: string): HouseholdProfile | n
   return householdProfilesStore.update(profile.id, { familyName })
 }
 
+/** Clears workspace + household profile (tests); dev uses initial module seed until reset. */
 export function resetStore(): void {
-  workspacesStore.reset(SEED_WORKSPACES)
-  householdProfilesStore.reset(SEED_HOUSEHOLD_PROFILES)
+  workspacesStore.reset([])
+  householdProfilesStore.reset([])
 }

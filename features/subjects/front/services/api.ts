@@ -25,6 +25,16 @@ async function post<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
   return res.json()
 }
 
+async function put<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
+  const res = await fetch(`${getApiBaseUrl()}${path}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  return res.json()
+}
+
 async function patch<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
   const res = await fetch(`${getApiBaseUrl()}${path}`, {
     method: 'PATCH',
@@ -45,6 +55,17 @@ export const subjectsApi = {
     category: SubjectCourseCategory
     order?: number
   }): Promise<ApiResponse<SubjectCourse>> => post('/api/subjects', body),
+
+  updateSubject: (
+    id: string,
+    body: {
+      name?: string
+      category?: SubjectCourseCategory
+      childId?: string
+      order?: number
+    }
+  ): Promise<ApiResponse<SubjectCourse>> =>
+    put(`/api/subjects/${encodeURIComponent(id)}`, body),
 
   archiveSubject: (id: string): Promise<ApiResponse<SubjectCourse>> =>
     patch(`/api/subjects/${encodeURIComponent(id)}/archive`),
