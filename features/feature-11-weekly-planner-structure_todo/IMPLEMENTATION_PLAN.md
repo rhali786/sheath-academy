@@ -6,6 +6,40 @@
 
 ---
 
+## Implementation Waves (Scope & Token Optimization)
+
+### Wave 1: Feature internals (`features/planner/` only)
+
+Create all new files under `features/planner/` including types, server (store/seed/service/ids), API routes, front components, and tests. Tests must fail first (TDD).
+
+**Wave 1 deliverable:** All files in §7.1 created; all tests failing, then passing. No modifications to any other feature.
+
+**Instruction to start Wave 1:**
+> "Start Wave 1: Work only in `features/planner/`. Create all new files from §7.1. Write failing tests first (§6), then implement until green. Do not modify any files outside `features/planner/`."
+
+---
+
+### Wave 2: Cross-feature integration (existing files only)
+
+Modify only these files to wire the planner into existing features:
+
+```
+features/household/types.ts                              — add weekStartDay field
+features/household/server/service.ts                    — expose weekStartDay in getHouseholdProfile
+features/household/api/routes/household-profile.ts    — handle weekStartDay in PUT payload
+features/household/front/components/HouseholdSettings.tsx  — add week start selector UI
+features/layout/front/components/Header.tsx             — add "Weekly" nav item
+features/dashboard/front/pages/Dashboard.tsx            — remove "Weekly" tab
+app/api/[...slug]/route.ts                              — add planner branch + import
+```
+
+**Wave 2 deliverable:** Household setting persists; Header nav works; API wiring complete. Wave 2 depends on Wave 1 passing all tests.
+
+**Instruction to start Wave 2:**
+> "Start Wave 2: Modify only the 7 files listed in §1 (Wave 2). Update household types/API/UI for weekStartDay, wire Header nav, remove Dashboard tab, add planner API route."
+
+---
+
 ## 1. Locked Decisions
 
 These decisions are frozen. Do not re-open them in a PR or agent chat.
@@ -226,8 +260,11 @@ describe('PATCH /api/planner/lessons/:id/complete', () => {
 
 ```ts
 describe('WeeklyPlannerPage', () => {
-  it('renders week grid on desktop viewport')
-  it('renders week list on mobile viewport')
+  it('shows loading spinner while fetching household profile and lessons')
+  it('shows error state when GET /api/household/profile fails')
+  it('shows error state when GET /api/planner/lessons fails')
+  it('renders week grid on desktop viewport once loaded')
+  it('renders week list on mobile viewport once loaded')
   it('loads and displays lessons for the current week on mount')
   it('shows empty state when no lessons exist for the week')
   it('previous/next buttons navigate to previous/next week')
@@ -271,6 +308,28 @@ describe('WeekNavigator', () => {
   it('date picker opens and allows selecting a new week start')
   it('jump-to-today button sets week to current week')
   it('displays current week range in header (Mon–Sun based on weekStartDay)')
+})
+
+describe('EmptyWeekState', () => {
+  it('renders friendly message when passed empty lessons array')
+  it('does not render when lessons array is populated')
+  it('message text is contextual and witty')
+})
+```
+
+### 6.3 Integration tests for Household Settings (`features/household/__tests__/integration/HouseholdSettings.test.tsx`)
+
+_Note: This test file may already exist; add the following cases if extending an existing file._
+
+```ts
+describe('HouseholdSettings — Week Start Day selector', () => {
+  it('renders dropdown with "Monday" and "Sunday" options')
+  it('loads and displays current weekStartDay from household profile on mount')
+  it('defaults to "Monday" when weekStartDay is not set')
+  it('calls PUT /api/household/profile when selection changes')
+  it('updates displayed value after successful PUT')
+  it('shows error message when PUT /api/household/profile fails')
+  it('reverts to previous value if update fails')
 })
 ```
 
@@ -316,7 +375,9 @@ features/household/types.ts                                    — add weekStart
 features/household/server/service.ts                           — ensure getHouseholdProfile returns weekStartDay
 features/household/api/routes/household-profile.ts            — ensure PUT endpoint handles weekStartDay
 features/household/front/components/HouseholdSettings.tsx    — add week start selector UI
+features/household/__tests__/integration/HouseholdSettings.test.tsx  — add week start day selector test cases
 features/layout/front/components/Header.tsx                  — add "Weekly" nav item linking to /planner
+features/layout/__tests__/Header.test.tsx                    — add test case for "Weekly" nav link rendering + routing
 features/dashboard/front/pages/Dashboard.tsx                 — remove the "Weekly" tab if it exists
 app/api/[...slug]/route.ts                                    — add planner branch + import (see §4.1)
 ```
@@ -327,11 +388,13 @@ app/api/[...slug]/route.ts                                    — add planner br
 
 | Component | Context(s) to mock | States | User interactions |
 |---|---|---|---|
-| `WeeklyPlannerPage` | Mock `useHousehold()` for weekStartDay; mock `GET /api/planner/lessons`, `GET /api/children`, `GET /api/subjects` | loading, empty, error, populated | navigate weeks, filter, jump to today |
+| `WeeklyPlannerPage` | Mock `useHousehold()` for weekStartDay; mock `GET /api/household/profile`, `GET /api/planner/lessons`, `GET /api/children`, `GET /api/subjects` | loading (profile + lessons), error (profile fails), error (lessons fail), empty week, populated week | navigate weeks, filter, jump to today |
 | `WeekGrid` | Mock `PlannerContext` with lessons array | empty week, one lesson, multiple children/subjects, weekend de-emphasis | (none — read-only) |
 | `WeeklyList` | Mock `PlannerContext` with lessons array | collapsed sections, expanded sections, empty sections | expand/collapse day sections |
+| `EmptyWeekState` | None (pure display component) | message renders, message does not render | (none — read-only) |
 | `ChildSubjectFilter` | Mock context + mock API responses | no children, one child, multiple children, filter updates | select/deselect children, select/deselect subjects |
-| `WeekNavigator` | Mock context with current week | month transitions, date picker, jump to today | prev/next, date picker, jump button |
+| `WeekNavigator` | Mock context with current week | month transitions, date picker, jump to today, week range respects weekStartDay | prev/next, date picker, jump button |
+| `HouseholdSettings` (week start) | Mock `useHousehold()`; mock `GET /api/household/profile`, `PUT /api/household/profile` | loading, default value, changed value, PUT success, PUT error | select option, change selection |
 
 Mock contexts in tests; do not render `AppShell` or `HouseholdProvider`. Use `renderWithProvider` pattern from dashboard tests.
 
@@ -374,16 +437,20 @@ Mock contexts in tests; do not render `AppShell` or `HouseholdProvider`. Use `re
 - [ ] Filters work: child multi-select, subject multi-select, all-children mode
 - [ ] Week navigation works: prev, next, date picker, jump to today
 - [ ] Weekends are displayed and visually de-emphasized
-- [ ] Empty week shows friendly message
+- [ ] Empty week shows friendly message (EmptyWeekState component)
 - [ ] `GET /api/planner/lessons?week=YYYY-MM-DD&childIds=X,Y&subjectIds=A,B` works with all combinations
 - [ ] Household `weekStartDay` setting is respected when calculating week spans
-- [ ] Header nav has "Weekly" link; Dashboard no longer has a Weekly tab
+- [ ] Household Settings UI includes week start selector; changes persist via PUT
+- [ ] Header nav has "Weekly" link; clicking navigates to `/planner`; Dashboard no longer has a Weekly tab
 
 ### Dependencies
 - [ ] `features/household/types.ts` updated with `weekStartDay` field
+- [ ] `features/household/server/service.ts` returns `weekStartDay` in profile
 - [ ] `features/household/api/routes/household-profile.ts` handles `weekStartDay` in PUT payload
 - [ ] `features/household/front/components/HouseholdSettings.tsx` includes UI for week start selector
+- [ ] `features/household/__tests__/integration/HouseholdSettings.test.tsx` has test cases for week start selector
 - [ ] `features/layout/front/components/Header.tsx` includes "Weekly" nav item
+- [ ] `features/layout/__tests__/Header.test.tsx` has test case for "Weekly" link
 
 ### Scope
 - [ ] Only files listed in §7 are created/modified
@@ -432,6 +499,24 @@ Mock contexts in tests; do not render `AppShell` or `HouseholdProvider`. Use `re
 - [ ] No `.env.local`, API keys, or secrets committed
 - [ ] Only files in §7 modified
 ```
+
+---
+
+## 11. Smoke Test Checklist
+
+After `npm run build && npm run start`:
+
+- [ ] Navigate to `/login` → dev bypass or auth flow
+- [ ] Header displays "Dashboard" and **"Weekly"** nav items
+- [ ] Click "Weekly" → navigates to `/planner`
+- [ ] Weekly planner page loads; displays week grid (desktop) or collapsible list (mobile)
+- [ ] Lessons populate for current week with multiple children/subjects visible
+- [ ] Week navigation buttons (prev/next) change the displayed week
+- [ ] Filters (child, subject) update the displayed lessons when changed
+- [ ] "Jump to today" button returns to current week
+- [ ] Navigate to Settings → "Week Starts On" dropdown visible with Monday/Sunday options
+- [ ] Change week start setting → persists (reload page confirms the change)
+- [ ] `GET http://localhost:3010/api/planner/lessons?week=2026-05-12` → 200 with lessons array
 
 ---
 
