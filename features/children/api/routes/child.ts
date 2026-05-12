@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, StudentProfile } from '@/features/lib/types'
-import { getStudentProfile, updateStudentProfile, archiveStudentProfile, restoreStudentProfile } from '@/features/lib/server/dataStore'
+import { getStudentProfile, updateStudentProfile, archiveStudentProfile, restoreStudentProfile } from '@/features/children/server/service'
 
 export async function GET(id: string): Promise<NextResponse<ApiResponse<StudentProfile | null>>> {
   const profile = getStudentProfile(id)

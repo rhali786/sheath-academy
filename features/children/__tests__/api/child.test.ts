@@ -1,7 +1,7 @@
-import { createStudentProfile, getStudentProfile, updateStudentProfile, archiveStudentProfile, restoreStudentProfile, resetDataStore } from '@/features/lib/server/dataStore'
+import { createStudentProfile, getStudentProfile, updateStudentProfile, archiveStudentProfile, restoreStudentProfile, resetStore } from '@/features/children/server/service'
 
 beforeEach(() => {
-  resetDataStore()
+  resetStore()
 })
 
 describe('Student Profiles - Individual Operations', () => {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, StudentProfile } from '@/features/lib/types'
-import { getStudentProfiles, createStudentProfile } from '@/features/lib/server/dataStore'
+import { getStudentProfiles, createStudentProfile } from '@/features/children/server/service'
 
 export async function GET(request: Request): Promise<NextResponse<ApiResponse<StudentProfile[]>>> {
   const url = new URL(request.url)

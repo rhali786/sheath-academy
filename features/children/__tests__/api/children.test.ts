@@ -1,14 +1,15 @@
-import { createStudentProfile, getStudentProfiles, resetDataStore } from '@/features/lib/server/dataStore'
+import { createStudentProfile, getStudentProfiles, resetStore } from '@/features/children/server/service'
+import { SEED_STUDENT_PROFILES } from '@/features/children/server/seed'
 
 beforeEach(() => {
-  resetDataStore()
+  resetStore()
 })
 
 describe('Student Profiles - List and Create', () => {
   describe('getStudentProfiles()', () => {
-    it('should return empty array on fresh store (no seed profiles)', () => {
+    it('should return seeded profiles on fresh store', () => {
       const profiles = getStudentProfiles()
-      expect(profiles).toEqual([])
+      expect(profiles.length).toBe(SEED_STUDENT_PROFILES.length)
     })
 
     it('should return only profiles matching householdId', () => {
@@ -25,7 +26,7 @@ describe('Student Profiles - List and Create', () => {
       createStudentProfile({ householdId: 'hh_b', name: 'Bilal', gradeLabel: 'Grade 2', username: 'bilal', password: 'p' })
 
       const profiles = getStudentProfiles()
-      expect(profiles.length).toBe(2)
+      expect(profiles.length).toBe(SEED_STUDENT_PROFILES.length + 2)
       expect(Array.isArray(profiles)).toBe(true)
     })
 
