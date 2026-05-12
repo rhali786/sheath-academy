@@ -6,20 +6,26 @@ beforeEach(() => {
 
 describe('Student Profiles - List and Create', () => {
   describe('getStudentProfiles()', () => {
-    it('should return seed data with 3 profiles in default household', () => {
-      const profiles = getStudentProfiles('household_default')
-      expect(profiles).toHaveLength(3)
-      expect(profiles.every(p => p.householdId === 'household_default')).toBe(true)
+    it('should return empty array on fresh store (no seed profiles)', () => {
+      const profiles = getStudentProfiles()
+      expect(profiles).toEqual([])
     })
 
-    it('should return all active profiles for a household by default', () => {
-      const profiles = getStudentProfiles('household_default')
-      expect(profiles.every(p => p.isActive)).toBe(true)
+    it('should return only profiles matching householdId', () => {
+      createStudentProfile({ householdId: 'hh_a', name: 'Ada', gradeLabel: 'Grade 1', username: 'ada', password: 'p' })
+      createStudentProfile({ householdId: 'hh_b', name: 'Bilal', gradeLabel: 'Grade 2', username: 'bilal', password: 'p' })
+
+      expect(getStudentProfiles('hh_a')).toHaveLength(1)
+      expect(getStudentProfiles('hh_a')[0].name).toBe('Ada')
+      expect(getStudentProfiles('hh_b')).toHaveLength(1)
     })
 
     it('should return all profiles across households when no householdId specified', () => {
+      createStudentProfile({ householdId: 'hh_a', name: 'Ada', gradeLabel: 'Grade 1', username: 'ada', password: 'p' })
+      createStudentProfile({ householdId: 'hh_b', name: 'Bilal', gradeLabel: 'Grade 2', username: 'bilal', password: 'p' })
+
       const profiles = getStudentProfiles()
-      expect(profiles.length).toBeGreaterThanOrEqual(3)
+      expect(profiles.length).toBe(2)
       expect(Array.isArray(profiles)).toBe(true)
     })
 
