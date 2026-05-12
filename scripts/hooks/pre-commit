@@ -1,3 +1,2 @@
 #!/bin/sh
-node scripts/bump-version.cjs
-git add package.json
+# Version bumping is handled by the commit-msg hook based on message prefix.

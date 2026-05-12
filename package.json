@@ -1,6 +1,6 @@
 {
   "name": "sheath-academy",
-  "version": "0.1.21",
+  "version": "0.2.1",
   "private": true,
   "engines": {
     "node": ">=22.22.2"
@@ -14,7 +14,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "smoke": "node scripts/smoke.cjs",
-    "setup-hooks": "sh scripts/setup-hooks.sh"
+    "setup-hooks": "sh scripts/setup-hooks.sh",
+    "prepare": "sh scripts/setup-hooks.sh"
   },
   "dependencies": {
     "@nivo/bar": "^0.83.0",
