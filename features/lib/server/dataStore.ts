@@ -1,8 +1,9 @@
 import { MOCK_DATA } from './mockData'
-import type { DataStore, Task, QuranSession, QuranSessionRequest, Workspace, HouseholdProfile } from '../types'
+import type { DataStore, Task, QuranSession, QuranSessionRequest, Workspace, HouseholdProfile, StudentProfile } from '../types'
 
 // In-memory data store (session lifetime; resets on redeploy)
 let dataStore: DataStore | null = null
+let studentProfileCounter = 0
 
 export function initializeDataStore(): DataStore {
   if (dataStore === null) {
@@ -120,6 +121,72 @@ export function updateHouseholdProfile(familyName: string): HouseholdProfile | n
   return profile
 }
 
+export function getStudentProfiles(householdId?: string): StudentProfile[] {
+  const store = getDataStore()
+  if (householdId) {
+    return store.studentProfiles.filter(p => p.householdId === householdId)
+  }
+  return store.studentProfiles
+}
+
+export function getStudentProfile(id: string): StudentProfile | null {
+  const store = getDataStore()
+  return store.studentProfiles.find(p => p.id === id) ?? null
+}
+
+export function createStudentProfile(data: Partial<StudentProfile> & { householdId: string; name: string; gradeLabel: string; username: string; password: string }): StudentProfile {
+  const store = getDataStore()
+  studentProfileCounter++
+  const profile: StudentProfile = {
+    id: `student_${Date.now()}_${studentProfileCounter}`,
+    householdId: data.householdId,
+    name: data.name,
+    gradeLabel: data.gradeLabel,
+    dob: data.dob,
+    teacherName: data.teacherName,
+    username: data.username,
+    password: data.password,
+    isActive: true,
+    avatarInitials: data.avatarInitials || data.name.charAt(0).toUpperCase(),
+    createdAt: new Date().toISOString(),
+  }
+  store.studentProfiles.push(profile)
+  return profile
+}
+
+export function updateStudentProfile(id: string, patch: Partial<StudentProfile>): StudentProfile | null {
+  const store = getDataStore()
+  const profile = store.studentProfiles.find(p => p.id === id)
+  if (!profile) return null
+
+  if (patch.name !== undefined) profile.name = patch.name
+  if (patch.gradeLabel !== undefined) profile.gradeLabel = patch.gradeLabel
+  if (patch.dob !== undefined) profile.dob = patch.dob
+  if (patch.teacherName !== undefined) profile.teacherName = patch.teacherName
+  if (patch.username !== undefined) profile.username = patch.username
+  if (patch.password !== undefined) profile.password = patch.password
+  if (patch.avatarInitials !== undefined) profile.avatarInitials = patch.avatarInitials
+
+  return profile
+}
+
+export function archiveStudentProfile(id: string): StudentProfile | null {
+  const store = getDataStore()
+  const profile = store.studentProfiles.find(p => p.id === id)
+  if (!profile) return null
+  profile.isActive = false
+  return profile
+}
+
+export function restoreStudentProfile(id: string): StudentProfile | null {
+  const store = getDataStore()
+  const profile = store.studentProfiles.find(p => p.id === id)
+  if (!profile) return null
+  profile.isActive = true
+  return profile
+}
+
 export function resetDataStore(): void {
   dataStore = null
+  studentProfileCounter = 0
 }
