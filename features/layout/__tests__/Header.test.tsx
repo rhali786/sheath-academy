@@ -125,11 +125,13 @@ describe('Header — tab navigation on dashboard page', () => {
     mockUsePathname.mockReturnValue('/')
   })
 
-  test('renders all four nav tabs on desktop', () => {
+  test('renders dashboard tabs and Settings/About links on desktop', () => {
     render(<Header />)
-    ;['Today', 'Weekly', 'Reports', 'Settings'].forEach((tab) => {
+    ;['Today', 'Weekly', 'Reports'].forEach((tab) => {
       expect(screen.getAllByRole('button', { name: tab }).length).toBeGreaterThan(0)
     })
+    expect(screen.getAllByRole('link', { name: 'Settings' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: 'About' }).length).toBeGreaterThan(0)
   })
 
   test('active tab has distinct active styling', () => {
