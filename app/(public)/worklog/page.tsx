@@ -12,11 +12,11 @@ const sessions = [
   { date: 'Sun May 3',       width: '1%',   bg: '#4a6654',                   label: 'Started the project',                                 time: '—' },
   { date: 'Mon May 4 AM',    width: '17%',  bg: '#4a9ebe',                   label: 'First version of the app built',                      time: '1h 10m' },
   { date: 'Mon May 4 PM',    width: '50%',  bg: '#c0392b',                   label: 'Troubleshooting — software conflict, had to roll back', time: '3h 30m' },
-  { date: 'Fri–Sat May 8–9', width: '100%', bg: '#1a5c3a',          label: '★ Rebuilt everything on better tools — the real foundation', time: '6h 55m' },
+  { date: 'Fri–Sat May 8–9', width: '100%', bg: '#1a5c3a',                   label: '★ Rebuilt everything on better tools — the real foundation', time: '6h 55m' },
   { date: 'Sat May 9',       width: '24%',  bg: '#4a9ebe', opacity: '0.75',  label: 'Cleaned up, tested, removed old files',               time: '1h 41m' },
-  { date: 'Sun May 10 early',width: '18%',  bg: '#9b59b6',                   label: 'Redesigned the look — green & blue colour scheme',   time: '~solo' },
+  { date: 'Sun May 10 early',width: '18%',  bg: '#9b59b6',                   label: 'Redesigned the look — green & blue colour scheme',     time: '~solo' },
   { date: 'Sun May 10 mid',  width: '8%',   bg: '#c4963a',                   label: 'Wrote the roadmap, 35 features planned out',           time: '34m' },
-  { date: 'Sun May 10 PM',   width: '22%',  bg: '#2d7a52',                   label: 'Built sign-in — email link, no password needed',     time: '1h 33m' },
+  { date: 'Sun May 10 PM',   width: '22%',  bg: '#2d7a52',                   label: 'Built sign-in — email link, no password needed',       time: '1h 33m' },
   { date: 'Sun May 10 eve',  width: '30%',  bg: '#2d7a52',                   label: 'Merged sign-in, added About page, tidied navigation',  time: '2h 03m' },
 ]
 
