@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { handleDashboardRoute } from '@/features/dashboard/api/router'
+import { handleHouseholdRoute } from '@/features/household/api/router'
 
 export async function GET(
   request: Request,
@@ -7,10 +8,13 @@ export async function GET(
 ): Promise<NextResponse | Response> {
   const { slug } = await params
 
-  // Only handle dashboard routes
   if (slug[0] === 'dashboard') {
-    const dashboardSlug = slug.slice(1)
-    const response = await handleDashboardRoute(dashboardSlug, request)
+    const response = await handleDashboardRoute(slug.slice(1), request)
+    if (response) return response
+  }
+
+  if (slug[0] === 'household') {
+    const response = await handleHouseholdRoute(slug.slice(1), request)
     if (response) return response
   }
 
@@ -31,10 +35,13 @@ export async function POST(
 ): Promise<NextResponse | Response> {
   const { slug } = await params
 
-  // Only handle dashboard routes
   if (slug[0] === 'dashboard') {
-    const dashboardSlug = slug.slice(1)
-    const response = await handleDashboardRoute(dashboardSlug, request)
+    const response = await handleDashboardRoute(slug.slice(1), request)
+    if (response) return response
+  }
+
+  if (slug[0] === 'household') {
+    const response = await handleHouseholdRoute(slug.slice(1), request)
     if (response) return response
   }
 

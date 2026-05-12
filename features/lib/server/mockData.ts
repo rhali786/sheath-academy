@@ -2,6 +2,8 @@ import type { DataStore } from '../types'
 
 // Canonical mock seed for the in-memory store
 export const MOCK_DATA: DataStore = {
+  workspaces: [],
+  householdProfiles: [],
   children: [
     { id: 'adam_001', name: 'Adam', age: 11, grade: 5, avatar: 'A' },
     { id: 'khadijah_001', name: 'Khadijah', age: 8, grade: 3, avatar: 'K' },

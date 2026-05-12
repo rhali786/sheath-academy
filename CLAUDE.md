@@ -53,18 +53,26 @@ Homeschool dashboard (Next.js 15 App Router, React, TypeScript). Business logic 
 features/
   lib/                    # types, mockData, dataStore (shared)
   auth/                   # sign-in feature (NextAuth, magic link, dev bypass)
-  layout/                 # shared layout components (Header)
+  layout/                 # AppShell, Header — product shell components
+    front/components/AppShell.tsx   # owns HouseholdProvider + Header; used by (shell) layout
+    front/components/Header.tsx     # reads useHousehold() directly — no prop threading
+  household/              # workspace / household profile feature
   dashboard/
     api/router.ts         # maps /api/dashboard/* → route handlers
     api/routes/           # handlers (summary, tasks, …)
     front/                # UI: components, pages, context, services
     __tests__/            # api/, integration/, utils, mocks
-app/
+app/                      # thin routing layer — route declarations + metadata only
+  (shell)/                # pages that use AppShell (Header + HouseholdProvider)
+    layout.tsx            # <AppShell>{children}</AppShell> — single place to update
+    page.tsx              # → Dashboard (protected by middleware)
+    about/page.tsx        # → AboutPage (public)
+  (auth)/                 # pages without AppShell (no header)
+    login/page.tsx        # → Login
   api/health/route.ts
   api/auth/[...nextauth]/route.ts → NextAuth handlers
-  api/[...slug]/route.ts → dashboard router
-  login/                  # login page (thin wrapper over features/auth)
-  layout.tsx, page.tsx, globals.css
+  api/[...slug]/route.ts → feature routers
+  layout.tsx              # generic: html/body/SessionProvider only — never grows
 middleware.ts             # route protection — redirects unauthenticated to /login
 scripts/
   hooks/pre-commit        # committed hook source; copied to .git/hooks/ by setup-hooks
@@ -108,12 +116,19 @@ New REST surface: extend the dynamic slug handler and the feature router consist
 
 ## Testing
 
-- Tests live under `features/*/___tests__/` (currently **69** cases — `npm test` is the source of truth if this drifts).
+- Tests live under `features/*/___tests__/` (currently **82** cases — `npm test` is the source of truth if this drifts).
 - UI tests use **`jsdom`** and **`@/features/dashboard/__tests__/utils/renderWithProvider`** so components sit under `DashboardProvider` (avoids `useDashboard must be used within DashboardProvider` at runtime).
 - **New UI:** add or extend integration coverage with the provider; chart-heavy changes warrant a quick **browser** check.
 
 Jest maps `@nivo/line`, `@nivo/bar`, and `@nivo/core` to `__tests__/mocks/nivo.tsx`.
 Jest maps `next-auth/react` to `__mocks__/next-auth/react.ts` (default unauthenticated stub; override per-test with `jest.mock`).
+
+**Adding new pages — shell vs auth**
+
+- Pages that need the Header and household context → add under `app/(shell)/`. The layout supplies `AppShell` automatically; no per-page provider wiring needed.
+- Pages that must not show the Header (e.g. login, onboarding) → add under `app/(auth)/`. No AppShell, no HouseholdProvider.
+- Feature components (`features/*/front/pages/`) must not import `Header` or `AppShell` directly — the shell layout owns those. Keep feature pages focused on their own content.
+- Tests for feature page components render the component directly (no AppShell needed). If the component consumes a context, mock that context in the test file.
 
 ---
 
