@@ -43,6 +43,7 @@ export function SubjectEditDialog({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    if (!subject) return
     setError(null)
     if (!name.trim() || !childId) {
       setError('Name and child are required.')
