@@ -64,3 +64,43 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Attachments**:
 
 ---
+
+- **ID**: FB-003
+- **Status**: New
+- **Date/time**: 2026-05-13 07:10 (America/Detroit)
+- **Area/URL**: Settings → Subjects / https://sheathacademy.onrender.com/settings?tab=subjects
+- **Feedback summary**: Refine Subjects setup flow to support learner enrollments, shared family courses, instructor assignment, and transcript-ready course structure.
+- **Details / suggested change**:
+  - Rename “Subject name” to:
+    - “Course / Subject name”
+  - Add optional Instructor/Teacher field to subject setup.
+  - Associate courses/subjects with a School Year / Academic Year.
+  - Clean up category formatting:
+    - Example: “IslamicStudies” should display as “Islamic Studies”.
+  - Add optional Level / Grade field separate from the course name.
+    - Examples:
+      - Grade 5
+      - Algebra I
+      - Arabic Level 2
+      - Quran Revision
+  - Add support for assigning a course/subject to multiple learners simultaneously.
+    - Example:
+      - Shared PE
+      - Shared Art
+      - Shared Islamic Studies
+      - Shared Science
+  - Add learner multi-select with optional “Select all” behavior.
+  - Clarify page language so users understand they are assigning courses to learners.
+  - Consider future starter templates/default subject bundles for homeschool onboarding.
+  - Preserve separation between:
+    - Course/Subject Name
+    - Category
+  - Example:
+    - Course Name: “Saxon Math 6/5”
+    - Category: “Math”
+- **Reasoning (why)**: Homeschool families often combine learners into shared courses while still needing individualized tracking and transcript-ready records. Separating course names, levels, categories, instructors, and learner assignments creates a stronger long-term enrollment model that supports homeschool, tutor, co-op, and school workflows.
+- **Priority**: P1
+- **Notes**: The emerging architecture here is closer to learner enrollments than simple student-subject relationships. This is a strong direction for long-term scalability and reporting.
+- **Attachments**:
+
+---
