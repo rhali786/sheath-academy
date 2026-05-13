@@ -213,26 +213,140 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Status**: New
 - **Date/time**: 2026-05-13 08:12 (America/Detroit)
 - **Area/URL**: Future Schedule / Classroom workflow
-- **Feedback summary**: Create dedicated live schedule / classroom timing workflow with dashboard integration.
+- **Feedback summary**: Create dedicated live schedule / classroom timing workflow with dashboard integration and adaptive day reflow.
 - **Details / suggested change**:
   - Create future dedicated Schedule/Classroom screen.
   - Support visual live daily schedule.
   - Display:
     - Current lesson block
     - Start/end times
+    - Current time
     - Live time-fill/progress behavior
     - Upcoming lesson preview
     - Day schedule overview
   - Support modular scheduling tied to lesson planning workflows.
   - Add live classroom/day pacing support.
   - Add lightweight “Now & Next” preview module to Today dashboard.
+  - Support “Now / Next / Later” structure.
+  - Add Pause Day / Resume Day workflow.
+  - Add Dynamic Day Reflow actions:
+    - Pause day
+    - Shift remaining schedule
+    - Swap lesson order
+    - Pull independent work forward
+    - Push teacher-led work later
+    - Compress remaining day
+    - Extend day
+    - Convert to light day
+    - Reschedule unfinished items
+  - Support instruction-mode classification for schedule blocks:
+    - Teacher-led
+    - Guided
+    - Independent
+    - Shared/family
+    - Tutor-led
+    - Co-op/external
+    - Async/self-paced
+  - Support flexibility state for schedule blocks:
+    - Locked/fixed
+    - Flexible
+    - Optional
+  - Add flexible work bank / independent-work pool that can be pulled forward when the day changes.
+  - Support dynamic transition between lesson blocks as time progresses.
   - Allow homeschool parents to quickly determine:
     - what should be happening now
     - what comes next
     - whether the day is on pace
-- **Reasoning (why)**: Many homeschool families struggle less with curriculum selection and more with maintaining rhythm, pacing, and transitions throughout the day. A live visual schedule system would help families maintain operational flow and reduce friction during instruction.
+    - what can be moved if the day changes
+- **Reasoning (why)**: Many homeschool families struggle less with curriculum selection and more with maintaining rhythm, pacing, interruptions, transitions, and real-life schedule changes. A live visual schedule system with adaptive reflow would help families maintain operational flow without making the system rigid or stressful.
 - **Priority**: P2
-- **Notes**: This should eventually integrate closely with planning, lesson, attendance, and pacing systems.
+- **Notes**: This should eventually integrate closely with planning, lesson, attendance, and pacing systems. Avoid turning the product into overly rigid “air traffic control” software for homeschooling; the system should scale from gentle guidance to structured/adaptive scheduling.
+- **Attachments**:
+
+---
+
+- **ID**: FB-006
+- **Status**: New
+- **Date/time**: 2026-05-13 08:35 (America/Detroit)
+- **Area/URL**: Weekly Plan / Planner / https://sheathacademy.onrender.com/planner
+- **Feedback summary**: Refine Weekly Plan into a homeschool planning control board that supports flexible scheduling, pacing, family-defined workload thresholds, and future classroom execution.
+- **Details / suggested change**:
+  - Rename global navigation from “Weekly” to “Plan” or “Planner,” while retaining “Weekly Plan” as the page title/view name.
+  - Default to the week containing today unless school settings define a different week range.
+  - Add configurable school-week start day.
+  - Highlight today clearly in the weekly grid.
+  - Improve active filter visibility for existing child and subject multi-select controls.
+    - Example:
+      - Children: All 3
+      - Subjects: Quran, Math
+  - Add collapsible child groups.
+  - Add Scheduled-only vs All-subjects view toggle.
+  - Remove, prevent, or clarify duplicate subject rows.
+  - Add Family / Shared Work section for shared homeschool lessons.
+  - Add direct “+ Add lesson” affordance in empty cells.
+  - Add lesson cell actions:
+    - Edit
+    - Move
+    - Duplicate
+    - Complete
+    - Add evidence
+    - Assign to schedule block
+  - Add drag-and-drop lesson placement and movement.
+  - Support vertical ordering of daily lesson blocks.
+  - Support estimated lesson durations.
+  - Auto-calculate daily scheduled time totals.
+    - Example:
+      - Monday: 6 lessons · 4h 20m
+  - Add family-configurable workload thresholds instead of hard-coded “too heavy” or “too light” judgments.
+    - Configurable examples:
+      - Maximum lessons per day
+      - Maximum instructional minutes/hours per day
+      - Quran target frequency
+      - Core subject frequency goals
+      - Friday reduced workload preference
+      - Preferred light/heavy day distribution
+      - Maximum consecutive heavy days
+      - Co-op/outside class days
+  - Frame warnings around user settings.
+    - Example:
+      - “Monday exceeds your preferred daily lesson target.”
+      - not “Monday is too heavy.”
+  - Add Week Balance summary.
+    - Example:
+      - total lessons planned
+      - total scheduled time
+      - Quran sessions planned
+      - overloaded days by family settings
+      - light days by family settings
+      - unfinished lessons carried over
+  - Add School Week / pacing visibility.
+    - Example:
+      - School Week 15 of 36
+      - Course expected week vs current curriculum week
+  - Add Carry Forward Unfinished Work workflow.
+    - Options:
+      - move to next school day
+      - move to next week
+      - distribute across remaining days
+      - mark skipped
+      - keep as overdue
+  - Connect weekly lessons to future Schedule/Classroom workflow.
+    - Allow planned lessons to populate the live classroom/day schedule.
+    - Allow lessons to be assigned to timed schedule blocks.
+    - Allow dashboard “Now & Next” card to pull from planned schedule blocks.
+  - Support reusable schedule/planning templates.
+    - Examples:
+      - Standard Monday
+      - Co-op Tuesday
+      - Light Friday
+      - Ramadan schedule
+      - Summer schedule
+      - Hifz intensive day
+  - Add print/export weekly plan support.
+  - Add mobile day-by-day card layout for small screens.
+- **Reasoning (why)**: The planner should become the orchestration layer of the platform. It should help parents build the week, balance workload according to their own family thresholds, manage shared and individual lessons, and feed the live dashboard/classroom execution flow. This turns the screen from a static weekly grid into a practical homeschool planning control board.
+- **Priority**: P1
+- **Notes**: Current child/subject multi-select already exists; feedback is to improve visibility and downstream planning usefulness, not necessarily add basic multi-select from scratch.
 - **Attachments**:
 
 ---
