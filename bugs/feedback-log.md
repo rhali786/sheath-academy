@@ -33,3 +33,34 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Attachments**: 
 
 ---
+
+- **ID**: FB-002
+- **Status**: New
+- **Date/time**: 2026-05-12 21:35 (America/Detroit)
+- **Area/URL**: Settings → Children / Add Child form / https://sheathacademy.onrender.com/settings?tab=children
+- **Feedback summary**: Refine Add Child form structure for transcript-safe learner records and cleaner onboarding.
+- **Details / suggested change**:
+  - Replace “Child's name” with separate required fields:
+    - First name*
+    - Last name*
+  - Add helper text beneath name fields:
+    - “Names entered here may appear on reports, transcripts, and exported records.”
+  - Change “Grade/Level” from free text to dropdown:
+    - PK
+    - K
+    - Grade 1–12
+    - Other/custom
+  - Keep Date of Birth optional.
+  - Add helper text beneath DOB field:
+    - “Used for age-based planning and school records.”
+  - Remove “Teacher/Instructor name” from Add Child flow.
+  - Instructor assignment should occur at the subject/enrollment level instead of the learner profile level.
+  - Add toggle:
+    - “Allow learner to sign in”
+  - Only show Username and Password fields if learner sign-in is enabled.
+- **Reasoning (why)**: Formal first and last names are needed for transcripts, report cards, and exported educational records. Separating learner identity from authentication keeps onboarding cleaner and preserves flexibility for homeschool, tutor, co-op, and school workflows. Instructor assignment at the subject level better reflects real-world educational structures.
+- **Priority**: P1
+- **Notes**: This feedback specifically applies to the Settings → Children → Add Child workflow and should remain separate from broader navigation/dashboard feedback.
+- **Attachments**:
+
+---
