@@ -35,15 +35,8 @@ export function ChildSubjectFilter() {
     setSelectedSubjectIds(subjects.map(s => s.id))
   }
 
-  const selectedChildNames = selectedChildIds
-    .map(id => children.find(c => c.id === id)?.name)
-    .filter(Boolean)
-    .join(', ')
-
-  const selectedSubjectNames = selectedSubjectIds
-    .map(id => subjects.find(s => s.id === id)?.name)
-    .filter(Boolean)
-    .join(', ')
+  const selectedChildCount = selectedChildIds.length
+  const selectedSubjectCount = selectedSubjectIds.length
 
   return (
     <div className="sticky top-[65px] z-20 bg-white border-b border-slate-200 shadow-sm">
@@ -55,7 +48,7 @@ export function ChildSubjectFilter() {
               onClick={() => setShowChildrenDropdown(!showChildrenDropdown)}
               className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2 transition-colors"
             >
-              Children: {selectedChildNames || 'All'}
+              Children ({selectedChildCount})
             </button>
             {showChildrenDropdown && (
               <div className="absolute top-full left-0 z-50 mt-2 w-48 bg-white border border-slate-300 rounded-lg shadow-xl">
@@ -82,7 +75,7 @@ export function ChildSubjectFilter() {
               onClick={() => setShowSubjectsDropdown(!showSubjectsDropdown)}
               className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2 transition-colors"
             >
-              Subjects: {selectedSubjectNames || 'All'}
+              Subjects ({selectedSubjectCount})
             </button>
             {showSubjectsDropdown && (
               <div className="absolute top-full left-0 z-50 mt-2 w-48 bg-white border border-slate-300 rounded-lg shadow-xl">

@@ -49,21 +49,21 @@ describe('ChildSubjectFilter', () => {
   it('renders multi-select dropdown for children', () => {
     renderFilter()
 
-    const childButton = screen.getByRole('button', { name: /children:/i })
+    const childButton = screen.getByRole('button', { name: /children \(\d+\)/i })
     expect(childButton).toBeInTheDocument()
   })
 
   it('renders multi-select dropdown for subjects', () => {
     renderFilter()
 
-    const subjectButton = screen.getByRole('button', { name: /subjects:/i })
+    const subjectButton = screen.getByRole('button', { name: /subjects \(\d+\)/i })
     expect(subjectButton).toBeInTheDocument()
   })
 
   it('selecting a child updates the filter', () => {
     const { setSelectedChildIds } = renderFilter(['child_001'])
 
-    const childButton = screen.getByRole('button', { name: /children:/i })
+    const childButton = screen.getByRole('button', { name: /children \(\d+\)/i })
     fireEvent.click(childButton)
 
     const adamCheckbox = screen.getByRole('checkbox', { name: /adam/i })
@@ -75,7 +75,7 @@ describe('ChildSubjectFilter', () => {
   it('selecting a subject updates the filter', () => {
     const { setSelectedSubjectIds } = renderFilter([], ['subj_001'])
 
-    const subjectButton = screen.getByRole('button', { name: /subjects:/i })
+    const subjectButton = screen.getByRole('button', { name: /subjects \(\d+\)/i })
     fireEvent.click(subjectButton)
 
     const mathCheckbox = screen.getByRole('checkbox', { name: /math/i })
@@ -87,7 +87,7 @@ describe('ChildSubjectFilter', () => {
   it('deselecting a child removes it from the filter', () => {
     const { setSelectedChildIds } = renderFilter(['child_001', 'child_002'])
 
-    const childButton = screen.getByRole('button', { name: /children:/i })
+    const childButton = screen.getByRole('button', { name: /children \(\d+\)/i })
     fireEvent.click(childButton)
 
     const adamCheckbox = screen.getByRole('checkbox', { name: /adam/i })
@@ -109,7 +109,7 @@ describe('ChildSubjectFilter', () => {
   it('deselecting all children also clears subjects', () => {
     const { setSelectedChildIds, setSelectedSubjectIds } = renderFilter(['child_001'], ['subj_001', 'subj_002'])
 
-    const childButton = screen.getByRole('button', { name: /children:/i })
+    const childButton = screen.getByRole('button', { name: /children \(\d+\)/i })
     fireEvent.click(childButton)
 
     const adamCheckbox = screen.getByRole('checkbox', { name: /adam/i })

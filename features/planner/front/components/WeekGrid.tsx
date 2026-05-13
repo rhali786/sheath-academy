@@ -12,7 +12,7 @@ function isWeekend(dayIndex: number): boolean {
 }
 
 export function WeekGrid() {
-  const { lessons, selectedWeek, weekStartDay, children, subjects } = usePlanner()
+  const { lessons, selectedWeek, weekStartDay, children, subjects, selectedChildIds, selectedSubjectIds } = usePlanner()
 
   // Calculate week start date
   const d = new Date(selectedWeek)
@@ -28,10 +28,14 @@ export function WeekGrid() {
     return date
   })
 
-  // Build row identifiers (child x subject combinations)
-  const rows = children.flatMap(child =>
-    subjects.map(subject => ({ childId: child.id, childName: child.name, subjectId: subject.id, subjectName: subject.name }))
-  )
+  // Build row identifiers (child x subject combinations) — filter to selected only
+  const rows = children
+    .filter(child => selectedChildIds.includes(child.id))
+    .flatMap(child =>
+      subjects
+        .filter(subject => selectedSubjectIds.includes(subject.id))
+        .map(subject => ({ childId: child.id, childName: child.name, subjectId: subject.id, subjectName: subject.name }))
+    )
 
   // Get lesson for a specific day, child, and subject
   function getLessonForCell(date: string, childId: string, subjectId: string) {
