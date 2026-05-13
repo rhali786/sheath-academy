@@ -164,11 +164,11 @@ describe('Header — tab navigation on dashboard page', () => {
   test('active tab has distinct active styling', () => {
     mockUseNavigation.mockImplementation(() => ({
       ...defaultNavigation(),
-      selectedTab: 'Weekly',
+      selectedTab: 'Reports',
     }))
     render(<Header />)
-    const weeklyButtons = screen.getAllByRole('button', { name: 'Weekly' })
-    expect(weeklyButtons.some((b) => b.className.includes('bg-forest-900'))).toBe(true)
+    const reportsButtons = screen.getAllByRole('button', { name: 'Reports' })
+    expect(reportsButtons.some((b) => b.className.includes('bg-forest-900'))).toBe(true)
   })
 
   test('clicking a tab calls setSelectedTab and does NOT push router when already on /', () => {
@@ -201,8 +201,8 @@ describe('Header — tab navigation from non-dashboard page', () => {
     }))
     mockUseRouter.mockImplementation(() => ({ push }))
     render(<Header />)
-    fireEvent.click(screen.getAllByRole('button', { name: 'Weekly' })[0])
-    expect(setSelectedTab).toHaveBeenCalledWith('Weekly')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Reports' })[0])
+    expect(setSelectedTab).toHaveBeenCalledWith('Reports')
     expect(push).toHaveBeenCalledWith('/')
   })
 

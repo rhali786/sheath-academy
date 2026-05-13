@@ -81,9 +81,10 @@ describe('WeekGrid (desktop)', () => {
   })
 
   it('clicking a lesson cell does nothing (read-only)', () => {
-    const { container } = renderGrid(mockLessons)
+    renderGrid(mockLessons)
 
-    const lessonCell = container.querySelector('.bg-blue-100')
+    const lessonTitle = screen.getByText('Math lesson 1')
+    const lessonCell = lessonTitle.closest('div')
     expect(lessonCell).toBeInTheDocument()
     expect(lessonCell?.getAttribute('onclick')).toBeNull()
   })
