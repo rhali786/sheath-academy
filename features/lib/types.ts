@@ -99,6 +99,20 @@ export interface TaskCompleteRequest {
   completed: boolean
 }
 
+export interface LessonTask {
+  id: string
+  childId: string
+  subjectId: string
+  householdId: string
+  title: string
+  description?: string
+  dueDate: string
+  isCompleted: boolean
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface ApiResponse<T> {
   status: string
   data: T
@@ -117,6 +131,7 @@ export interface HouseholdProfile {
   id: string
   workspaceId: string
   familyName: string
+  weekStartDay?: 'Monday' | 'Sunday'
   createdAt: string
 }
 

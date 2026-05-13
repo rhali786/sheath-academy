@@ -1,7 +1,10 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { LessonTask } from '../../types'
+import { plannerApi } from '../services/api'
+import type { StudentProfile, ApiResponse } from '@/features/lib/types'
+import type { SubjectCourse } from '@/features/subjects/types'
 
 interface PlannerContextType {
   lessons: LessonTask[]
@@ -13,6 +16,9 @@ interface PlannerContextType {
   setSelectedSubjectIds: (ids: string[]) => void
   isLoading: boolean
   error: string | null
+  weekStartDay: 'Monday' | 'Sunday'
+  children: StudentProfile[]
+  subjects: SubjectCourse[]
 }
 
 export const PlannerContext = React.createContext<PlannerContextType | undefined>(undefined)
@@ -25,18 +31,121 @@ export function usePlanner() {
   return context
 }
 
-export function PlannerProvider({ children }: { children: React.ReactNode }) {
-  // TODO: Implement provider
-  const value: PlannerContextType = {
-    lessons: [],
-    selectedWeek: new Date(),
-    setSelectedWeek: () => {},
-    selectedChildIds: [],
-    setSelectedChildIds: () => {},
-    selectedSubjectIds: [],
-    setSelectedSubjectIds: () => {},
-    isLoading: false,
-    error: null,
+function getWeekStartDate(date: Date, weekStartDay: 'Monday' | 'Sunday'): string {
+  const d = new Date(date)
+  const dayOfWeek = d.getDay()
+  const offset = weekStartDay === 'Monday' ? dayOfWeek === 0 ? -6 : 1 - dayOfWeek : dayOfWeek
+  d.setDate(d.getDate() - offset)
+  return d.toISOString().split('T')[0]
+}
+
+function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    return window.location.origin
   }
+  const port = process.env.PORT || '3000'
+  return `http://127.0.0.1:${port}`
+}
+
+async function get<T>(path: string): Promise<ApiResponse<T>> {
+  const res = await fetch(`${getApiBaseUrl()}${path}`)
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  return res.json()
+}
+
+export function PlannerProvider({ children }: { children: React.ReactNode }) {
+  const [lessons, setLessons] = useState<LessonTask[]>([])
+  const [selectedWeek, setSelectedWeek] = useState<Date>(new Date())
+  const [selectedChildIds, setSelectedChildIds] = useState<string[]>([])
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [weekStartDay, setWeekStartDay] = useState<'Monday' | 'Sunday'>('Monday')
+  const [childrenList, setChildrenList] = useState<StudentProfile[]>([])
+  const [subjectsList, setSubjectsList] = useState<SubjectCourse[]>([])
+  const [allChildrenIds, setAllChildrenIds] = useState<string[]>([])
+  const [allSubjectIds, setAllSubjectIds] = useState<string[]>([])
+
+  // Initial load: fetch household profile, children, and subjects
+  useEffect(() => {
+    const initialize = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        // Fetch household profile for weekStartDay
+        const profileResponse = await get<unknown>('/api/household/profile')
+        const profile = profileResponse.data as any
+        const dayStart = profile?.weekStartDay === 'Sunday' ? 'Sunday' : 'Monday'
+        setWeekStartDay(dayStart)
+
+        // Fetch children
+        const childrenResponse = await get<StudentProfile[]>('/api/children/children')
+        setChildrenList(childrenResponse.data)
+        const childIds = childrenResponse.data.map(c => c.id)
+        setAllChildrenIds(childIds)
+        setSelectedChildIds(childIds)
+
+        // Fetch subjects
+        const subjectsResponse = await get<SubjectCourse[]>('/api/subjects')
+        setSubjectsList(subjectsResponse.data)
+        const subjectIds = subjectsResponse.data.map(s => s.id)
+        setAllSubjectIds(subjectIds)
+        setSelectedSubjectIds(subjectIds)
+
+        setIsLoading(false)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load planner')
+        setIsLoading(false)
+      }
+    }
+
+    initialize()
+  }, [])
+
+  // Fetch lessons when week or filters change
+  useEffect(() => {
+    if (selectedChildIds.length === 0 || selectedSubjectIds.length === 0) {
+      setLessons([])
+      return
+    }
+
+    const fetchLessons = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        const weekStart = getWeekStartDate(selectedWeek, weekStartDay)
+        const lessonsList = await plannerApi.getLessons(
+          weekStart,
+          selectedChildIds,
+          selectedSubjectIds
+        )
+        setLessons(lessonsList)
+        setIsLoading(false)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load lessons')
+        setIsLoading(false)
+      }
+    }
+
+    fetchLessons()
+  }, [selectedWeek, selectedChildIds, selectedSubjectIds, weekStartDay])
+
+  const value: PlannerContextType = {
+    lessons,
+    selectedWeek,
+    setSelectedWeek,
+    selectedChildIds,
+    setSelectedChildIds,
+    selectedSubjectIds,
+    setSelectedSubjectIds,
+    isLoading,
+    error,
+    weekStartDay,
+    children: childrenList,
+    subjects: subjectsList,
+  }
+
   return <PlannerContext.Provider value={value}>{children}</PlannerContext.Provider>
 }
