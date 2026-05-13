@@ -44,13 +44,33 @@ const wave1 = [
 
 const changelog = [
   {
-    version: '0.2.0',
-    label: 'Planned — Wave 1B',
-    detail: "Weekly planner, lesson creation, lesson status states, recurring patterns, today's lessons card.",
+    version: '0.10.0',
+    label: 'Weekly planner (current)',
+    detail: 'Full Wave 1B weekly planning: per-child lesson scheduling across the week, linked child/subject filters, week start day preference in household settings. Planner integrated into app routing with its own tab.',
+  },
+  {
+    version: '0.5.1',
+    label: 'Subjects, settings, and setup wizard',
+    detail: 'F5–F10: Subject/Course data model and admin UI. Unified settings page. Progressive household setup cards. Child selector. Header date display. Per-feature data stores replace the shared dataStore.',
+  },
+  {
+    version: '0.4.0',
+    label: 'Child profiles',
+    detail: 'Child data model, API routes, and management UI. Parents can add, edit, and remove children from the household. Child list drives the per-child progress and Quran tracking sections.',
+  },
+  {
+    version: '0.3.4',
+    label: 'Worklog public + household fixes',
+    detail: 'AppShell owns Header — removed duplicate rendering from Dashboard. Household settings restored to full rename form. Worklog linked from About footer. Semantic versioning via pre-commit hook keeps package.json in sync across commits.',
+  },
+  {
+    version: '0.3.0',
+    label: 'Worklog page',
+    detail: 'Week 1 work summary slide — responsive canvas showing 9 work sessions, 17h logged, outcomes, and takeaways. Publicly accessible at /worklog (no sign-in required) with subtle link from the dashboard.',
   },
   {
     version: '0.1.17',
-    label: 'Shell & navigation (current)',
+    label: 'Shell & navigation',
     detail: 'AppShell architecture — header and household context live in one shell component shared by all pages. NavigationContext keeps tab state in sync between header and dashboard. Tab buttons navigate back to the dashboard from any page.',
   },
   {
