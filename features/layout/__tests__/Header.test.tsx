@@ -153,9 +153,10 @@ describe('Header — tab navigation on dashboard page', () => {
 
   test('renders dashboard tabs and Settings/About links on desktop', () => {
     render(<Header />)
-    ;['Today', 'Weekly', 'Reports'].forEach((tab) => {
+    ;['Today', 'Reports'].forEach((tab) => {
       expect(screen.getAllByRole('button', { name: tab }).length).toBeGreaterThan(0)
     })
+    expect(screen.getAllByRole('link', { name: 'Weekly' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'Settings' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'About' }).length).toBeGreaterThan(0)
   })
@@ -215,5 +216,35 @@ describe('Header — tab navigation from non-dashboard page', () => {
     render(<Header />)
     const todayButton = screen.getAllByRole('button', { name: 'Today' })[0]
     expect(todayButton.className).not.toContain('bg-forest-900')
+  })
+})
+
+describe('Header — Weekly nav link', () => {
+  beforeEach(() => {
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
+    mockUsePathname.mockReturnValue('/')
+  })
+
+  test('renders "Weekly" nav link and navigates to /planner on click', () => {
+    render(<Header />)
+    const weeklyLinks = screen.getAllByRole('link', { name: 'Weekly' })
+    expect(weeklyLinks.length).toBeGreaterThan(0)
+    weeklyLinks.forEach((link) => {
+      expect(link).toHaveAttribute('href', '/planner')
+    })
+  })
+
+  test('Weekly link is highlighted when on /planner', () => {
+    mockUsePathname.mockReturnValue('/planner')
+    render(<Header />)
+    const weeklyLink = screen.getAllByRole('link', { name: 'Weekly' })[0]
+    expect(weeklyLink.className).toContain('bg-forest-900')
+  })
+
+  test('Weekly link is not highlighted when on dashboard', () => {
+    mockUsePathname.mockReturnValue('/')
+    render(<Header />)
+    const weeklyLink = screen.getAllByRole('link', { name: 'Weekly' })[0]
+    expect(weeklyLink.className).not.toContain('bg-forest-900')
   })
 })

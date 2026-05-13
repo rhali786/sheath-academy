@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import type { ApiResponse, LessonTask } from '@/features/lib/types'
 import { getLessons, createLessonTask } from '@/features/planner/server/service'
 
-export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse<LessonTask[]>>> {
+export async function GET(request: Request): Promise<NextResponse<ApiResponse<LessonTask[]>>> {
   const url = new URL(request.url)
   const childIds = url.searchParams.get('childIds')
   const subjectIds = url.searchParams.get('subjectIds')
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
   })
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<LessonTask | null>>> {
+export async function POST(request: Request): Promise<NextResponse<ApiResponse<LessonTask | null>>> {
   const body = await request.json()
 
   const { childId, subjectId, title, dueDate, description } = body

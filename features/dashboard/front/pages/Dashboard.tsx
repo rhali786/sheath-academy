@@ -108,15 +108,6 @@ export default function Dashboard() {
         </>
       )}
 
-      {selectedTab === 'Weekly' && (
-        <div className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-xl shadow-sm p-8">
-            <h2 className="text-2xl font-bold text-slate-900">Weekly View</h2>
-            <p className="text-slate-400 mt-2 text-sm">Weekly analytics coming soon.</p>
-          </div>
-        </div>
-      )}
-
       {selectedTab === 'Reports' && (
         <div className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
           <div className="bg-white rounded-xl shadow-sm p-8">

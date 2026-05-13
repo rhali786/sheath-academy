@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import * as lessonsHandler from './routes/lessons'
 import * as lessonHandler from './routes/lesson'
 
 export async function handlePlannerRoute(
   slug: string[],
-  request: NextRequest
+  request: Request
 ): Promise<NextResponse | null> {
   const method = request.method
 

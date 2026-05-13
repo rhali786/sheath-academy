@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import type { ApiResponse, LessonTask } from '@/features/lib/types'
 import { getLessonTask, updateLessonTask, completeLessonTask } from '@/features/planner/server/service'
 
@@ -25,7 +25,7 @@ export async function GET(id: string): Promise<NextResponse<ApiResponse<LessonTa
   })
 }
 
-export async function PUT(id: string, request: NextRequest): Promise<NextResponse<ApiResponse<LessonTask | null>>> {
+export async function PUT(id: string, request: Request): Promise<NextResponse<ApiResponse<LessonTask | null>>> {
   const lesson = getLessonTask(id)
   if (!lesson) {
     return NextResponse.json(
