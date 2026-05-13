@@ -104,3 +104,135 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Attachments**:
 
 ---
+
+- **ID**: FB-004
+- **Status**: New
+- **Date/time**: 2026-05-13 08:05 (America/Detroit)
+- **Area/URL**: Dashboard / Today screen / https://sheathacademy.onrender.com/
+- **Feedback summary**: Refine Today dashboard into a priority-based homeschool command center with stronger hierarchy, pacing visibility, Quran workflows, and daily operational clarity.
+- **Details / suggested change**:
+  - Replace “Plan your first lesson / Coming soon” hero area with a true dashboard summary section.
+  - Add “Today’s Homeschool Status” summary card/banner near the top.
+    - Example:
+      - Attendance status
+      - Overdue lesson count
+      - Quran logging status
+      - Portfolio/evidence readiness
+      - Daily readiness percentage
+  - Move “Needs Attention” directly below the daily status summary.
+  - Keep “Do Today” as the primary working checklist area.
+  - Preserve family/shared lesson workflows and make them visually distinct.
+    - Example label:
+      - “Family / Shared Work”
+  - Improve subject treatment consistency across the dashboard.
+    - Add consistent iconography, category styling, and status treatment for:
+      - Quran
+      - Arabic
+      - Islamic Studies
+      - Math
+      - English
+      - Reading
+      - Writing
+      - Science
+      - History
+      - Social Studies
+      - Geography
+      - Art
+      - PE / Health
+      - Technology
+      - Nature Study
+      - Logic
+      - Life Skills
+      - Civics
+      - Economics
+      - Handwriting
+      - Vocabulary / Spelling
+  - Keep Quran, Arabic, and Islamic Studies visually first-class rather than generic categories.
+  - Clarify “Today’s State” metrics.
+    - Example:
+      - “Attendance Logged — 3/5 students” instead of ambiguous counters.
+  - Replace internal IDs such as:
+    - “student_seed_zayd_001”
+    - with actual learner names.
+  - Improve overdue treatment.
+    - Overdue items should visually stand out and be easy to resolve.
+  - Preserve quick actions such as:
+    - Log Quran
+    - Add Evidence
+    - Move Work
+    - but make them more context-aware where possible.
+  - Strengthen “Per-Child Progress” clarity.
+    - Add timeframe context:
+      - This week
+      - This month
+      - School year
+  - Improve Quran Progress and Weekly Quran Sessions clarity.
+  - Keep chart-based Quran session visualization, but improve readability and labeling rather than replacing charts with tables.
+  - Improve “Records & Proof” into a clearer readiness-oriented section.
+    - Example:
+      - “Records Readiness”
+  - Keep export/report actions but communicate readiness state before export.
+  - Add bilingual Islamic date display.
+    - Arabic Hijri line example:
+      - “الأربعاء، ٢٦ ذو القعدة ١٤٤٧ هـ”
+    - English Hijri line example:
+      - “Wednesday, 26 Dhul Qa‘dah 1447 AH”
+    - Gregorian line example:
+      - “Wednesday, May 13, 2026”
+  - Add School Year Progress card.
+    - Example:
+      - Day 72 of 180
+      - Week 15 of 36
+      - Remaining school days
+      - Overall completion percentage
+  - Surface pacing awareness.
+    - Example:
+      - Dashboard can later compare curriculum pacing versus school-week pacing.
+  - Add “Now & Next” live schedule preview card to the Today dashboard.
+    - Example:
+      - Current lesson block
+      - Time remaining
+      - Next scheduled block
+      - Live progress fill/timer
+  - Future expansion:
+    - Dedicated Schedule/Classroom screen with live visual schedule tracking, current block highlighting, modular lesson timing, and real-time classroom flow support.
+- **Reasoning (why)**: The dashboard is the operational heart of the platform and should quickly answer:
+  - What needs attention?
+  - What should we be doing right now?
+  - What is behind?
+  - What has already been logged?
+  - Are we on pace for the school year?
+  Strong hierarchy, pacing awareness, family/shared workflows, Quran-native tracking, and records readiness help position Sheath as a true family education operating system rather than a generic homeschool checklist app.
+- **Priority**: P1
+- **Notes**: This dashboard already contains strong foundational concepts. The main opportunity is improving hierarchy, clarity, operational flow, and homeschool-native pacing visibility without overwhelming the parent.
+- **Attachments**:
+
+---
+
+- **ID**: FB-005
+- **Status**: New
+- **Date/time**: 2026-05-13 08:12 (America/Detroit)
+- **Area/URL**: Future Schedule / Classroom workflow
+- **Feedback summary**: Create dedicated live schedule / classroom timing workflow with dashboard integration.
+- **Details / suggested change**:
+  - Create future dedicated Schedule/Classroom screen.
+  - Support visual live daily schedule.
+  - Display:
+    - Current lesson block
+    - Start/end times
+    - Live time-fill/progress behavior
+    - Upcoming lesson preview
+    - Day schedule overview
+  - Support modular scheduling tied to lesson planning workflows.
+  - Add live classroom/day pacing support.
+  - Add lightweight “Now & Next” preview module to Today dashboard.
+  - Allow homeschool parents to quickly determine:
+    - what should be happening now
+    - what comes next
+    - whether the day is on pace
+- **Reasoning (why)**: Many homeschool families struggle less with curriculum selection and more with maintaining rhythm, pacing, and transitions throughout the day. A live visual schedule system would help families maintain operational flow and reduce friction during instruction.
+- **Priority**: P2
+- **Notes**: This should eventually integrate closely with planning, lesson, attendance, and pacing systems.
+- **Attachments**:
+
+---
