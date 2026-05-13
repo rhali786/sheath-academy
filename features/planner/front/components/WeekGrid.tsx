@@ -39,12 +39,12 @@ export function WeekGrid() {
   }
 
   return (
-    <div className="overflow-x-auto p-4">
-      <table className="w-full border-collapse border border-gray-300">
+    <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm">
+      <table className="w-full border-collapse">
         <thead>
-          <tr>
-            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-sm font-semibold text-left w-40">
-              Child / Subject
+          <tr className="border-b border-slate-200">
+            <th className="bg-slate-50 px-4 py-3 text-sm font-semibold text-left w-40">
+              <span className="text-slate-700">Child / Subject</span>
             </th>
             {orderedDays.map((date, idx) => {
               const dayOfWeek = date.getDay()
@@ -55,12 +55,12 @@ export function WeekGrid() {
               return (
                 <th
                   key={date.toISOString()}
-                  className={`border border-gray-300 px-2 py-2 text-sm font-semibold text-center min-w-32 ${
-                    isWeekendDay ? 'bg-gray-100 text-gray-500 opacity-60' : 'bg-blue-50'
+                  className={`px-3 py-3 text-sm font-semibold text-center min-w-32 border-l border-slate-200 ${
+                    isWeekendDay ? 'bg-slate-50 text-slate-400 opacity-60' : 'bg-forest-50'
                   }`}
                 >
-                  <div>{dayLabel}</div>
-                  <div className="text-xs">{dateStr}</div>
+                  <div className={isWeekendDay ? 'text-slate-500' : 'text-forest-900'}>{dayLabel}</div>
+                  <div className={`text-xs ${isWeekendDay ? 'text-slate-400' : 'text-forest-700'}`}>{dateStr}</div>
                 </th>
               )
             })}
@@ -68,10 +68,10 @@ export function WeekGrid() {
         </thead>
         <tbody>
           {rows.map((row, rowIdx) => (
-            <tr key={`${row.childId}-${row.subjectId}`} className={rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-              <td className="border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-medium sticky left-0 z-10">
-                <div className="font-semibold text-gray-900">{row.childName}</div>
-                <div className="text-xs text-gray-600">{row.subjectName}</div>
+            <tr key={`${row.childId}-${row.subjectId}`} className={`border-b border-slate-200 ${rowIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`}>
+              <td className="bg-slate-50 px-4 py-3 text-sm font-medium sticky left-0 z-10 border-r border-slate-200">
+                <div className="font-semibold text-slate-900">{row.childName}</div>
+                <div className="text-xs text-slate-600">{row.subjectName}</div>
               </td>
               {orderedDays.map(date => {
                 const dateStr = date.toISOString().split('T')[0]
@@ -82,14 +82,14 @@ export function WeekGrid() {
                 return (
                   <td
                     key={dateStr}
-                    className={`border border-gray-300 px-2 py-2 text-sm align-top ${
-                      isWeekendDay ? 'bg-gray-100 text-gray-600 opacity-60' : 'bg-white'
+                    className={`px-3 py-3 text-sm align-top border-l border-slate-200 ${
+                      isWeekendDay ? 'bg-slate-50 text-slate-600 opacity-60' : 'bg-white'
                     }`}
                   >
                     {lesson && (
-                      <div className="p-2 bg-blue-100 rounded border border-blue-300">
-                        <div className="font-medium text-gray-900">{lesson.title}</div>
-                        {lesson.description && <div className="text-xs text-gray-700 mt-1">{lesson.description}</div>}
+                      <div className="p-2.5 bg-forest-50 rounded-md border border-forest-200 hover:shadow-md transition-shadow">
+                        <div className="font-medium text-forest-900">{lesson.title}</div>
+                        {lesson.description && <div className="text-xs text-forest-700 mt-1">{lesson.description}</div>}
                       </div>
                     )}
                   </td>

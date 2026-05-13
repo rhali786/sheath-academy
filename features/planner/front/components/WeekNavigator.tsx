@@ -47,49 +47,53 @@ export function WeekNavigator() {
   }
 
   return (
-    <div className="flex items-center justify-between gap-4 p-4 bg-white border-b">
-      <div className="flex items-center gap-2">
-        <button
-          onClick={previousWeek}
-          className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-          aria-label="Previous week"
-        >
-          ← Previous
-        </button>
-        <button
-          onClick={nextWeek}
-          className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-          aria-label="Next week"
-        >
-          Next →
-        </button>
-      </div>
+    <div className="bg-white border-b border-slate-200 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between gap-6 py-4">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={previousWeek}
+              className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2 transition-colors"
+              aria-label="Previous week"
+            >
+              ← Previous
+            </button>
+            <button
+              onClick={nextWeek}
+              className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2 transition-colors"
+              aria-label="Next week"
+            >
+              Next →
+            </button>
+          </div>
 
-      <div className="text-sm font-medium text-gray-900">{getWeekRange()}</div>
+          <div className="text-base font-semibold text-slate-900">{getWeekRange()}</div>
 
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setShowDatePicker(!showDatePicker)}
-          className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-          aria-label="Open date picker"
-        >
-          📅
-        </button>
-        {showDatePicker && (
-          <input
-            type="date"
-            value={selectedWeek.toISOString().split('T')[0]}
-            onChange={handleDateChange}
-            className="px-3 py-2 text-sm border border-gray-300 rounded-md"
-          />
-        )}
-        <button
-          onClick={jumpToToday}
-          className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-          aria-label="Jump to today"
-        >
-          Today
-        </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2 transition-colors"
+              aria-label="Open date picker"
+            >
+              📅
+            </button>
+            {showDatePicker && (
+              <input
+                type="date"
+                value={selectedWeek.toISOString().split('T')[0]}
+                onChange={handleDateChange}
+                className="px-4 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2"
+              />
+            )}
+            <button
+              onClick={jumpToToday}
+              className="px-4 py-2.5 text-sm font-medium text-white bg-forest-900 border border-forest-900 rounded-lg hover:bg-forest-800 hover:border-forest-800 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2 transition-colors"
+              aria-label="Jump to today"
+            >
+              Today
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -62,7 +62,7 @@ export function WeeklyList() {
   const lessonsForDay = (dateStr: string) => lessons.filter(l => l.dueDate === dateStr)
 
   return (
-    <div className="p-4 space-y-2">
+    <div className="space-y-3">
       {daySections.map(day => {
         const dayLessons = lessonsForDay(day.dateStr)
         const isExpanded = expandedDays.has(day.dateStr)
@@ -71,41 +71,45 @@ export function WeeklyList() {
         return (
           <div
             key={day.dateStr}
-            className={`border rounded-lg overflow-hidden ${
-              day.isWeekend ? 'border-gray-300 bg-gray-50 opacity-60' : 'border-gray-300 bg-white'
+            className={`rounded-lg border shadow-sm overflow-hidden transition-all ${
+              day.isWeekend ? 'border-slate-200 bg-slate-50 opacity-60' : 'border-slate-200 bg-white hover:shadow-md'
             }`}
           >
             <button
               onClick={() => toggleDay(day.dateStr)}
-              className={`w-full flex items-center justify-between p-3 hover:bg-gray-100 ${
-                day.isWeekend ? 'bg-gray-100' : 'bg-white'
+              className={`w-full flex items-center justify-between px-4 py-4 transition-colors ${
+                day.isWeekend ? 'hover:bg-slate-100' : 'hover:bg-slate-50'
               }`}
             >
-              <div className="text-left">
-                <div className="font-semibold text-gray-900">{day.dayLabel}</div>
-                <div className="text-sm text-gray-600">{dateFormatted}</div>
+              <div className="text-left flex-1">
+                <div className={`font-semibold ${day.isWeekend ? 'text-slate-600' : 'text-slate-900'}`}>{day.dayLabel}</div>
+                <div className={`text-sm ${day.isWeekend ? 'text-slate-500' : 'text-slate-600'}`}>{dateFormatted}</div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">{dayLessons.length} lesson(s)</span>
-                <span className="text-lg">{isExpanded ? '▼' : '▶'}</span>
+              <div className="flex items-center gap-3 ml-2">
+                <span className={`text-xs font-medium ${day.isWeekend ? 'text-slate-500' : 'text-slate-600'}`}>
+                  {dayLessons.length} {dayLessons.length === 1 ? 'lesson' : 'lessons'}
+                </span>
+                <span className={`text-lg transition-transform ${isExpanded ? 'rotate-180' : ''} ${day.isWeekend ? 'text-slate-500' : 'text-slate-700'}`}>
+                  ▼
+                </span>
               </div>
             </button>
 
             {isExpanded && (
-              <div className="border-t bg-gray-50 p-3 space-y-2">
+              <div className={`border-t px-4 py-4 space-y-3 ${day.isWeekend ? 'bg-slate-50' : 'bg-slate-50'}`}>
                 {dayLessons.length > 0 ? (
                   dayLessons.map(lesson => (
-                    <div key={lesson.id} className="p-3 bg-blue-50 rounded border border-blue-200">
-                      <div className="font-semibold text-gray-900">{lesson.title}</div>
-                      <div className="text-sm text-gray-700 mt-1">
-                        <span className="inline-block mr-2">Child: {lesson.childId}</span>
-                        <span className="inline-block">Subject: {lesson.subjectId}</span>
+                    <div key={lesson.id} className="p-4 bg-white rounded-lg border border-forest-200 hover:shadow-md transition-shadow">
+                      <div className="font-semibold text-forest-900">{lesson.title}</div>
+                      <div className="text-sm text-slate-600 mt-2 space-y-1">
+                        <div>Child: <span className="font-medium text-slate-900">{lesson.childId}</span></div>
+                        <div>Subject: <span className="font-medium text-slate-900">{lesson.subjectId}</span></div>
                       </div>
-                      {lesson.description && <div className="text-sm text-gray-600 mt-2">{lesson.description}</div>}
+                      {lesson.description && <div className="text-sm text-slate-700 mt-3 p-3 bg-forest-50 rounded border border-forest-100">{lesson.description}</div>}
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-4 text-gray-500">No lessons scheduled</div>
+                  <div className="text-center py-6 text-slate-500">No lessons scheduled</div>
                 )}
               </div>
             )}

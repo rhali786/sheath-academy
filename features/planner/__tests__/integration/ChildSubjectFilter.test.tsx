@@ -99,10 +99,24 @@ describe('ChildSubjectFilter', () => {
   it('clear button resets to all children and all subjects', () => {
     const { setSelectedChildIds, setSelectedSubjectIds } = renderFilter(['child_001'], ['subj_001'])
 
-    const clearButton = screen.getByRole('button', { name: /clear filters/i })
+    const clearButton = screen.getByRole('button', { name: /^clear$/i })
     fireEvent.click(clearButton)
 
     expect(setSelectedChildIds).toHaveBeenCalledWith(['child_001', 'child_002'])
     expect(setSelectedSubjectIds).toHaveBeenCalledWith(['subj_001', 'subj_002'])
+  })
+
+  it('deselecting all children also clears subjects', () => {
+    const { setSelectedChildIds, setSelectedSubjectIds } = renderFilter(['child_001'], ['subj_001', 'subj_002'])
+
+    const childButton = screen.getByRole('button', { name: /children:/i })
+    fireEvent.click(childButton)
+
+    const adamCheckbox = screen.getByRole('checkbox', { name: /adam/i })
+    fireEvent.click(adamCheckbox)
+
+    // When deselecting the last child, subjects should also be cleared
+    expect(setSelectedChildIds).toHaveBeenCalled()
+    expect(setSelectedSubjectIds).toHaveBeenCalledWith([])
   })
 })

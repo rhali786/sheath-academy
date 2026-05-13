@@ -10,11 +10,16 @@ export function ChildSubjectFilter() {
   const [showSubjectsDropdown, setShowSubjectsDropdown] = useState(false)
 
   function toggleChild(childId: string) {
-    setSelectedChildIds(
-      selectedChildIds.includes(childId)
-        ? selectedChildIds.filter(id => id !== childId)
-        : [...selectedChildIds, childId]
-    )
+    const updated = selectedChildIds.includes(childId)
+      ? selectedChildIds.filter(id => id !== childId)
+      : [...selectedChildIds, childId]
+
+    setSelectedChildIds(updated)
+
+    // When clearing all children, also clear subjects (directional relationship)
+    if (updated.length === 0) {
+      setSelectedSubjectIds([])
+    }
   }
 
   function toggleSubject(subjectId: string) {
@@ -41,75 +46,83 @@ export function ChildSubjectFilter() {
     .join(', ')
 
   return (
-    <div className="flex flex-wrap items-center gap-3 p-4 bg-gray-50 border-b">
-      {/* Children filter */}
-      <div className="relative">
-        <button
-          onClick={() => setShowChildrenDropdown(!showChildrenDropdown)}
-          className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          Children: {selectedChildNames || 'None'}
-        </button>
-        {showChildrenDropdown && (
-          <div className="absolute z-10 mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
-            {children.map(child => (
-              <label key={child.id} className="flex items-center px-4 py-2 hover:bg-gray-100 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedChildIds.includes(child.id)}
-                  onChange={() => toggleChild(child.id)}
-                  className="mr-2"
-                />
-                {child.name}
-              </label>
-            ))}
+    <div className="sticky top-[65px] z-20 bg-white border-b border-slate-200 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap items-center gap-2 py-4">
+          {/* Children filter */}
+          <div className="relative">
+            <button
+              onClick={() => setShowChildrenDropdown(!showChildrenDropdown)}
+              className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2 transition-colors"
+            >
+              Children: {selectedChildNames || 'All'}
+            </button>
+            {showChildrenDropdown && (
+              <div className="absolute top-full left-0 z-50 mt-2 w-48 bg-white border border-slate-300 rounded-lg shadow-xl">
+                <div className="max-h-64 overflow-y-auto py-1">
+                  {children.map(child => (
+                    <label key={child.id} className="flex items-center px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={selectedChildIds.includes(child.id)}
+                        onChange={() => toggleChild(child.id)}
+                        className="w-4 h-4 mr-3 text-forest-600 rounded border-slate-300 focus:ring-2 focus:ring-forest-500"
+                      />
+                      <span className="text-sm text-slate-700">{child.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Subjects filter */}
-      <div className="relative">
-        <button
-          onClick={() => setShowSubjectsDropdown(!showSubjectsDropdown)}
-          className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          Subjects: {selectedSubjectNames || 'None'}
-        </button>
-        {showSubjectsDropdown && (
-          <div className="absolute z-10 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-            {subjects.map(subject => (
-              <label key={subject.id} className="flex items-center px-4 py-2 hover:bg-gray-100 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedSubjectIds.includes(subject.id)}
-                  onChange={() => toggleSubject(subject.id)}
-                  className="mr-2"
-                />
-                {subject.name}
-              </label>
-            ))}
+          {/* Subjects filter */}
+          <div className="relative">
+            <button
+              onClick={() => setShowSubjectsDropdown(!showSubjectsDropdown)}
+              className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2 transition-colors"
+            >
+              Subjects: {selectedSubjectNames || 'All'}
+            </button>
+            {showSubjectsDropdown && (
+              <div className="absolute top-full left-0 z-50 mt-2 w-48 bg-white border border-slate-300 rounded-lg shadow-xl">
+                <div className="max-h-64 overflow-y-auto py-1">
+                  {subjects.map(subject => (
+                    <label key={subject.id} className="flex items-center px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={selectedSubjectIds.includes(subject.id)}
+                        onChange={() => toggleSubject(subject.id)}
+                        className="w-4 h-4 mr-3 text-forest-600 rounded border-slate-300 focus:ring-2 focus:ring-forest-500"
+                      />
+                      <span className="text-sm text-slate-700">{subject.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Clear button */}
+          <button
+            onClick={clearFilters}
+            className="px-4 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-colors"
+          >
+            Clear
+          </button>
+
+          {/* Close dropdowns when clicking outside */}
+          {(showChildrenDropdown || showSubjectsDropdown) && (
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => {
+                setShowChildrenDropdown(false)
+                setShowSubjectsDropdown(false)
+              }}
+            />
+          )}
+        </div>
       </div>
-
-      {/* Clear button */}
-      <button
-        onClick={clearFilters}
-        className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-      >
-        Clear Filters
-      </button>
-
-      {/* Close dropdowns when clicking outside */}
-      {(showChildrenDropdown || showSubjectsDropdown) && (
-        <div
-          className="fixed inset-0 z-0"
-          onClick={() => {
-            setShowChildrenDropdown(false)
-            setShowSubjectsDropdown(false)
-          }}
-        />
-      )}
     </div>
   )
 }

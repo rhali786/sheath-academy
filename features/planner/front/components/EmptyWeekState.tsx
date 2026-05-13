@@ -20,9 +20,9 @@ export function EmptyWeekState({ lessons }: EmptyWeekStateProps) {
   const randomMessage = MESSAGES[Math.floor(Math.random() * MESSAGES.length)]
 
   return (
-    <div className="flex items-center justify-center min-h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-      <div className="text-center">
-        <p className="text-lg font-medium text-gray-700">{randomMessage}</p>
+    <div className="flex items-center justify-center min-h-64 bg-white rounded-lg border-2 border-dashed border-slate-300">
+      <div className="text-center px-6">
+        <p className="text-lg font-medium text-slate-700">{randomMessage}</p>
       </div>
     </div>
   )

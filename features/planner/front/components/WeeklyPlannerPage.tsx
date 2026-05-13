@@ -46,17 +46,21 @@ export function WeeklyPlannerPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col h-screen bg-slate-50">
       <WeekNavigator />
       <ChildSubjectFilter />
 
       {lessons.length === 0 ? (
-        <div className="flex-1 overflow-auto p-4">
-          <EmptyWeekState lessons={lessons} />
+        <div className="flex-1 overflow-auto">
+          <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+            <EmptyWeekState lessons={lessons} />
+          </div>
         </div>
       ) : (
-        <div className="flex-1 overflow-auto">
-          {isMobile ? <WeeklyList /> : <WeekGrid />}
+        <div className="flex-1 overflow-auto bg-slate-50">
+          <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+            {isMobile ? <WeeklyList /> : <WeekGrid />}
+          </div>
         </div>
       )}
     </div>
