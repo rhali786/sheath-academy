@@ -6,6 +6,7 @@ import type { StudentProfile } from '@/features/lib/types'
 import type { SchoolYear } from '@/features/school-year/types'
 import { useHousehold } from '@/features/household/front/context'
 import { householdApi } from '@/features/household/front/services/api'
+import { HouseholdSettings } from '@/features/household/front/components/HouseholdSettings'
 import { ChildrenProvider } from '@/features/children/front/context'
 import { ChildList } from '@/features/children/front/components/ChildList'
 import { SubjectForm } from '@/features/subjects/front/components/SubjectForm'
@@ -162,35 +163,53 @@ export function SettingsPage() {
       {activeTab === 'household' && (
         <section data-testid="settings-panel-household">
           <h2 className="text-lg font-semibold text-slate-900 mb-1">Household</h2>
-          <p className="text-sm text-slate-500 mb-4">
-            Rename your household. This name appears in the header throughout the app.
+          <p className="text-sm text-slate-500 mb-6">
+            Configure household settings including name and week start day.
           </p>
 
-          <form onSubmit={handleRename} className="bg-white rounded-xl border border-slate-200 p-6 max-w-md">
-            <label htmlFor="rename-household" className="block text-xs font-medium text-slate-600 mb-1.5">
-              Household name
-            </label>
-            <input
-              id="rename-household"
-              type="text"
-              value={renameName}
-              onChange={(e) => {
-                setRenameName(e.target.value)
-                setRenameSuccess(false)
-              }}
-              className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900 mb-4"
-              maxLength={80}
-            />
-            {renameError && <p className="text-red-500 text-xs mb-3">{renameError}</p>}
-            {renameSuccess && <p className="text-green-600 text-xs mb-3">Household name updated.</p>}
-            <button
-              type="submit"
-              disabled={!renameName.trim() || renameName.trim() === familyName || renaming}
-              className="px-5 py-2.5 bg-forest-900 text-white rounded-lg text-sm font-medium hover:bg-forest-800 disabled:opacity-50 transition-colors"
-            >
-              {renaming ? 'Saving…' : 'Save'}
-            </button>
-          </form>
+          <div className="space-y-6">
+            {/* Household name */}
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800 mb-3">Household name</h3>
+              <p className="text-xs text-slate-500 mb-3">
+                This name appears in the header throughout the app.
+              </p>
+              <form onSubmit={handleRename} className="bg-white rounded-xl border border-slate-200 p-6 max-w-md">
+                <label htmlFor="rename-household" className="block text-xs font-medium text-slate-600 mb-1.5">
+                  Name
+                </label>
+                <input
+                  id="rename-household"
+                  type="text"
+                  value={renameName}
+                  onChange={(e) => {
+                    setRenameName(e.target.value)
+                    setRenameSuccess(false)
+                  }}
+                  className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900 mb-4"
+                  maxLength={80}
+                />
+                {renameError && <p className="text-red-500 text-xs mb-3">{renameError}</p>}
+                {renameSuccess && <p className="text-green-600 text-xs mb-3">Household name updated.</p>}
+                <button
+                  type="submit"
+                  disabled={!renameName.trim() || renameName.trim() === familyName || renaming}
+                  className="px-5 py-2.5 bg-forest-900 text-white rounded-lg text-sm font-medium hover:bg-forest-800 disabled:opacity-50 transition-colors"
+                >
+                  {renaming ? 'Saving…' : 'Save'}
+                </button>
+              </form>
+            </div>
+
+            {/* Week start day */}
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800 mb-3">Week start day</h3>
+              <p className="text-xs text-slate-500 mb-3">
+                Choose which day your week starts on in the planner.
+              </p>
+              <HouseholdSettings />
+            </div>
+          </div>
         </section>
       )}
 
