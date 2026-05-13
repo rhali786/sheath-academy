@@ -33,10 +33,16 @@ export function createHouseholdProfile(workspaceId: string, familyName: string):
   return profile
 }
 
-export function updateHouseholdProfile(familyName: string): HouseholdProfile | null {
+export function updateHouseholdProfile(
+  familyName?: string,
+  weekStartDay?: 'Monday' | 'Sunday'
+): HouseholdProfile | null {
   const profile = householdProfilesStore.getAll()[0]
   if (!profile) return null
-  return householdProfilesStore.update(profile.id, { familyName })
+  const updates: Partial<HouseholdProfile> = {}
+  if (familyName !== undefined) updates.familyName = familyName
+  if (weekStartDay !== undefined) updates.weekStartDay = weekStartDay
+  return householdProfilesStore.update(profile.id, updates)
 }
 
 /** Clears workspace + household profile (tests); dev uses initial module seed until reset. */

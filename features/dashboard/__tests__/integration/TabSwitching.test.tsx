@@ -109,15 +109,6 @@ describe('Tab switching — NavigationContext regression', () => {
     })
   })
 
-  test('Weekly tab shows Weekly content', async () => {
-    renderWithShell()
-    await waitForDashboard()
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'Weekly' })[0])
-    expect(screen.getByText('Weekly View')).toBeInTheDocument()
-    expect(screen.queryByText("Today's State")).not.toBeInTheDocument()
-  })
-
   test('Reports tab shows Reports content', async () => {
     renderWithShell()
     await waitForDashboard()

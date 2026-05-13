@@ -44,6 +44,13 @@ export const householdApi = {
   setup: (familyName: string): Promise<ApiResponse<{ workspace: Workspace; profile: HouseholdProfile }>> =>
     post('/api/household/workspace', { familyName }),
 
-  updateProfile: (familyName: string): Promise<ApiResponse<HouseholdProfile>> =>
-    put('/api/household/profile', { familyName }),
+  updateProfile: (
+    familyName?: string,
+    weekStartDay?: 'Monday' | 'Sunday'
+  ): Promise<ApiResponse<HouseholdProfile>> => {
+    const body: Record<string, string> = {}
+    if (familyName !== undefined) body.familyName = familyName
+    if (weekStartDay !== undefined) body.weekStartDay = weekStartDay
+    return put('/api/household/profile', body)
+  },
 }
