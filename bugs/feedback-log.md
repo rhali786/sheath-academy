@@ -37,14 +37,18 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **ID**: FB-002
 - **Status**: New
 - **Date/time**: 2026-05-12 21:35 (America/Detroit)
-- **Area/URL**: Settings → Children / Add Child form / https://sheathacademy.onrender.com/settings?tab=children
-- **Feedback summary**: Refine Add Child form structure for transcript-safe learner records and cleaner onboarding.
+- **Area/URL**: Settings → Children / Add + manage child profiles / https://sheathacademy.onrender.com/settings?tab=children
+- **Feedback summary**: Refine the full Children sub-tab for transcript-safe learner records, cleaner onboarding, and clearer learner management cards.
 - **Details / suggested change**:
+  - Treat this feedback as covering the full Settings → Children sub-tab, including both:
+    - Add/Edit Child form
+    - Your Children management list/cards
   - Replace “Child's name” with separate required fields:
     - First name*
     - Last name*
   - Add helper text beneath name fields:
     - “Names entered here may appear on reports, transcripts, and exported records.”
+  - Child cards should display the learner’s formal first + last name consistently after this change.
   - Change “Grade/Level” from free text to dropdown:
     - PK
     - K
@@ -53,14 +57,28 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
   - Keep Date of Birth optional.
   - Add helper text beneath DOB field:
     - “Used for age-based planning and school records.”
-  - Remove “Teacher/Instructor name” from Add Child flow.
-  - Instructor assignment should occur at the subject/enrollment level instead of the learner profile level.
+  - Keep DOB visible on learner cards only when present, formatted cleanly.
+  - Remove “Teacher/Instructor name” from Add/Edit Child flow.
+  - Remove Teacher from learner cards/profile display unless it is later summarizing course-level instructors.
+  - Instructor assignment should occur at the subject/course/enrollment level instead of the learner profile level.
   - Add toggle:
     - “Allow learner to sign in”
   - Only show Username and Password fields if learner sign-in is enabled.
-- **Reasoning (why)**: Formal first and last names are needed for transcripts, report cards, and exported educational records. Separating learner identity from authentication keeps onboarding cleaner and preserves flexibility for homeschool, tutor, co-op, and school workflows. Instructor assignment at the subject level better reflects real-world educational structures.
+  - On learner cards, replace raw Username display with login status.
+    - Example:
+      - “Learner login: Enabled”
+      - “Learner login: Not enabled”
+  - Username/password management should live inside Edit Profile / login settings rather than being prominently displayed on the card.
+  - Consider renaming “Edit” button to “Edit profile” for clarity.
+  - Keep Archive action, but clarify behavior:
+    - archived learners keep records
+    - archived learners should not appear in active planning by default
+    - archived learners can be restored
+  - Keep “Show archived,” and eventually consider showing archived count.
+  - Architecture should think in terms of Learners, while homeschool-facing UI can still use Children where it feels warmer and appropriate.
+- **Reasoning (why)**: Formal first and last names are needed for transcripts, report cards, and exported educational records. Separating learner identity from authentication keeps onboarding cleaner and preserves flexibility for homeschool, tutor, co-op, and school workflows. Instructor assignment at the course/enrollment level better reflects real-world education, where different subjects may have different teachers, tutors, co-op instructors, or parents. The learner cards should show useful management status without exposing raw credentials or implying each child has one global teacher.
 - **Priority**: P1
-- **Notes**: This feedback specifically applies to the Settings → Children → Add Child workflow and should remain separate from broader navigation/dashboard feedback.
+- **Notes**: This feedback applies to the entire Settings → Children workflow, not only the Add Child form. The current form and learner cards should be updated together so the tab has one coherent learner-management model.
 - **Attachments**:
 
 ---
