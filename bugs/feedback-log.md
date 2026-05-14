@@ -86,39 +86,117 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **ID**: FB-003
 - **Status**: New
 - **Date/time**: 2026-05-13 07:10 (America/Detroit)
-- **Area/URL**: Settings → Subjects / https://sheathacademy.onrender.com/settings?tab=subjects
-- **Feedback summary**: Refine Subjects setup flow to support learner enrollments, shared family courses, instructor assignment, and transcript-ready course structure.
+- **Area/URL**: Settings → Subjects / Add + manage courses / https://sheathacademy.onrender.com/settings?tab=subjects
+- **Feedback summary**: Refine the full Subjects/Courses sub-tab into a course and learner-enrollment management screen that supports shared family courses, instructor assignment, transcript-ready structure, and clean reporting categories.
 - **Details / suggested change**:
+  - Treat this feedback as covering the full Settings → Subjects sub-tab, including both:
+    - Add/Edit Course/Subject form
+    - All Subjects table/list
   - Rename “Subject name” to:
     - “Course / Subject name”
-  - Add optional Instructor/Teacher field to subject setup.
+  - Preserve separation between:
+    - Course / Subject Name
+    - Category
+  - Example:
+    - Course Name: “Saxon Math 6/5”
+    - Category: “Math”
+  - Add optional Instructor/Teacher field to course/subject setup.
+  - Instructor assignment belongs here at the course/subject/enrollment level, not on the child profile.
   - Associate courses/subjects with a School Year / Academic Year.
-  - Clean up category formatting:
-    - Example: “IslamicStudies” should display as “Islamic Studies”.
   - Add optional Level / Grade field separate from the course name.
     - Examples:
       - Grade 5
       - Algebra I
       - Arabic Level 2
       - Quran Revision
-  - Add support for assigning a course/subject to multiple learners simultaneously.
-    - Example:
+  - Replace the current child-tab-only assignment model with a learner multi-select section inside the form.
+    - Learners:
+      - Adam
+      - Khadijah
+      - Zayd
+      - Select all
+    - This should support one learner, multiple learners, or all learners.
+  - Support shared/family courses without duplicating the same course row unnecessarily.
+    - Examples:
       - Shared PE
       - Shared Art
       - Shared Islamic Studies
       - Shared Science
-  - Add learner multi-select with optional “Select all” behavior.
-  - Clarify page language so users understand they are assigning courses to learners.
+      - Family read-aloud
+      - Nature Study
+  - Clarify page language so users understand they are creating courses/subjects and assigning them to learners.
+    - Current wording based on child tabs should evolve toward learner assignment.
+  - Update the All Subjects table from a simple child-subject list into a course/enrollment management table.
+    - Suggested columns:
+      - Learner(s)
+      - Course / Subject
+      - Category
+      - Level / Grade
+      - School Year
+      - Instructor
+      - Status
+      - Actions
+  - For shared courses, show the course once with learner chips or learner count rather than forcing duplicate rows.
+    - Example:
+      - Learners: Adam, Khadijah, Zayd
+      - Course: Family Nature Study
+      - Category: Science / Nature Study
+  - Clean up category formatting:
+    - Example: “IslamicStudies” should display as “Islamic Studies”.
+  - Expand standard category options beyond the current narrow list.
+    - Recommended categories:
+      - Quran
+      - Arabic
+      - Islamic Studies
+      - Math
+      - English / ELA
+      - Reading
+      - Writing
+      - Science
+      - History
+      - Social Studies
+      - Geography
+      - Art
+      - PE / Health
+      - Technology
+      - Nature Study
+      - Logic
+      - Life Skills
+      - Civics
+      - Economics
+      - Handwriting
+      - Vocabulary / Spelling
+      - Foreign Language
+      - Other / Custom
+  - Keep Quran, Arabic, and Islamic Studies as first-class categories, not generic “Other” categories.
+  - Add custom category support.
+    - If “Other / Custom” is selected, reveal a custom category / subject-area field.
   - Consider future starter templates/default subject bundles for homeschool onboarding.
-  - Preserve separation between:
-    - Course/Subject Name
-    - Category
-  - Example:
-    - Course Name: “Saxon Math 6/5”
-    - Category: “Math”
-- **Reasoning (why)**: Homeschool families often combine learners into shared courses while still needing individualized tracking and transcript-ready records. Separating course names, levels, categories, instructors, and learner assignments creates a stronger long-term enrollment model that supports homeschool, tutor, co-op, and school workflows.
+    - Examples:
+      - Quran
+      - Arabic
+      - Islamic Studies
+      - Math
+      - English / ELA
+      - Science
+      - History / Social Studies
+  - Clarify course vs curriculum/resource relationship.
+    - Course/Subject is the educational container.
+    - Curriculum/resource can be linked later from the Resources tab.
+    - Do not force curriculum/resource entry during MVP setup.
+    - Example:
+      - Course: Math 5
+      - Resource: Saxon Math 6/5
+  - Add archive behavior clarity for courses/subjects.
+    - Archived courses should keep historical lesson/progress/report records.
+    - Archived courses should not appear in active planning by default.
+    - Archived courses should be restorable.
+    - Eventually add “Show archived” and/or archived count.
+  - Standardize spelling and naming across the product.
+    - Example: use “Quran Memorization” if the product is using US English, or make spelling locale-aware later.
+- **Reasoning (why)**: Homeschool families often combine learners into shared courses while still needing individualized tracking and transcript-ready records. Separating course names, levels, categories, instructors, school years, resources, and learner assignments creates a stronger long-term enrollment model that supports homeschool, tutor, co-op, and school workflows. The All Subjects table should become a practical course/enrollment management surface rather than a simple child-subject row list.
 - **Priority**: P1
-- **Notes**: The emerging architecture here is closer to learner enrollments than simple student-subject relationships. This is a strong direction for long-term scalability and reporting.
+- **Notes**: The emerging architecture here is closer to learner enrollments than simple student-subject relationships. This feedback applies to the full Settings → Subjects/Courses workflow, not only the Add Subject form. The top-level Settings architecture may eventually rename this sub-tab from “Subjects” to “Courses.”
 - **Attachments**:
 
 ---
