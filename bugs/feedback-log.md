@@ -511,3 +511,163 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Attachments**:
 
 ---
+
+- **ID**: FB-009
+- **Status**: New
+- **Date/time**: 2026-05-13 21:55 (America/Detroit)
+- **Area/URL**: Settings → School year / https://sheathacademy.onrender.com/settings?tab=school-year
+- **Feedback summary**: Expand School Year Settings into academic calendar, pacing, and compliance foundation.
+- **Details / suggested change**:
+  - Keep Active School Year card at the top, but make it more informative.
+    - Show school year name.
+    - Show Gregorian start/end dates.
+    - Automatically show Hijri/Arabic date equivalents for start/end dates.
+    - Show school day count and week count.
+    - Example:
+      - Day 72 of 180 planned school days
+      - Week 15 of 36
+  - Prefill current active year when editing.
+  - Clearly distinguish between:
+    - Edit active school year
+    - Create new school year
+    - Create next school year
+  - Add first-day-of-school trigger options.
+    - Examples:
+      - exact date
+      - first selected school day after a selected holiday/break
+      - first selected school day in August
+      - first selected school day in September
+      - Monday after a selected holiday
+      - custom rule
+    - After calculation, save the actual resolved start date.
+  - Add required school days and/or required instructional hours.
+  - Add tracking method:
+    - Days only
+    - Hours only
+    - Days and hours
+    - Flexible / not compliance-tracked
+  - Connect required days/hours to compliance settings.
+    - Use selected location to suggest likely day/hour requirements where available.
+    - Location should support country, state/province, and optional district/local notes.
+    - Show source links, last reviewed dates, and a clear informational-not-legal-advice disclaimer when compliance data is available.
+  - Add planned school days calculation.
+    - Based on start/end dates, household school days, breaks, off days, make-up days, and school-year overrides.
+  - Allow school year to inherit household school days or customize for this school year.
+  - Add breaks, holidays, custom non-school days, recurring off days, and make-up days.
+    - Examples:
+      - Eid break
+      - Ramadan light schedule
+      - winter break
+      - family travel
+      - co-op closure
+      - teacher sick day
+      - snow day
+  - Add terms/reporting periods.
+    - Options:
+      - full year only
+      - semesters
+      - quarters
+      - trimesters
+      - custom terms
+  - Add week numbering rules.
+    - Examples:
+      - Week 1 starts on school year start date
+      - Week 1 starts on first full school week
+      - Use household week start day
+      - Exclude break weeks from pacing count
+      - Include break weeks in calendar count but not school pacing
+  - Add school day counting rules.
+    - Examples:
+      - count only completed attendance days
+      - count planned school days
+      - count partial days
+      - count hours toward day completion
+      - allow manual day override
+  - Add live academic-year preview before saving.
+    - Show:
+      - school year length
+      - planned school days
+      - required school days
+      - required/planned hours if enabled
+      - planned school weeks
+      - first/last school week
+      - break days
+      - remaining days
+      - target status
+  - Add validation and soft warnings.
+    - End date after start date
+    - overlapping school years
+    - planned days below required target
+    - no school days selected
+    - missing requirement data when compliance tracking is enabled
+    - changes that affect planner weeks/reports
+  - Add future school-year rollover workflow.
+    - Copy learners
+    - Copy or archive courses
+    - Carry forward unfinished courses
+    - Reset attendance
+    - Preserve resource library
+    - Create new reporting periods
+  - Add archived/past school year access.
+    - View previous years
+    - Export prior records
+    - Duplicate setup
+    - Archive year
+  - Show related school-year anchors.
+    - Learners enrolled
+    - Courses connected
+    - Attendance records
+    - Portfolio items
+    - Reports generated
+- **Reasoning (why)**: School Year Settings should be the academic calendar foundation for the whole platform. It should tell Sheath how to plan, count, pace, report, and prove the homeschool year while staying connected to compliance, dashboard progress, weekly planning, records, transcripts, and growth reporting.
+- **Priority**: P1
+- **Notes**: MVP can start with name, start/end dates, required days/hours, tracking method, school day inheritance/customization, planned-day preview, and basic breaks. Advanced rollover, archived-year management, reporting periods, and compliance automation can mature over time.
+- **Attachments**:
+
+---
+
+- **ID**: FB-010
+- **Status**: New
+- **Date/time**: 2026-05-13 22:00 (America/Detroit)
+- **Area/URL**: Islamic Calendar & Reminders / Settings + Today dashboard future workflow
+- **Feedback summary**: Add Muslim-native Islamic calendar reminders, countdowns, and optional dashboard notifications.
+- **Details / suggested change**:
+  - Add optional Islamic calendar reminder system.
+  - Support built-in countdowns/reminders for:
+    - Ramadan
+    - Eid al-Fitr
+    - Eid al-Adha
+    - Day of Arafah
+    - Ashura
+    - White Days: 13th, 14th, 15th of each Hijri month
+    - Sacred months:
+      - Muharram
+      - Rajab
+      - Dhul-Qa‘dah
+      - Dhul-Hijjah
+  - Support custom Islamic date reminders.
+  - Support custom Gregorian date reminders.
+  - Let families choose which reminders/countdowns are enabled via checkboxes or settings toggles.
+  - Show selected reminders/countdowns on Today dashboard where useful.
+    - Examples:
+      - Ramadan begins in 23 days
+      - White Days begin tomorrow
+      - We are in Rajab, one of the sacred months
+      - Eid break starts in 5 days
+  - Allow optional notification behavior later.
+  - Allow reminders to interact with School Year and Planner where appropriate.
+    - Example:
+      - Eid break
+      - Ramadan light schedule
+      - Jumu‘ah/protected time
+      - custom special school days
+  - Add Hijri calendar preference/adjustment later.
+    - Automatic calculated date
+    - Manual adjustment
+    - Local masjid/calendar preference
+- **Reasoning (why)**: Muslim homeschool families often plan around Islamic months, Ramadan, Eid, white days, sacred months, and other important dates. A Muslim-native calendar layer helps Sheath feel purpose-built rather than generic homeschool software with Islamic subjects added on top.
+- **Priority**: P2
+- **Notes**: Keep School Year Settings focused on academic-year structure. Islamic reminders/countdowns should be a related but separate feature layer that can display on Today and influence Plan/Records when needed.
+- **Attachments**:
+
+---
