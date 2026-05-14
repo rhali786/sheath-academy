@@ -350,3 +350,164 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Attachments**:
 
 ---
+
+- **ID**: FB-007
+- **Status**: New
+- **Date/time**: 2026-05-13 21:20 (America/Detroit)
+- **Area/URL**: Settings → Household / https://sheathacademy.onrender.com/settings
+- **Feedback summary**: Expand Household Settings into family rhythm, calendar, and household-level planning defaults.
+- **Details / suggested change**:
+  - Keep Household display name.
+    - This should remain the name shown in the app header.
+  - Add optional Homeschool / School reporting name.
+    - This can be used later for reports, transcripts, exports, and formal records.
+  - Expand Week Starts On beyond Monday/Sunday.
+    - Support all 7 days for future-proofing:
+      - Sunday
+      - Monday
+      - Tuesday
+      - Wednesday
+      - Thursday
+      - Friday
+      - Saturday
+  - Add Default School Days selector.
+    - Use checkboxes for all 7 days.
+    - This should feed planner, dashboard, attendance, pacing, reports, and school-year progress logic.
+  - Add day-load preference by day.
+    - Options:
+      - Off / No school
+      - Light
+      - Normal
+      - Heavy
+      - Custom
+    - This should support family-defined planning expectations rather than one rigid default schedule.
+  - Add optional protected time blocks.
+    - Examples:
+      - Jumu‘ah
+      - co-op
+      - tutor session
+      - therapy
+      - appointment
+      - masjid class
+      - parent work block
+  - Add optional Jumu‘ah protected-time fields.
+    - Leave time / start window
+    - Return time / end window
+    - Optional note/helper:
+      - “Planner should avoid scheduling teacher-led work during this window.”
+    - This supports families who school before Jumu‘ah, pause, then resume after returning.
+  - Add Timezone setting.
+    - Needed for dashboard dates, live schedule timing, attendance logs, deadlines, and future tutor/class workflows.
+  - Add Date Display preferences.
+    - Gregorian date display
+    - English Hijri display
+    - Arabic Hijri display
+    - Full bilingual Islamic date display
+    - Later: Hijri adjustment/manual correction or local masjid calendar preference
+  - Improve helper text for Week Starts On.
+    - Explain that it affects planner, dashboard summaries, and weekly reports.
+  - Organize Household page into clear sections:
+    - Household Identity
+    - Weekly Rhythm
+    - Protected Time
+    - Calendar & Time
+  - Improve save behavior.
+    - Add clear saved confirmation.
+    - Add unsaved-change warning if user navigates away.
+    - For week/calendar changes, clarify that existing lesson dates are not automatically changed unless a future migration/reflow action is selected.
+- **Reasoning (why)**: Household Settings should define how the family’s homeschool week actually works. Week start day, school days, day-load preferences, protected time, Jumu‘ah windows, timezone, and date display all influence planning, dashboard logic, attendance, pacing, records, and future schedule/classroom execution.
+- **Priority**: P1
+- **Notes**: Keep this sub-tab focused on household-wide defaults. The Plan tab should remain where planning work happens; Household Settings should define the defaults and calendar assumptions that planning depends on.
+- **Attachments**:
+
+---
+
+- **ID**: FB-008
+- **Status**: New
+- **Date/time**: 2026-05-13 21:25 (America/Detroit)
+- **Area/URL**: Settings architecture / https://sheathacademy.onrender.com/settings
+- **Feedback summary**: Reorganize Settings around defaults, rules, access, and preferences aligned with the confirmed top-level tabs.
+- **Details / suggested change**:
+  - Keep confirmed top-level navigation aligned to:
+    - Today
+    - Plan
+    - Records
+    - Growth
+    - Resources
+    - Settings
+    - About
+  - Treat top-level tabs as family workflows.
+    - Today = daily command center
+    - Plan = planning and orchestration
+    - Records = attendance, reports, transcripts, portfolio, exports, compliance documentation
+    - Growth = progress, mastery, Quran progress, gaps, trends
+    - Resources = curriculum, books, links, files, templates, lesson materials
+    - Settings = defaults, rules, permissions, preferences, and system controls
+    - About = temporary build/dev info, later possibly footer/help/settings
+  - Settings should not duplicate the full Plan, Records, Growth, or Resources workflows.
+  - Settings should define how those workflows behave.
+  - Recommended Settings sub-tabs over time:
+    - Household
+    - School Year
+    - Learners
+    - Courses
+    - Planning Defaults
+    - Records & Compliance Defaults
+    - Access & Privacy
+  - Household should include:
+    - household identity
+    - homeschool/reporting name
+    - week start day
+    - default school days
+    - day-load defaults
+    - protected time/Jumu‘ah windows
+    - timezone
+    - date display preferences
+  - School Year should include:
+    - school year start/end
+    - required days/hours
+    - planned school days
+    - breaks/holidays
+    - terms/quarters
+    - reporting periods
+    - day/week counting rules
+  - Learners should eventually replace or underlie “Children.”
+    - UI may still use child-friendly wording for homeschool mode.
+    - Architecture should support broader learner contexts.
+  - Courses should eventually replace or expand “Subjects.”
+    - Course/subject setup, categories, levels, school year, assigned learners, instructors, and shared/family courses belong here.
+  - Planning Defaults should include:
+    - planning style/intensity
+    - simple / structured / time-blocked / adaptive modes
+    - workload thresholds
+    - light/normal/heavy day definitions
+    - default lesson durations
+    - default subject frequency goals
+    - carry-forward unfinished work behavior
+    - reflow preferences
+  - Records & Compliance Defaults should include:
+    - attendance tracking preference
+    - days vs hours tracking
+    - location/state requirement references
+    - transcript defaults
+    - report card defaults
+    - portfolio expectations
+    - export formatting preferences
+  - Access & Privacy should include:
+    - parent/guardian access
+    - learner login permissions
+    - password/security settings
+    - data export
+    - archive/delete household
+    - privacy preferences
+  - Later optional Settings areas:
+    - Notifications
+    - Appearance / Branding
+    - Integrations
+    - Intelligence / Automation Preferences
+- **Reasoning (why)**: The confirmed top-level tabs should remain workflow-oriented, while Settings should serve as the control panel for defaults, rules, permissions, preferences, and system behavior. This prevents Settings from becoming a dumping ground and keeps each feature family clear as the platform grows.
+- **Priority**: P2
+- **Notes**: This is a broader architecture entry. It should not block immediate Household improvements, but it should guide future settings growth so the app does not sprawl as more features are added.
+- **Attachments**:
+
+---
