@@ -1,13 +1,25 @@
 import { LessonTask } from '../types'
 import { SEED_IDS } from '@/features/lib/seedIds'
 
-// Current date for seeding (May 12, 2026 is a Monday)
-const baseDate = new Date('2026-05-12')
+function formatLocalDate(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
+}
 
-function getDateForDay(dayOfWeek: number): string {
-  const d = new Date(baseDate)
-  d.setDate(d.getDate() + dayOfWeek)
-  return d.toISOString().split('T')[0]
+function getMondayOfCurrentWeek(): Date {
+  const today = new Date()
+  const dayOfWeek = today.getDay()
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysFromMonday)
+}
+
+const weekMonday = getMondayOfCurrentWeek()
+
+function getDateForDay(dayOffset: number): string {
+  const d = new Date(weekMonday.getFullYear(), weekMonday.getMonth(), weekMonday.getDate() + dayOffset)
+  return formatLocalDate(d)
 }
 
 export const SEED_LESSONS: LessonTask[] = [
