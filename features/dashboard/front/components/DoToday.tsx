@@ -1,9 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useContext_Dashboard } from '../context/DashboardProvider'
-import { plannerApi } from '@/features/planner/front/services/api'
-import type { LessonTask, LessonTaskStatus } from '@/features/planner/types'
+import { TodayLessonCard } from '@/features/planner/front/components/TodayLessonCard'
 
 function todayLocal(): string {
   const d = new Date()
@@ -13,106 +11,20 @@ function todayLocal(): string {
   return `${y}-${m}-${dd}`
 }
 
-function mondayOfWeek(today: string): string {
-  const d = new Date(`${today}T00:00:00`)
-  const dayOfWeek = d.getDay()
-  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
-  d.setDate(d.getDate() - daysFromMonday)
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${dd}`
-}
-
-const STATUS_BADGE: Record<LessonTaskStatus, { label: string; cls: string }> = {
-  not_started: { label: '', cls: '' },
-  completed: { label: 'Done', cls: 'bg-green-100 text-green-700' },
-  skipped: { label: 'Skipped', cls: 'bg-amber-100 text-amber-700' },
-}
-
 export function DoToday() {
   const { selectedChildId } = useContext_Dashboard()
-  const [lessons, setLessons] = useState<LessonTask[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
   const today = todayLocal()
-  const formattedToday = new Date(`${today}T00:00:00`).toLocaleDateString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric',
-  })
-
-  useEffect(() => {
-    if (!selectedChildId) {
-      setLessons([])
-      return
-    }
-
-    const fetch = async () => {
-      setIsLoading(true)
-      setError(null)
-      try {
-        const week = mondayOfWeek(today)
-        const all = await plannerApi.getLessons(week, [selectedChildId])
-        setLessons(all.filter(l => l.dueDate === today))
-      } catch {
-        setError('Could not load today\'s lessons.')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetch()
-  }, [selectedChildId, today])
 
   return (
     <section>
       <h2 className="text-xl font-bold text-slate-900 mb-5">Do Today</h2>
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="text-sm font-medium text-slate-500 mb-4">
-          {formattedToday}
+      {selectedChildId ? (
+        <TodayLessonCard childId={selectedChildId} today={today} />
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <p className="text-sm text-slate-400">Select a child to see today&apos;s lessons.</p>
         </div>
-
-        {isLoading && (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-5 bg-slate-100 rounded animate-pulse" />
-            ))}
-          </div>
-        )}
-
-        {!isLoading && error && (
-          <p className="text-sm text-red-600">{error}</p>
-        )}
-
-        {!isLoading && !error && lessons.length === 0 && (
-          <p className="text-sm text-slate-400">No lessons scheduled for today.</p>
-        )}
-
-        {!isLoading && !error && lessons.length > 0 && (
-          <ul className="space-y-2">
-            {lessons.map(lesson => {
-              const badge = STATUS_BADGE[lesson.status]
-              return (
-                <li
-                  key={lesson.id}
-                  className={`flex items-center justify-between gap-2 py-2 border-b border-slate-50 last:border-0 ${
-                    lesson.status !== 'not_started' ? 'opacity-60' : ''
-                  }`}
-                >
-                  <span className={`text-sm ${lesson.status === 'completed' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
-                    {lesson.title}
-                  </span>
-                  {badge.label && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${badge.cls}`}>
-                      {badge.label}
-                    </span>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </div>
+      )}
     </section>
   )
 }
