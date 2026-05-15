@@ -27,10 +27,10 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Area/URL**: Dashboard top navigation / https://sheathacademy.onrender.com/
 - **Feedback summary**: Update primary dashboard tabs to match family-facing workflows.
 - **Details / suggested change**: Use the following top-level tabs for now: Today, Plan, Records, Growth, Resources, Settings, About.
-- **Reasoning (why)**: These labels are clearer for families than exposing the full internal product taxonomy. The 10 platform categories can remain useful for feature organization, but the dashboard navigation should stay workflow-oriented and simple. Keep About in the top navigation during the build phase for easy access, with the expectation that it may later move to a footer/help/settings area.
+- **Reasoning (why)**: These labels are clearer for families than exposing the full internal product taxonomy. The 10 platform categories can remain useful for feature organization, but the dashboard navigation should stay workflow-oriented and simple. Keep About in the top navigation during the build phase, with the expectation that it may later move to a footer/help/settings area.
 - **Priority**: P2
 - **Notes**: Current navigation shows Today, Reports, Weekly, Settings, About. Suggested changes include renaming Weekly to Plan and Reports to Records, while adding Growth and Resources.
-- **Attachments**: 
+- **Attachments**:
 
 ---
 
@@ -40,9 +40,7 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Area/URL**: Settings → Children / Add + manage child profiles / https://sheathacademy.onrender.com/settings?tab=children
 - **Feedback summary**: Refine the full Children sub-tab for transcript-safe learner records, cleaner onboarding, and clearer learner management cards.
 - **Details / suggested change**:
-  - Treat this feedback as covering the full Settings → Children sub-tab, including both:
-    - Add/Edit Child form
-    - Your Children management list/cards
+  - Treat this feedback as covering the full Settings → Children sub-tab, including both Add/Edit Child form and Your Children management list/cards.
   - Replace “Child's name” with separate required fields:
     - First name*
     - Last name*
@@ -64,10 +62,9 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
   - Add toggle:
     - “Allow learner to sign in”
   - Only show Username and Password fields if learner sign-in is enabled.
-  - On learner cards, replace raw Username display with login status.
-    - Example:
-      - “Learner login: Enabled”
-      - “Learner login: Not enabled”
+  - On learner cards, replace raw Username display with login status:
+    - “Learner login: Enabled”
+    - “Learner login: Not enabled”
   - Username/password management should live inside Edit Profile / login settings rather than being prominently displayed on the card.
   - Consider renaming “Edit” button to “Edit profile” for clarity.
   - Keep Archive action, but clarify behavior:
@@ -89,104 +86,59 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Area/URL**: Settings → Subjects / Add + manage courses / https://sheathacademy.onrender.com/settings?tab=subjects
 - **Feedback summary**: Refine the full Subjects/Courses sub-tab into a course and learner-enrollment management screen that supports shared family courses, instructor assignment, transcript-ready structure, and clean reporting categories.
 - **Details / suggested change**:
-  - Treat this feedback as covering the full Settings → Subjects sub-tab, including both:
-    - Add/Edit Course/Subject form
-    - All Subjects table/list
-  - Rename “Subject name” to:
-    - “Course / Subject name”
-  - Preserve separation between:
-    - Course / Subject Name
-    - Category
-  - Example:
-    - Course Name: “Saxon Math 6/5”
-    - Category: “Math”
+  - Treat this feedback as covering the full Settings → Subjects sub-tab, including both Add/Edit Course/Subject form and All Subjects table/list.
+  - Rename “Subject name” to “Course / Subject name.”
+  - Preserve separation between Course / Subject Name and Category.
+    - Example: Course Name: “Saxon Math 6/5”; Category: “Math.”
   - Add optional Instructor/Teacher field to course/subject setup.
   - Instructor assignment belongs here at the course/subject/enrollment level, not on the child profile.
   - Associate courses/subjects with a School Year / Academic Year.
   - Add optional Level / Grade field separate from the course name.
-    - Examples:
-      - Grade 5
-      - Algebra I
-      - Arabic Level 2
-      - Quran Revision
+    - Examples: Grade 5; Algebra I; Arabic Level 2; Quran Revision.
   - Replace the current child-tab-only assignment model with a learner multi-select section inside the form.
-    - Learners:
-      - Adam
-      - Khadijah
-      - Zayd
-      - Select all
+    - Learners: Adam, Khadijah, Zayd, Select all.
     - This should support one learner, multiple learners, or all learners.
   - Support shared/family courses without duplicating the same course row unnecessarily.
-    - Examples:
-      - Shared PE
-      - Shared Art
-      - Shared Islamic Studies
-      - Shared Science
-      - Family read-aloud
-      - Nature Study
+    - Examples: Shared PE, Shared Art, Shared Islamic Studies, Shared Science, Family read-aloud, Nature Study.
   - Clarify page language so users understand they are creating courses/subjects and assigning them to learners.
-    - Current wording based on child tabs should evolve toward learner assignment.
   - Update the All Subjects table from a simple child-subject list into a course/enrollment management table.
-    - Suggested columns:
-      - Learner(s)
-      - Course / Subject
-      - Category
-      - Level / Grade
-      - School Year
-      - Instructor
-      - Status
-      - Actions
+    - Suggested columns: Learner(s), Course / Subject, Category, Level / Grade, School Year, Instructor, Status, Actions.
   - For shared courses, show the course once with learner chips or learner count rather than forcing duplicate rows.
-    - Example:
-      - Learners: Adam, Khadijah, Zayd
-      - Course: Family Nature Study
-      - Category: Science / Nature Study
   - Clean up category formatting:
-    - Example: “IslamicStudies” should display as “Islamic Studies”.
-  - Expand standard category options beyond the current narrow list.
-    - Recommended categories:
-      - Quran
-      - Arabic
-      - Islamic Studies
-      - Math
-      - English / ELA
-      - Reading
-      - Writing
-      - Science
-      - History
-      - Social Studies
-      - Geography
-      - Art
-      - PE / Health
-      - Technology
-      - Nature Study
-      - Logic
-      - Life Skills
-      - Civics
-      - Economics
-      - Handwriting
-      - Vocabulary / Spelling
-      - Foreign Language
-      - Other / Custom
+    - Example: “IslamicStudies” should display as “Islamic Studies.”
+  - Expand standard category options beyond the current narrow list:
+    - Quran
+    - Arabic
+    - Islamic Studies
+    - Math
+    - English / ELA
+    - Reading
+    - Writing
+    - Science
+    - History
+    - Social Studies
+    - Geography
+    - Art
+    - PE / Health
+    - Technology
+    - Nature Study
+    - Logic
+    - Life Skills
+    - Civics
+    - Economics
+    - Handwriting
+    - Vocabulary / Spelling
+    - Foreign Language
+    - Other / Custom
   - Keep Quran, Arabic, and Islamic Studies as first-class categories, not generic “Other” categories.
   - Add custom category support.
     - If “Other / Custom” is selected, reveal a custom category / subject-area field.
   - Consider future starter templates/default subject bundles for homeschool onboarding.
-    - Examples:
-      - Quran
-      - Arabic
-      - Islamic Studies
-      - Math
-      - English / ELA
-      - Science
-      - History / Social Studies
   - Clarify course vs curriculum/resource relationship.
     - Course/Subject is the educational container.
     - Curriculum/resource can be linked later from the Resources tab.
     - Do not force curriculum/resource entry during MVP setup.
-    - Example:
-      - Course: Math 5
-      - Resource: Saxon Math 6/5
+    - Example: Course: Math 5; Resource: Saxon Math 6/5.
   - Add archive behavior clarity for courses/subjects.
     - Archived courses should keep historical lesson/progress/report records.
     - Archived courses should not appear in active planning by default.
@@ -209,96 +161,36 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Details / suggested change**:
   - Replace “Plan your first lesson / Coming soon” hero area with a true dashboard summary section.
   - Add “Today’s Homeschool Status” summary card/banner near the top.
-    - Example:
-      - Attendance status
-      - Overdue lesson count
-      - Quran logging status
-      - Portfolio/evidence readiness
-      - Daily readiness percentage
+    - Include attendance status, overdue lesson count, Quran logging status, portfolio/evidence readiness, and daily readiness percentage.
   - Move “Needs Attention” directly below the daily status summary.
   - Keep “Do Today” as the primary working checklist area.
   - Preserve family/shared lesson workflows and make them visually distinct.
-    - Example label:
-      - “Family / Shared Work”
+    - Example label: “Family / Shared Work.”
   - Improve subject treatment consistency across the dashboard.
-    - Add consistent iconography, category styling, and status treatment for:
-      - Quran
-      - Arabic
-      - Islamic Studies
-      - Math
-      - English
-      - Reading
-      - Writing
-      - Science
-      - History
-      - Social Studies
-      - Geography
-      - Art
-      - PE / Health
-      - Technology
-      - Nature Study
-      - Logic
-      - Life Skills
-      - Civics
-      - Economics
-      - Handwriting
-      - Vocabulary / Spelling
+    - Add consistent iconography, category styling, and status treatment for Quran, Arabic, Islamic Studies, Math, English, Reading, Writing, Science, History, Social Studies, Geography, Art, PE / Health, Technology, Nature Study, Logic, Life Skills, Civics, Economics, Handwriting, and Vocabulary / Spelling.
   - Keep Quran, Arabic, and Islamic Studies visually first-class rather than generic categories.
   - Clarify “Today’s State” metrics.
-    - Example:
-      - “Attendance Logged — 3/5 students” instead of ambiguous counters.
-  - Replace internal IDs such as:
-    - “student_seed_zayd_001”
-    - with actual learner names.
-  - Improve overdue treatment.
-    - Overdue items should visually stand out and be easy to resolve.
-  - Preserve quick actions such as:
-    - Log Quran
-    - Add Evidence
-    - Move Work
-    - but make them more context-aware where possible.
-  - Strengthen “Per-Child Progress” clarity.
-    - Add timeframe context:
-      - This week
-      - This month
-      - School year
+    - Example: “Attendance Logged — 3/5 students” instead of ambiguous counters.
+  - Replace internal IDs such as “student_seed_zayd_001” with actual learner names.
+  - Improve overdue treatment so overdue items visually stand out and are easy to resolve.
+  - Preserve quick actions such as Log Quran, Add Evidence, and Move Work, but make them more context-aware where possible.
+  - Strengthen “Per-Child Progress” clarity with timeframe context: This week, This month, School year.
   - Improve Quran Progress and Weekly Quran Sessions clarity.
   - Keep chart-based Quran session visualization, but improve readability and labeling rather than replacing charts with tables.
-  - Improve “Records & Proof” into a clearer readiness-oriented section.
-    - Example:
-      - “Records Readiness”
+  - Improve “Records & Proof” into a clearer readiness-oriented section, such as “Records Readiness.”
   - Keep export/report actions but communicate readiness state before export.
   - Add bilingual Islamic date display.
-    - Arabic Hijri line example:
-      - “الأربعاء، ٢٦ ذو القعدة ١٤٤٧ هـ”
-    - English Hijri line example:
-      - “Wednesday, 26 Dhul Qa‘dah 1447 AH”
-    - Gregorian line example:
-      - “Wednesday, May 13, 2026”
+    - Arabic Hijri line example: “الأربعاء، ٢٦ ذو القعدة ١٤٤٧ هـ”
+    - English Hijri line example: “Wednesday, 26 Dhul Qa‘dah 1447 AH”
+    - Gregorian line example: “Wednesday, May 13, 2026”
   - Add School Year Progress card.
-    - Example:
-      - Day 72 of 180
-      - Week 15 of 36
-      - Remaining school days
-      - Overall completion percentage
+    - Example: Day 72 of 180; Week 15 of 36; Remaining school days; Overall completion percentage.
   - Surface pacing awareness.
-    - Example:
-      - Dashboard can later compare curriculum pacing versus school-week pacing.
+    - Dashboard can later compare curriculum pacing versus school-week pacing.
   - Add “Now & Next” live schedule preview card to the Today dashboard.
-    - Example:
-      - Current lesson block
-      - Time remaining
-      - Next scheduled block
-      - Live progress fill/timer
-  - Future expansion:
-    - Dedicated Schedule/Classroom screen with live visual schedule tracking, current block highlighting, modular lesson timing, and real-time classroom flow support.
-- **Reasoning (why)**: The dashboard is the operational heart of the platform and should quickly answer:
-  - What needs attention?
-  - What should we be doing right now?
-  - What is behind?
-  - What has already been logged?
-  - Are we on pace for the school year?
-  Strong hierarchy, pacing awareness, family/shared workflows, Quran-native tracking, and records readiness help position Sheath as a true family education operating system rather than a generic homeschool checklist app.
+    - Include current lesson block, time remaining, next scheduled block, and live progress fill/timer.
+  - Future expansion: dedicated Schedule/Classroom screen with live visual schedule tracking, current block highlighting, modular lesson timing, and real-time classroom flow support.
+- **Reasoning (why)**: The dashboard is the operational heart of the platform and should quickly answer: What needs attention? What should we be doing right now? What is behind? What has already been logged? Are we on pace for the school year? Strong hierarchy, pacing awareness, family/shared workflows, Quran-native tracking, and records readiness help position Sheath as a true family education operating system rather than a generic homeschool checklist app.
 - **Priority**: P1
 - **Notes**: This dashboard already contains strong foundational concepts. The main opportunity is improving hierarchy, clarity, operational flow, and homeschool-native pacing visibility without overwhelming the parent.
 - **Attachments**:
@@ -313,13 +205,7 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Details / suggested change**:
   - Create future dedicated Schedule/Classroom screen.
   - Support visual live daily schedule.
-  - Display:
-    - Current lesson block
-    - Start/end times
-    - Current time
-    - Live time-fill/progress behavior
-    - Upcoming lesson preview
-    - Day schedule overview
+  - Display current lesson block, start/end times, current time, live time-fill/progress behavior, upcoming lesson preview, and day schedule overview.
   - Support modular scheduling tied to lesson planning workflows.
   - Add live classroom/day pacing support.
   - Add lightweight “Now & Next” preview module to Today dashboard.
@@ -349,12 +235,13 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
     - Optional
   - Add flexible work bank / independent-work pool that can be pulled forward when the day changes.
   - Support dynamic transition between lesson blocks as time progresses.
-  - Allow homeschool parents to quickly determine:
-    - what should be happening now
-    - what comes next
-    - whether the day is on pace
-    - what can be moved if the day changes
-- **Reasoning (why)**: Many homeschool families struggle less with curriculum selection and more with maintaining rhythm, pacing, interruptions, transitions, and real-life schedule changes. A live visual schedule system with adaptive reflow would help families maintain operational flow without making the system rigid or stressful.
+  - Add transition/break-time support between scheduled blocks.
+    - Allow default break time between lessons/classes.
+    - Allow custom break/transition time after specific blocks.
+    - Allow protected breaks such as lunch, prayer, toddler care, parent work blocks, or travel time.
+    - The live schedule should account for transition time so a 30-minute lesson followed by a 10-minute transition does not behave like back-to-back instruction.
+  - Allow homeschool parents to quickly determine what should be happening now, what comes next, whether the day is on pace, and what can be moved if the day changes.
+- **Reasoning (why)**: Many homeschool families struggle less with curriculum selection and more with maintaining rhythm, pacing, interruptions, transitions, and real-life schedule changes. A live visual schedule system with adaptive reflow and realistic transition/break buffers would help families maintain operational flow without making the system rigid or stressful.
 - **Priority**: P2
 - **Notes**: This should eventually integrate closely with planning, lesson, attendance, and pacing systems. Avoid turning the product into overly rigid “air traffic control” software for homeschooling; the system should scale from gentle guidance to structured/adaptive scheduling.
 - **Attachments**:
@@ -365,82 +252,48 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Status**: New
 - **Date/time**: 2026-05-13 08:35 (America/Detroit)
 - **Area/URL**: Weekly Plan / Planner / https://sheathacademy.onrender.com/planner
-- **Feedback summary**: Refine Weekly Plan into a homeschool planning control board that supports flexible scheduling, pacing, family-defined workload thresholds, and future classroom execution.
+- **Feedback summary**: Refine Weekly Plan into a homeschool planning control board that supports flexible scheduling, pacing, family-defined workload thresholds, transition time, and future classroom execution.
 - **Details / suggested change**:
   - Rename global navigation from “Weekly” to “Plan” or “Planner,” while retaining “Weekly Plan” as the page title/view name.
   - Default to the week containing today unless school settings define a different week range.
   - Add configurable school-week start day.
   - Highlight today clearly in the weekly grid.
   - Improve active filter visibility for existing child and subject multi-select controls.
-    - Example:
-      - Children: All 3
-      - Subjects: Quran, Math
+    - Example: Children: All 3; Subjects: Quran, Math.
   - Add collapsible child groups.
   - Add Scheduled-only vs All-subjects view toggle.
   - Remove, prevent, or clarify duplicate subject rows.
   - Add Family / Shared Work section for shared homeschool lessons.
   - Add direct “+ Add lesson” affordance in empty cells.
-  - Add lesson cell actions:
-    - Edit
-    - Move
-    - Duplicate
-    - Complete
-    - Add evidence
-    - Assign to schedule block
+  - Add lesson cell actions: Edit, Move, Duplicate, Complete, Add evidence, Assign to schedule block.
   - Add drag-and-drop lesson placement and movement.
   - Support vertical ordering of daily lesson blocks.
   - Support estimated lesson durations.
+  - Support transition/break buffers in planning totals.
+    - Allow default transition time between scheduled blocks.
+    - Allow custom transition time after specific lessons.
+    - Daily totals should include both instructional time and transition/break time where enabled.
   - Auto-calculate daily scheduled time totals.
-    - Example:
-      - Monday: 6 lessons · 4h 20m
+    - Example: Monday: 6 lessons · 4h 20m instruction + 40m transitions.
   - Add family-configurable workload thresholds instead of hard-coded “too heavy” or “too light” judgments.
-    - Configurable examples:
-      - Maximum lessons per day
-      - Maximum instructional minutes/hours per day
-      - Quran target frequency
-      - Core subject frequency goals
-      - Friday reduced workload preference
-      - Preferred light/heavy day distribution
-      - Maximum consecutive heavy days
-      - Co-op/outside class days
+    - Configurable examples: maximum lessons per day, maximum instructional minutes/hours per day, maximum total scheduled time including breaks, Quran target frequency, core subject frequency goals, Friday reduced workload preference, preferred light/heavy day distribution, maximum consecutive heavy days, co-op/outside class days.
   - Frame warnings around user settings.
-    - Example:
-      - “Monday exceeds your preferred daily lesson target.”
-      - not “Monday is too heavy.”
+    - Example: “Monday exceeds your preferred daily lesson target,” not “Monday is too heavy.”
   - Add Week Balance summary.
-    - Example:
-      - total lessons planned
-      - total scheduled time
-      - Quran sessions planned
-      - overloaded days by family settings
-      - light days by family settings
-      - unfinished lessons carried over
+    - Include total lessons planned, total instructional time, transition/break time, total scheduled time, Quran sessions planned, overloaded days by family settings, light days by family settings, and unfinished lessons carried over.
   - Add School Week / pacing visibility.
-    - Example:
-      - School Week 15 of 36
-      - Course expected week vs current curriculum week
+    - Example: School Week 15 of 36; Course expected week vs current curriculum week.
   - Add Carry Forward Unfinished Work workflow.
-    - Options:
-      - move to next school day
-      - move to next week
-      - distribute across remaining days
-      - mark skipped
-      - keep as overdue
+    - Options: move to next school day, move to next week, distribute across remaining days, mark skipped, keep as overdue.
   - Connect weekly lessons to future Schedule/Classroom workflow.
     - Allow planned lessons to populate the live classroom/day schedule.
     - Allow lessons to be assigned to timed schedule blocks.
     - Allow dashboard “Now & Next” card to pull from planned schedule blocks.
   - Support reusable schedule/planning templates.
-    - Examples:
-      - Standard Monday
-      - Co-op Tuesday
-      - Light Friday
-      - Ramadan schedule
-      - Summer schedule
-      - Hifz intensive day
+    - Examples: Standard Monday, Co-op Tuesday, Light Friday, Ramadan schedule, Summer schedule, Hifz intensive day.
   - Add print/export weekly plan support.
   - Add mobile day-by-day card layout for small screens.
-- **Reasoning (why)**: The planner should become the orchestration layer of the platform. It should help parents build the week, balance workload according to their own family thresholds, manage shared and individual lessons, and feed the live dashboard/classroom execution flow. This turns the screen from a static weekly grid into a practical homeschool planning control board.
+- **Reasoning (why)**: The planner should become the orchestration layer of the platform. It should help parents build the week, balance workload according to their own family thresholds, account for real transition time, manage shared and individual lessons, and feed the live dashboard/classroom execution flow. This turns the screen from a static weekly grid into a practical homeschool planning control board.
 - **Priority**: P1
 - **Notes**: Current child/subject multi-select already exists; feedback is to improve visibility and downstream planning usefulness, not necessarily add basic multi-select from scratch.
 - **Attachments**:
@@ -454,52 +307,25 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Feedback summary**: Expand Household Settings into family rhythm, calendar, and household-level planning defaults.
 - **Details / suggested change**:
   - Keep Household display name.
-    - This should remain the name shown in the app header.
-  - Add optional Homeschool / School reporting name.
-    - This can be used later for reports, transcripts, exports, and formal records.
+  - Add optional Homeschool / School reporting name for reports, transcripts, exports, and formal records.
   - Expand Week Starts On beyond Monday/Sunday.
-    - Support all 7 days for future-proofing:
-      - Sunday
-      - Monday
-      - Tuesday
-      - Wednesday
-      - Thursday
-      - Friday
-      - Saturday
-  - Add Default School Days selector.
-    - Use checkboxes for all 7 days.
-    - This should feed planner, dashboard, attendance, pacing, reports, and school-year progress logic.
+    - Support all 7 days for future-proofing.
+  - Add Default School Days selector with checkboxes for all 7 days.
   - Add day-load preference by day.
-    - Options:
-      - Off / No school
-      - Light
-      - Normal
-      - Heavy
-      - Custom
-    - This should support family-defined planning expectations rather than one rigid default schedule.
+    - Options: Off / No school, Light, Normal, Heavy, Custom.
   - Add optional protected time blocks.
-    - Examples:
-      - Jumu‘ah
-      - co-op
-      - tutor session
-      - therapy
-      - appointment
-      - masjid class
-      - parent work block
+    - Examples: Jumu‘ah, co-op, tutor session, therapy, appointment, masjid class, parent work block.
   - Add optional Jumu‘ah protected-time fields.
-    - Leave time / start window
-    - Return time / end window
-    - Optional note/helper:
-      - “Planner should avoid scheduling teacher-led work during this window.”
-    - This supports families who school before Jumu‘ah, pause, then resume after returning.
+    - Leave time / start window.
+    - Return time / end window.
+    - Optional helper: “Planner should avoid scheduling teacher-led work during this window.”
   - Add Timezone setting.
-    - Needed for dashboard dates, live schedule timing, attendance logs, deadlines, and future tutor/class workflows.
   - Add Date Display preferences.
-    - Gregorian date display
-    - English Hijri display
-    - Arabic Hijri display
-    - Full bilingual Islamic date display
-    - Later: Hijri adjustment/manual correction or local masjid calendar preference
+    - Gregorian date display.
+    - English Hijri display.
+    - Arabic Hijri display.
+    - Full bilingual Islamic date display.
+    - Later: Hijri adjustment/manual correction or local masjid calendar preference.
   - Improve helper text for Week Starts On.
     - Explain that it affects planner, dashboard summaries, and weekly reports.
   - Organize Household page into clear sections:
@@ -524,22 +350,15 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Area/URL**: Settings architecture / https://sheathacademy.onrender.com/settings
 - **Feedback summary**: Reorganize Settings around defaults, rules, access, and preferences aligned with the confirmed top-level tabs.
 - **Details / suggested change**:
-  - Keep confirmed top-level navigation aligned to:
-    - Today
-    - Plan
-    - Records
-    - Growth
-    - Resources
-    - Settings
-    - About
-  - Treat top-level tabs as family workflows.
-    - Today = daily command center
-    - Plan = planning and orchestration
-    - Records = attendance, reports, transcripts, portfolio, exports, compliance documentation
-    - Growth = progress, mastery, Quran progress, gaps, trends
-    - Resources = curriculum, books, links, files, templates, lesson materials
-    - Settings = defaults, rules, permissions, preferences, and system controls
-    - About = temporary build/dev info, later possibly footer/help/settings
+  - Keep confirmed top-level navigation aligned to: Today, Plan, Records, Growth, Resources, Settings, About.
+  - Treat top-level tabs as family workflows:
+    - Today = daily command center.
+    - Plan = planning and orchestration.
+    - Records = attendance, reports, transcripts, portfolio, exports, compliance documentation.
+    - Growth = progress, mastery, Quran progress, gaps, trends.
+    - Resources = curriculum, books, links, files, templates, lesson materials.
+    - Settings = defaults, rules, permissions, preferences, and system controls.
+    - About = temporary build/dev info, later possibly footer/help/settings.
   - Settings should not duplicate the full Plan, Records, Growth, or Resources workflows.
   - Settings should define how those workflows behave.
   - Recommended Settings sub-tabs over time:
@@ -550,57 +369,14 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
     - Planning Defaults
     - Records & Compliance Defaults
     - Access & Privacy
-  - Household should include:
-    - household identity
-    - homeschool/reporting name
-    - week start day
-    - default school days
-    - day-load defaults
-    - protected time/Jumu‘ah windows
-    - timezone
-    - date display preferences
-  - School Year should include:
-    - school year start/end
-    - required days/hours
-    - planned school days
-    - breaks/holidays
-    - terms/quarters
-    - reporting periods
-    - day/week counting rules
-  - Learners should eventually replace or underlie “Children.”
-    - UI may still use child-friendly wording for homeschool mode.
-    - Architecture should support broader learner contexts.
+  - Household should include identity, reporting name, week start, default school days, day-load defaults, protected time/Jumu‘ah windows, timezone, and date display preferences.
+  - School Year should include start/end, required days/hours, planned school days, breaks/holidays, terms/quarters, reporting periods, and day/week counting rules.
+  - Learners should eventually replace or underlie “Children,” while UI may still use child-friendly wording for homeschool mode.
   - Courses should eventually replace or expand “Subjects.”
-    - Course/subject setup, categories, levels, school year, assigned learners, instructors, and shared/family courses belong here.
-  - Planning Defaults should include:
-    - planning style/intensity
-    - simple / structured / time-blocked / adaptive modes
-    - workload thresholds
-    - light/normal/heavy day definitions
-    - default lesson durations
-    - default subject frequency goals
-    - carry-forward unfinished work behavior
-    - reflow preferences
-  - Records & Compliance Defaults should include:
-    - attendance tracking preference
-    - days vs hours tracking
-    - location/state requirement references
-    - transcript defaults
-    - report card defaults
-    - portfolio expectations
-    - export formatting preferences
-  - Access & Privacy should include:
-    - parent/guardian access
-    - learner login permissions
-    - password/security settings
-    - data export
-    - archive/delete household
-    - privacy preferences
-  - Later optional Settings areas:
-    - Notifications
-    - Appearance / Branding
-    - Integrations
-    - Intelligence / Automation Preferences
+  - Planning Defaults should include planning style/intensity, simple/structured/time-blocked/adaptive modes, workload thresholds, light/normal/heavy day definitions, default lesson durations, default subject frequency goals, carry-forward behavior, and reflow preferences.
+  - Records & Compliance Defaults should include attendance tracking preference, days vs hours tracking, location/state requirement references, transcript defaults, report card defaults, portfolio expectations, and export formatting preferences.
+  - Access & Privacy should include parent/guardian access, learner login permissions, password/security settings, data export, archive/delete household, and privacy preferences.
+  - Later optional Settings areas: Notifications, Appearance / Branding, Integrations, Intelligence / Automation Preferences.
 - **Reasoning (why)**: The confirmed top-level tabs should remain workflow-oriented, while Settings should serve as the control panel for defaults, rules, permissions, preferences, and system behavior. This prevents Settings from becoming a dumping ground and keeps each feature family clear as the platform grows.
 - **Priority**: P2
 - **Notes**: This is a broader architecture entry. It should not block immediate Household improvements, but it should guide future settings growth so the app does not sprawl as more features are added.
@@ -619,22 +395,11 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
     - Show Gregorian start/end dates.
     - Automatically show Hijri/Arabic date equivalents for start/end dates.
     - Show school day count and week count.
-    - Example:
-      - Day 72 of 180 planned school days
-      - Week 15 of 36
+    - Example: Day 72 of 180 planned school days; Week 15 of 36.
   - Prefill current active year when editing.
-  - Clearly distinguish between:
-    - Edit active school year
-    - Create new school year
-    - Create next school year
+  - Clearly distinguish between Edit active school year, Create new school year, and Create next school year.
   - Add first-day-of-school trigger options.
-    - Examples:
-      - exact date
-      - first selected school day after a selected holiday/break
-      - first selected school day in August
-      - first selected school day in September
-      - Monday after a selected holiday
-      - custom rule
+    - Examples: exact date, first selected school day after holiday/break, first selected school day in August/September, Monday after a selected holiday, custom rule.
     - After calculation, save the actual resolved start date.
   - Add required school days and/or required instructional hours.
   - Add tracking method:
@@ -646,70 +411,20 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
     - Use selected location to suggest likely day/hour requirements where available.
     - Location should support country, state/province, and optional district/local notes.
     - Show source links, last reviewed dates, and a clear informational-not-legal-advice disclaimer when compliance data is available.
-  - Add planned school days calculation.
-    - Based on start/end dates, household school days, breaks, off days, make-up days, and school-year overrides.
+  - Add planned school days calculation based on start/end dates, household school days, breaks, off days, make-up days, and school-year overrides.
   - Allow school year to inherit household school days or customize for this school year.
   - Add breaks, holidays, custom non-school days, recurring off days, and make-up days.
-    - Examples:
-      - Eid break
-      - Ramadan light schedule
-      - winter break
-      - family travel
-      - co-op closure
-      - teacher sick day
-      - snow day
+    - Examples: Eid break, Ramadan light schedule, winter break, family travel, co-op closure, teacher sick day, snow day.
   - Add terms/reporting periods.
-    - Options:
-      - full year only
-      - semesters
-      - quarters
-      - trimesters
-      - custom terms
+    - Options: full year only, semesters, quarters, trimesters, custom terms.
   - Add week numbering rules.
-    - Examples:
-      - Week 1 starts on school year start date
-      - Week 1 starts on first full school week
-      - Use household week start day
-      - Exclude break weeks from pacing count
-      - Include break weeks in calendar count but not school pacing
   - Add school day counting rules.
-    - Examples:
-      - count only completed attendance days
-      - count planned school days
-      - count partial days
-      - count hours toward day completion
-      - allow manual day override
   - Add live academic-year preview before saving.
-    - Show:
-      - school year length
-      - planned school days
-      - required school days
-      - required/planned hours if enabled
-      - planned school weeks
-      - first/last school week
-      - break days
-      - remaining days
-      - target status
+    - Show school year length, planned school days, required school days, required/planned hours, planned school weeks, first/last school week, break days, remaining days, and target status.
   - Add validation and soft warnings.
-    - End date after start date
-    - overlapping school years
-    - planned days below required target
-    - no school days selected
-    - missing requirement data when compliance tracking is enabled
-    - changes that affect planner weeks/reports
   - Add future school-year rollover workflow.
-    - Copy learners
-    - Copy or archive courses
-    - Carry forward unfinished courses
-    - Reset attendance
-    - Preserve resource library
-    - Create new reporting periods
   - Add archived/past school year access.
-    - View previous years
-    - Export prior records
-    - Duplicate setup
-    - Archive year
-  - Show related school-year anchors.
+  - Show related school-year anchors:
     - Learners enrolled
     - Courses connected
     - Attendance records
@@ -729,34 +444,17 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Feedback summary**: Add Muslim-native Islamic calendar reminders, countdowns, and optional dashboard notifications.
 - **Details / suggested change**:
   - Add optional Islamic calendar reminder system.
-  - Support built-in countdowns/reminders for:
-    - Ramadan
-    - Eid al-Fitr
-    - Eid al-Adha
-    - Day of Arafah
-    - Ashura
-    - White Days: 13th, 14th, 15th of each Hijri month
-    - Sacred months:
-      - Muharram
-      - Rajab
-      - Dhul-Qa‘dah
-      - Dhul-Hijjah
+  - Support built-in countdowns/reminders for Ramadan, Eid al-Fitr, Eid al-Adha, Day of Arafah, Ashura, White Days, and Sacred Months.
+  - White Days: 13th, 14th, 15th of each Hijri month.
+  - Sacred months: Muharram, Rajab, Dhul-Qa‘dah, Dhul-Hijjah.
   - Support custom Islamic date reminders.
   - Support custom Gregorian date reminders.
   - Let families choose which reminders/countdowns are enabled via checkboxes or settings toggles.
   - Show selected reminders/countdowns on Today dashboard where useful.
-    - Examples:
-      - Ramadan begins in 23 days
-      - White Days begin tomorrow
-      - We are in Rajab, one of the sacred months
-      - Eid break starts in 5 days
+    - Examples: Ramadan begins in 23 days; White Days begin tomorrow; We are in Rajab, one of the sacred months; Eid break starts in 5 days.
   - Allow optional notification behavior later.
   - Allow reminders to interact with School Year and Planner where appropriate.
-    - Example:
-      - Eid break
-      - Ramadan light schedule
-      - Jumu‘ah/protected time
-      - custom special school days
+    - Examples: Eid break, Ramadan light schedule, Jumu‘ah/protected time, custom special school days.
   - Add Hijri calendar preference/adjustment later.
     - Automatic calculated date
     - Manual adjustment
@@ -764,6 +462,254 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Reasoning (why)**: Muslim homeschool families often plan around Islamic months, Ramadan, Eid, white days, sacred months, and other important dates. A Muslim-native calendar layer helps Sheath feel purpose-built rather than generic homeschool software with Islamic subjects added on top.
 - **Priority**: P2
 - **Notes**: Keep School Year Settings focused on academic-year structure. Islamic reminders/countdowns should be a related but separate feature layer that can display on Today and influence Plan/Records when needed.
+- **Attachments**:
+
+---
+
+- **ID**: FB-011
+- **Status**: New
+- **Date/time**: 2026-05-15 12:30 (America/Detroit)
+- **Area/URL**: Lessons page / https://sheathacademy-pr-8.onrender.com/lessons
+- **Feedback summary**: Refine Lessons page into a lesson/work management hub connected to Plan, Today, Records, Growth, Resources, and future Schedule/Classroom execution.
+- **Details / suggested change**:
+  - Lessons should likely live under the Plan top-level workflow long-term rather than remain a permanent top-level tab.
+    - Top nav should stay aligned to: Today, Plan, Records, Growth, Resources, Settings, About.
+    - Plan can include subviews such as Weekly Plan, Lessons, Schedule/Classroom, Templates, and Carry Forward Work.
+  - Add a clear page heading and purpose statement.
+    - Example: “Create, manage, move, and complete planned work for each learner or shared family course.”
+  - Rename form fields:
+    - Child → Learner(s)
+    - Subject → Course / Subject
+    - Due date → Planned date
+    - Add optional Due date later for assignments/projects.
+  - Support learner multi-select later for shared/family lessons.
+    - Examples: Islamic Studies discussion, read-aloud, science experiment, art, PE, field trip, Quran review group, nature walk.
+  - Connect Course / Subject dropdown to the improved Settings → Courses/Subjects model.
+    - If one learner is selected, show that learner’s active courses.
+    - If multiple learners are selected, show shared/family courses or allow shared lesson creation.
+  - Add helper text when Course / Subject is empty.
+    - Example: “Choose learner(s) first to see active courses.”
+  - Add Estimated duration.
+    - Examples: 15 min, 30 min, 45 min, 1 hour, custom.
+    - This should feed Weekly Plan totals, schedule timing, day-load thresholds, Now & Next, and future reflow logic.
+  - Add Lesson type.
+    - Examples:
+      - Lesson
+      - Assignment
+      - Reading
+      - Practice
+      - Review
+      - Project
+      - Assessment
+      - Quran memorization
+      - Quran revision
+      - Quran recitation
+      - Discussion
+      - Field trip
+      - Evidence / portfolio task
+      - Other
+  - Make lesson-type options adaptive based on selected course/category.
+    - Do not hide the full list, but front-load the most likely options.
+    - Quran should front-load recitation, memorization, revision, tajweed, listening.
+    - Math should front-load lesson, practice, review, assessment, drill, project.
+    - Reading/English should front-load reading, vocabulary, writing, comprehension, discussion.
+    - Science should front-load lesson, lab, observation, experiment, project, nature study.
+  - Add Instruction mode later.
+    - Teacher-led
+    - Guided
+    - Independent
+    - Shared/family
+    - Tutor-led
+    - Co-op/external
+    - Async/self-paced
+  - Improve Resource link into Resource / link.
+    - MVP can keep URL entry.
+    - Later support linked resource from Resources tab, external URL, file attachment, book/page reference, curriculum link.
+  - Add Quran-specific lesson metadata later when course/category is Quran.
+    - Surah
+    - Ayah range
+    - Juz
+    - Mode: memorization, revision, recitation, tajweed, listening
+    - Last reviewed
+    - Needs review
+    - Mastery/confidence level
+  - Fix Today section so it displays all lessons planned for today, not only one lesson.
+  - Add filters and grouping for All Lessons.
+    - Filter by learner, course/subject, date range, status, overdue, today, this week, archived, lesson type.
+    - Group by date, learner, course, status, or school week.
+  - Auto-label past uncompleted lessons as overdue.
+    - Past planned-date + not completed/skipped should show “Overdue” or “Not started · 3 days overdue.”
+  - Expand lesson actions beyond Edit/Delete.
+    - Complete
+    - Move
+    - Edit
+    - Skip
+    - Add evidence
+    - More
+  - Replace primary Delete action with safer Archive/Remove behavior.
+    - Draft lesson with no records may be deleted.
+    - Lesson with progress/evidence/records should be archived instead of deleted.
+  - Add completion workflow later.
+    - Completed date
+    - Time spent
+    - Notes
+    - Add evidence?
+    - Mark progress?
+    - Quran log? if Quran lesson
+    - Carry forward unfinished part?
+  - Connect lessons to Records and Growth.
+    - Lessons can feed attendance, completed work, portfolio evidence, weekly reports, transcript support, subject progress, mastery, Quran progress, consistency, and gaps.
+  - Support recurring/bulk lesson creation later.
+    - Repeat daily/weekly
+    - Create sequence
+    - Import from curriculum plan
+    - Duplicate lesson
+    - Create next lesson
+    - Generate week from course plan
+    - Copy previous week
+  - Consider moving Add Lesson form into modal/drawer later so the page is not dominated by the form.
+  - Ensure internal IDs never leak into user-facing labels, filters, validation, or saved records.
+- **Reasoning (why)**: Lessons are the central work-item layer that connects planning, daily execution, records, growth, and resources. The page should mature from a basic manual task list into a homeschool lesson/work management hub that supports real family workflows, shared lessons, overdue repair, evidence capture, and future schedule execution.
+- **Priority**: P1
+- **Notes**: MVP can start by renaming fields, adding planned date, estimated duration, lesson type, Today completeness, overdue labeling, safer delete/archive behavior, and basic filters. Advanced multi-learner lessons, adaptive lesson types, Quran-specific metadata, completion/evidence modal, and recurrence can mature over time.
+- **Attachments**:
+
+---
+
+- **ID**: FB-012
+- **Status**: New
+- **Date/time**: 2026-05-15 12:40 (America/Detroit)
+- **Area/URL**: Resources + Plan + Lessons / Future curriculum pacing engine
+- **Feedback summary**: Create curriculum/resource pacing engine that can generate, adapt, and reuse lesson plans from structured resource metadata.
+- **Details / suggested change**:
+  - Add future curriculum/resource pacing engine connected to Resources, Plan, Lessons, and Growth.
+  - Allow families to enter structured resource metadata.
+    - Title
+    - Publisher
+    - Author
+    - Edition
+    - Grade/level
+    - Subject/category
+    - ISBN
+    - Resource type: textbook, workbook, teacher guide, online course, video course, Quran text, reader, etc.
+    - Total pages
+    - Number of lessons
+    - Units/chapters/modules
+    - Table of contents / sequence metadata
+  - Allow lesson generation from resource structure.
+    - By pages
+    - By chapters
+    - By lessons
+    - By units
+    - By sections
+    - By surahs/ayahs
+    - By modules
+    - By custom milestones
+  - Use school-year and course schedule data to calculate pacing.
+    - Example: 360-page math book across 180 Math days = 2 pages/day.
+    - Example: 30 chapters across 36 school weeks = about 1 chapter/week with buffer.
+  - Allow parents to set pacing targets.
+    - Finish by school year end.
+    - Finish by custom date.
+    - Complete X pages/lessons per week.
+    - Complete X sessions per week.
+  - Track actual progress against planned pacing.
+    - Example: completed through page 57 of 360.
+    - System recalculates pages/lessons remaining and needed pace.
+  - Support adaptive recalculation without automatically changing plans unless user confirms.
+    - Example: “You have 303 pages remaining. At your current schedule, you need about 2.4 pages per Math day to finish on time.”
+  - Allow generated lessons to populate the Lessons page and Weekly Plan.
+  - Allow updates from completed lessons to update the resource pacing state.
+  - Support resource-level pacing patterns later.
+    - Families may complete the same resource at different speeds.
+    - System can learn common pacing models once enough verified usage exists.
+  - Build toward a shared verified resource database.
+    - One parent or staff member can enter a resource once.
+    - Admin/staff can review/verify resource metadata.
+    - Future parents selecting the same title/edition can reuse the structure.
+  - Support exact edition matching.
+    - Example: Math-U-See Grade 3, Second Edition should be distinct from other editions.
+  - Add verification status.
+    - User-submitted
+    - Needs review
+    - Verified
+    - Deprecated/outdated
+  - Avoid requiring this in MVP lesson creation.
+    - MVP should support manual lessons.
+    - Pacing engine can become a later intelligence layer.
+- **Reasoning (why)**: Lesson planning is often pacing math. If Sheath knows the resource structure, school year, school days, and actual progress, it can help families forward-plan lessons and adapt when they fall behind. A verified shared resource database prevents every family from manually re-entering the same curriculum structure and creates a long-term product advantage.
+- **Priority**: P2
+- **Notes**: This is not required for first MVP, but it is strategically important because it connects Resources, Plan, Lessons, Growth, and future Intelligence features. Copyright controls are required: do not allow redistribution of copyrighted textbook pages, answer keys, worksheets, or teacher manual content unless the user has rights.
+- **Attachments**:
+
+---
+
+- **ID**: FB-013
+- **Status**: New
+- **Date/time**: 2026-05-15 12:50 (America/Detroit)
+- **Area/URL**: Resources / Future community curriculum intelligence
+- **Feedback summary**: Add community-informed curriculum/resource intelligence with parent feedback, Islamic compatibility notes, pacing insights, and vetted community teaching notes.
+- **Details / suggested change**:
+  - Add future parent feedback layer for resources/curricula/lessons.
+  - Allow parents to optionally leave structured feedback on a resource or specific lesson.
+    - Rating
+    - Difficulty
+    - Actual time required
+    - Vocabulary load
+    - Parent prep needed
+    - Supplies required
+    - Works well independently?
+    - Works better teacher-led?
+    - Works well for combined ages?
+    - Common modification
+    - Content concern
+    - Islamic/worldview compatibility note
+  - Add Muslim-native review signals.
+    - Generally compatible
+    - Needs parent context
+    - Contains worldview concern
+    - Contains sensitive content
+    - Strongly beneficial
+    - Not reviewed yet
+  - Allow parents to contribute lesson notes only if they choose to share.
+  - Do not automatically expose raw parent notes to other users.
+  - Create a vetted/distilled “Sheath Community Note” or “Community Teaching Note” from parent-contributed insights.
+    - The note should use a consistent format.
+    - It should clearly indicate that it is based on parent-contributed experience, not publisher content.
+    - It should be reviewed/vetted before broad use.
+  - Suggested community note format:
+    - Common difficulty
+    - Estimated time
+    - Parent prep needed
+    - Supplies needed
+    - Islamic/worldview note
+    - Vocabulary warnings
+    - Suggested discussion questions
+    - Common pacing pattern
+    - Optional enrichment
+    - Common modification
+    - Age/grade fit
+    - Parent-submitted tips
+  - Use community pacing signals over time.
+    - Most families spend 2 days on this lesson.
+    - This chapter usually takes longer than the book suggests.
+    - Families often skip or modify this activity.
+    - This resource works better 3x/week than 5x/week.
+    - This unit often creates delays.
+  - Support future recommendations.
+    - Recommend resources based on child age/grade, subject, family schooling style, Islamic compatibility preference, parent time availability, independent vs teacher-led preference, community ratings, pacing data, difficulty level, budget, and format.
+  - Add strong contribution and copyright guardrails.
+    - Do not allow users to share copyrighted textbook pages, answer keys, paid worksheets, or teacher manual text unless they have rights.
+    - Safe contributions include parent-created notes, pacing experience, ratings, difficulty comments, worldview notes, teaching tips, personal modifications, and limited metadata.
+  - Add moderation/review controls before community notes become broadly visible.
+  - Consider privacy controls and attribution preferences.
+    - Anonymous contribution
+    - Named contribution
+    - Private only
+    - Share with Sheath for review
+- **Reasoning (why)**: Families do not only use resources; they learn which resources work, where they struggle, where they need Islamic framing, how long lessons actually take, and what teaching notes help. A community-informed resource intelligence layer could make Sheath stronger with use and help Muslim homeschool families benefit from each other’s experience without creating a chaotic unmoderated review system.
+- **Priority**: P3
+- **Notes**: This is a long-term strategic feature, not MVP. It should be built carefully with moderation, privacy, copyright, and quality controls. The goal is not raw social comments everywhere; the goal is vetted, structured, reusable curriculum intelligence.
 - **Attachments**:
 
 ---
