@@ -22,7 +22,7 @@ const mockLessons: LessonTask[] = [
     householdId: 'hh_001',
     title: 'Math lesson 1',
     description: 'Algebra basics',
-    dueDate: '2026-05-13',
+    dueDate: '2026-05-12',
     status: 'not_started' as const,
     order: 1,
     createdAt: '2026-01-01T00:00:00Z',
@@ -103,5 +103,27 @@ describe('WeeklyList (mobile)', () => {
 
     const weekendSections = container.querySelectorAll('.opacity-60')
     expect(weekendSections.length).toBeGreaterThan(0)
+  })
+
+  it('shows resolved subject name, not raw subjectId', () => {
+    renderList(mockLessons)
+
+    const buttons = screen.getAllByRole('button')
+    const tuesdayButton = buttons.find(btn => btn.textContent?.includes('Tuesday'))
+    fireEvent.click(tuesdayButton!)
+
+    expect(screen.getByText('Math')).toBeInTheDocument()
+    expect(screen.queryByText('subj_001')).not.toBeInTheDocument()
+  })
+
+  it('shows resolved child name, not raw childId', () => {
+    renderList(mockLessons)
+
+    const buttons = screen.getAllByRole('button')
+    const tuesdayButton = buttons.find(btn => btn.textContent?.includes('Tuesday'))
+    fireEvent.click(tuesdayButton!)
+
+    expect(screen.getByText('Adam')).toBeInTheDocument()
+    expect(screen.queryByText('child_001')).not.toBeInTheDocument()
   })
 })
