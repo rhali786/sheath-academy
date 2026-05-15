@@ -713,3 +713,122 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Attachments**:
 
 ---
+
+- **ID**: FB-014
+- **Status**: New
+- **Date/time**: 2026-05-15 13:15 (America/Detroit)
+- **Area/URL**: Attendance page / https://sheathacademy.onrender.com/attendance
+- **Feedback summary**: Refine Attendance into a homeschool records/compliance attendance engine connected to Today, Records, School Year, Lessons, and Growth.
+- **Details / suggested change**:
+  - Attendance should live under the Records top-level workflow long-term rather than remain a permanent top-level tab.
+    - Top nav should stay aligned to: Today, Plan, Records, Growth, Resources, Settings, About.
+    - Records can include Attendance, Reports, Transcripts, Portfolio/Evidence, Compliance, and Exports.
+  - Today dashboard should surface a quick attendance prompt/action.
+    - Examples: “Attendance not logged yet,” “Mark all present,” “Open attendance.”
+  - Add a clearer page purpose statement.
+    - Example: “Track school attendance by learner, date, time, and compliance status. Attendance records feed reports, school-year progress, and exports.”
+  - Rename Child → Learner.
+  - Date should default to today.
+    - Example: Friday, May 15, 2026.
+  - Ensure all form fields have clear visual and accessibility labels.
+    - The current text/number inputs should clearly label notes, hours, and minutes or instructional time.
+  - Add daily batch attendance mode for all active learners.
+    - Learner
+    - Status
+    - Hours/minutes where enabled
+    - Notes/reason
+  - Add quick actions.
+    - Mark all present
+    - Mark selected learners present
+    - Mark all absent
+    - Mark all partial
+    - Copy previous school day
+    - Apply same hours to all
+    - Apply note to selected learners
+    - Save attendance
+  - Keep individual editing available, but make daily batch entry the main parent-friendly workflow.
+  - Support attendance statuses beyond Present / Absent / Partial over time.
+    - Present
+    - Absent
+    - Partial
+    - Excused absence
+    - Sick day
+    - Holiday / break
+    - Field trip / educational outing
+    - Co-op day
+    - Makeup day
+    - Not a school day
+  - Distinguish planned school day from non-school day.
+    - Do not treat a break/holiday/non-school day as an absence.
+  - Inherit expectations from Household and School Year settings.
+    - Household: default school days, week start, day-load expectations, protected time.
+    - School Year: start/end, required days/hours, planned school days, breaks, make-up days, tracking method.
+    - Compliance Defaults: location/state requirements, days vs hours expectations, reporting expectations.
+  - Adapt the attendance form based on tracking method.
+    - Days only: status + notes.
+    - Hours only: hours/minutes required or strongly suggested.
+    - Days and hours: status + hours/minutes.
+    - Flexible: allow lightweight logging.
+  - Clarify partial attendance rules.
+    - Define whether partial days count toward required days, hours, both, or neither based on settings.
+    - Show how a partial day is counted under current configuration.
+  - Improve summary cards with timeframe and learner context.
+    - Example: “Adam — May 2026” or “Ahmed Family — School Year 2025–2026.”
+    - Show present days, partial days, absent days, hours logged, required days remaining, required hours remaining, attendance completion percentage.
+  - Add filters.
+    - Today
+    - This week
+    - This month
+    - This school year
+    - Custom date range
+    - Learner
+    - Status
+  - Make records more export-ready.
+    - Show learner, date, status, instructional time, notes/reason, count-toward-day result, count-toward-hours result.
+  - Replace primary Delete action with safer behavior.
+    - Prefer Edit, Void/Remove from active record, Archive, or Delete permanently only after confirmation.
+    - Add audit trail/edit history later for compliance confidence.
+  - Add attendance type/context.
+    - Regular school day
+    - Field trip
+    - Co-op
+    - Tutor/external class
+    - Masjid/community learning
+    - Project day
+    - Life skills day
+    - Makeup day
+    - Other
+  - Add reason templates.
+    - Absent examples: sick, appointment, family emergency, travel, weather, religious holiday, other.
+    - Partial examples: appointment, sick, late start, early finish, co-op day, Friday/Jumu‘ah schedule, travel, other.
+    - Present examples: regular day, field trip, co-op, project day, outdoor/nature study, other.
+  - Support evidence/attachment hooks later.
+    - Field trip photo
+    - Co-op confirmation
+    - Tutor note
+    - Completed work sample
+    - PDF certificate
+    - Parent note
+  - Add export/report support.
+    - Export attendance summary PDF
+    - Export CSV
+    - Print attendance log
+    - Generate school-year attendance report
+    - Generate learner-specific attendance report
+    - Generate compliance packet
+  - Show compliance progress carefully when configured.
+    - Example: “126 of 180 configured school days complete.”
+    - Use “based on your configured requirements” instead of making legal-compliance claims.
+  - Connect attendance to lessons carefully.
+    - If a learner completed lessons today but attendance is not logged, Today can prompt the parent to mark attendance.
+    - Do not auto-create official attendance records without parent confirmation.
+  - Support optional Hijri date display in attendance records if enabled.
+    - Example: Fri, May 15, 2026 / 28 Dhul Qa‘dah 1447 AH.
+  - Optimize mobile daily logging.
+    - Open Today → tap Log attendance → Mark all present → adjust exceptions → Save.
+- **Reasoning (why)**: Attendance is one of the official homeschool record foundations. It should help families prove the school year, track required days/hours, connect attendance to actual learning activity, and avoid daily recordkeeping friction. A stronger attendance system should support quick daily logging, compliance-aware summaries, safe record handling, exports, and clear connections to School Year, Today, Lessons, Records, and Growth.
+- **Priority**: P1
+- **Notes**: MVP should focus on date defaulting to today, learner wording, labeled fields, daily batch logging, mark-all-present, summary timeframe clarity, basic filters, safe delete/confirmation, partial-hours clarity, and School Year tracking-method connection. Later versions can add compliance automation, attendance context, reason templates, evidence attachments, exports, audit trail, lesson-completion prompts, and Hijri date display.
+- **Attachments**:
+
+---
