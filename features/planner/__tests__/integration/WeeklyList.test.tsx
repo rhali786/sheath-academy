@@ -2,6 +2,11 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
 import { WeeklyList } from '@/features/planner/front/components/WeeklyList'
 import { PlannerContext } from '@/features/planner/front/context/PlannerContext'
+
+const mockPush = jest.fn()
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
+}))
 import type { LessonTask } from '@/features/planner/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
@@ -125,5 +130,18 @@ describe('WeeklyList (mobile)', () => {
 
     expect(screen.getByText('Adam')).toBeInTheDocument()
     expect(screen.queryByText('child_001')).not.toBeInTheDocument()
+  })
+
+  it('clicking a lesson card navigates to the edit page', () => {
+    renderList(mockLessons)
+
+    const buttons = screen.getAllByRole('button')
+    const tuesdayButton = buttons.find(btn => btn.textContent?.includes('Tuesday'))
+    fireEvent.click(tuesdayButton!)
+
+    const lessonCard = screen.getByText('Math lesson 1').closest('div[class*="bg-white"]')
+    fireEvent.click(lessonCard!)
+
+    expect(mockPush).toHaveBeenCalledWith('/lessons?editId=lesson_001')
   })
 })

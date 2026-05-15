@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { usePlanner } from '../context/PlannerContext'
 
 function getDayOfWeekLabel(dayIndex: number): string {
@@ -28,6 +29,7 @@ interface DaySection {
 
 export function WeeklyList() {
   const { lessons, selectedWeek, weekStartDay, children, subjects } = usePlanner()
+  const router = useRouter()
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set())
 
   // Calculate week start date using local date methods to avoid UTC shift
@@ -114,7 +116,7 @@ export function WeeklyList() {
               <div className={`border-t px-4 py-4 space-y-3 ${day.isWeekend ? 'bg-slate-50' : 'bg-slate-50'}`}>
                 {dayLessons.length > 0 ? (
                   dayLessons.map(lesson => (
-                    <div key={lesson.id} className="p-4 bg-white rounded-lg border border-forest-200 hover:shadow-md transition-shadow">
+                    <div key={lesson.id} onClick={() => router.push(`/lessons?editId=${lesson.id}`)} className="p-4 bg-white rounded-lg border border-forest-200 hover:shadow-md transition-shadow cursor-pointer">
                       <div className="font-semibold text-forest-900">{lesson.title}</div>
                       <div className="text-sm text-slate-600 mt-2 space-y-1">
                         <div>Child: <span className="font-medium text-slate-900">{resolveChildName(lesson.childId)}</span></div>

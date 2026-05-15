@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { plannerApi } from '@/features/planner/front/services/api'
 import { LessonTaskForm, type LessonFormData } from '@/features/planner/front/components/LessonTaskForm'
 import { LessonTaskList } from '@/features/planner/front/components/LessonTaskList'
@@ -18,6 +19,28 @@ function todayLocal(): string {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const dd = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${dd}`
+}
+
+interface EditIdWatcherProps {
+  lessons: LessonTask[]
+  onEdit: (lesson: LessonTask) => void
+}
+
+function EditIdWatcher({ lessons, onEdit }: EditIdWatcherProps) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  useEffect(() => {
+    const editId = searchParams.get('editId')
+    if (!editId || lessons.length === 0) return
+    const lesson = lessons.find(l => l.id === editId)
+    if (lesson) {
+      onEdit(lesson)
+      router.replace('/lessons', { scroll: false })
+    }
+  }, [searchParams, lessons])
+
+  return null
 }
 
 export function LessonsPage() {
@@ -80,6 +103,10 @@ export function LessonsPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-8">
+      <Suspense>
+        <EditIdWatcher lessons={lessons} onEdit={setEditingLesson} />
+      </Suspense>
+
       <div>
         <h2 className="text-lg font-bold text-slate-900 mb-4">
           {editingLesson ? 'Edit lesson' : 'Add lesson'}

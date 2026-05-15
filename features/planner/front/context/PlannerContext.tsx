@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { LessonTask } from '../../types'
 import { plannerApi } from '../services/api'
 import type { StudentProfile, ApiResponse } from '@/features/lib/types'
@@ -22,6 +22,7 @@ interface PlannerContextType {
   weekStartDay: 'Monday' | 'Sunday'
   children: StudentProfile[]
   subjects: SubjectCourse[]
+  refreshLessons?: () => void
 }
 
 export const PlannerContext = React.createContext<PlannerContextType | undefined>(undefined)
@@ -60,6 +61,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const [subjectsList, setSubjectsList] = useState<SubjectCourse[]>([])
   const [allChildrenIds, setAllChildrenIds] = useState<string[]>([])
   const [allSubjectIds, setAllSubjectIds] = useState<string[]>([])
+  const [lessonsFetchKey, setLessonsFetchKey] = useState(0)
 
   // Initial load: fetch household profile, children, and subjects
   useEffect(() => {
@@ -122,7 +124,11 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     }
 
     fetchLessons()
-  }, [selectedWeek, selectedChildIds, selectedSubjectIds, weekStartDay])
+  }, [selectedWeek, selectedChildIds, selectedSubjectIds, weekStartDay, lessonsFetchKey])
+
+  const refreshLessons = useCallback(() => {
+    setLessonsFetchKey(k => k + 1)
+  }, [])
 
   const value: PlannerContextType = {
     lessons,
@@ -137,6 +143,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     weekStartDay,
     children: childrenList,
     subjects: subjectsList,
+    refreshLessons,
   }
 
   return <PlannerContext.Provider value={value}>{children}</PlannerContext.Provider>

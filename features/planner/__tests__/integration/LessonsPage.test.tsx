@@ -1,6 +1,13 @@
 import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { LessonsPage } from '@/features/planner/front/pages/LessonsPage'
+
+const mockReplace = jest.fn()
+let mockSearchParams = new URLSearchParams()
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: mockReplace }),
+  useSearchParams: () => mockSearchParams,
+}))
 import type { LessonTask } from '@/features/planner/types'
 import type { StudentProfile, ApiResponse } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
@@ -72,6 +79,7 @@ beforeEach(() => {
   mockGetAllChildren.mockResolvedValue(ok(mockChildren))
   mockGetSubjects.mockResolvedValue(ok(mockSubjects))
   mockGetLessons.mockResolvedValue([])
+  mockSearchParams = new URLSearchParams()
 })
 
 afterEach(() => {
@@ -136,5 +144,19 @@ describe('LessonsPage', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /all lessons/i })).toBeInTheDocument()
     })
+  })
+
+  it('pre-populates the form when ?editId is in the URL', async () => {
+    const editLesson = makeLesson({ id: 'edit_001', title: 'Lesson To Edit' })
+    mockGetLessons.mockResolvedValue([editLesson])
+    mockSearchParams = new URLSearchParams('editId=edit_001')
+
+    render(<LessonsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /edit lesson/i })).toBeInTheDocument()
+    })
+
+    expect(mockReplace).toHaveBeenCalledWith('/lessons', { scroll: false })
   })
 })
