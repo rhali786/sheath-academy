@@ -10,8 +10,8 @@ export function WeekNavigator() {
   function getWeekRange(): string {
     const d = new Date(selectedWeek)
     const dayOfWeek = d.getDay()
-    const offset = weekStartDay === 'Monday' ? dayOfWeek === 0 ? -6 : 1 - dayOfWeek : dayOfWeek
-    d.setDate(d.getDate() - offset)
+    const daysFromStart = weekStartDay === 'Monday' ? (dayOfWeek === 0 ? 6 : dayOfWeek - 1) : dayOfWeek
+    d.setDate(d.getDate() - daysFromStart)
 
     const start = new Date(d)
     const end = new Date(d)
@@ -80,7 +80,7 @@ export function WeekNavigator() {
             {showDatePicker && (
               <input
                 type="date"
-                value={selectedWeek.toISOString().split('T')[0]}
+                value={`${selectedWeek.getFullYear()}-${String(selectedWeek.getMonth() + 1).padStart(2, '0')}-${String(selectedWeek.getDate()).padStart(2, '0')}`}
                 onChange={handleDateChange}
                 className="px-4 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2"
               />

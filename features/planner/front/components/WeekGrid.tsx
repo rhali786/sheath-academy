@@ -11,20 +11,25 @@ function isWeekend(dayIndex: number): boolean {
   return dayIndex === 0 || dayIndex === 6
 }
 
+function formatLocalDate(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
+}
+
 export function WeekGrid() {
   const { lessons, selectedWeek, weekStartDay, children, subjects, selectedChildIds, selectedSubjectIds } = usePlanner()
 
-  // Calculate week start date
+  // Calculate week start date using local time (matches PlannerContext.getWeekStartDate)
   const d = new Date(selectedWeek)
   const dayOfWeek = d.getDay()
-  const offset = weekStartDay === 'Monday' ? (dayOfWeek === 0 ? -6 : 1 - dayOfWeek) : dayOfWeek
-  d.setDate(d.getDate() - offset)
+  const daysFromStart = weekStartDay === 'Monday' ? (dayOfWeek === 0 ? 6 : dayOfWeek - 1) : dayOfWeek
+  d.setDate(d.getDate() - daysFromStart)
   const weekStart = new Date(d)
 
-  // Get all days of the week (already in correct order based on weekStart calculation)
   const orderedDays = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(weekStart)
-    date.setDate(weekStart.getDate() + i)
+    const date = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i)
     return date
   })
 
@@ -37,9 +42,8 @@ export function WeekGrid() {
         .map(subject => ({ childId: child.id, childName: child.name, subjectId: subject.id, subjectName: subject.name }))
     )
 
-  // Get lesson for a specific day, child, and subject
-  function getLessonForCell(date: string, childId: string, subjectId: string) {
-    return lessons.find(l => l.dueDate === date && l.childId === childId && l.subjectId === subjectId)
+  function getLessonForCell(dateStr: string, childId: string, subjectId: string) {
+    return lessons.find(l => l.dueDate === dateStr && l.childId === childId && l.subjectId === subjectId)
   }
 
   return (
@@ -50,21 +54,21 @@ export function WeekGrid() {
             <th className="bg-slate-50 px-4 py-3 text-sm font-semibold text-left w-40">
               <span className="text-slate-700">Child / Subject</span>
             </th>
-            {orderedDays.map((date, idx) => {
-              const dayOfWeek = date.getDay()
-              const isWeekendDay = isWeekend(dayOfWeek)
-              const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-              const dayLabel = getDayOfWeekLabel(dayOfWeek)
+            {orderedDays.map((date) => {
+              const dow = date.getDay()
+              const isWeekendDay = isWeekend(dow)
+              const displayStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              const dayLabel = getDayOfWeekLabel(dow)
 
               return (
                 <th
-                  key={date.toISOString()}
+                  key={formatLocalDate(date)}
                   className={`px-3 py-3 text-sm font-semibold text-center min-w-32 border-l border-slate-200 ${
                     isWeekendDay ? 'bg-slate-50 text-slate-400 opacity-60' : 'bg-forest-50'
                   }`}
                 >
                   <div className={isWeekendDay ? 'text-slate-500' : 'text-forest-900'}>{dayLabel}</div>
-                  <div className={`text-xs ${isWeekendDay ? 'text-slate-400' : 'text-forest-700'}`}>{dateStr}</div>
+                  <div className={`text-xs ${isWeekendDay ? 'text-slate-400' : 'text-forest-700'}`}>{displayStr}</div>
                 </th>
               )
             })}
@@ -78,9 +82,9 @@ export function WeekGrid() {
                 <div className="text-xs text-slate-600">{row.subjectName}</div>
               </td>
               {orderedDays.map(date => {
-                const dateStr = date.toISOString().split('T')[0]
-                const dayOfWeek = date.getDay()
-                const isWeekendDay = isWeekend(dayOfWeek)
+                const dateStr = formatLocalDate(date)
+                const dow = date.getDay()
+                const isWeekendDay = isWeekend(dow)
                 const lesson = getLessonForCell(dateStr, row.childId, row.subjectId)
 
                 return (

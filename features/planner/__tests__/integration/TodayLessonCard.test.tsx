@@ -125,4 +125,50 @@ describe('TodayLessonCard', () => {
       expect(screen.getByText(/May 12/)).toBeInTheDocument()
     })
   })
+
+  describe('externalLessons prop', () => {
+    it('skips fetch and shows lessons from externalLessons immediately', () => {
+      const external = makeLessons([{ title: 'External lesson', dueDate: '2026-05-15' }])
+      render(<TodayLessonCard childId="child_001" today="2026-05-15" externalLessons={external} />)
+      expect(screen.getByText('External lesson')).toBeInTheDocument()
+      expect(mockGetLessons).not.toHaveBeenCalled()
+      expect(document.querySelector('.animate-pulse')).not.toBeInTheDocument()
+    })
+
+    it('filters externalLessons to only today and the given childId', () => {
+      const external = makeLessons([
+        { title: 'Today for child_001', dueDate: '2026-05-15', childId: 'child_001' },
+        { title: 'Other day', dueDate: '2026-05-16', childId: 'child_001' },
+        { title: 'Other child', dueDate: '2026-05-15', childId: 'child_002' },
+      ])
+      render(<TodayLessonCard childId="child_001" today="2026-05-15" externalLessons={external} />)
+      expect(screen.getByText('Today for child_001')).toBeInTheDocument()
+      expect(screen.queryByText('Other day')).not.toBeInTheDocument()
+      expect(screen.queryByText('Other child')).not.toBeInTheDocument()
+    })
+
+    it('shows empty state when externalLessons has no lessons for today', () => {
+      const external = makeLessons([{ dueDate: '2026-05-16' }])
+      render(<TodayLessonCard childId="child_001" today="2026-05-15" externalLessons={external} />)
+      expect(screen.getByText(/no lessons scheduled for today/i)).toBeInTheDocument()
+      expect(mockGetLessons).not.toHaveBeenCalled()
+    })
+
+    it('updates displayed lessons when externalLessons prop changes', () => {
+      const initial = makeLessons([{ title: 'Initial lesson', dueDate: '2026-05-15' }])
+      const { rerender } = render(
+        <TodayLessonCard childId="child_001" today="2026-05-15" externalLessons={initial} />
+      )
+      expect(screen.getByText('Initial lesson')).toBeInTheDocument()
+
+      const updated = makeLessons([
+        { title: 'Initial lesson', dueDate: '2026-05-15' },
+        { title: 'New lesson', dueDate: '2026-05-15' },
+      ])
+      rerender(<TodayLessonCard childId="child_001" today="2026-05-15" externalLessons={updated} />)
+      expect(screen.getByText('Initial lesson')).toBeInTheDocument()
+      expect(screen.getByText('New lesson')).toBeInTheDocument()
+      expect(mockGetLessons).not.toHaveBeenCalled()
+    })
+  })
 })

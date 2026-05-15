@@ -99,7 +99,7 @@ export function LessonsPage() {
       {children.length > 0 && (
         <div>
           <h2 className="text-lg font-bold text-slate-900 mb-4">Today</h2>
-          <TodayLessonCard childId={children[0].id} today={todayLocal()} />
+          <TodayLessonCard childId={children[0].id} today={todayLocal()} externalLessons={lessons} />
         </div>
       )}
 

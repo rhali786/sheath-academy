@@ -95,4 +95,25 @@ describe('WeekGrid (desktop)', () => {
     const weekendCells = container.querySelectorAll('.opacity-60')
     expect(weekendCells.length).toBeGreaterThan(0)
   })
+
+  it('lesson appears in the cell for its dueDate, childId and subjectId', () => {
+    // selectedWeek is May 12 (Monday); lesson is due May 13 (Tuesday)
+    renderGrid(mockLessons)
+
+    expect(screen.getByText('Math lesson 1')).toBeInTheDocument()
+    expect(screen.getByText('Algebra basics')).toBeInTheDocument()
+  })
+
+  it('lesson does not appear when dueDate is outside the displayed week', () => {
+    const outsideLesson: LessonTask[] = [
+      {
+        ...mockLessons[0],
+        dueDate: '2026-05-25', // two weeks later
+        title: 'Far future lesson',
+      },
+    ]
+    renderGrid(outsideLesson)
+
+    expect(screen.queryByText('Far future lesson')).not.toBeInTheDocument()
+  })
 })

@@ -24,11 +24,13 @@ const STATUS_BADGE: Record<LessonTaskStatus, { label: string; cls: string } | nu
 interface TodayLessonCardProps {
   childId: string
   today: string
+  /** When provided, skips the internal fetch and uses these lessons directly. */
+  externalLessons?: LessonTask[]
 }
 
-export function TodayLessonCard({ childId, today }: TodayLessonCardProps) {
-  const [lessons, setLessons] = useState<LessonTask[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+export function TodayLessonCard({ childId, today, externalLessons }: TodayLessonCardProps) {
+  const [fetchedLessons, setFetchedLessons] = useState<LessonTask[]>([])
+  const [isLoading, setIsLoading] = useState(externalLessons === undefined)
   const [error, setError] = useState<string | null>(null)
 
   const formattedToday = new Date(`${today}T00:00:00`).toLocaleDateString('en-US', {
@@ -38,16 +40,18 @@ export function TodayLessonCard({ childId, today }: TodayLessonCardProps) {
   })
 
   useEffect(() => {
+    if (externalLessons !== undefined) return
+
     let cancelled = false
 
-    const fetch = async () => {
+    const doFetch = async () => {
       setIsLoading(true)
       setError(null)
       try {
         const week = mondayOfWeek(today)
         const all = await plannerApi.getLessons(week, [childId])
         if (!cancelled) {
-          setLessons(all.filter(l => l.dueDate === today))
+          setFetchedLessons(all.filter(l => l.dueDate === today))
         }
       } catch {
         if (!cancelled) {
@@ -60,15 +64,21 @@ export function TodayLessonCard({ childId, today }: TodayLessonCardProps) {
       }
     }
 
-    fetch()
+    doFetch()
     return () => { cancelled = true }
-  }, [childId, today])
+  }, [childId, today, externalLessons])
+
+  const lessons = externalLessons !== undefined
+    ? externalLessons.filter(l => l.dueDate === today && l.childId === childId)
+    : fetchedLessons
+
+  const loading = externalLessons !== undefined ? false : isLoading
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
       <h3 className="text-sm font-semibold text-slate-700 mb-4">Today — {formattedToday}</h3>
 
-      {isLoading && (
+      {loading && (
         <div className="space-y-3">
           {[1, 2, 3].map(i => (
             <div key={i} className="h-5 bg-slate-100 rounded animate-pulse" />
@@ -76,15 +86,15 @@ export function TodayLessonCard({ childId, today }: TodayLessonCardProps) {
         </div>
       )}
 
-      {!isLoading && error && (
+      {!loading && error && (
         <p className="text-sm text-red-600">{error}</p>
       )}
 
-      {!isLoading && !error && lessons.length === 0 && (
+      {!loading && !error && lessons.length === 0 && (
         <p className="text-sm text-slate-400">No lessons scheduled for today.</p>
       )}
 
-      {!isLoading && !error && lessons.length > 0 && (
+      {!loading && !error && lessons.length > 0 && (
         <ul className="space-y-2">
           {lessons.map(lesson => {
             const badge = STATUS_BADGE[lesson.status]
