@@ -10,6 +10,15 @@ import type { SubjectCourse } from '@/features/subjects/types'
 import { childrenApi } from '@/features/children/front/services/api'
 import { subjectsApi } from '@/features/subjects/front/services/api'
 import { useHousehold } from '@/features/household/front/context'
+import { TodayLessonCard } from '@/features/planner/front/components/TodayLessonCard'
+
+function todayLocal(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
+}
 
 export function LessonsPage() {
   const { householdProfile } = useHousehold()
@@ -86,6 +95,13 @@ export function LessonsPage() {
           />
         </div>
       </div>
+
+      {children.length > 0 && (
+        <div>
+          <h2 className="text-lg font-bold text-slate-900 mb-4">Today</h2>
+          <TodayLessonCard childId={children[0].id} today={todayLocal()} />
+        </div>
+      )}
 
       <div>
         <h2 className="text-lg font-bold text-slate-900 mb-4">All lessons</h2>
