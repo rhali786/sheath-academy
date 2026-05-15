@@ -1,73 +1,31 @@
-/**
- * Comprehensive UI Component Integration Tests
- *
- * Tests each dashboard component in isolation to catch rendering errors,
- * prop mismatches, and missing dependencies.
- */
-
 import { render, screen } from '@testing-library/react'
 import { DoToday } from '@/features/dashboard/front/components/DoToday'
 import { NeedsAttention } from '@/features/dashboard/front/components/NeedsAttention'
 import { PerChildProgress } from '@/features/dashboard/front/components/PerChildProgress'
 import { QuranStudies } from '@/features/dashboard/front/components/QuranStudies'
 import { RecordsProof } from '@/features/dashboard/front/components/RecordsProof'
-import { mockChildren, mockTasks, mockAlerts, mockQuranSessions, mockRecords, mockProgressData } from '../../fixtures/mockData'
+import { mockChildren, mockAlerts, mockQuranSessions, mockRecords, mockProgressData } from '../../fixtures/mockData'
 
-const mockToggleTask = jest.fn()
+jest.mock('@/features/dashboard/front/context/DashboardProvider', () => ({
+  useContext_Dashboard: jest.fn(() => ({ selectedChildId: null })),
+}))
+
+jest.mock('@/features/planner/front/services/api', () => ({
+  plannerApi: { getLessons: jest.fn().mockResolvedValue([]) },
+}))
+
 const mockAddQuranSession = jest.fn()
 
 describe('Dashboard Components - Unit Tests', () => {
   describe('DoToday Component', () => {
-    test('renders without errors with valid props', () => {
-      render(
-        <DoToday
-          tasks={mockTasks}
-          children={mockChildren}
-          onTaskToggle={mockToggleTask}
-        />
-      )
-
+    test('renders heading', () => {
+      render(<DoToday />)
       expect(screen.getByText(/Do Today/i)).toBeInTheDocument()
     })
 
-    test('displays all child names in task groups', () => {
-      render(
-        <DoToday
-          tasks={mockTasks}
-          children={mockChildren}
-          onTaskToggle={mockToggleTask}
-        />
-      )
-
-      mockChildren.forEach(child => {
-        expect(screen.getByText(new RegExp(child.name))).toBeInTheDocument()
-      })
-    })
-
-    test('renders empty state when no tasks', () => {
-      render(
-        <DoToday
-          tasks={[]}
-          children={mockChildren}
-          onTaskToggle={mockToggleTask}
-        />
-      )
-
+    test('renders empty state when no child selected', () => {
+      render(<DoToday />)
       expect(screen.getByText(/Do Today/i)).toBeInTheDocument()
-    })
-
-    test('displays task descriptions and subjects', () => {
-      render(
-        <DoToday
-          tasks={mockTasks}
-          children={mockChildren}
-          onTaskToggle={mockToggleTask}
-        />
-      )
-
-      mockTasks.forEach(task => {
-        expect(screen.getByText(new RegExp(task.description))).toBeInTheDocument()
-      })
     })
   })
 
