@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import type { ApiResponse, LessonTask } from '@/features/lib/types'
+import type { ApiResponse } from '@/features/lib/types'
+import type { LessonTask } from '@/features/planner/types'
 import { getLessonTask, updateLessonTask, completeLessonTask } from '@/features/planner/server/service'
 
 export async function GET(id: string): Promise<NextResponse<ApiResponse<LessonTask | null>>> {

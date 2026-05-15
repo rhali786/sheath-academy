@@ -23,7 +23,7 @@ const mockLessons: LessonTask[] = [
     title: 'Math lesson 1',
     description: 'Algebra basics',
     dueDate: '2026-05-13',
-    isCompleted: false,
+    status: 'not_started' as const,
     order: 1,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',

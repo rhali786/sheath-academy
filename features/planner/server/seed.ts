@@ -21,7 +21,7 @@ export const SEED_LESSONS: LessonTask[] = [
     title: 'Math Lesson 1 - Fractions',
     description: 'Review basic fractions and simplification',
     dueDate: getDateForDay(0), // Monday
-    isCompleted: false,
+    status: 'not_started',
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -35,7 +35,7 @@ export const SEED_LESSONS: LessonTask[] = [
     title: 'Quran Practice - Surah Al-Fatihah',
     description: 'Continue memorization of Surah Al-Fatihah',
     dueDate: getDateForDay(1), // Tuesday
-    isCompleted: false,
+    status: 'not_started',
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -49,7 +49,7 @@ export const SEED_LESSONS: LessonTask[] = [
     title: 'Math Lesson 2 - Decimals',
     description: 'Introduction to decimal notation and operations',
     dueDate: getDateForDay(2), // Wednesday
-    isCompleted: false,
+    status: 'not_started',
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -63,7 +63,7 @@ export const SEED_LESSONS: LessonTask[] = [
     title: 'Quran Recitation',
     description: 'Practice recitation with tajweed',
     dueDate: getDateForDay(3), // Thursday
-    isCompleted: false,
+    status: 'not_started',
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -77,7 +77,7 @@ export const SEED_LESSONS: LessonTask[] = [
     title: 'Math Lesson 3 - Percentages',
     description: 'Understanding percentages and conversions',
     dueDate: getDateForDay(4), // Friday
-    isCompleted: false,
+    status: 'not_started',
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -93,7 +93,7 @@ export const SEED_LESSONS: LessonTask[] = [
     title: 'Reading Practice - Chapter 1',
     description: 'Read and discuss Chapter 1 from the assigned book',
     dueDate: getDateForDay(0), // Monday
-    isCompleted: false,
+    status: 'not_started',
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -107,7 +107,7 @@ export const SEED_LESSONS: LessonTask[] = [
     title: 'Quran Hifz - Surah Al-Nas',
     description: 'Memorize Surah Al-Nas',
     dueDate: getDateForDay(1), // Tuesday
-    isCompleted: false,
+    status: 'not_started',
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -121,7 +121,7 @@ export const SEED_LESSONS: LessonTask[] = [
     title: 'Reading Comprehension - Chapter 2',
     description: 'Answer comprehension questions for Chapter 2',
     dueDate: getDateForDay(2), // Wednesday
-    isCompleted: false,
+    status: 'not_started',
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -135,7 +135,7 @@ export const SEED_LESSONS: LessonTask[] = [
     title: 'Quran Review',
     description: 'Review previously memorized surahs',
     dueDate: getDateForDay(3), // Thursday
-    isCompleted: false,
+    status: 'not_started',
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -149,7 +149,7 @@ export const SEED_LESSONS: LessonTask[] = [
     title: 'Reading - Vocabulary Building',
     description: 'Learn new vocabulary words from Chapter 3',
     dueDate: getDateForDay(4), // Friday
-    isCompleted: false,
+    status: 'not_started',
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -163,7 +163,7 @@ export const SEED_LESSONS: LessonTask[] = [
     title: 'Quran Weekend Practice',
     description: 'Extended Quran practice session',
     dueDate: getDateForDay(5), // Saturday
-    isCompleted: false,
+    status: 'not_started',
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -179,7 +179,7 @@ export const SEED_LESSONS: LessonTask[] = [
     title: 'Islamic History - Early Caliphate',
     description: 'Study the early Islamic caliphate period',
     dueDate: getDateForDay(0), // Monday
-    isCompleted: false,
+    status: 'not_started',
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -193,7 +193,7 @@ export const SEED_LESSONS: LessonTask[] = [
     title: 'History Lesson - Medieval Period',
     description: 'Explore significant events of the Medieval period',
     dueDate: getDateForDay(2), // Wednesday
-    isCompleted: false,
+    status: 'not_started',
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -207,7 +207,7 @@ export const SEED_LESSONS: LessonTask[] = [
     title: 'Islamic Studies - Fiqh Basics',
     description: 'Introduction to basic Islamic jurisprudence',
     dueDate: getDateForDay(3), // Thursday
-    isCompleted: false,
+    status: 'not_started',
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -221,7 +221,7 @@ export const SEED_LESSONS: LessonTask[] = [
     title: 'History Research Project',
     description: 'Research and compile notes for history project',
     dueDate: getDateForDay(6), // Sunday
-    isCompleted: false,
+    status: 'not_started',
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',

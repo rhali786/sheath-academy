@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import type { ApiResponse, LessonTask } from '@/features/lib/types'
+import type { ApiResponse } from '@/features/lib/types'
+import type { LessonTask } from '@/features/planner/types'
 import { getLessons, createLessonTask } from '@/features/planner/server/service'
 
 export async function GET(request: Request): Promise<NextResponse<ApiResponse<LessonTask[]>>> {
@@ -57,7 +58,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<L
     title: title.trim(),
     description: description?.trim() || undefined,
     dueDate,
-    isCompleted: false,
+    status: 'not_started',
     order: body.order || 0,
   })
 
