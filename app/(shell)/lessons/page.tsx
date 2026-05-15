@@ -1,5 +1,5 @@
-import { LessonTasksPage } from '@/features/lesson-tasks/front/pages/LessonTasksPage'
+import { LessonsPage } from '@/features/planner/front/pages/LessonsPage'
 
-export default function LessonsPage() {
-  return <LessonTasksPage />
+export default function LessonsRoute() {
+  return <LessonsPage />
 }

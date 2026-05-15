@@ -27,7 +27,7 @@ function getWeekRange(weekStr: string): { start: string; end: string } | null {
   return { start: formatLocalDate(monday), end: formatLocalDate(sunday) }
 }
 
-export async function GET(request: Request): Promise<NextResponse<ApiResponse<LessonTask[]>>> {
+export async function GET(request: Request): Promise<NextResponse<ApiResponse<LessonTask[] | null>>> {
   const url = new URL(request.url)
   const week = url.searchParams.get('week')
   const childIds = url.searchParams.get('childIds')

@@ -66,6 +66,12 @@ export function completeLessonTask(id: string): LessonTask | null {
   return lessonsStore.update(id, { status: 'completed', updatedAt: new Date().toISOString() })
 }
 
+export function deleteLessonTask(id: string): boolean {
+  const lesson = lessonsStore.getById(id)
+  if (!lesson) return false
+  return lessonsStore.remove(id)
+}
+
 export function resetStore(): void {
   lessonsStore.reset(SEED_LESSONS)
   resetIdCounter()

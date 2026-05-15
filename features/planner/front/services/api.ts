@@ -46,11 +46,13 @@ async function patch<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
 }
 
 export const plannerApi = {
-  getLessons: async (week: string, childIds?: string[], subjectIds?: string[]): Promise<LessonTask[]> => {
-    const params = new URLSearchParams({ week })
+  getLessons: async (week?: string, childIds?: string[], subjectIds?: string[]): Promise<LessonTask[]> => {
+    const params = new URLSearchParams()
+    if (week) params.set('week', week)
     if (childIds && childIds.length > 0) params.append('childIds', childIds.join(','))
     if (subjectIds && subjectIds.length > 0) params.append('subjectIds', subjectIds.join(','))
-    const response = await get<LessonTask[]>(`/api/planner/lessons?${params}`)
+    const paramStr = params.toString()
+    const response = await get<LessonTask[]>(`/api/planner/lessons${paramStr ? `?${paramStr}` : ''}`)
     return response.data
   },
 
@@ -76,5 +78,10 @@ export const plannerApi = {
   completeLesson: async (id: string): Promise<LessonTask> => {
     const response = await patch<LessonTask>(`/api/planner/lessons/${id}/complete`)
     return response.data
+  },
+
+  deleteLesson: async (id: string): Promise<void> => {
+    const res = await fetch(`${getApiBaseUrl()}/api/planner/lessons/${id}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error(`Request failed: ${res.status}`)
   },
 }
