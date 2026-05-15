@@ -114,3 +114,22 @@ export async function PATCH(
     { status: 404 }
   )
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ slug: string[] }> }
+): Promise<NextResponse | Response> {
+  const { slug } = await params
+  const response = await handleRoute(slug, request)
+  if (response) return response
+
+  return NextResponse.json(
+    {
+      status: 'error',
+      data: null,
+      message: 'Not found',
+      timestamp: new Date().toISOString(),
+    },
+    { status: 404 }
+  )
+}

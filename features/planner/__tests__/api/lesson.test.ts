@@ -28,7 +28,7 @@ describe('POST /api/planner/lessons', () => {
       title: 'New Math Lesson',
       description: 'Test lesson',
       dueDate: '2026-05-15',
-      isCompleted: false,
+      status: 'not_started' as const,
       order: 1,
     })
 
@@ -44,7 +44,7 @@ describe('POST /api/planner/lessons', () => {
       householdId: SEED_IDS.household,
       title: 'New Lesson',
       dueDate: '2026-05-15',
-      isCompleted: false,
+      status: 'not_started' as const,
       order: 1,
     })
 
@@ -58,7 +58,7 @@ describe('POST /api/planner/lessons', () => {
       householdId: SEED_IDS.household,
       title: 'New Lesson',
       dueDate: '2026-05-15',
-      isCompleted: false,
+      status: 'not_started' as const,
       order: 1,
     })
 
@@ -90,11 +90,11 @@ describe('PUT /api/planner/lessons/:id', () => {
 })
 
 describe('PATCH /api/planner/lessons/:id/complete', () => {
-  it('sets isCompleted to true', () => {
+  it('sets status to completed', () => {
     const completed = completeLessonTask('lesson_seed_001')
 
     expect(completed).not.toBeNull()
-    expect(completed?.isCompleted).toBe(true)
+    expect(completed?.status).toBe('completed')
   })
 
   it('returns null when id does not exist', () => {

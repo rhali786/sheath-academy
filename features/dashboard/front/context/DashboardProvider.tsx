@@ -89,6 +89,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     void fetchData()
   }, [workspace?.id, householdProfile?.id, householdLoading])
 
+  useEffect(() => {
+    if (!selectedChildId && studentProfiles.length > 0) {
+      setSelectedChildId(studentProfiles[0].id)
+    }
+  }, [studentProfiles, selectedChildId, setSelectedChildId])
+
   const tasks = useMemo(() => {
     if (!selectedChildId) {
       return allTasks

@@ -88,7 +88,7 @@ export default function Dashboard() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
               <div className="lg:col-span-2">
-                <DoToday tasks={tasks} children={children} onTaskToggle={toggleTask} />
+                <DoToday />
               </div>
               <div>
                 <NeedsAttention alerts={alerts} />

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { usePlanner } from '../context/PlannerContext'
 
 function getDayOfWeekLabel(dayIndex: number): string {
@@ -12,6 +13,13 @@ function isWeekend(dayIndex: number): boolean {
   return dayIndex === 0 || dayIndex === 6
 }
 
+function formatLocalDate(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
+}
+
 interface DaySection {
   dateStr: string
   date: Date
@@ -20,32 +28,33 @@ interface DaySection {
 }
 
 export function WeeklyList() {
-  const { lessons, selectedWeek, weekStartDay } = usePlanner()
+  const { lessons, selectedWeek, weekStartDay, children, subjects } = usePlanner()
+  const router = useRouter()
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set())
 
-  // Calculate week start date
+  // Calculate week start date using local date methods to avoid UTC shift
   const d = new Date(selectedWeek)
   const dayOfWeek = d.getDay()
-  const offset = weekStartDay === 'Monday' ? (dayOfWeek === 0 ? -6 : 1 - dayOfWeek) : dayOfWeek
-  d.setDate(d.getDate() - offset)
+  // daysFromMonday: Mon=0, Tue=1, ..., Sat=5, Sun=6
+  const daysFromMonday = weekStartDay === 'Monday'
+    ? (dayOfWeek === 0 ? 6 : dayOfWeek - 1)
+    : dayOfWeek
+  d.setDate(d.getDate() - daysFromMonday)
   const weekStart = new Date(d)
 
-  // Get all days of the week
   const orderedDays = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(weekStart)
-    date.setDate(weekStart.getDate() + i)
+    const date = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i)
     return date
   })
 
   const daySections: DaySection[] = orderedDays.map(date => {
-    const dayOfWeek = date.getDay()
-    const dateStr = date.toISOString().split('T')[0]
-    const dayLabel = getDayOfWeekLabel(dayOfWeek)
+    const dow = date.getDay()
+    const dateStr = formatLocalDate(date)
     return {
       dateStr,
       date,
-      dayLabel,
-      isWeekend: isWeekend(dayOfWeek),
+      dayLabel: getDayOfWeekLabel(dow),
+      isWeekend: isWeekend(dow),
     }
   })
 
@@ -60,6 +69,14 @@ export function WeeklyList() {
   }
 
   const lessonsForDay = (dateStr: string) => lessons.filter(l => l.dueDate === dateStr)
+
+  function resolveChildName(childId: string): string {
+    return children.find(c => c.id === childId)?.name ?? childId
+  }
+
+  function resolveSubjectName(subjectId: string): string {
+    return subjects.find(s => s.id === subjectId)?.name ?? subjectId
+  }
 
   return (
     <div className="space-y-3">
@@ -99,11 +116,11 @@ export function WeeklyList() {
               <div className={`border-t px-4 py-4 space-y-3 ${day.isWeekend ? 'bg-slate-50' : 'bg-slate-50'}`}>
                 {dayLessons.length > 0 ? (
                   dayLessons.map(lesson => (
-                    <div key={lesson.id} className="p-4 bg-white rounded-lg border border-forest-200 hover:shadow-md transition-shadow">
+                    <div key={lesson.id} onClick={() => router.push(`/lessons?editId=${lesson.id}`)} className="p-4 bg-white rounded-lg border border-forest-200 hover:shadow-md transition-shadow cursor-pointer">
                       <div className="font-semibold text-forest-900">{lesson.title}</div>
                       <div className="text-sm text-slate-600 mt-2 space-y-1">
-                        <div>Child: <span className="font-medium text-slate-900">{lesson.childId}</span></div>
-                        <div>Subject: <span className="font-medium text-slate-900">{lesson.subjectId}</span></div>
+                        <div>Child: <span className="font-medium text-slate-900">{resolveChildName(lesson.childId)}</span></div>
+                        <div>Subject: <span className="font-medium text-slate-900">{resolveSubjectName(lesson.subjectId)}</span></div>
                       </div>
                       {lesson.description && <div className="text-sm text-slate-700 mt-3 p-3 bg-forest-50 rounded border border-forest-100">{lesson.description}</div>}
                     </div>

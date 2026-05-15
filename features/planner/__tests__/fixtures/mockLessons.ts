@@ -1,4 +1,4 @@
-import { LessonTask } from '@/features/planner/types'
+import { LessonTask, LessonTaskStatus } from '@/features/planner/types'
 import { SEED_IDS } from '@/features/lib/seedIds'
 
 export const mockLessons: LessonTask[] = [
@@ -11,7 +11,7 @@ export const mockLessons: LessonTask[] = [
     title: 'Math Lesson 1',
     description: 'Fractions',
     dueDate: '2026-05-12',
-    isCompleted: false,
+    status: 'not_started' as LessonTaskStatus,
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -24,7 +24,7 @@ export const mockLessons: LessonTask[] = [
     title: 'Quran Practice',
     description: 'Memorization',
     dueDate: '2026-05-13',
-    isCompleted: false,
+    status: 'not_started' as LessonTaskStatus,
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -38,7 +38,7 @@ export const mockLessons: LessonTask[] = [
     title: 'Reading Lesson',
     description: 'Chapter 1',
     dueDate: '2026-05-12',
-    isCompleted: false,
+    status: 'not_started' as LessonTaskStatus,
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -51,7 +51,7 @@ export const mockLessons: LessonTask[] = [
     title: 'Quran Hifz',
     description: 'Surah Al-Nas',
     dueDate: '2026-05-13',
-    isCompleted: false,
+    status: 'not_started' as LessonTaskStatus,
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -65,7 +65,7 @@ export const mockLessons: LessonTask[] = [
     title: 'Islamic History',
     description: 'Early Caliphate',
     dueDate: '2026-05-12',
-    isCompleted: false,
+    status: 'not_started' as LessonTaskStatus,
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -78,7 +78,7 @@ export const mockLessons: LessonTask[] = [
     title: 'History Lesson',
     description: 'Medieval Period',
     dueDate: '2026-05-14',
-    isCompleted: true,
+    status: 'completed' as LessonTaskStatus,
     order: 1,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',

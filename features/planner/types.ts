@@ -1,3 +1,5 @@
+export type LessonTaskStatus = 'not_started' | 'completed' | 'skipped'
+
 export interface LessonTask {
   id: string
   childId: string
@@ -5,8 +7,9 @@ export interface LessonTask {
   householdId: string
   title: string
   description?: string
+  resourceLink?: string
   dueDate: string
-  isCompleted: boolean
+  status: LessonTaskStatus
   order: number
   createdAt: string
   updatedAt: string
