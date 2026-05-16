@@ -62,23 +62,105 @@ button {
 }
 
 @media print {
-  body {
-    @apply bg-white text-black;
+  *,
+  *::before,
+  *::after {
+    color: black !important;
+    background: white !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
   }
 
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 11pt;
+    line-height: 1.5;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Hide all chrome: nav, toolbar, controls */
   header,
+  nav,
+  aside,
   .reports-toolbar,
-  .reports-controls {
+  .reports-controls,
+  button,
+  [role="navigation"] {
     display: none !important;
   }
 
   .reports-page {
-    @apply bg-white;
+    background: white !important;
+    min-height: unset;
   }
 
+  /* Make the report article fill the page */
   .print-report {
     box-shadow: none !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 1cm 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  /* Keep sections together; break between them */
+  .print-report section {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-bottom: 1.5em;
+  }
+
+  /* Header stands alone on page top */
+  .print-report > header {
+    page-break-after: avoid;
+    break-after: avoid;
+    border-bottom: 1px solid #ccc !important;
+    margin-bottom: 1.5em;
+    padding-bottom: 0.75em;
+  }
+
+  /* Typography hierarchy */
+  h1, h2 {
+    font-size: 18pt;
+    font-weight: bold;
+    margin-bottom: 0.25em;
+  }
+
+  h3 {
+    font-size: 13pt;
+    font-weight: bold;
+    margin-bottom: 0.25em;
+  }
+
+  p, li {
+    font-size: 11pt;
+  }
+
+  /* Evidence / progress dividers */
+  .print-report .divide-y > * {
+    border-top: 1px solid #e2e8f0 !important;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+  }
+
+  /* Highlight boxes (checklist) — keep borders visible */
+  .print-report .rounded-md {
+    border: 1px solid #ccc !important;
+    padding: 0.4em 0.6em;
+    margin-bottom: 0.4em;
+  }
+
+  /* Links: show URL in parens */
+  a[href]::after {
+    content: ' (' attr(href) ')';
+    font-size: 9pt;
+    color: #555 !important;
+  }
+
+  /* Avoid orphaned headings */
+  h2, h3 {
+    page-break-after: avoid;
+    break-after: avoid;
   }
 }

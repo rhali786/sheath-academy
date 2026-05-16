@@ -111,7 +111,7 @@ export function PortfolioTab() {
   }))
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-4">
       <h2 className="text-xl font-bold text-gray-900">Portfolio</h2>
 
       <EvidenceForm

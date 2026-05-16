@@ -201,7 +201,12 @@ export function AttendancePage() {
         {isLoading ? (
           <p className="text-sm text-slate-400 py-4">Loading…</p>
         ) : (
-          <AttendanceList records={records} onDelete={handleDelete} onEdit={handleEdit} />
+          <AttendanceList
+            records={records}
+            childMap={Object.fromEntries(children.map(c => [c.id, c.name]))}
+            onDelete={handleDelete}
+            onEdit={handleEdit}
+          />
         )}
       </div>
     </div>

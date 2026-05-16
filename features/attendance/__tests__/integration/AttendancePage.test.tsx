@@ -130,4 +130,45 @@ describe('AttendancePage', () => {
       expect(screen.getByText(/no attendance records/i)).toBeInTheDocument()
     })
   })
+
+  it('shows child name in each attendance record row', async () => {
+    mockGetRecords.mockResolvedValue(ok([makeRecord({ childId: 'child_001', status: 'present' })]))
+    render(<AttendancePage />)
+    await waitFor(() => {
+      expect(screen.getByText('Adam')).toBeInTheDocument()
+    })
+  })
+
+  it('shows hours when hours > 0', async () => {
+    mockGetRecords.mockResolvedValue(ok([makeRecord({ hours: 2, minutes: 30 })]))
+    render(<AttendancePage />)
+    await waitFor(() => {
+      expect(screen.getByText(/2h/)).toBeInTheDocument()
+      expect(screen.getByText(/30m/)).toBeInTheDocument()
+    })
+  })
+
+  it('does not show time when hours and minutes are both 0', async () => {
+    mockGetRecords.mockResolvedValue(ok([makeRecord({ hours: 0, minutes: 0 })]))
+    render(<AttendancePage />)
+    await waitFor(() => {
+      expect(screen.queryByText(/0h/)).not.toBeInTheDocument()
+    })
+  })
+
+  it('shows notes icon when notes are present', async () => {
+    mockGetRecords.mockResolvedValue(ok([makeRecord({ notes: 'Worked on fractions' })]))
+    render(<AttendancePage />)
+    await waitFor(() => {
+      expect(screen.getByTitle('Has notes')).toBeInTheDocument()
+    })
+  })
+
+  it('does not show notes icon when notes are absent', async () => {
+    mockGetRecords.mockResolvedValue(ok([makeRecord({ notes: undefined })]))
+    render(<AttendancePage />)
+    await waitFor(() => {
+      expect(screen.queryByTitle('Has notes')).not.toBeInTheDocument()
+    })
+  })
 })
