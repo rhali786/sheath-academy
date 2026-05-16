@@ -19,6 +19,7 @@ import { NextSetupStrip } from '@/features/setup/front/components/NextSetupStrip
 import { SubjectProgressCard } from '../components/SubjectProgressCard'
 import { RecentLessonsCard } from '../components/RecentLessonsCard'
 import { WeekAttendanceCard } from '../components/WeekAttendanceCard'
+import { PortfolioTab } from '@/features/portfolio/front/components/PortfolioTab'
 
 export default function Dashboard() {
   const { selectedTab } = useNavigation()
@@ -120,6 +121,8 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {selectedTab === 'Portfolio' && <PortfolioTab />}
 
     </div>
   )

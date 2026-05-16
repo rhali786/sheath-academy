@@ -20,7 +20,7 @@ export function Header() {
   const pathname = usePathname()
   const router = useRouter()
   const { selectedTab, setSelectedTab } = useNavigation()
-  const tabs = ['Today', 'Reports']
+  const tabs = ['Today', 'Reports', 'Portfolio']
 
   function handleTabChange(tab: string) {
     setSelectedTab(tab)

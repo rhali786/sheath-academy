@@ -50,7 +50,7 @@ export function PortfolioTab() {
     if (targetChildId) {
       const params = new URLSearchParams({ childId: targetChildId })
       if (subjectId) params.set('subjectId', subjectId)
-      fetch(`/api/planner?${params.toString()}`)
+      fetch(`/api/planner/lessons?${params.toString()}`)
         .then(r => r.json())
         .then(res => setLessons(res.data ?? []))
         .catch(() => setLessons([]))
