@@ -143,6 +143,7 @@ export function PortfolioTab() {
         subjectMap={subjectMap}
         loading={loading}
         error={error}
+        hasActiveFilters={!!(filterSubjectId || filterType || filterStartDate || filterEndDate)}
       />
     </div>
   )

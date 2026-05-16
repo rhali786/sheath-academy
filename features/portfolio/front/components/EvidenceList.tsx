@@ -9,9 +9,10 @@ interface Props {
   subjectMap: Record<string, string>
   loading: boolean
   error: string | null
+  hasActiveFilters?: boolean
 }
 
-export function EvidenceList({ items, childMap, subjectMap, loading, error }: Props) {
+export function EvidenceList({ items, childMap, subjectMap, loading, error, hasActiveFilters }: Props) {
   if (loading) {
     return <p className="text-gray-500 text-sm py-4">Loading portfolio...</p>
   }
@@ -21,7 +22,12 @@ export function EvidenceList({ items, childMap, subjectMap, loading, error }: Pr
   }
 
   if (items.length === 0) {
-    return (
+    return hasActiveFilters ? (
+      <div className="text-center py-8 text-gray-500 text-sm space-y-1">
+        <p>No evidence matches these filters.</p>
+        <p>Try changing the child, subject, type, or date range.</p>
+      </div>
+    ) : (
       <div className="text-center py-8 text-gray-500 text-sm space-y-1">
         <p>No portfolio evidence yet.</p>
         <p>Add a note or link to preserve proof of learning.</p>

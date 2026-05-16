@@ -135,6 +135,9 @@ export function ReportsPage() {
               <p className="mt-1 text-sm text-slate-600">
                 {report.child.gradeLabel} | {report.dateRange.start} to {report.dateRange.end}
               </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Generated: {new Date(report.generatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
             </header>
 
             <section>
