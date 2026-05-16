@@ -7,8 +7,17 @@ export function WeekNavigator() {
   const { selectedWeek, setSelectedWeek, weekStartDay } = usePlanner()
   const [showDatePicker, setShowDatePicker] = useState(false)
 
+  function normalizeDateOnly(date: Date): Date {
+    const dateStr = date.toISOString().slice(0, 10)
+    return new Date(`${dateStr}T00:00:00`)
+  }
+
+  function formatDateInputValue(date: Date): string {
+    return date.toISOString().slice(0, 10)
+  }
+
   function getWeekRange(): string {
-    const d = new Date(selectedWeek)
+    const d = normalizeDateOnly(selectedWeek)
     const dayOfWeek = d.getDay()
     const daysFromStart = weekStartDay === 'Monday' ? (dayOfWeek === 0 ? 6 : dayOfWeek - 1) : dayOfWeek
     d.setDate(d.getDate() - daysFromStart)
@@ -23,13 +32,13 @@ export function WeekNavigator() {
   }
 
   function previousWeek() {
-    const newDate = new Date(selectedWeek)
+    const newDate = normalizeDateOnly(selectedWeek)
     newDate.setDate(newDate.getDate() - 7)
     setSelectedWeek(newDate)
   }
 
   function nextWeek() {
-    const newDate = new Date(selectedWeek)
+    const newDate = normalizeDateOnly(selectedWeek)
     newDate.setDate(newDate.getDate() + 7)
     setSelectedWeek(newDate)
   }
@@ -41,7 +50,7 @@ export function WeekNavigator() {
   function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
     const dateStr = e.target.value
     if (dateStr) {
-      setSelectedWeek(new Date(dateStr))
+      setSelectedWeek(new Date(`${dateStr}T00:00:00`))
       setShowDatePicker(false)
     }
   }
@@ -80,7 +89,7 @@ export function WeekNavigator() {
             {showDatePicker && (
               <input
                 type="date"
-                value={`${selectedWeek.getFullYear()}-${String(selectedWeek.getMonth() + 1).padStart(2, '0')}-${String(selectedWeek.getDate()).padStart(2, '0')}`}
+                value={formatDateInputValue(selectedWeek)}
                 onChange={handleDateChange}
                 className="px-4 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2"
               />

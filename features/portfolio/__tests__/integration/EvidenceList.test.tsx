@@ -87,6 +87,22 @@ describe('EvidenceList', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
+  it('shows parent reflection when present', () => {
+    const items = [
+      makeItem({ reflection: 'This shows careful narration and recall.' }),
+    ]
+    render(
+      <EvidenceList
+        items={items}
+        childMap={childMap}
+        subjectMap={subjectMap}
+        loading={false}
+        error={null}
+      />
+    )
+    expect(screen.getByText(/this shows careful narration/i)).toBeInTheDocument()
+  })
+
   it('shows linked lesson indicator when lessonTaskId is present', () => {
     const items = [makeItem({ lessonTaskId: 'lesson_a' })]
     render(

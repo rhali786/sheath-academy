@@ -52,6 +52,13 @@ export function EvidenceListItem({ item, childName, subjectName }: Props) {
         <p className="text-sm text-gray-600">{notesPreview}</p>
       )}
 
+      {item.reflection && (
+        <div className="rounded-md bg-slate-50 border border-slate-100 px-3 py-2">
+          <p className="text-xs font-semibold text-slate-500 mb-1">Parent reflection</p>
+          <p className="text-sm text-slate-700">{item.reflection}</p>
+        </div>
+      )}
+
       {item.url && (
         <a
           href={item.url}

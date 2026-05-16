@@ -233,4 +233,17 @@ describe('Feature 32 — extended filters and 50-item limit', () => {
     const items = listEvidenceItems()
     expect(items.length).toBeLessThanOrEqual(50)
   })
+
+  it('sorts newest created evidence first', () => {
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date('2026-05-01T09:00:00Z'))
+    createEvidenceItem(validInput({ title: 'Older item' }))
+    jest.setSystemTime(new Date('2026-05-02T09:00:00Z'))
+    createEvidenceItem(validInput({ title: 'Newer item' }))
+
+    const items = listEvidenceItems().filter(i => i.title.endsWith('item'))
+
+    expect(items[0].title).toBe('Newer item')
+    jest.useRealTimers()
+  })
 })

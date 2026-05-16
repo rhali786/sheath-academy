@@ -48,6 +48,7 @@ describe('EvidenceForm', () => {
     expect(screen.getByLabelText(/date/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/type/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/notes/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/parent reflection/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/url/i)).toBeInTheDocument()
   })
 
@@ -99,6 +100,9 @@ describe('EvidenceForm', () => {
     fireEvent.change(screen.getByLabelText(/date/i), { target: { value: '2026-05-12' } })
     fireEvent.change(screen.getByLabelText(/type/i), { target: { value: 'note' } })
     fireEvent.change(screen.getByLabelText(/notes/i), { target: { value: 'Some great notes' } })
+    fireEvent.change(screen.getByLabelText(/parent reflection/i), {
+      target: { value: 'This shows strong independent work.' },
+    })
 
     fireEvent.click(screen.getByRole('button', { name: /save evidence/i }))
 
@@ -110,6 +114,7 @@ describe('EvidenceForm', () => {
           subjectId: 'sub_a',
           type: 'note',
           notes: 'Some great notes',
+          reflection: 'This shows strong independent work.',
         })
       )
     })

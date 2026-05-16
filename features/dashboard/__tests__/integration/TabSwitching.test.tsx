@@ -124,13 +124,13 @@ describe('Tab switching — NavigationContext regression', () => {
     })
   })
 
-  test('Reports tab shows Reports content', async () => {
+  test('Portfolio tab shows Portfolio content', async () => {
     renderWithShell()
     await waitForDashboard()
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Reports' })[0])
+    fireEvent.click(screen.getAllByRole('button', { name: 'Portfolio' })[0])
     await waitFor(() => {
-      expect(screen.getByText(/no lessons planned this week/i)).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Portfolio' })).toBeInTheDocument()
     })
   })
 

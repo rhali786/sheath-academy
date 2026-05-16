@@ -1,6 +1,6 @@
 'use client'
 
-import type { EvidenceItem, CreateEvidenceItemInput } from '@/features/portfolio/types'
+import type { EvidenceItem, CreateEvidenceItemInput, EvidenceType } from '@/features/portfolio/types'
 import type { ApiResponse } from '@/features/lib/types'
 
 function getBase(): string {
@@ -21,10 +21,18 @@ export const portfolioApi = {
   listEvidence(filters?: {
     childId?: string
     subjectId?: string
+    lessonTaskId?: string
+    type?: EvidenceType
+    startDate?: string
+    endDate?: string
   }): Promise<ApiResponse<EvidenceItem[]>> {
     const params = new URLSearchParams()
     if (filters?.childId) params.set('childId', filters.childId)
     if (filters?.subjectId) params.set('subjectId', filters.subjectId)
+    if (filters?.lessonTaskId) params.set('lessonTaskId', filters.lessonTaskId)
+    if (filters?.type) params.set('type', filters.type)
+    if (filters?.startDate) params.set('startDate', filters.startDate)
+    if (filters?.endDate) params.set('endDate', filters.endDate)
     const qs = params.toString()
     return apiFetch(`/api/portfolio/evidence${qs ? `?${qs}` : ''}`)
   },
@@ -57,7 +65,6 @@ export const portfolioApi = {
   },
 
   listEvidenceByLessonTask(lessonTaskId: string): Promise<ApiResponse<EvidenceItem[]>> {
-    const params = new URLSearchParams({ lessonTaskId })
-    return apiFetch(`/api/portfolio/evidence?${params.toString()}`)
+    return this.listEvidence({ lessonTaskId })
   },
 }

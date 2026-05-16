@@ -20,6 +20,11 @@ function formatLocalDate(d: Date): string {
   return `${y}-${m}-${dd}`
 }
 
+function normalizeDateOnly(date: Date): Date {
+  const dateStr = date.toISOString().slice(0, 10)
+  return new Date(`${dateStr}T00:00:00`)
+}
+
 interface DaySection {
   dateStr: string
   date: Date
@@ -33,7 +38,7 @@ export function WeeklyList() {
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set())
 
   // Calculate week start date using local date methods to avoid UTC shift
-  const d = new Date(selectedWeek)
+  const d = normalizeDateOnly(selectedWeek)
   const dayOfWeek = d.getDay()
   // daysFromMonday: Mon=0, Tue=1, ..., Sat=5, Sun=6
   const daysFromMonday = weekStartDay === 'Monday'

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { EvidenceItem, CreateEvidenceItemInput } from '@/features/portfolio/types'
+import type { EvidenceItem, CreateEvidenceItemInput, EvidenceType } from '@/features/portfolio/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import type { LessonTask } from '@/features/planner/types'
 import type { StudentProfile } from '@/features/lib/types'
@@ -19,6 +19,9 @@ export function PortfolioTab() {
   const [lessons, setLessons] = useState<LessonTask[]>([])
   const [filterChildId, setFilterChildId] = useState<string | null>(selectedChildId)
   const [filterSubjectId, setFilterSubjectId] = useState<string | null>(null)
+  const [filterType, setFilterType] = useState<EvidenceType | null>(null)
+  const [filterStartDate, setFilterStartDate] = useState<string | null>(null)
+  const [filterEndDate, setFilterEndDate] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -34,12 +37,12 @@ export function PortfolioTab() {
     if (targetChildId) {
       fetch(`/api/subjects?childId=${targetChildId}`)
         .then(r => r.json())
-        .then(res => setSubjects(res.data ?? []))
+        .then(res => setSubjects(Array.isArray(res.data) ? res.data : []))
         .catch(() => setSubjects([]))
     } else {
       fetch('/api/subjects')
         .then(r => r.json())
-        .then(res => setSubjects(res.data ?? []))
+        .then(res => setSubjects(Array.isArray(res.data) ? res.data : []))
         .catch(() => setSubjects([]))
     }
   }, [filterChildId])
@@ -52,7 +55,7 @@ export function PortfolioTab() {
       if (subjectId) params.set('subjectId', subjectId)
       fetch(`/api/planner/lessons?${params.toString()}`)
         .then(r => r.json())
-        .then(res => setLessons(res.data ?? []))
+        .then(res => setLessons(Array.isArray(res.data) ? res.data : []))
         .catch(() => setLessons([]))
     } else {
       setLessons([])
@@ -66,19 +69,25 @@ export function PortfolioTab() {
       .listEvidence({
         childId: filterChildId ?? undefined,
         subjectId: filterSubjectId ?? undefined,
+        type: filterType ?? undefined,
+        startDate: filterStartDate ?? undefined,
+        endDate: filterEndDate ?? undefined,
       })
-      .then(res => setItems(res.data))
+      .then(res => setItems(Array.isArray(res.data) ? res.data : []))
       .catch(err => setError(err.message ?? 'Failed to load portfolio'))
       .finally(() => setLoading(false))
-  }, [filterChildId, filterSubjectId])
+  }, [filterChildId, filterSubjectId, filterType, filterStartDate, filterEndDate])
 
   async function handleSave(input: CreateEvidenceItemInput) {
     await portfolioApi.createEvidence(input)
     const res = await portfolioApi.listEvidence({
       childId: filterChildId ?? undefined,
       subjectId: filterSubjectId ?? undefined,
+      type: filterType ?? undefined,
+      startDate: filterStartDate ?? undefined,
+      endDate: filterEndDate ?? undefined,
     })
-    setItems(res.data)
+    setItems(Array.isArray(res.data) ? res.data : [])
   }
 
   const childMap: Record<string, string> = {}
@@ -118,8 +127,14 @@ export function PortfolioTab() {
         subjects={subjectOptions}
         selectedChildId={filterChildId}
         selectedSubjectId={filterSubjectId}
+        selectedType={filterType}
+        startDate={filterStartDate}
+        endDate={filterEndDate}
         onChildChange={setFilterChildId}
         onSubjectChange={setFilterSubjectId}
+        onTypeChange={setFilterType}
+        onStartDateChange={setFilterStartDate}
+        onEndDateChange={setFilterEndDate}
       />
 
       <EvidenceList

@@ -153,9 +153,10 @@ describe('Header — tab navigation on dashboard page', () => {
 
   test('renders dashboard tabs and Settings/About links on desktop', () => {
     render(<Header />)
-    ;['Today', 'Reports'].forEach((tab) => {
+    ;['Today', 'Portfolio'].forEach((tab) => {
       expect(screen.getAllByRole('button', { name: tab }).length).toBeGreaterThan(0)
     })
+    expect(screen.getAllByRole('link', { name: 'Reports' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'Weekly' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'Settings' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'About' }).length).toBeGreaterThan(0)
@@ -164,11 +165,11 @@ describe('Header — tab navigation on dashboard page', () => {
   test('active tab has distinct active styling', () => {
     mockUseNavigation.mockImplementation(() => ({
       ...defaultNavigation(),
-      selectedTab: 'Reports',
+      selectedTab: 'Portfolio',
     }))
     render(<Header />)
-    const reportsButtons = screen.getAllByRole('button', { name: 'Reports' })
-    expect(reportsButtons.some((b) => b.className.includes('bg-forest-900'))).toBe(true)
+    const portfolioButtons = screen.getAllByRole('button', { name: 'Portfolio' })
+    expect(portfolioButtons.some((b) => b.className.includes('bg-forest-900'))).toBe(true)
   })
 
   test('clicking a tab calls setSelectedTab and does NOT push router when already on /', () => {
@@ -180,8 +181,8 @@ describe('Header — tab navigation on dashboard page', () => {
     }))
     mockUseRouter.mockImplementation(() => ({ push }))
     render(<Header />)
-    fireEvent.click(screen.getAllByRole('button', { name: 'Reports' })[0])
-    expect(setSelectedTab).toHaveBeenCalledWith('Reports')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Portfolio' })[0])
+    expect(setSelectedTab).toHaveBeenCalledWith('Portfolio')
     expect(push).not.toHaveBeenCalled()
   })
 })
@@ -201,9 +202,18 @@ describe('Header — tab navigation from non-dashboard page', () => {
     }))
     mockUseRouter.mockImplementation(() => ({ push }))
     render(<Header />)
-    fireEvent.click(screen.getAllByRole('button', { name: 'Reports' })[0])
-    expect(setSelectedTab).toHaveBeenCalledWith('Reports')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Portfolio' })[0])
+    expect(setSelectedTab).toHaveBeenCalledWith('Portfolio')
     expect(push).toHaveBeenCalledWith('/')
+  })
+
+  test('Reports link points to the standalone /reports page', () => {
+    render(<Header />)
+    const reportsLinks = screen.getAllByRole('link', { name: 'Reports' })
+    expect(reportsLinks.length).toBeGreaterThan(0)
+    reportsLinks.forEach(link => {
+      expect(link).toHaveAttribute('href', '/reports')
+    })
   })
 
   test('About link is highlighted when on /about', () => {

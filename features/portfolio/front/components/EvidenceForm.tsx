@@ -66,6 +66,7 @@ export function EvidenceForm({
   const [date, setDate] = useState(todayStr)
   const [type, setType] = useState<EvidenceType | ''>('')
   const [notes, setNotes] = useState('')
+  const [reflection, setReflection] = useState('')
   const [url, setUrl] = useState('')
   const [lessonTaskId, setLessonTaskId] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
@@ -110,6 +111,7 @@ export function EvidenceForm({
         date,
         type: type as EvidenceType,
         notes: notes.trim() || undefined,
+        reflection: reflection.trim() || undefined,
         url: url.trim() || undefined,
         lessonTaskId: lessonTaskId || undefined,
       }
@@ -120,6 +122,7 @@ export function EvidenceForm({
       setDate(todayStr())
       setType('')
       setNotes('')
+      setReflection('')
       setUrl('')
       setLessonTaskId('')
     } finally {
@@ -244,6 +247,20 @@ export function EvidenceForm({
           placeholder="Optional notes about this evidence"
         />
         {errors.notes && <p className="text-red-600 text-xs mt-1">{errors.notes}</p>}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="ev-reflection">
+          Parent reflection
+        </label>
+        <textarea
+          id="ev-reflection"
+          value={reflection}
+          onChange={e => setReflection(e.target.value)}
+          className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+          rows={3}
+          placeholder="Why does this show learning or growth?"
+        />
       </div>
 
       <div>

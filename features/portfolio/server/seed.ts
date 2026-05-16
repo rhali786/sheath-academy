@@ -10,6 +10,7 @@ export const SEED_EVIDENCE: EvidenceItem[] = [
     date: '2026-05-12',
     type: 'recitation',
     notes: 'Adam recited Al-Fatiha with proper tajweed. Excellent pronunciation.',
+    reflection: 'This shows steady memorisation progress and confidence reciting aloud.',
     createdBy: 'demo-parent',
     createdAt: '2026-05-12T09:00:00.000Z',
     updatedAt: '2026-05-12T09:00:00.000Z',
