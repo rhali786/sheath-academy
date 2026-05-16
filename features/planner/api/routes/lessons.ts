@@ -1,20 +1,64 @@
 import { NextResponse } from 'next/server'
-import type { ApiResponse, LessonTask } from '@/features/lib/types'
+import type { ApiResponse } from '@/features/lib/types'
+import type { LessonTask } from '@/features/planner/types'
 import { getLessons, createLessonTask } from '@/features/planner/server/service'
 
-export async function GET(request: Request): Promise<NextResponse<ApiResponse<LessonTask[]>>> {
+function formatLocalDate(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
+}
+
+function getWeekRange(weekStr: string): { start: string; end: string } | null {
+  // Use T00:00:00 (no Z) so the date is parsed in local time, not UTC
+  const d = new Date(`${weekStr}T00:00:00`)
+  if (isNaN(d.getTime())) return null
+
+  // Snap to Monday of the given week
+  const dayOfWeek = d.getDay()
+  const offsetToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+  const monday = new Date(d)
+  monday.setDate(d.getDate() + offsetToMonday)
+
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+
+  return { start: formatLocalDate(monday), end: formatLocalDate(sunday) }
+}
+
+export async function GET(request: Request): Promise<NextResponse<ApiResponse<LessonTask[] | null>>> {
   const url = new URL(request.url)
+  const week = url.searchParams.get('week')
   const childIds = url.searchParams.get('childIds')
   const subjectIds = url.searchParams.get('subjectIds')
 
-  // Parse comma-separated IDs into arrays
+  // Validate and parse week param
+  let weekRange: { start: string; end: string } | null = null
+  if (week) {
+    weekRange = getWeekRange(week)
+    if (!weekRange) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          data: null,
+          message: 'Invalid week parameter — expected YYYY-MM-DD',
+          timestamp: new Date().toISOString(),
+        },
+        { status: 400 }
+      )
+    }
+  }
+
   const childIdArray = childIds ? childIds.split(',').filter(Boolean) : undefined
   const subjectIdArray = subjectIds ? subjectIds.split(',').filter(Boolean) : undefined
 
-  // Get all lessons
   let lessons = getLessons()
 
-  // Apply filters
+  if (weekRange) {
+    lessons = lessons.filter(l => l.dueDate >= weekRange!.start && l.dueDate <= weekRange!.end)
+  }
+
   if (childIdArray && childIdArray.length > 0) {
     lessons = lessons.filter(l => childIdArray.includes(l.childId))
   }
@@ -36,7 +80,6 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<L
 
   const { childId, subjectId, title, dueDate, description } = body
 
-  // Validate required fields
   if (!childId || !subjectId || !title?.trim() || !dueDate) {
     return NextResponse.json(
       {
@@ -49,15 +92,14 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<L
     )
   }
 
-  // Create lesson (service validates childId and subjectId)
   const lesson = createLessonTask({
     childId,
     subjectId,
-    householdId: body.householdId || '', // TODO: Get from context
+    householdId: body.householdId || '',
     title: title.trim(),
     description: description?.trim() || undefined,
     dueDate,
-    isCompleted: false,
+    status: 'not_started',
     order: body.order || 0,
   })
 

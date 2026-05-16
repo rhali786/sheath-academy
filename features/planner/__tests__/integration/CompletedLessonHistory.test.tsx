@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { CompletedLessonHistory } from '@/features/planner/front/components/CompletedLessonHistory'
-import type { LessonTask } from '@/features/lib/types'
+import type { LessonTask } from '@/features/planner/types'
 
 jest.mock('@/features/planner/front/services/api', () => ({
   plannerApi: {
@@ -20,7 +20,7 @@ function makeLesson(overrides: Partial<LessonTask> = {}): LessonTask {
     householdId: 'hh_1',
     title: 'Math Lesson',
     dueDate: '2026-05-12',
-    isCompleted: true,
+    status: 'completed' as const,
     order: 1,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',

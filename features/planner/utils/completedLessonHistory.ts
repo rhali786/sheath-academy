@@ -1,4 +1,4 @@
-import type { LessonTask } from '@/features/lib/types'
+import type { LessonTask } from '@/features/planner/types'
 
 export interface LessonHistoryOptions {
   childId?: string
@@ -19,7 +19,7 @@ export function getCompletedLessonHistory(
   let result = lessons
 
   if (!showAll && !showPending) {
-    result = result.filter(l => l.isCompleted)
+    result = result.filter(l => l.status === 'completed')
   }
 
   if (childId) result = result.filter(l => l.childId === childId)

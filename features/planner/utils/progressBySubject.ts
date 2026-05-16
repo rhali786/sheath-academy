@@ -1,4 +1,4 @@
-import type { LessonTask } from '@/features/lib/types'
+import type { LessonTask } from '@/features/planner/types'
 
 export interface SubjectProgressSummary {
   childId: string
@@ -34,7 +34,7 @@ export function computeProgressBySubject(
   const summaries: SubjectProgressSummary[] = []
   for (const [key, group] of groups) {
     const [childId, subjectId] = key.split('|')
-    const completedCount = group.filter(l => l.isCompleted).length
+    const completedCount = group.filter(l => l.status === 'completed').length
     const plannedCount = group.length
     summaries.push({
       childId,

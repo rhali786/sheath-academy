@@ -1,5 +1,5 @@
 import { computeProgressBySubject } from '@/features/planner/utils/progressBySubject'
-import type { LessonTask } from '@/features/lib/types'
+import type { LessonTask } from '@/features/planner/types'
 
 function makeLesson(overrides: Partial<LessonTask> = {}): LessonTask {
   return {
@@ -9,7 +9,7 @@ function makeLesson(overrides: Partial<LessonTask> = {}): LessonTask {
     householdId: 'hh_1',
     title: 'Lesson',
     dueDate: '2026-05-12',
-    isCompleted: false,
+    status: 'not_started',
     order: 1,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
@@ -45,9 +45,9 @@ describe('computeProgressBySubject', () => {
 
   it('counts completed and pending correctly', () => {
     const lessons = [
-      makeLesson({ id: 'l1', dueDate: '2026-05-12', isCompleted: true }),
-      makeLesson({ id: 'l2', dueDate: '2026-05-13', isCompleted: true }),
-      makeLesson({ id: 'l3', dueDate: '2026-05-14', isCompleted: false }),
+      makeLesson({ id: 'l1', dueDate: '2026-05-12', status: 'completed' }),
+      makeLesson({ id: 'l2', dueDate: '2026-05-13', status: 'completed' }),
+      makeLesson({ id: 'l3', dueDate: '2026-05-14', status: 'not_started' }),
     ]
     const [row] = computeProgressBySubject(lessons, WEEK, null, NAMES.children, NAMES.subjects, 'week')
     expect(row.plannedCount).toBe(3)
@@ -57,18 +57,17 @@ describe('computeProgressBySubject', () => {
 
   it('calculates completionRate safely when plannedCount is zero', () => {
     const result = computeProgressBySubject([], WEEK, null, NAMES.children, NAMES.subjects, 'week')
-    // No rows → no division error
     expect(result).toEqual([])
   })
 
   it('completionRate is 0 when no lessons completed', () => {
-    const lessons = [makeLesson({ dueDate: '2026-05-12', isCompleted: false })]
+    const lessons = [makeLesson({ dueDate: '2026-05-12', status: 'not_started' })]
     const [row] = computeProgressBySubject(lessons, WEEK, null, NAMES.children, NAMES.subjects, 'week')
     expect(row.completionRate).toBe(0)
   })
 
   it('completionRate is 1 when all completed', () => {
-    const lessons = [makeLesson({ dueDate: '2026-05-12', isCompleted: true })]
+    const lessons = [makeLesson({ dueDate: '2026-05-12', status: 'completed' })]
     const [row] = computeProgressBySubject(lessons, WEEK, null, NAMES.children, NAMES.subjects, 'week')
     expect(row.completionRate).toBe(1)
   })
@@ -126,8 +125,8 @@ describe('computeProgressBySubject', () => {
 
   it('works correctly over school-year date range', () => {
     const lessons = [
-      makeLesson({ id: 'l1', dueDate: '2025-09-01', isCompleted: true }),
-      makeLesson({ id: 'l2', dueDate: '2026-03-15', isCompleted: false }),
+      makeLesson({ id: 'l1', dueDate: '2025-09-01', status: 'completed' }),
+      makeLesson({ id: 'l2', dueDate: '2026-03-15', status: 'not_started' }),
       makeLesson({ id: 'l3', dueDate: '2026-07-01' }), // outside year
     ]
     const [row] = computeProgressBySubject(lessons, YEAR, null, NAMES.children, NAMES.subjects, 'year')

@@ -69,6 +69,14 @@ jest.mock('@/features/planner/front/services/api', () => ({
   },
 }))
 
+jest.mock('@/features/attendance/front/services/api', () => ({
+  attendanceApi: {
+    getSummary: jest.fn(() => Promise.resolve({
+      data: { childId: 'c1', totalPresent: 0, totalAbsent: 0, totalPartial: 0, totalRecorded: 0 },
+    })),
+  },
+}))
+
 beforeAll(() => {
   // JSDOM: Tailwind `md:` nav uses matchMedia; default viewport hides desktop tabs.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

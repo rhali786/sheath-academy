@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { plannerApi } from '@/features/planner/front/services/api'
-import type { LessonTask } from '@/features/lib/types'
+import type { LessonTask } from '@/features/planner/types'
 import type { LessonHistoryOptions } from '@/features/planner/utils/completedLessonHistory'
 
 interface Props {

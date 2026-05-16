@@ -248,3 +248,42 @@ describe('Header — Weekly nav link', () => {
     expect(weeklyLink.className).not.toContain('bg-forest-900')
   })
 })
+
+describe('Header — Lessons nav link', () => {
+  beforeEach(() => {
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
+    mockUsePathname.mockReturnValue('/')
+  })
+
+  test('Desktop: Lessons link points to /lessons', () => {
+    render(<Header />)
+    const lessonsLinks = screen.getAllByRole('link', { name: 'Lessons' })
+    expect(lessonsLinks.length).toBeGreaterThan(0)
+    lessonsLinks.forEach((link) => {
+      expect(link).toHaveAttribute('href', '/lessons')
+    })
+  })
+
+  test('Mobile: menu includes Lessons link', () => {
+    mockUsePathname.mockReturnValue('/')
+    render(<Header />)
+    // Open the mobile menu
+    fireEvent.click(screen.getByRole('button', { name: /open menu/i }))
+    const lessonsLinks = screen.getAllByRole('link', { name: 'Lessons' })
+    expect(lessonsLinks.length).toBeGreaterThan(0)
+  })
+
+  test('Mobile: clicking Lessons closes the menu', () => {
+    render(<Header />)
+    // Open the mobile menu
+    fireEvent.click(screen.getByRole('button', { name: /open menu/i }))
+    expect(screen.getByRole('button', { name: /close menu/i })).toBeInTheDocument()
+
+    // Click lessons link (mobile one is a Link with onClick to close)
+    const allLessonsLinks = screen.getAllByRole('link', { name: 'Lessons' })
+    // Find the one inside the mobile menu (last one, or trigger a click)
+    fireEvent.click(allLessonsLinks[allLessonsLinks.length - 1])
+    // Menu should be closed — hamburger should say "Open menu"
+    expect(screen.getByRole('button', { name: /open menu/i })).toBeInTheDocument()
+  })
+})

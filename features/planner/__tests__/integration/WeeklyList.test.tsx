@@ -2,6 +2,11 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
 import { WeeklyList } from '@/features/planner/front/components/WeeklyList'
 import { PlannerContext } from '@/features/planner/front/context/PlannerContext'
+
+const mockPush = jest.fn()
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
+}))
 import type { LessonTask } from '@/features/planner/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
@@ -24,7 +29,7 @@ const mockLessons: LessonTask[] = [
     title: 'Math lesson 1',
     description: 'Algebra basics',
     dueDate: '2026-05-12',
-    isCompleted: false,
+    status: 'not_started' as const,
     order: 1,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
@@ -104,5 +109,40 @@ describe('WeeklyList (mobile)', () => {
 
     const weekendSections = container.querySelectorAll('.opacity-60')
     expect(weekendSections.length).toBeGreaterThan(0)
+  })
+
+  it('shows resolved subject name, not raw subjectId', () => {
+    renderList(mockLessons)
+
+    const buttons = screen.getAllByRole('button')
+    const tuesdayButton = buttons.find(btn => btn.textContent?.includes('Tuesday'))
+    fireEvent.click(tuesdayButton!)
+
+    expect(screen.getByText('Math')).toBeInTheDocument()
+    expect(screen.queryByText('subj_001')).not.toBeInTheDocument()
+  })
+
+  it('shows resolved child name, not raw childId', () => {
+    renderList(mockLessons)
+
+    const buttons = screen.getAllByRole('button')
+    const tuesdayButton = buttons.find(btn => btn.textContent?.includes('Tuesday'))
+    fireEvent.click(tuesdayButton!)
+
+    expect(screen.getByText('Adam')).toBeInTheDocument()
+    expect(screen.queryByText('child_001')).not.toBeInTheDocument()
+  })
+
+  it('clicking a lesson card navigates to the edit page', () => {
+    renderList(mockLessons)
+
+    const buttons = screen.getAllByRole('button')
+    const tuesdayButton = buttons.find(btn => btn.textContent?.includes('Tuesday'))
+    fireEvent.click(tuesdayButton!)
+
+    const lessonCard = screen.getByText('Math lesson 1').closest('div[class*="bg-white"]')
+    fireEvent.click(lessonCard!)
+
+    expect(mockPush).toHaveBeenCalledWith('/lessons?editId=lesson_001')
   })
 })

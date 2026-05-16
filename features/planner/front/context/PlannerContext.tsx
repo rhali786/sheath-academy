@@ -1,10 +1,13 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { LessonTask } from '../../types'
 import { plannerApi } from '../services/api'
 import type { StudentProfile, ApiResponse } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
+import { getWeekStartDate } from '../utils/weekDate'
+
+export { getWeekStartDate }
 
 interface PlannerContextType {
   lessons: LessonTask[]
@@ -19,6 +22,7 @@ interface PlannerContextType {
   weekStartDay: 'Monday' | 'Sunday'
   children: StudentProfile[]
   subjects: SubjectCourse[]
+  refreshLessons?: () => void
 }
 
 export const PlannerContext = React.createContext<PlannerContextType | undefined>(undefined)
@@ -29,14 +33,6 @@ export function usePlanner() {
     throw new Error('usePlanner must be used within PlannerProvider')
   }
   return context
-}
-
-function getWeekStartDate(date: Date, weekStartDay: 'Monday' | 'Sunday'): string {
-  const d = new Date(date)
-  const dayOfWeek = d.getDay()
-  const offset = weekStartDay === 'Monday' ? dayOfWeek === 0 ? -6 : 1 - dayOfWeek : dayOfWeek
-  d.setDate(d.getDate() - offset)
-  return d.toISOString().split('T')[0]
 }
 
 function getApiBaseUrl(): string {
@@ -65,6 +61,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const [subjectsList, setSubjectsList] = useState<SubjectCourse[]>([])
   const [allChildrenIds, setAllChildrenIds] = useState<string[]>([])
   const [allSubjectIds, setAllSubjectIds] = useState<string[]>([])
+  const [lessonsFetchKey, setLessonsFetchKey] = useState(0)
 
   // Initial load: fetch household profile, children, and subjects
   useEffect(() => {
@@ -73,20 +70,17 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(true)
         setError(null)
 
-        // Fetch household profile for weekStartDay
         const profileResponse = await get<unknown>('/api/household/profile')
         const profile = profileResponse.data as any
         const dayStart = profile?.weekStartDay === 'Sunday' ? 'Sunday' : 'Monday'
         setWeekStartDay(dayStart)
 
-        // Fetch children
         const childrenResponse = await get<StudentProfile[]>('/api/children/children')
         setChildrenList(childrenResponse.data)
         const childIds = childrenResponse.data.map(c => c.id)
         setAllChildrenIds(childIds)
         setSelectedChildIds(childIds)
 
-        // Fetch subjects
         const subjectsResponse = await get<SubjectCourse[]>('/api/subjects')
         setSubjectsList(subjectsResponse.data)
         const subjectIds = subjectsResponse.data.map(s => s.id)
@@ -130,7 +124,11 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     }
 
     fetchLessons()
-  }, [selectedWeek, selectedChildIds, selectedSubjectIds, weekStartDay])
+  }, [selectedWeek, selectedChildIds, selectedSubjectIds, weekStartDay, lessonsFetchKey])
+
+  const refreshLessons = useCallback(() => {
+    setLessonsFetchKey(k => k + 1)
+  }, [])
 
   const value: PlannerContextType = {
     lessons,
@@ -145,6 +143,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     weekStartDay,
     children: childrenList,
     subjects: subjectsList,
+    refreshLessons,
   }
 
   return <PlannerContext.Provider value={value}>{children}</PlannerContext.Provider>

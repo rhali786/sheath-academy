@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
-import type { ApiResponse, LessonTask } from '@/features/lib/types'
-import { getLessonTask, updateLessonTask, completeLessonTask } from '@/features/planner/server/service'
+import type { ApiResponse } from '@/features/lib/types'
+import type { LessonTask } from '@/features/planner/types'
+import { getLessonTask, updateLessonTask, completeLessonTask, deleteLessonTask } from '@/features/planner/server/service'
 
 export async function GET(id: string): Promise<NextResponse<ApiResponse<LessonTask | null>>> {
   const lesson = getLessonTask(id)
@@ -76,6 +77,29 @@ export async function COMPLETE(id: string): Promise<NextResponse<ApiResponse<Les
     status: 'success',
     data: completed,
     message: 'Lesson marked as complete',
+    timestamp: new Date().toISOString(),
+  })
+}
+
+export async function DELETE(id: string): Promise<NextResponse<ApiResponse<null>>> {
+  const deleted = deleteLessonTask(id)
+
+  if (!deleted) {
+    return NextResponse.json(
+      {
+        status: 'error',
+        data: null,
+        message: 'Lesson not found',
+        timestamp: new Date().toISOString(),
+      },
+      { status: 404 }
+    )
+  }
+
+  return NextResponse.json({
+    status: 'success',
+    data: null,
+    message: 'Lesson deleted',
     timestamp: new Date().toISOString(),
   })
 }

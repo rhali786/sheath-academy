@@ -127,6 +127,26 @@ export function Header() {
             Weekly
           </Link>
           <Link
+            href="/lessons"
+            className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
+              pathname.startsWith('/lessons')
+                ? 'bg-forest-900 text-white'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            Lessons
+          </Link>
+          <Link
+            href="/attendance"
+            className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
+              pathname.startsWith('/attendance')
+                ? 'bg-forest-900 text-white'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            Attendance
+          </Link>
+          <Link
             href="/settings"
             className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
               pathname.startsWith('/settings')
@@ -185,6 +205,28 @@ export function Header() {
               }`}
             >
               Weekly
+            </Link>
+            <Link
+              href="/lessons"
+              onClick={() => setMenuOpen(false)}
+              className={`block px-4 py-3 text-sm font-medium transition-colors ${
+                pathname.startsWith('/lessons')
+                  ? 'bg-forest-50 text-forest-900'
+                  : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              Lessons
+            </Link>
+            <Link
+              href="/attendance"
+              onClick={() => setMenuOpen(false)}
+              className={`block px-4 py-3 text-sm font-medium transition-colors ${
+                pathname.startsWith('/attendance')
+                  ? 'bg-forest-50 text-forest-900'
+                  : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              Attendance
             </Link>
             <Link
               href="/settings"

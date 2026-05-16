@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { SubjectProgressCard } from '@/features/dashboard/front/components/SubjectProgressCard'
 import { RecentLessonsCard } from '@/features/dashboard/front/components/RecentLessonsCard'
 import type { SubjectProgressSummary } from '@/features/planner/utils/progressBySubject'
-import type { LessonTask } from '@/features/lib/types'
+import type { LessonTask } from '@/features/planner/types'
 
 jest.mock('@/features/planner/front/services/api', () => ({
   plannerApi: {
@@ -38,7 +38,7 @@ function makeLesson(id: string, title: string): LessonTask {
     householdId: 'hh_1',
     title,
     dueDate: '2026-05-12',
-    isCompleted: true,
+    status: 'completed' as const,
     order: 1,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
