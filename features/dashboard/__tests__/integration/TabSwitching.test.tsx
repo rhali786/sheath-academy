@@ -62,6 +62,21 @@ jest.mock('@/features/children/front/services/api', () => ({
   },
 }))
 
+jest.mock('@/features/planner/front/services/api', () => ({
+  plannerApi: {
+    getProgress: jest.fn(() => Promise.resolve([])),
+    getHistory: jest.fn(() => Promise.resolve([])),
+  },
+}))
+
+jest.mock('@/features/attendance/front/services/api', () => ({
+  attendanceApi: {
+    getSummary: jest.fn(() => Promise.resolve({
+      data: { childId: 'c1', totalPresent: 0, totalAbsent: 0, totalPartial: 0, totalRecorded: 0 },
+    })),
+  },
+}))
+
 beforeAll(() => {
   // JSDOM: Tailwind `md:` nav uses matchMedia; default viewport hides desktop tabs.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -109,12 +124,14 @@ describe('Tab switching — NavigationContext regression', () => {
     })
   })
 
-  test('Reports tab shows Reports content', async () => {
+  test('Portfolio tab shows Portfolio content', async () => {
     renderWithShell()
     await waitForDashboard()
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Reports' })[0])
-    expect(screen.getByText('Detailed reports coming soon.')).toBeInTheDocument()
+    fireEvent.click(screen.getAllByRole('button', { name: 'Portfolio' })[0])
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Portfolio' })).toBeInTheDocument()
+    })
   })
 
   test('Settings link is present in navigation', async () => {

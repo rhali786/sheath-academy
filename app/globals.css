@@ -60,3 +60,25 @@ button {
 .badge-gray {
   @apply bg-slate-100 text-slate-600;
 }
+
+@media print {
+  body {
+    @apply bg-white text-black;
+  }
+
+  header,
+  .reports-toolbar,
+  .reports-controls {
+    display: none !important;
+  }
+
+  .reports-page {
+    @apply bg-white;
+  }
+
+  .print-report {
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}

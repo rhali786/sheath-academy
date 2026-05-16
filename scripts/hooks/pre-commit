@@ -1,2 +1,9 @@
 #!/bin/sh
-# Version bumping is handled by the commit-msg hook based on message prefix.
+# Bumps the patch version in package.json and stages it so the bump lands in
+# the same commit. Must run in pre-commit — that is the only hook early enough
+# for `git add` to be included in the commit tree.
+#
+# Always bumps patch. Major/minor bumps must be done manually before committing.
+
+node scripts/bump-version.cjs patch
+git add package.json
