@@ -26,19 +26,19 @@ const pains = [
 const wave1 = [
   {
     label: '1A — Foundation',
-    description: 'Parent account, household workspace, child profiles, subject setup, school year, dashboard shell.',
+    description: 'Magic-link sign-in, household workspace, child profiles, subject setup, school year config, dashboard shell.',
   },
   {
     label: '1B — Planning spine',
-    description: "Weekly planner, lesson creation, lesson status states, recurring patterns, today's lessons card.",
+    description: "Weekly planner, per-child lesson scheduling, drag-to-reschedule, lesson status states, today's lessons card.",
   },
   {
     label: '1C — Records spine',
-    description: 'Attendance by child and date, progress by subject, completed lesson history, dashboard cards.',
+    description: 'Attendance by child and date, missing-day detection, progress by subject, completed lesson history, dashboard cards.',
   },
   {
-    label: '1D — Proof and export',
-    description: 'Portfolio evidence, file and photo capture, records report, export, review checklist.',
+    label: '1D — Proof and records',
+    description: 'Portfolio evidence (text notes, URL links), parent reflections, records report, browser print, advisory review checklist.',
   },
 ]
 
@@ -222,7 +222,7 @@ export function AboutPage() {
           <div className="space-y-2">
             {changelog.map((entry) => (
               <div key={entry.version} className="bg-white rounded-xl px-5 py-4 shadow-sm flex items-start gap-4">
-                <span className="text-xs font-bold text-forest-900 tabular-nums mt-0.5 w-10 flex-shrink-0">{entry.version}</span>
+                <span className="text-xs font-bold text-forest-900 tabular-nums mt-0.5 w-16 flex-shrink-0">{entry.version}</span>
                 <div>
                   <p className="text-sm font-semibold text-slate-900">{entry.label}</p>
                   <p className="text-xs text-slate-500 mt-0.5">{entry.detail}</p>
