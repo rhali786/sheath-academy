@@ -39,6 +39,9 @@ export function EvidenceList({ items, childMap, subjectMap, loading, error }: Pr
           subjectName={subjectMap[item.subjectId] ?? item.subjectId}
         />
       ))}
+      {items.length === 50 && (
+        <p className="text-xs text-slate-400 text-center pt-1">Showing 50 most recent items.</p>
+      )}
     </div>
   )
 }
