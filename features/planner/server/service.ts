@@ -72,6 +72,10 @@ export function deleteLessonTask(id: string): boolean {
   return lessonsStore.remove(id)
 }
 
+// Lesson history is preserved for reporting; no isActive field on LessonTask.
+export function archiveByChildId(_childId: string): void {}
+export function archiveBySubjectId(_subjectId: string): void {}
+
 export function resetStore(): void {
   lessonsStore.reset(SEED_LESSONS)
   resetIdCounter()

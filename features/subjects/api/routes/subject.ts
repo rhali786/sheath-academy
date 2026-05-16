@@ -7,6 +7,7 @@ import {
   archiveSubject,
   restoreSubject,
 } from '@/features/subjects/server/service'
+import { archiveBySubjectId as archivePlannerBySubjectId } from '@/features/planner/server/service'
 
 interface ApiResponse<T> {
   status: 'success' | 'error'
@@ -110,6 +111,7 @@ export async function ARCHIVE(id: string): Promise<NextResponse> {
   }
 
   const archived = archiveSubject(id)
+  archivePlannerBySubjectId(id)
 
   return NextResponse.json({
     status: 'success',

@@ -1,16 +1,84 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, DashboardRecord } from '@/features/lib/types'
-import { getRecords } from '@/features/dashboard/server/service'
+import { getRecords as getAttendanceRecords } from '@/features/attendance/server/service'
+import { getLessons } from '@/features/planner/server/service'
+import { listEvidenceItems } from '@/features/portfolio/server/service'
+import { getQuranSessions } from '@/features/dashboard/server/service'
+import { getStudentProfiles } from '@/features/children/server/service'
+
+function getCurrentWeekRange(): { start: string; end: string } {
+  const today = new Date()
+  const dow = today.getDay()
+  const daysFromMonday = dow === 0 ? 6 : dow - 1
+  const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysFromMonday)
+  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6)
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return { start: fmt(monday), end: fmt(sunday) }
+}
+
+function weekdayCount(start: string, end: string): number {
+  const s = new Date(`${start}T00:00:00Z`)
+  const e = new Date(`${end}T00:00:00Z`)
+  let count = 0
+  const cur = new Date(s)
+  while (cur <= e) {
+    const day = cur.getUTCDay()
+    if (day !== 0 && day !== 6) count++
+    cur.setUTCDate(cur.getUTCDate() + 1)
+  }
+  return count
+}
 
 export async function GET(): Promise<NextResponse<ApiResponse<DashboardRecord[]>>> {
-  const records = getRecords()
+  const { start, end } = getCurrentWeekRange()
 
-  const response: ApiResponse<DashboardRecord[]> = {
+  const activeChildren = getStudentProfiles().filter(p => p.isActive)
+  const maxAttendance = activeChildren.length * weekdayCount(start, end)
+
+  const weekAttendance = getAttendanceRecords({ startDate: start, endDate: end })
+  const weekLessons = getLessons().filter(l => l.dueDate >= start && l.dueDate <= end)
+  const completedLessons = weekLessons.filter(l => l.status === 'completed')
+  const weekEvidence = listEvidenceItems({ startDate: start, endDate: end })
+  const weekQuran = getQuranSessions().filter(s => s.date >= start && s.date <= end)
+
+  const records: DashboardRecord[] = [
+    {
+      id: 'record_attendance',
+      title: 'Attendance',
+      count: weekAttendance.length,
+      maxCount: maxAttendance > 0 ? maxAttendance : undefined,
+      icon: 'CheckCircle',
+      viewButton: 'View',
+    },
+    {
+      id: 'record_progress',
+      title: 'Progress updates',
+      count: completedLessons.length,
+      maxCount: weekLessons.length > 0 ? weekLessons.length : undefined,
+      icon: 'TrendingUp',
+      viewButton: 'View',
+    },
+    {
+      id: 'record_portfolio',
+      title: 'Portfolio evidence',
+      count: weekEvidence.length,
+      icon: 'Folder',
+      viewButton: 'View',
+    },
+    {
+      id: 'record_quran',
+      title: 'Quran sessions',
+      count: weekQuran.length,
+      icon: 'BookOpen',
+      viewButton: 'View',
+    },
+  ]
+
+  return NextResponse.json({
     status: 'success',
     data: records,
     message: 'Records retrieved',
     timestamp: new Date().toISOString(),
-  }
-
-  return NextResponse.json(response)
+  })
 }

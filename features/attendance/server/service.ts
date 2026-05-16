@@ -97,6 +97,9 @@ export function getAttendanceSummary(childId: string, startDate?: string, endDat
   }
 }
 
+// Attendance records are historical and preserved for reporting; no isActive field.
+export function archiveByChildId(_childId: string): void {}
+
 export function resetStore(): void {
   attendanceStore.reset(SEED_ATTENDANCE)
   resetIdCounter()

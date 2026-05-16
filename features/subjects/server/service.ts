@@ -64,6 +64,10 @@ export function archiveSubject(id: string): SubjectCourse | null {
   return subjectsStore.update(id, { isActive: false })
 }
 
+export function archiveByChildId(childId: string): void {
+  getSubjects(childId).forEach(s => subjectsStore.update(s.id, { isActive: false }))
+}
+
 export function restoreSubject(id: string): SubjectCourse | null {
   if (!subjectsStore.getById(id)) return null
   return subjectsStore.update(id, { isActive: true })

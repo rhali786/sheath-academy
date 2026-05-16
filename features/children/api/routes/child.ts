@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, StudentProfile } from '@/features/lib/types'
 import { getStudentProfile, updateStudentProfile, archiveStudentProfile, restoreStudentProfile } from '@/features/children/server/service'
+import { archiveByChildId as archiveSubjectsByChildId } from '@/features/subjects/server/service'
+import { archiveByChildId as archiveAttendanceByChildId } from '@/features/attendance/server/service'
+import { archiveByChildId as archivePlannerByChildId } from '@/features/planner/server/service'
+import { archiveByChildId as archivePortfolioByChildId } from '@/features/portfolio/server/service'
 
 export async function GET(id: string): Promise<NextResponse<ApiResponse<StudentProfile | null>>> {
   const profile = getStudentProfile(id)
@@ -73,6 +77,10 @@ export async function ARCHIVE(id: string): Promise<NextResponse> {
   }
 
   const archived = archiveStudentProfile(id)
+  archiveSubjectsByChildId(id)
+  archiveAttendanceByChildId(id)
+  archivePlannerByChildId(id)
+  archivePortfolioByChildId(id)
 
   return NextResponse.json({
     status: 'success',
