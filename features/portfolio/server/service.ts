@@ -1,4 +1,4 @@
-import type { EvidenceItem, CreateEvidenceItemInput } from '../types'
+import type { EvidenceItem, CreateEvidenceItemInput, EvidenceType } from '../types'
 import { evidenceStore } from './store'
 import { SEED_EVIDENCE } from './seed'
 import { generateEvidenceId, resetIdCounter } from './ids'
@@ -14,6 +14,9 @@ export function listEvidenceItems(filters?: {
   childId?: string
   subjectId?: string
   lessonTaskId?: string
+  type?: EvidenceType
+  startDate?: string
+  endDate?: string
 }): EvidenceItem[] {
   let items = evidenceStore.getAll()
   if (filters?.childId) {
@@ -25,7 +28,19 @@ export function listEvidenceItems(filters?: {
   if (filters?.lessonTaskId) {
     items = items.filter(i => i.lessonTaskId === filters.lessonTaskId)
   }
-  return items
+  if (filters?.type) {
+    items = items.filter(i => i.type === filters.type)
+  }
+  if (filters?.startDate) {
+    items = items.filter(i => i.date >= filters.startDate!)
+  }
+  if (filters?.endDate) {
+    items = items.filter(i => i.date <= filters.endDate!)
+  }
+  const sorted = [...items].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )
+  return sorted.slice(0, 50)
 }
 
 export function getEvidenceItemById(id: string): EvidenceItem | undefined {
@@ -48,6 +63,7 @@ export function createEvidenceItem(
     date: input.date,
     type: input.type,
     notes: input.notes,
+    reflection: input.reflection?.trim() || undefined,
     url: input.url,
     lessonTaskId: input.lessonTaskId,
     createdBy: 'system',
@@ -73,6 +89,7 @@ export function updateEvidenceItem(
     date: patch.date ?? existing.date,
     type: patch.type ?? existing.type,
     notes: patch.notes !== undefined ? patch.notes : existing.notes,
+    reflection: patch.reflection !== undefined ? patch.reflection?.trim() || undefined : existing.reflection,
     url: patch.url !== undefined ? patch.url : existing.url,
     lessonTaskId: patch.lessonTaskId !== undefined ? patch.lessonTaskId : existing.lessonTaskId,
   }

@@ -8,6 +8,7 @@ export interface EvidenceItem {
   date: string
   type: EvidenceType
   notes?: string
+  reflection?: string
   url?: string
   lessonTaskId?: string
   createdBy: string
@@ -22,6 +23,7 @@ export interface CreateEvidenceItemInput {
   date: string
   type: EvidenceType
   notes?: string
+  reflection?: string
   url?: string
   lessonTaskId?: string
 }

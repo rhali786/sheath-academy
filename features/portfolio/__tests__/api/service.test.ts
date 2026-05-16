@@ -186,3 +186,51 @@ describe('deleteEvidenceItem', () => {
     expect(deleteEvidenceItem('nope')).toBe(false)
   })
 })
+
+describe('Feature 31 — reflection field', () => {
+  it('createEvidenceItem stores reflection when provided', () => {
+    const { item, errors } = createEvidenceItem(
+      validInput({ reflection: 'This shows mastery of the topic.' })
+    )
+    expect(errors).toHaveLength(0)
+    expect(item?.reflection).toBe('This shows mastery of the topic.')
+  })
+})
+
+describe('Feature 32 — extended filters and 50-item limit', () => {
+  it('listEvidenceItems filters by type', () => {
+    createEvidenceItem(validInput({ title: 'A note', type: 'note' }))
+    createEvidenceItem(validInput({ title: 'A link', type: 'link', url: 'https://example.com' }))
+    const notes = listEvidenceItems({ type: 'note' })
+    notes.forEach(i => expect(i.type).toBe('note'))
+    expect(notes.length).toBeGreaterThan(0)
+    const links = listEvidenceItems({ type: 'link' })
+    links.forEach(i => expect(i.type).toBe('link'))
+  })
+
+  it('listEvidenceItems filters by startDate', () => {
+    createEvidenceItem(validInput({ title: 'Early', date: '2026-01-01' }))
+    createEvidenceItem(validInput({ title: 'Late', date: '2026-06-01' }))
+    const items = listEvidenceItems({ startDate: '2026-06-01' })
+    items.forEach(i => expect(i.date >= '2026-06-01').toBe(true))
+    expect(items.some(i => i.title === 'Late')).toBe(true)
+    expect(items.some(i => i.title === 'Early')).toBe(false)
+  })
+
+  it('listEvidenceItems filters by endDate', () => {
+    createEvidenceItem(validInput({ title: 'Early', date: '2026-01-01' }))
+    createEvidenceItem(validInput({ title: 'Late', date: '2026-06-01' }))
+    const items = listEvidenceItems({ endDate: '2026-01-31' })
+    items.forEach(i => expect(i.date <= '2026-01-31').toBe(true))
+    expect(items.some(i => i.title === 'Early')).toBe(true)
+    expect(items.some(i => i.title === 'Late')).toBe(false)
+  })
+
+  it('listEvidenceItems returns max 50 items', () => {
+    for (let i = 0; i < 55; i++) {
+      createEvidenceItem(validInput({ title: `Item ${i}` }))
+    }
+    const items = listEvidenceItems()
+    expect(items.length).toBeLessThanOrEqual(50)
+  })
+})
