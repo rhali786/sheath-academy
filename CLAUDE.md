@@ -49,6 +49,52 @@ If any layer boundary is unverified in the plan, do not proceed to implementatio
 
 ---
 
+## Pre-implementation audit (obligatory before writing any code)
+
+Run these six checks at the start of every implementation session, before touching any file. They catch the class of bugs that only surface during manual testing or after a PR lands on master. Skipping any step is not optional.
+
+**1. Sync with master**
+
+```bash
+git fetch origin && git merge origin/master
+```
+
+Note every conflict and every file that changed. Read the diff for any type, store, or API file that your plan touches — master may have renamed fields, added routes, or changed schemas since the plan was written.
+
+**2. Read the actual type files**
+
+For every type you plan to use, open the file that defines it and read the exact field names. Do not rely on session memory, plan summaries, or grep snippets. Pay attention to:
+- Which file owns the type (`features/planner/types.ts` vs `features/lib/types.ts` — they can diverge)
+- Whether a field has been renamed or replaced (e.g. `isCompleted: boolean` → `status: LessonTaskStatus`)
+- Whether there is a duplicate definition and which one the existing code imports
+
+**3. Check import paths before writing new imports**
+
+Grep for how existing code in the same feature imports the type or module you plan to use:
+
+```bash
+grep -r "from '@/features/planner/types'" features/ --include="*.ts" --include="*.tsx" -l
+```
+
+Use the same path. Cross-feature imports at the client layer (a dashboard card calling `plannerApi`) are fine — they are the established pattern. Cross-feature imports at the server layer (a route handler importing another feature's store directly) are not.
+
+**4. Trace the data path without creating new access**
+
+For each piece of data the feature needs, identify the existing service function that returns it and call that function. Do not reach into another feature's store directly from a route handler. If no service function exists yet, create one in the owning feature before wiring the route.
+
+**5. Verify route wiring**
+
+Before adding a new endpoint, confirm:
+- The feature router (`features/<feature>/api/router.ts`) has a case for the new slug
+- `app/api/[...slug]/route.ts` delegates to the feature router
+- No existing route uses the same slug pattern (collision produces silent wrong-handler bugs)
+
+**6. List every file to touch — read it first**
+
+Before editing any file, read it. State what you found and exactly what you will change and why. This prevents overwriting in-progress work, resolving a conflict in the wrong direction, or missing a dependency that the existing code already satisfies.
+
+---
+
 ## Commands
 
 | Command | Purpose |
