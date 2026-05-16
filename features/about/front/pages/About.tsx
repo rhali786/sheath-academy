@@ -44,9 +44,24 @@ const wave1 = [
 
 const changelog = [
   {
+    version: '0.35.0',
+    label: 'Portfolio completion + Reports spine (current)',
+    detail: 'F31–F35: Parent reflection on evidence. Portfolio filters by child, subject, type, and date range. Separate /reports page with sectioned records summary, print-optimised output, and an advisory records review checklist. No PDF generation — browser print only.',
+  },
+  {
+    version: '0.30.0',
+    label: 'Portfolio evidence',
+    detail: 'F27–F30: Evidence data model, API, and UI. Parents can capture text note and URL evidence linked to a child, subject, and lesson. Evidence appears in a dedicated Portfolio tab. Safe URL rendering — http/https only.',
+  },
+  {
+    version: '0.26.0',
+    label: 'Records spine',
+    detail: 'F24–F26: Progress by subject with per-subject completion rates. Completed lesson history per child and subject. Records dashboard cards surface progress and history at a glance.',
+  },
+  {
     version: '0.10.0',
-    label: 'Weekly planner (current)',
-    detail: 'Full Wave 1B weekly planning: per-child lesson scheduling across the week, linked child/subject filters, week start day preference in household settings. Planner integrated into app routing with its own tab.',
+    label: 'Weekly planner',
+    detail: 'F11: Per-child lesson scheduling across the week. WeekNavigator and weekly lesson list. Linked child/subject filters. Week start day preference in household settings. Planner integrated into app routing with its own tab.',
   },
   {
     version: '0.5.1',
@@ -56,17 +71,12 @@ const changelog = [
   {
     version: '0.4.0',
     label: 'Child profiles',
-    detail: 'Child data model, API routes, and management UI. Parents can add, edit, and remove children from the household. Child list drives the per-child progress and Quran tracking sections.',
+    detail: 'F4: Child data model, API routes, and management UI. Parents can add, edit, and remove children from the household. Child list drives the per-child progress and Quran tracking sections.',
   },
   {
     version: '0.3.4',
     label: 'Worklog public + household fixes',
     detail: 'AppShell owns Header — removed duplicate rendering from Dashboard. Household settings restored to full rename form. Worklog linked from About footer. Semantic versioning via pre-commit hook keeps package.json in sync across commits.',
-  },
-  {
-    version: '0.3.0',
-    label: 'Worklog page',
-    detail: 'Week 1 work summary slide — responsive canvas showing 9 work sessions, 17h logged, outcomes, and takeaways. Publicly accessible at /worklog (no sign-in required) with subtle link from the dashboard.',
   },
   {
     version: '0.1.17',
@@ -158,7 +168,7 @@ export function AboutPage() {
         {/* Wave 1 features */}
         <section>
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Wave 1 — Homeschool MVP</p>
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">Built in dependency order.</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">Complete. All 35 features shipped.</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {wave1.map((w) => (
               <div key={w.label} className="bg-white rounded-xl p-5 shadow-sm">
