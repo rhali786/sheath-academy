@@ -160,7 +160,7 @@ describe('AttendancePage', () => {
     mockGetRecords.mockResolvedValue(ok([makeRecord({ notes: 'Worked on fractions' })]))
     render(<AttendancePage />)
     await waitFor(() => {
-      expect(screen.getByTitle('Has notes')).toBeInTheDocument()
+      expect(screen.getByRole('img', { name: 'Has notes' })).toBeInTheDocument()
     })
   })
 
@@ -168,7 +168,7 @@ describe('AttendancePage', () => {
     mockGetRecords.mockResolvedValue(ok([makeRecord({ notes: undefined })]))
     render(<AttendancePage />)
     await waitFor(() => {
-      expect(screen.queryByTitle('Has notes')).not.toBeInTheDocument()
+      expect(screen.queryByRole('img', { name: 'Has notes' })).not.toBeInTheDocument()
     })
   })
 })
