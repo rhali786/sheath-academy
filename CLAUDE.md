@@ -95,6 +95,164 @@ Before editing any file, read it. State what you found and exactly what you will
 
 ---
 
+## Type ownership and data-access ownership
+
+### Type ownership rule
+
+New domain types belong in the owning feature folder:
+
+```
+features/<feature>/types.ts
+```
+
+Examples:
+- Planner-owned lesson/task types → `features/planner/types.ts`
+- Attendance-owned attendance types → `features/attendance/types.ts`
+- Subject/course types → `features/subjects/types.ts`
+- Portfolio evidence types → `features/portfolio/types.ts`
+- Report/export/checklist types → the owning reports/records feature folder
+
+Do **not** add new feature-domain types to `features/lib/types.ts` unless the type is truly shared infrastructure or an intentionally app-wide foundation type.
+
+Use `features/lib/types.ts` only for shared infrastructure contracts and foundational app-wide models, such as:
+- `ApiResponse`
+- `Workspace`
+- `HouseholdProfile`
+- `StudentProfile` until intentionally migrated
+- shared chart/UI data contracts
+- temporary legacy dashboard contracts
+
+If a feature needs another feature's domain type, import it from the owning feature. Do not duplicate it.
+
+**Correct pattern:**
+```ts
+import type { LessonTask } from '@/features/planner/types'
+import type { SubjectCourse } from '@/features/subjects/types'
+import type { AttendanceRecord } from '@/features/attendance/types'
+```
+
+**Incorrect pattern:**
+```ts
+// Do not copy LessonTask into another feature.
+// Do not add a second LessonTask definition to features/lib/types.ts.
+// Do not create local "almost the same" DTOs unless the API contract truly differs.
+```
+
+Before creating any type, answer:
+1. Which feature owns this domain concept?
+2. Does this type already exist elsewhere?
+3. Is this a domain entity, API DTO, form state, or UI-only view model?
+4. If there is an existing duplicate, which one is canonical for this feature?
+
+If there is ambiguity, stop and report it before writing code.
+
+---
+
+### Data-access ownership rule
+
+Do not call raw stores directly from API route handlers or UI code.
+
+**Preferred flow:**
+```
+UI component
+  → front service/client
+  → API route
+  → feature service
+  → feature repository/store adapter
+  → memory store for now, Postgres later
+```
+
+API route handlers should be thin: parse/validate the request, call the feature service, return the standard API response shape. Feature services own business rules. Feature repository/store adapters own persistence details.
+
+The current app uses `features/lib/server/memoryStore.ts` as the shared in-memory CRUD helper. Treat it as a temporary persistence adapter, not as the long-term domain boundary.
+
+When adding new server-side data access:
+- First look for an existing service function in the feature.
+- If one exists, use it.
+- If one does not exist, add or extend a feature service function.
+- Do **not** import `createMemoryStore` directly into API route handlers.
+- Do **not** create a second store for the same entity.
+- Do **not** bypass validation or business rules by importing a store directly into UI-facing routes.
+
+If a feature currently has only `server/store.ts`, keep new persistence calls behind `server/service.ts`. If a repository layer already exists, use it. If no repository layer exists and the change is large enough to justify one, propose it in the audit before implementing.
+
+---
+
+### Postgres readiness rule
+
+Do not design new features so that a Postgres migration requires rewriting UI components or API routes.
+
+Keep persistence behind server-side feature services and, where useful, repository/store adapter functions.
+
+Avoid leaking memory-store assumptions into higher layers:
+- No direct array mutation outside store/adapters.
+- No synchronous-only persistence assumptions in route design.
+- No reliance on seed-only IDs unless documented in tests.
+- No UI importing server stores.
+- No API route returning raw internal store objects when the response contract should be stable.
+
+If a new feature introduces an entity that will eventually live in Postgres, define service/repository function names around domain operations, not around memory-store mechanics.
+
+**Prefer:**
+```ts
+listEvidenceItems(filters)
+createEvidenceItem(input)
+updateEvidenceItem(id, patch)
+```
+
+**Avoid exposing generic persistence language at the API boundary:**
+```ts
+evidenceStore.getAll()
+evidenceStore.insert()
+```
+
+---
+
+### Refactor restraint rule
+
+Do not perform broad type or data-access refactors while implementing a feature unless the feature plan explicitly includes that refactor.
+
+If you discover duplicate types, inconsistent imports, or direct store usage during the audit:
+1. Report the issue.
+2. State whether it blocks the current feature.
+3. If it does not block the feature, leave it untouched.
+4. If it does block the feature, propose the smallest safe change and wait for approval unless the user already authorized that exact file change.
+
+Prefer forward-correct architecture for new code over opportunistic cleanup of old code.
+
+---
+
+### Cross-feature import rule
+
+Before adding any cross-feature import, grep for the existing pattern in the same layer (API route → API route, server service → server service, front component → front component, test → test utility).
+
+Use the same path style already used in that layer. Prefer `@/features/...` for cross-feature imports and relative imports inside the same feature folder.
+
+```ts
+// Cross-feature — use alias
+import type { SubjectCourse } from '@/features/subjects/types'
+
+// Same feature — use relative
+import type { LessonTask } from '../types'
+```
+
+Do not introduce a new import style without a clear reason.
+
+---
+
+### Architecture findings (output requirement)
+
+When applying this section during feature work, include a short **"Architecture Findings"** block in the audit report covering:
+
+- Type owner decisions
+- Any duplicate type risks found
+- Existing import pattern followed
+- Existing service function used or extended
+- Whether any raw store access was avoided
+- Whether the design remains Postgres-ready
+
+---
+
 ## Commands
 
 | Command | Purpose |
