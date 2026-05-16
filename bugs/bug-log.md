@@ -205,3 +205,35 @@ Copy/paste the template below and fill it in.
 - **Attachments**:
 
 ---
+
+- **ID**: BUG-012
+- **Status**: Open
+- **Date/time**: 2026-05-15 23:18 (America/Detroit)
+- **Environment**: Live Render site, Attendance page click-through
+- **URL/path**: https://sheathacademy.onrender.com/attendance
+- **Steps to reproduce**:
+  1. Open Attendance.
+  2. Keep the default child (Adam) and date (today).
+  3. Click “Present.”
+  4. Click “Present” again without changing child/date.
+- **Expected result**: Attendance behaves like a daily record per child/date by updating the existing record, or it prevents duplicate records for the same child/date.
+- **Actual result**: A second attendance record is added for the same child/date and the Summary counts increase.
+- **Notes**: Confirmed by click-through. In the live UI, Summary Present increased from 4 to 5 and Records showed two “present” entries for Fri, May 15. This can inflate attendance totals and create multiple official attendance records for the same learner/date.
+- **Attachments**:
+
+---
+
+- **ID**: BUG-013
+- **Status**: Open
+- **Date/time**: 2026-05-15 23:18 (America/Detroit)
+- **Environment**: Live Render site, Attendance page
+- **URL/path**: https://sheathacademy.onrender.com/attendance
+- **Steps to reproduce**:
+  1. Open Attendance.
+  2. Look at the Summary section.
+- **Expected result**: Summary should include the intended “missing days” metric for the selected child/year, or clearly indicate that missing-day detection is not implemented yet.
+- **Actual result**: Summary only shows Present / Absent / Partial counts; there is no “missing days” metric displayed.
+- **Notes**: Feature 23’s acceptance criteria says the parent can see attendance count and missing days for the selected child/year. Current summary service and UI only count statuses.
+- **Attachments**:
+
+---
