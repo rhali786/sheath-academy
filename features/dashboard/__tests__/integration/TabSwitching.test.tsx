@@ -62,6 +62,13 @@ jest.mock('@/features/children/front/services/api', () => ({
   },
 }))
 
+jest.mock('@/features/planner/front/services/api', () => ({
+  plannerApi: {
+    getProgress: jest.fn(() => Promise.resolve([])),
+    getHistory: jest.fn(() => Promise.resolve([])),
+  },
+}))
+
 beforeAll(() => {
   // JSDOM: Tailwind `md:` nav uses matchMedia; default viewport hides desktop tabs.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -114,7 +121,9 @@ describe('Tab switching — NavigationContext regression', () => {
     await waitForDashboard()
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Reports' })[0])
-    expect(screen.getByText('Detailed reports coming soon.')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText(/no lessons planned this week/i)).toBeInTheDocument()
+    })
   })
 
   test('Settings link is present in navigation', async () => {

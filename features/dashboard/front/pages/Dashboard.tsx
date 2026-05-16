@@ -16,12 +16,14 @@ import { useNavigation } from '@/features/layout/front/context/NavigationContext
 import type { Child } from '../types'
 import { ChildSelector } from '../components/ChildSelector'
 import { NextSetupStrip } from '@/features/setup/front/components/NextSetupStrip'
+import { SubjectProgressCard } from '../components/SubjectProgressCard'
+import { RecentLessonsCard } from '../components/RecentLessonsCard'
 
 export default function Dashboard() {
   const { selectedTab } = useNavigation()
   const {
     children: studentProfiles, tasks, alerts, quranSessions, records, metrics,
-    loading, error, toggleTask, addQuranSession,
+    loading, error, toggleTask, addQuranSession, selectedChildId,
   } = useContext_Dashboard()
 
   // Map StudentProfile[] to legacy Child[] for existing components
@@ -110,9 +112,9 @@ export default function Dashboard() {
 
       {selectedTab === 'Reports' && (
         <div className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-xl shadow-sm p-8">
-            <h2 className="text-2xl font-bold text-slate-900">Reports</h2>
-            <p className="text-slate-400 mt-2 text-sm">Detailed reports coming soon.</p>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <SubjectProgressCard childId={selectedChildId ?? undefined} />
+            <RecentLessonsCard childId={selectedChildId ?? undefined} limit={10} />
           </div>
         </div>
       )}

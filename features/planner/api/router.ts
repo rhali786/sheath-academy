@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import * as lessonsHandler from './routes/lessons'
 import * as lessonHandler from './routes/lesson'
+import * as progressHandler from './routes/progress'
+import * as historyHandler from './routes/history'
 
 export async function handlePlannerRoute(
   slug: string[],
@@ -31,6 +33,16 @@ export async function handlePlannerRoute(
   // PATCH /lessons/:id/complete — mark lesson as complete
   if (slug.length === 3 && slug[0] === 'lessons' && slug[2] === 'complete' && method === 'PATCH') {
     return lessonHandler.COMPLETE(slug[1])
+  }
+
+  // GET /progress — progress by subject
+  if (slug.length === 1 && slug[0] === 'progress' && method === 'GET') {
+    return progressHandler.GET(request)
+  }
+
+  // GET /history — completed lesson history
+  if (slug.length === 1 && slug[0] === 'history' && method === 'GET') {
+    return historyHandler.GET(request)
   }
 
   return null

@@ -21,6 +21,7 @@ jest.mock('@/features/household/front/context', () => ({
 jest.mock('@/features/household/front/services/api', () => ({
   householdApi: {
     updateProfile: jest.fn(),
+    getProfile: jest.fn(() => Promise.resolve({ data: null })),
   },
 }))
 

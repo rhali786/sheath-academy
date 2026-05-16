@@ -14,6 +14,7 @@ const mockSubjects: SubjectCourse[] = [
   { id: 'subj_001', childId: 'child_001', name: 'Math', category: 'Math', isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
 ]
 
+// 2026-05-11 is Monday; 2026-05-12 is Tuesday
 const mockLessons: LessonTask[] = [
   {
     id: 'lesson_001',
@@ -22,7 +23,7 @@ const mockLessons: LessonTask[] = [
     householdId: 'hh_001',
     title: 'Math lesson 1',
     description: 'Algebra basics',
-    dueDate: '2026-05-13',
+    dueDate: '2026-05-12',
     isCompleted: false,
     order: 1,
     createdAt: '2026-01-01T00:00:00Z',
@@ -33,7 +34,7 @@ const mockLessons: LessonTask[] = [
 function renderList(lessons: LessonTask[] = [], weekStartDay: 'Monday' | 'Sunday' = 'Monday') {
   const mockContext = {
     lessons,
-    selectedWeek: new Date('2026-05-12'),
+    selectedWeek: new Date('2026-05-11'),
     setSelectedWeek: jest.fn(),
     selectedChildIds: ['child_001'],
     setSelectedChildIds: jest.fn(),

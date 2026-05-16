@@ -23,11 +23,15 @@ export function WeeklyList() {
   const { lessons, selectedWeek, weekStartDay } = usePlanner()
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set())
 
+  function formatLocalDate(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+
   // Calculate week start date
   const d = new Date(selectedWeek)
   const dayOfWeek = d.getDay()
-  const offset = weekStartDay === 'Monday' ? (dayOfWeek === 0 ? -6 : 1 - dayOfWeek) : dayOfWeek
-  d.setDate(d.getDate() - offset)
+  const daysFromStart = weekStartDay === 'Monday' ? (dayOfWeek === 0 ? 6 : dayOfWeek - 1) : dayOfWeek
+  d.setDate(d.getDate() - daysFromStart)
   const weekStart = new Date(d)
 
   // Get all days of the week
@@ -39,7 +43,7 @@ export function WeeklyList() {
 
   const daySections: DaySection[] = orderedDays.map(date => {
     const dayOfWeek = date.getDay()
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = formatLocalDate(date)
     const dayLabel = getDayOfWeekLabel(dayOfWeek)
     return {
       dateStr,

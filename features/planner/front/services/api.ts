@@ -1,5 +1,7 @@
 import type { ApiResponse } from '@/features/lib/types'
 import { LessonTask } from '../../types'
+import type { SubjectProgressSummary } from '@/features/planner/utils/progressBySubject'
+import type { LessonHistoryOptions } from '@/features/planner/utils/completedLessonHistory'
 
 function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
@@ -75,6 +77,30 @@ export const plannerApi = {
 
   completeLesson: async (id: string): Promise<LessonTask> => {
     const response = await patch<LessonTask>(`/api/planner/lessons/${id}/complete`)
+    return response.data
+  },
+
+  getProgress: async (
+    scope: 'week' | 'year',
+    dateRange: { start: string; end: string },
+    childId?: string
+  ): Promise<SubjectProgressSummary[]> => {
+    const params = new URLSearchParams({ scope, start: dateRange.start, end: dateRange.end })
+    if (childId) params.set('childId', childId)
+    const response = await get<SubjectProgressSummary[]>(`/api/planner/progress?${params}`)
+    return response.data
+  },
+
+  getHistory: async (options: LessonHistoryOptions = {}): Promise<LessonTask[]> => {
+    const params = new URLSearchParams()
+    if (options.childId) params.set('childId', options.childId)
+    if (options.subjectId) params.set('subjectId', options.subjectId)
+    if (options.startDate) params.set('startDate', options.startDate)
+    if (options.endDate) params.set('endDate', options.endDate)
+    if (options.limit !== undefined) params.set('limit', String(options.limit))
+    if (options.showAll) params.set('showAll', 'true')
+    if (options.showPending) params.set('showPending', 'true')
+    const response = await get<LessonTask[]>(`/api/planner/history?${params}`)
     return response.data
   },
 }
