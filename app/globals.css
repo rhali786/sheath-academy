@@ -62,24 +62,25 @@ button {
 }
 
 @media print {
+  /* Page-level reset only — do NOT apply white background globally
+     so that content callout boxes keep their colour */
+  html,
+  body {
+    background: white !important;
+    color: black !important;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 11pt;
+    line-height: 1.5;
+  }
+
   *,
   *::before,
   *::after {
-    color: black !important;
-    background: white !important;
     box-shadow: none !important;
     text-shadow: none !important;
   }
 
-  body {
-    font-family: Georgia, 'Times New Roman', serif;
-    font-size: 11pt;
-    line-height: 1.5;
-    background: white !important;
-    color: black !important;
-  }
-
-  /* Hide all chrome: nav, toolbar, controls */
+  /* Hide chrome: nav, toolbar, controls, buttons */
   header,
   nav,
   aside,
@@ -95,13 +96,13 @@ button {
     min-height: unset;
   }
 
-  /* Make the report article fill the page */
+  /* Report article fills the page */
   .print-report {
-    box-shadow: none !important;
     margin: 0 !important;
     padding: 1cm 0 !important;
     max-width: none !important;
     width: 100% !important;
+    background: white !important;
   }
 
   /* Keep sections together; break between them */
@@ -111,7 +112,7 @@ button {
     margin-bottom: 1.5em;
   }
 
-  /* Header stands alone on page top */
+  /* Header stays with first content section */
   .print-report > header {
     page-break-after: avoid;
     break-after: avoid;
@@ -120,47 +121,58 @@ button {
     padding-bottom: 0.75em;
   }
 
-  /* Typography hierarchy */
-  h1, h2 {
+  /* Typography */
+  h2 {
     font-size: 18pt;
     font-weight: bold;
     margin-bottom: 0.25em;
+    page-break-after: avoid;
+    break-after: avoid;
   }
 
   h3 {
     font-size: 13pt;
     font-weight: bold;
     margin-bottom: 0.25em;
+    page-break-after: avoid;
+    break-after: avoid;
   }
 
   p, li {
     font-size: 11pt;
   }
 
-  /* Evidence / progress dividers */
+  /* Checklist callout boxes — preserve amber background + darker border */
+  .print-callout {
+    background: #fef9c3 !important; /* amber-50 equivalent that prints visibly */
+    border: 1px solid #d97706 !important; /* amber-600 */
+    padding: 0.4em 0.6em;
+    margin-bottom: 0.4em;
+  }
+
+  /* Stats grid: enforce 3 columns regardless of viewport */
+  .print-stats {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 1em !important;
+  }
+
+  /* Progress / evidence dividers */
   .print-report .divide-y > * {
     border-top: 1px solid #e2e8f0 !important;
     padding-top: 0.5em;
     padding-bottom: 0.5em;
   }
 
-  /* Highlight boxes (checklist) — keep borders visible */
-  .print-report .rounded-md {
-    border: 1px solid #ccc !important;
-    padding: 0.4em 0.6em;
-    margin-bottom: 0.4em;
+  /* Portfolio items separator */
+  .print-report .border-t {
+    border-top: 1px solid #e2e8f0 !important;
   }
 
-  /* Links: show URL in parens */
+  /* Show link URLs inline */
   a[href]::after {
     content: ' (' attr(href) ')';
     font-size: 9pt;
     color: #555 !important;
-  }
-
-  /* Avoid orphaned headings */
-  h2, h3 {
-    page-break-after: avoid;
-    break-after: avoid;
   }
 }
