@@ -47,15 +47,18 @@ export function AttendancePage() {
   const [batchLoading, setBatchLoading] = useState(false)
 
   useEffect(() => {
-    const urlChildId = searchParams.get('childId')
-    childrenApi.getAllChildren().then(res => {
-      setChildren(res.data)
-      if (res.data.length > 0) {
-        const matched = urlChildId ? res.data.find(c => c.id === urlChildId) : null
-        setSelectedChildId(matched ? matched.id : res.data[0].id)
-      }
-    }).catch(() => setError('Failed to load learners'))
+    childrenApi.getAllChildren()
+      .then(res => setChildren(res.data))
+      .catch(() => setError('Failed to load learners'))
   }, [])
+
+  // Sync URL childId → selectedChildId after children load and on URL changes
+  useEffect(() => {
+    if (children.length === 0) return
+    const urlChildId = searchParams.get('childId')
+    const matched = urlChildId ? children.find(c => c.id === urlChildId) : null
+    setSelectedChildId(matched ? matched.id : children[0].id)
+  }, [searchParams, children])
 
   async function fetchRecords() {
     try {

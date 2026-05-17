@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { AttendancePage } from '@/features/attendance/front/pages/AttendancePage'
 import type { AttendanceRecord } from '@/features/attendance/types'
 import type { StudentProfile, ApiResponse } from '@/features/lib/types'
@@ -298,6 +298,26 @@ describe('AttendancePage', () => {
     await waitFor(() => {
       const selector = screen.getAllByRole('combobox')[0]
       expect(selector).toHaveValue('child_001')
+    })
+  })
+
+  it('updates selected learner when URL childId changes while component stays mounted', async () => {
+    mockSearchParams = new URLSearchParams()
+    const { rerender } = render(<AttendancePage />)
+
+    // Wait for children to load — first child selected by default
+    await waitFor(() => {
+      const sel = screen.getByLabelText(/^learner$/i) as HTMLSelectElement
+      expect(sel).toHaveValue('child_001')
+    })
+
+    // Simulate URL change while component stays mounted
+    act(() => { mockSearchParams = new URLSearchParams('childId=child_002') })
+    rerender(<AttendancePage />)
+
+    await waitFor(() => {
+      const sel = screen.getByLabelText(/^learner$/i) as HTMLSelectElement
+      expect(sel).toHaveValue('child_002')
     })
   })
 })

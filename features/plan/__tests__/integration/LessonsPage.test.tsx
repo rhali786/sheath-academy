@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import { LessonsPage } from '@/features/plan/front/pages/LessonsPage'
 
 const mockReplace = jest.fn()
@@ -191,6 +191,33 @@ describe('LessonsPage', () => {
         Array.from((s as HTMLSelectElement).options || []).some(o => o.text === 'All children')
       ) as HTMLSelectElement
       expect(allChildrenSelect).toHaveValue('')
+    })
+  })
+
+  it('updates child filter when URL childId changes while component stays mounted', async () => {
+    const child002 = { id: 'child_002', householdId: 'hh_001', name: 'Khadijah', gradeLabel: '3rd', isActive: true, username: 'k', password: 'pw', createdAt: '2026-01-01T00:00:00Z' }
+    mockGetAllChildren.mockResolvedValue(ok([mockChildren[0], child002]))
+    mockSearchParams = new URLSearchParams()
+
+    const { rerender } = render(<LessonsPage />)
+
+    // Wait for children to load — filter starts empty (All children)
+    await waitFor(() => {
+      const sel = screen.getAllByRole('combobox').find(s =>
+        Array.from((s as HTMLSelectElement).options ?? []).some(o => o.text === 'All children')
+      ) as HTMLSelectElement
+      expect(sel).toHaveValue('')
+    })
+
+    // Simulate URL change while component stays mounted
+    act(() => { mockSearchParams = new URLSearchParams('childId=child_002') })
+    rerender(<LessonsPage />)
+
+    await waitFor(() => {
+      const sel = screen.getAllByRole('combobox').find(s =>
+        Array.from((s as HTMLSelectElement).options ?? []).some(o => o.text === 'All children')
+      ) as HTMLSelectElement
+      expect(sel).toHaveValue('child_002')
     })
   })
 })

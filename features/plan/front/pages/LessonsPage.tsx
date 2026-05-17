@@ -61,7 +61,6 @@ export function LessonsPage() {
   const [dateSort, setDateSort] = useState<DateSort>('desc')
 
   useEffect(() => {
-    const urlChildId = searchParams.get('childId')
     const init = async () => {
       try {
         const [kidsRes, subsRes] = await Promise.all([
@@ -70,16 +69,20 @@ export function LessonsPage() {
         ])
         setChildren(kidsRes.data)
         setSubjects(subsRes.data)
-        if (urlChildId) {
-          const matched = kidsRes.data.find((c: StudentProfile) => c.id === urlChildId)
-          if (matched) setFilterChildId(matched.id)
-        }
       } catch {
         setError('Failed to load setup data')
       }
     }
     init()
   }, [])
+
+  // Sync URL childId → filterChildId after children load and on URL changes
+  useEffect(() => {
+    if (children.length === 0) return
+    const urlChildId = searchParams.get('childId')
+    const matched = urlChildId ? children.find((c: StudentProfile) => c.id === urlChildId) : null
+    setFilterChildId(matched ? matched.id : '')
+  }, [searchParams, children])
 
   async function fetchLessons() {
     try {
