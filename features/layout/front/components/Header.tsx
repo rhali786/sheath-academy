@@ -117,34 +117,44 @@ export function Header() {
             </button>
           ))}
           <Link
-            href="/portfolio"
+            href="/growth"
             className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
-              pathname.startsWith('/portfolio')
+              pathname.startsWith('/growth') || pathname.startsWith('/portfolio')
                 ? 'bg-forest-900 text-white'
                 : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
-            Portfolio
+            Growth
           </Link>
           <Link
-            href="/reports"
+            href="/records"
             className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
-              pathname.startsWith('/reports')
+              pathname.startsWith('/records') || pathname.startsWith('/reports')
                 ? 'bg-forest-900 text-white'
                 : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
-            Reports
+            Records
           </Link>
           <Link
-            href="/planner"
+            href="/plan"
             className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
-              pathname.startsWith('/planner')
+              pathname.startsWith('/plan') || pathname.startsWith('/planner')
                 ? 'bg-forest-900 text-white'
                 : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
-            Weekly
+            Plan
+          </Link>
+          <Link
+            href="/resources"
+            className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
+              pathname.startsWith('/resources')
+                ? 'bg-forest-900 text-white'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            Resources
           </Link>
           <Link
             href="/lessons"
@@ -226,37 +236,48 @@ export function Header() {
               </button>
             ))}
             <Link
-              href="/portfolio"
+              href="/growth"
               onClick={() => setMenuOpen(false)}
               className={`block px-4 py-3 text-sm font-medium transition-colors ${
-                pathname.startsWith('/portfolio')
+                pathname.startsWith('/growth') || pathname.startsWith('/portfolio')
                   ? 'bg-forest-50 text-forest-900'
                   : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              Portfolio
+              Growth
             </Link>
             <Link
-              href="/reports"
+              href="/records"
               onClick={() => setMenuOpen(false)}
               className={`block px-4 py-3 text-sm font-medium transition-colors ${
-                pathname.startsWith('/reports')
+                pathname.startsWith('/records') || pathname.startsWith('/reports')
                   ? 'bg-forest-50 text-forest-900'
                   : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              Reports
+              Records
             </Link>
             <Link
-              href="/planner"
+              href="/plan"
               onClick={() => setMenuOpen(false)}
               className={`block px-4 py-3 text-sm font-medium transition-colors ${
-                pathname.startsWith('/planner')
+                pathname.startsWith('/plan') || pathname.startsWith('/planner')
                   ? 'bg-forest-50 text-forest-900'
                   : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              Weekly
+              Plan
+            </Link>
+            <Link
+              href="/resources"
+              onClick={() => setMenuOpen(false)}
+              className={`block px-4 py-3 text-sm font-medium transition-colors ${
+                pathname.startsWith('/resources')
+                  ? 'bg-forest-50 text-forest-900'
+                  : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              Resources
             </Link>
             <Link
               href="/lessons"

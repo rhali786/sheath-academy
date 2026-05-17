@@ -15,9 +15,9 @@ import { HouseholdSetup } from '@/features/household/front/components/HouseholdS
 import { useNavigation } from '@/features/layout/front/context/NavigationContext'
 import { ChildSelector } from '../components/ChildSelector'
 import { NextSetupStrip } from '@/features/setup/front/components/NextSetupStrip'
-import { plannerApi } from '@/features/planner/front/services/api'
+import { plannerApi } from '@/features/plan/front/services/api'
 import { subjectsApi } from '@/features/subjects/front/services/api'
-import type { LessonTask } from '@/features/planner/types'
+import type { LessonTask } from '@/features/plan/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import type { StudentProfile } from '@/features/lib/types'
 

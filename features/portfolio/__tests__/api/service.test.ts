@@ -12,7 +12,7 @@ jest.mock('@/features/subjects/server/service', () => ({
   ),
 }))
 
-jest.mock('@/features/planner/server/service', () => ({
+jest.mock('@/features/plan/server/service', () => ({
   getLessonTask: jest.fn((id: string) =>
     id === 'lesson_a' ? { id: 'lesson_a', childId: 'child_a' } : undefined
   ),

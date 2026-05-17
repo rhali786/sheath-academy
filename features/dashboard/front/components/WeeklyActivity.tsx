@@ -5,7 +5,7 @@ import { ResponsiveBar } from '@nivo/bar'
 import { ChartContainer } from './shared/ChartContainer'
 import { nivoTheme, childColors } from '../theme'
 import type { QuranSession } from '../types'
-import type { LessonTask } from '@/features/planner/types'
+import type { LessonTask } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 
 interface WeeklyActivityProps {

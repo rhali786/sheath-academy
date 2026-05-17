@@ -154,9 +154,10 @@ describe('Header — tab navigation on dashboard page', () => {
   test('renders dashboard tab buttons and nav links on desktop', () => {
     render(<Header />)
     expect(screen.getAllByRole('button', { name: 'Today' }).length).toBeGreaterThan(0)
-    expect(screen.getAllByRole('link', { name: 'Portfolio' }).length).toBeGreaterThan(0)
-    expect(screen.getAllByRole('link', { name: 'Reports' }).length).toBeGreaterThan(0)
-    expect(screen.getAllByRole('link', { name: 'Weekly' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: 'Growth' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: 'Records' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: 'Plan' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: 'Resources' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'Settings' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'About' }).length).toBeGreaterThan(0)
   })
@@ -185,12 +186,12 @@ describe('Header — tab navigation on dashboard page', () => {
     expect(push).not.toHaveBeenCalled()
   })
 
-  test('Portfolio link points to /portfolio', () => {
+  test('Growth link points to /growth', () => {
     render(<Header />)
-    const portfolioLinks = screen.getAllByRole('link', { name: 'Portfolio' })
-    expect(portfolioLinks.length).toBeGreaterThan(0)
-    portfolioLinks.forEach(link => {
-      expect(link).toHaveAttribute('href', '/portfolio')
+    const growthLinks = screen.getAllByRole('link', { name: 'Growth' })
+    expect(growthLinks.length).toBeGreaterThan(0)
+    growthLinks.forEach(link => {
+      expect(link).toHaveAttribute('href', '/growth')
     })
   })
 })
@@ -215,12 +216,12 @@ describe('Header — tab navigation from non-dashboard page', () => {
     expect(push).toHaveBeenCalledWith('/')
   })
 
-  test('Reports link points to the standalone /reports page', () => {
+  test('Records link points to the standalone /records page', () => {
     render(<Header />)
-    const reportsLinks = screen.getAllByRole('link', { name: 'Reports' })
-    expect(reportsLinks.length).toBeGreaterThan(0)
-    reportsLinks.forEach(link => {
-      expect(link).toHaveAttribute('href', '/reports')
+    const recordsLinks = screen.getAllByRole('link', { name: 'Records' })
+    expect(recordsLinks.length).toBeGreaterThan(0)
+    recordsLinks.forEach(link => {
+      expect(link).toHaveAttribute('href', '/records')
     })
   })
 
@@ -237,33 +238,51 @@ describe('Header — tab navigation from non-dashboard page', () => {
   })
 })
 
-describe('Header — Weekly nav link', () => {
+describe('Header — Plan nav link', () => {
   beforeEach(() => {
     mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
     mockUsePathname.mockReturnValue('/')
   })
 
-  test('renders "Weekly" nav link and navigates to /planner on click', () => {
+  test('renders "Plan" nav link and navigates to /plan on click', () => {
     render(<Header />)
-    const weeklyLinks = screen.getAllByRole('link', { name: 'Weekly' })
-    expect(weeklyLinks.length).toBeGreaterThan(0)
-    weeklyLinks.forEach((link) => {
-      expect(link).toHaveAttribute('href', '/planner')
+    const planLinks = screen.getAllByRole('link', { name: 'Plan' })
+    expect(planLinks.length).toBeGreaterThan(0)
+    planLinks.forEach((link) => {
+      expect(link).toHaveAttribute('href', '/plan')
     })
   })
 
-  test('Weekly link is highlighted when on /planner', () => {
-    mockUsePathname.mockReturnValue('/planner')
+  test('Plan link is highlighted when on /plan', () => {
+    mockUsePathname.mockReturnValue('/plan')
     render(<Header />)
-    const weeklyLink = screen.getAllByRole('link', { name: 'Weekly' })[0]
-    expect(weeklyLink.className).toContain('bg-forest-900')
+    const planLink = screen.getAllByRole('link', { name: 'Plan' })[0]
+    expect(planLink.className).toContain('bg-forest-900')
   })
 
-  test('Weekly link is not highlighted when on dashboard', () => {
+  test('Plan link is not highlighted when on dashboard', () => {
     mockUsePathname.mockReturnValue('/')
     render(<Header />)
-    const weeklyLink = screen.getAllByRole('link', { name: 'Weekly' })[0]
-    expect(weeklyLink.className).not.toContain('bg-forest-900')
+    const planLink = screen.getAllByRole('link', { name: 'Plan' })[0]
+    expect(planLink.className).not.toContain('bg-forest-900')
+  })
+
+  test('Resources link points to /resources', () => {
+    render(<Header />)
+    const resourcesLinks = screen.getAllByRole('link', { name: 'Resources' })
+    expect(resourcesLinks.length).toBeGreaterThan(0)
+    resourcesLinks.forEach((link) => {
+      expect(link).toHaveAttribute('href', '/resources')
+    })
+  })
+
+  test('Growth link points to /growth', () => {
+    render(<Header />)
+    const growthLinks = screen.getAllByRole('link', { name: 'Growth' })
+    expect(growthLinks.length).toBeGreaterThan(0)
+    growthLinks.forEach((link) => {
+      expect(link).toHaveAttribute('href', '/growth')
+    })
   })
 })
 

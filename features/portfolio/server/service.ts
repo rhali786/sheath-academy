@@ -6,7 +6,7 @@ import { validateEvidenceInput } from './validation'
 import type { ValidationError } from './validation'
 import { getStudentProfile } from '@/features/children/server/service'
 import { getSubject } from '@/features/subjects/server/service'
-import { getLessonTask } from '@/features/planner/server/service'
+import { getLessonTask } from '@/features/plan/server/service'
 
 const deps = { getStudentProfile, getSubject, getLessonTask }
 

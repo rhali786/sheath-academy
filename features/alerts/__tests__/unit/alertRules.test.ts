@@ -1,6 +1,6 @@
 import { getAlerts } from '@/features/alerts/server/service'
 
-jest.mock('@/features/planner/server/service', () => ({
+jest.mock('@/features/plan/server/service', () => ({
   getLessons: jest.fn(),
 }))
 
@@ -12,7 +12,7 @@ jest.mock('@/features/children/server/service', () => ({
   getStudentProfiles: jest.fn(),
 }))
 
-import { getLessons } from '@/features/planner/server/service'
+import { getLessons } from '@/features/plan/server/service'
 import { getRecords } from '@/features/attendance/server/service'
 import { getStudentProfiles } from '@/features/children/server/service'
 

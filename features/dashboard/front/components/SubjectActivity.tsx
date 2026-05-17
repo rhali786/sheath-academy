@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { childColors } from '../theme'
-import type { LessonTask } from '@/features/planner/types'
+import type { LessonTask } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 

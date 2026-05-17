@@ -10,7 +10,7 @@ jest.mock('@/features/dashboard/front/context/DashboardProvider', () => ({
   useContext_Dashboard: jest.fn(() => ({ selectedChildId: null })),
 }))
 
-jest.mock('@/features/planner/front/services/api', () => ({
+jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: { getLessons: jest.fn().mockResolvedValue([]) },
 }))
 

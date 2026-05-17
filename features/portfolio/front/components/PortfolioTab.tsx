@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { EvidenceItem, CreateEvidenceItemInput, EvidenceType } from '@/features/portfolio/types'
 import type { SubjectCourse } from '@/features/subjects/types'
-import type { LessonTask } from '@/features/planner/types'
+import type { LessonTask } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import { useContext_Dashboard } from '@/features/dashboard/front/context'
 import { portfolioApi } from '../services/api'

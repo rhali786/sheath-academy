@@ -5,7 +5,7 @@ import { DashboardContext } from '@/features/dashboard/front/context/DashboardPr
 import type { DashboardContextType } from '@/features/dashboard/front/context/DashboardProvider'
 import type { StudentProfile } from '@/features/lib/types'
 
-jest.mock('@/features/planner/front/services/api', () => ({
+jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: { getLessons: jest.fn().mockResolvedValue([]) },
 }))
 
