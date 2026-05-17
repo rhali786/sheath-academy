@@ -1,0 +1,54 @@
+import { NextResponse } from 'next/server'
+import * as lessonsHandler from './routes/lessons'
+import * as lessonHandler from './routes/lesson'
+import * as progressHandler from './routes/progress'
+import * as historyHandler from './routes/history'
+
+export async function handlePlanRoute(
+  slug: string[],
+  request: Request
+): Promise<NextResponse | null> {
+  const method = request.method
+
+  // GET /lessons — list lessons with optional filters
+  if (slug.length === 1 && slug[0] === 'lessons' && method === 'GET') {
+    return lessonsHandler.GET(request)
+  }
+
+  // POST /lessons — create lesson
+  if (slug.length === 1 && slug[0] === 'lessons' && method === 'POST') {
+    return lessonsHandler.POST(request)
+  }
+
+  // GET /lessons/:id — get single lesson
+  if (slug.length === 2 && slug[0] === 'lessons' && method === 'GET') {
+    return lessonHandler.GET(slug[1])
+  }
+
+  // PUT /lessons/:id — update lesson
+  if (slug.length === 2 && slug[0] === 'lessons' && method === 'PUT') {
+    return lessonHandler.PUT(slug[1], request)
+  }
+
+  // PATCH /lessons/:id/complete — mark lesson as complete or skipped
+  if (slug.length === 3 && slug[0] === 'lessons' && slug[2] === 'complete' && method === 'PATCH') {
+    return lessonHandler.COMPLETE(slug[1], request)
+  }
+
+  // DELETE /lessons/:id — delete lesson
+  if (slug.length === 2 && slug[0] === 'lessons' && method === 'DELETE') {
+    return lessonHandler.DELETE(slug[1])
+  }
+
+  // GET /progress — progress by subject
+  if (slug.length === 1 && slug[0] === 'progress' && method === 'GET') {
+    return progressHandler.GET(request)
+  }
+
+  // GET /history — completed lesson history
+  if (slug.length === 1 && slug[0] === 'history' && method === 'GET') {
+    return historyHandler.GET(request)
+  }
+
+  return null
+}

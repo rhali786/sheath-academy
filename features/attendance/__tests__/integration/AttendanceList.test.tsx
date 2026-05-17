@@ -24,7 +24,7 @@ describe('AttendanceList — empty state', () => {
       <AttendanceList
         records={[]}
         childMap={childMap}
-        onDelete={jest.fn()}
+        onArchive={jest.fn()}
         onEdit={jest.fn()}
       />
     )
@@ -32,67 +32,67 @@ describe('AttendanceList — empty state', () => {
   })
 })
 
-describe('AttendanceList — delete confirmation (Phase 2)', () => {
-  it('shows Delete button initially (no confirm UI)', () => {
+describe('AttendanceList — void confirmation (Phase 2)', () => {
+  it('shows Void button initially (no confirm UI)', () => {
     render(
       <AttendanceList
         records={[makeRecord()]}
         childMap={childMap}
-        onDelete={jest.fn()}
+        onArchive={jest.fn()}
         onEdit={jest.fn()}
       />
     )
-    expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /confirm/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /void/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /confirm void/i })).not.toBeInTheDocument()
     expect(screen.queryByText(/are you sure/i)).not.toBeInTheDocument()
   })
 
-  it('clicking Delete shows inline confirm UI', () => {
+  it('clicking Void shows inline confirm UI', () => {
     render(
       <AttendanceList
         records={[makeRecord()]}
         childMap={childMap}
-        onDelete={jest.fn()}
+        onArchive={jest.fn()}
         onEdit={jest.fn()}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /delete/i }))
-    expect(screen.getByRole('button', { name: /confirm/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^void$/i }))
+    expect(screen.getByRole('button', { name: /confirm void/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^delete$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^void$/i })).not.toBeInTheDocument()
   })
 
-  it('clicking Confirm calls onDelete with the record id', () => {
-    const onDelete = jest.fn()
+  it('clicking Confirm void calls onArchive with the record id', () => {
+    const onArchive = jest.fn()
     render(
       <AttendanceList
         records={[makeRecord({ id: 'rec_abc' })]}
         childMap={childMap}
-        onDelete={onDelete}
+        onArchive={onArchive}
         onEdit={jest.fn()}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /delete/i }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm/i }))
-    expect(onDelete).toHaveBeenCalledWith('rec_abc')
+    fireEvent.click(screen.getByRole('button', { name: /^void$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm void/i }))
+    expect(onArchive).toHaveBeenCalledWith('rec_abc')
   })
 
-  it('clicking Cancel hides confirm UI and does not call onDelete', () => {
-    const onDelete = jest.fn()
+  it('clicking Cancel hides confirm UI and does not call onArchive', () => {
+    const onArchive = jest.fn()
     render(
       <AttendanceList
         records={[makeRecord()]}
         childMap={childMap}
-        onDelete={onDelete}
+        onArchive={onArchive}
         onEdit={jest.fn()}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /delete/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^void$/i }))
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
-    expect(onDelete).not.toHaveBeenCalled()
+    expect(onArchive).not.toHaveBeenCalled()
     // Should return to normal state
-    expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /confirm/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^void$/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /confirm void/i })).not.toBeInTheDocument()
   })
 })
 
@@ -104,7 +104,7 @@ describe('AttendanceList — card click opens edit (Phase 3)', () => {
       <AttendanceList
         records={[record]}
         childMap={childMap}
-        onDelete={jest.fn()}
+        onArchive={jest.fn()}
         onEdit={onEdit}
       />
     )
@@ -121,7 +121,7 @@ describe('AttendanceList — card click opens edit (Phase 3)', () => {
       <AttendanceList
         records={[record]}
         childMap={childMap}
-        onDelete={jest.fn()}
+        onArchive={jest.fn()}
         onEdit={onEdit}
       />
     )

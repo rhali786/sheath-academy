@@ -5,10 +5,10 @@ import { handleChildrenRoute } from '@/features/children/api/router'
 import { handleSubjectsRoute } from '@/features/subjects/api/router'
 import { handleSchoolYearsRoute } from '@/features/school-year/api/router'
 import { handleSetupStatusRoute } from '@/features/setup/api/router'
-import { handlePlannerRoute } from '@/features/planner/api/router'
+import { handlePlanRoute } from '@/features/plan/api/router'
 import { handleAttendanceRoute } from '@/features/attendance/api/router'
 import { handlePortfolioRoute } from '@/features/portfolio/api/router'
-import { handleReportsRoute } from '@/features/reports/api/router'
+import { handleRecordsRoute } from '@/features/records/api/router'
 import { handleAlertsRoute } from '@/features/alerts/api/router'
 import { handleQuranRoute } from '@/features/quran/api/router'
 
@@ -25,8 +25,8 @@ async function handleRoute(slug: string[], request: Request): Promise<NextRespon
     return await handleChildrenRoute(slug.slice(1), request)
   }
 
-  if (slug[0] === 'planner') {
-    return await handlePlannerRoute(slug.slice(1), request)
+  if (slug[0] === 'plan') {
+    return await handlePlanRoute(slug.slice(1), request)
   }
 
   if (slug[0] === 'subjects') {
@@ -49,8 +49,8 @@ async function handleRoute(slug: string[], request: Request): Promise<NextRespon
     return await handlePortfolioRoute(slug.slice(1), request)
   }
 
-  if (slug[0] === 'reports') {
-    return await handleReportsRoute(slug.slice(1), request)
+  if (slug[0] === 'records') {
+    return await handleRecordsRoute(slug.slice(1), request)
   }
 
   if (slug[0] === 'alerts') {

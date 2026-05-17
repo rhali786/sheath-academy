@@ -1,7 +1,7 @@
 'use client'
 
 import { useContext_Dashboard } from '../context/DashboardProvider'
-import { TodayLessonCard } from '@/features/planner/front/components/TodayLessonCard'
+import { TodayLessonCard } from '@/features/plan/front/components/TodayLessonCard'
 
 function todayLocal(): string {
   const d = new Date()

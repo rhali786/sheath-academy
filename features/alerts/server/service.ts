@@ -1,5 +1,5 @@
 import type { Alert } from '@/features/alerts/types'
-import { getLessons } from '@/features/planner/server/service'
+import { getLessons } from '@/features/plan/server/service'
 import { getRecords as getAttendanceRecords } from '@/features/attendance/server/service'
 import { getStudentProfiles } from '@/features/children/server/service'
 

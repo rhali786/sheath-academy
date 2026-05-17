@@ -3,7 +3,7 @@ import type { ApiResponse, StudentProfile } from '@/features/lib/types'
 import { getStudentProfile, updateStudentProfile, archiveStudentProfile, restoreStudentProfile } from '@/features/children/server/service'
 import { archiveByChildId as archiveSubjectsByChildId } from '@/features/subjects/server/service'
 import { archiveByChildId as archiveAttendanceByChildId } from '@/features/attendance/server/service'
-import { archiveByChildId as archivePlannerByChildId } from '@/features/planner/server/service'
+import { archiveByChildId as archivePlannerByChildId } from '@/features/plan/server/service'
 import { archiveByChildId as archivePortfolioByChildId } from '@/features/portfolio/server/service'
 
 export async function GET(id: string): Promise<NextResponse<ApiResponse<StudentProfile | null>>> {

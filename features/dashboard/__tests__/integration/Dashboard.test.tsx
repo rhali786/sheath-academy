@@ -28,7 +28,7 @@ jest.mock('@/features/alerts/front/services/api', () => ({
   },
 }))
 
-jest.mock('@/features/planner/front/services/api', () => ({
+jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: {
     getProgress: jest.fn(() => Promise.resolve([])),
     getLessons: jest.fn(() => Promise.resolve([])),

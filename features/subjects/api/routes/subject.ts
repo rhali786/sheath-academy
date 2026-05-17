@@ -7,7 +7,7 @@ import {
   archiveSubject,
   restoreSubject,
 } from '@/features/subjects/server/service'
-import { archiveBySubjectId as archivePlannerBySubjectId } from '@/features/planner/server/service'
+import { archiveBySubjectId as archivePlannerBySubjectId } from '@/features/plan/server/service'
 
 interface ApiResponse<T> {
   status: 'success' | 'error'

@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { plannerApi } from '@/features/planner/front/services/api'
-import type { LessonTask } from '@/features/planner/types'
+import { plannerApi } from '@/features/plan/front/services/api'
+import type { LessonTask } from '@/features/plan/types'
 
 interface Props {
   childId?: string

@@ -28,7 +28,7 @@ import {
   archiveByChildId as archivePlannerByChildId,
   archiveBySubjectId as archivePlannerBySubjectId,
   resetStore as resetPlannerStore,
-} from '@/features/planner/server/service'
+} from '@/features/plan/server/service'
 import {
   archiveByChildId as archivePortfolioByChildId,
   resetEvidenceStore,

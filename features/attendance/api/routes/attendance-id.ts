@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { AttendanceRecord } from '@/features/attendance/types'
-import { getRecord, updateRecord, deleteRecord } from '@/features/attendance/server/service'
+import { getRecord, updateRecord, archiveRecord } from '@/features/attendance/server/service'
 
 export function GET(id: string): NextResponse<ApiResponse<AttendanceRecord | null>> {
   const record = getRecord(id)
@@ -37,8 +37,8 @@ export async function PATCH(id: string, request: Request): Promise<NextResponse<
 }
 
 export function DELETE(id: string): NextResponse<ApiResponse<null>> {
-  const removed = deleteRecord(id)
-  if (!removed) {
+  const archived = archiveRecord(id)
+  if (!archived) {
     return NextResponse.json(
       { status: 'error', data: null, message: 'Record not found', timestamp: new Date().toISOString() },
       { status: 404 }
@@ -47,7 +47,7 @@ export function DELETE(id: string): NextResponse<ApiResponse<null>> {
   return NextResponse.json({
     status: 'success',
     data: null,
-    message: 'Attendance record deleted',
+    message: 'Attendance record archived',
     timestamp: new Date().toISOString(),
   })
 }

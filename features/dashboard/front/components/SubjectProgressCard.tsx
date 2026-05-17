@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { plannerApi } from '@/features/planner/front/services/api'
-import type { SubjectProgressSummary } from '@/features/planner/utils/progressBySubject'
+import { plannerApi } from '@/features/plan/front/services/api'
+import type { SubjectProgressSummary } from '@/features/plan/utils/progressBySubject'
 
 function getCurrentWeekRange(): { start: string; end: string } {
   const today = new Date()

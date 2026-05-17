@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, DashboardMetrics } from '@/features/lib/types'
 import { getRecords as getAttendanceRecords } from '@/features/attendance/server/service'
-import { getLessons } from '@/features/planner/server/service'
+import { getLessons } from '@/features/plan/server/service'
 import { getQuranSessions } from '@/features/quran/server/service'
 import { getAlerts } from '@/features/alerts/server/service'
 import { listEvidenceItems } from '@/features/portfolio/server/service'

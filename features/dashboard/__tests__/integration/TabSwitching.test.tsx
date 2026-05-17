@@ -67,7 +67,7 @@ jest.mock('@/features/children/front/services/api', () => ({
   },
 }))
 
-jest.mock('@/features/planner/front/services/api', () => ({
+jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: {
     getProgress: jest.fn(() => Promise.resolve([])),
     getHistory: jest.fn(() => Promise.resolve([])),
@@ -143,11 +143,11 @@ describe('Tab switching — NavigationContext regression', () => {
     })
   })
 
-  test('Portfolio link is present in navigation', async () => {
+  test('Growth link is present in navigation', async () => {
     renderWithShell()
     await waitForDashboard()
 
-    expect(screen.getAllByRole('link', { name: 'Portfolio' })[0]).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'Growth' })[0]).toBeInTheDocument()
   })
 
   test('Settings link is present in navigation', async () => {

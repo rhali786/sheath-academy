@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { AttendanceRecord } from '@/features/attendance/types'
-import { getRecords, createRecord, isValidStatus } from '@/features/attendance/server/service'
+import { getRecords, createOrUpdateRecord, isValidStatus } from '@/features/attendance/server/service'
 
 export async function GET(request: Request): Promise<NextResponse<ApiResponse<AttendanceRecord[]>>> {
   const url = new URL(request.url)
@@ -22,7 +22,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<At
 
 export async function POST(request: Request): Promise<NextResponse<ApiResponse<AttendanceRecord | null>>> {
   const body = await request.json()
-  const { childId, householdId, date, status, notes, hours, minutes } = body
+  const { childId, householdId, date, status, attendanceType, reason, notes, hours, minutes } = body
 
   if (!childId || !date || !status) {
     return NextResponse.json(
@@ -33,12 +33,22 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<A
 
   if (!isValidStatus(status)) {
     return NextResponse.json(
-      { status: 'error', data: null, message: 'status must be present, absent, or partial', timestamp: new Date().toISOString() },
+      { status: 'error', data: null, message: 'Invalid status value', timestamp: new Date().toISOString() },
       { status: 400 }
     )
   }
 
-  const record = createRecord({ childId, householdId: householdId ?? '', date, status, notes, hours, minutes })
+  const record = createOrUpdateRecord({
+    childId,
+    householdId: householdId ?? '',
+    date,
+    status,
+    attendanceType: attendanceType ?? undefined,
+    reason: reason ?? undefined,
+    notes: notes ?? undefined,
+    hours: hours ?? undefined,
+    minutes: minutes ?? undefined,
+  })
 
   if (!record) {
     return NextResponse.json(
@@ -48,7 +58,36 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<A
   }
 
   return NextResponse.json(
-    { status: 'success', data: record, message: 'Attendance record created', timestamp: new Date().toISOString() },
+    { status: 'success', data: record, message: 'Attendance record saved', timestamp: new Date().toISOString() },
+    { status: 201 }
+  )
+}
+
+export async function BATCH(request: Request): Promise<NextResponse<ApiResponse<AttendanceRecord[]>>> {
+  const body = await request.json()
+  const { householdId, date, entries } = body
+
+  if (!date || !Array.isArray(entries)) {
+    return NextResponse.json(
+      { status: 'error', data: [], message: 'date and entries[] are required', timestamp: new Date().toISOString() },
+      { status: 400 }
+    )
+  }
+
+  const results: AttendanceRecord[] = []
+  for (const entry of entries) {
+    if (!entry.childId || !isValidStatus(entry.status)) continue
+    const record = createOrUpdateRecord({
+      childId: entry.childId,
+      householdId: householdId ?? '',
+      date,
+      status: entry.status,
+    })
+    if (record) results.push(record)
+  }
+
+  return NextResponse.json(
+    { status: 'success', data: results, message: 'Batch attendance saved', timestamp: new Date().toISOString() },
     { status: 201 }
   )
 }

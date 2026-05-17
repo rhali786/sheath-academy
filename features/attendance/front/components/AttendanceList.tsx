@@ -2,17 +2,25 @@
 
 import { useState } from 'react'
 import type { AttendanceRecord, AttendanceStatus } from '@/features/attendance/types'
+import { STATUS_LABELS } from '@/features/attendance/types'
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
   present: 'bg-green-100 text-green-800 border-green-200',
   absent: 'bg-red-100 text-red-800 border-red-200',
   partial: 'bg-amber-100 text-amber-800 border-amber-200',
+  excused: 'bg-blue-100 text-blue-800 border-blue-200',
+  sick: 'bg-orange-100 text-orange-800 border-orange-200',
+  holiday: 'bg-purple-100 text-purple-800 border-purple-200',
+  field_trip: 'bg-teal-100 text-teal-800 border-teal-200',
+  coop: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+  makeup: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  not_school: 'bg-slate-100 text-slate-600 border-slate-200',
 }
 
 interface Props {
   records: AttendanceRecord[]
   childMap: Record<string, string>
-  onDelete: (id: string) => void
+  onArchive: (id: string) => void
   onEdit: (record: AttendanceRecord) => void
 }
 
@@ -24,12 +32,12 @@ function formatDate(dateStr: string): string {
 interface RecordRowProps {
   record: AttendanceRecord
   childMap: Record<string, string>
-  onDelete: (id: string) => void
+  onArchive: (id: string) => void
   onEdit: (record: AttendanceRecord) => void
 }
 
-function RecordRow({ record, childMap, onDelete, onEdit }: RecordRowProps) {
-  const [confirmDelete, setConfirmDelete] = useState(false)
+function RecordRow({ record, childMap, onArchive, onEdit }: RecordRowProps) {
+  const [confirmVoid, setConfirmVoid] = useState(false)
 
   function handleRowClick(e: React.MouseEvent) {
     // Don't trigger edit when clicking a button
@@ -44,7 +52,7 @@ function RecordRow({ record, childMap, onDelete, onEdit }: RecordRowProps) {
     >
       <div className="flex items-center gap-3">
         <span className={`text-xs font-semibold px-2 py-1 rounded border ${STATUS_STYLES[record.status]}`}>
-          {record.status}
+          {STATUS_LABELS[record.status]}
         </span>
         {childMap[record.childId] && (
           <span className="text-xs font-medium text-slate-600">{childMap[record.childId]}</span>
@@ -70,7 +78,7 @@ function RecordRow({ record, childMap, onDelete, onEdit }: RecordRowProps) {
         )}
       </div>
       <div className="flex gap-2 items-center">
-        {!confirmDelete && (
+        {!confirmVoid && (
           <button
             onClick={e => { e.stopPropagation(); onEdit(record) }}
             className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-100"
@@ -78,25 +86,25 @@ function RecordRow({ record, childMap, onDelete, onEdit }: RecordRowProps) {
             Edit
           </button>
         )}
-        {!confirmDelete && (
+        {!confirmVoid && (
           <button
-            onClick={e => { e.stopPropagation(); setConfirmDelete(true) }}
+            onClick={e => { e.stopPropagation(); setConfirmVoid(true) }}
             className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50"
           >
-            Delete
+            Void
           </button>
         )}
-        {confirmDelete && (
+        {confirmVoid && (
           <>
             <span className="text-xs text-slate-600">Are you sure?</span>
             <button
-              onClick={e => { e.stopPropagation(); onDelete(record.id); setConfirmDelete(false) }}
+              onClick={e => { e.stopPropagation(); onArchive(record.id); setConfirmVoid(false) }}
               className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700 transition-colors"
             >
-              Confirm
+              Confirm void
             </button>
             <button
-              onClick={e => { e.stopPropagation(); setConfirmDelete(false) }}
+              onClick={e => { e.stopPropagation(); setConfirmVoid(false) }}
               className="text-xs px-2 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
             >
               Cancel
@@ -108,7 +116,7 @@ function RecordRow({ record, childMap, onDelete, onEdit }: RecordRowProps) {
   )
 }
 
-export function AttendanceList({ records, childMap, onDelete, onEdit }: Props) {
+export function AttendanceList({ records, childMap, onArchive, onEdit }: Props) {
   if (records.length === 0) {
     return <p className="text-sm text-slate-400 py-6 text-center">No attendance records yet</p>
   }
@@ -120,7 +128,7 @@ export function AttendanceList({ records, childMap, onDelete, onEdit }: Props) {
           key={record.id}
           record={record}
           childMap={childMap}
-          onDelete={onDelete}
+          onArchive={onArchive}
           onEdit={onEdit}
         />
       ))}

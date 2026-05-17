@@ -39,6 +39,9 @@ global.fetch = jest.fn(() =>
   Promise.resolve({ ok: true, json: async () => ({ data: [], status: 'success', message: '', timestamp: '' }) })
 ) as jest.Mock
 
+// jsdom doesn't implement scrollTo
+Object.defineProperty(window, 'scrollTo', { value: jest.fn(), writable: true })
+
 function makeEvidenceItem(overrides: Partial<EvidenceItem> = {}): EvidenceItem {
   return {
     id: 'ev_001',
@@ -73,16 +76,30 @@ describe('PortfolioPage — standalone (no DashboardProvider)', () => {
 })
 
 describe('PortfolioPage — evidence card edit (Phase 5)', () => {
-  const { portfolioApi } = require('@/features/portfolio/front/services/api')
+  let portfolioApi: ReturnType<typeof require>['portfolioApi']
+  let childrenApi: ReturnType<typeof require>['childrenApi']
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    portfolioApi = require('@/features/portfolio/front/services/api').portfolioApi
+    childrenApi = require('@/features/children/front/services/api').childrenApi
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [], status: 'success', message: '', timestamp: '' }),
+    })
+    childrenApi.getChildren.mockResolvedValue({
+      data: [{ id: 'c1', name: 'Khadijah', householdId: 'hh_001', gradeLabel: 'Grade 3', username: 'k', password: '', isActive: true, avatarInitials: 'K', createdAt: '2026-01-01T00:00:00.000Z' }],
+      status: 'success', message: '', timestamp: '',
+    })
     portfolioApi.listEvidence.mockResolvedValue({
       data: [makeEvidenceItem()],
       status: 'success',
       message: '',
       timestamp: '',
     })
+  })
+
+  afterEach(() => {
+    jest.clearAllMocks()
   })
 
   test('clicking an evidence card changes form heading to Edit Evidence', async () => {

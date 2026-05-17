@@ -1,6 +1,6 @@
 /** @jest-environment node */
 
-import { POST as BATCH_POST } from '@/features/attendance/api/routes/batch'
+import { BATCH } from '@/features/attendance/api/routes/attendance'
 import { resetStore } from '@/features/attendance/server/service'
 import { SEED_IDS } from '@/features/lib/seedIds'
 
@@ -16,13 +16,15 @@ function makeBatchRequest(body: Record<string, unknown>): Request {
   })
 }
 
-describe('POST /api/attendance/batch', () => {
+describe('BATCH /api/attendance/batch', () => {
   it('creates one record per entry in the batch', async () => {
-    const res = await BATCH_POST(makeBatchRequest({
+    const res = await BATCH(makeBatchRequest({
       householdId: SEED_IDS.household,
       date: '2026-06-10',
-      status: 'present',
-      childIds: [SEED_IDS.layth, SEED_IDS.hawa],
+      entries: [
+        { childId: SEED_IDS.layth, status: 'present' },
+        { childId: SEED_IDS.hawa, status: 'present' },
+      ],
     }))
     const body = await res.json()
     expect(res.status).toBe(201)
@@ -33,29 +35,27 @@ describe('POST /api/attendance/batch', () => {
     expect(body.data[0].date).toBe('2026-06-10')
   })
 
-  it('passes hours, minutes, notes to each record', async () => {
-    const res = await BATCH_POST(makeBatchRequest({
+  it('creates records with different statuses per entry', async () => {
+    const res = await BATCH(makeBatchRequest({
       householdId: SEED_IDS.household,
       date: '2026-06-11',
-      status: 'partial',
-      childIds: [SEED_IDS.layth],
-      hours: 3,
-      minutes: 30,
-      notes: 'Short day',
+      entries: [
+        { childId: SEED_IDS.layth, status: 'present' },
+        { childId: SEED_IDS.hawa, status: 'absent' },
+      ],
     }))
     const body = await res.json()
     expect(res.status).toBe(201)
-    expect(body.data[0].hours).toBe(3)
-    expect(body.data[0].minutes).toBe(30)
-    expect(body.data[0].notes).toBe('Short day')
+    expect(body.data).toHaveLength(2)
+    const statuses = body.data.map((r: { status: string }) => r.status)
+    expect(statuses).toContain('present')
+    expect(statuses).toContain('absent')
   })
 
-  it('returns 400 when childIds is missing or empty', async () => {
-    const res = await BATCH_POST(makeBatchRequest({
+  it('returns 400 when entries is missing or not an array', async () => {
+    const res = await BATCH(makeBatchRequest({
       householdId: SEED_IDS.household,
       date: '2026-06-10',
-      status: 'present',
-      childIds: [],
     }))
     expect(res.status).toBe(400)
     const body = await res.json()
@@ -63,34 +63,40 @@ describe('POST /api/attendance/batch', () => {
   })
 
   it('returns 400 when date is missing', async () => {
-    const res = await BATCH_POST(makeBatchRequest({
+    const res = await BATCH(makeBatchRequest({
       householdId: SEED_IDS.household,
-      status: 'present',
-      childIds: [SEED_IDS.layth],
+      entries: [{ childId: SEED_IDS.layth, status: 'present' }],
     }))
     expect(res.status).toBe(400)
   })
 
-  it('returns 400 when status is invalid', async () => {
-    const res = await BATCH_POST(makeBatchRequest({
+  it('skips entries with invalid status and still creates records for valid ones', async () => {
+    const res = await BATCH(makeBatchRequest({
       householdId: SEED_IDS.household,
       date: '2026-06-10',
-      status: 'unknown',
-      childIds: [SEED_IDS.layth],
-    }))
-    expect(res.status).toBe(400)
-  })
-
-  it('skips unknown childIds and still creates records for valid ones', async () => {
-    const res = await BATCH_POST(makeBatchRequest({
-      householdId: SEED_IDS.household,
-      date: '2026-06-10',
-      status: 'present',
-      childIds: [SEED_IDS.layth, 'unknown_child_999'],
+      entries: [
+        { childId: SEED_IDS.layth, status: 'present' },
+        { childId: SEED_IDS.hawa, status: 'not_a_real_status' },
+      ],
     }))
     const body = await res.json()
     expect(res.status).toBe(201)
-    // Only the valid child should have a record created
+    // Only valid entries get records
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0].childId).toBe(SEED_IDS.layth)
+  })
+
+  it('skips entries with unknown childIds and still creates records for valid ones', async () => {
+    const res = await BATCH(makeBatchRequest({
+      householdId: SEED_IDS.household,
+      date: '2026-06-10',
+      entries: [
+        { childId: SEED_IDS.layth, status: 'present' },
+        { childId: 'unknown_child_999', status: 'present' },
+      ],
+    }))
+    const body = await res.json()
+    expect(res.status).toBe(201)
     expect(body.data).toHaveLength(1)
     expect(body.data[0].childId).toBe(SEED_IDS.layth)
   })

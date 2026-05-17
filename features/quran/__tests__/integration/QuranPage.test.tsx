@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import QuranPage from '@/features/quran/front/pages/QuranPage'
 import type { StudentProfile, ApiResponse } from '@/features/lib/types'
 import type { QuranSession } from '@/features/lib/types'
@@ -134,6 +134,35 @@ describe('QuranPage', () => {
     await waitFor(() => {
       expect(screen.queryByText('Al-Fatiha')).not.toBeInTheDocument()
       expect(screen.getByText('Al-Baqarah')).toBeInTheDocument()
+    })
+  })
+
+  it('updates child filter when URL childId changes while component stays mounted', async () => {
+    mockSearchParams = new URLSearchParams()
+    mockGetSessions.mockResolvedValue(okSessions([
+      makeSession({ childId: 'child_001', surah: 'Al-Fatiha' }),
+      makeSession({ id: 'session_002', childId: 'child_002', surah: 'Al-Baqarah' }),
+    ]))
+
+    const { rerender } = render(<QuranPage />)
+
+    // Initially all children — filter is empty
+    await waitFor(() => {
+      const sel = screen.getAllByRole('combobox').find(s =>
+        Array.from((s as HTMLSelectElement).options ?? []).some(o => o.text === 'All children')
+      ) as HTMLSelectElement
+      expect(sel).toHaveValue('')
+    })
+
+    // Simulate URL change while mounted (e.g. back/forward, link within same page)
+    act(() => { mockSearchParams = new URLSearchParams('childId=child_002') })
+    rerender(<QuranPage />)
+
+    await waitFor(() => {
+      const sel = screen.getAllByRole('combobox').find(s =>
+        Array.from((s as HTMLSelectElement).options ?? []).some(o => o.text === 'All children')
+      ) as HTMLSelectElement
+      expect(sel).toHaveValue('child_002')
     })
   })
 })

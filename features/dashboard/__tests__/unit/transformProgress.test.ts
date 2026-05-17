@@ -1,5 +1,5 @@
 import { transformPlannerProgress } from '@/features/dashboard/front/utils/transformProgress'
-import type { SubjectProgressSummary } from '@/features/planner/utils/progressBySubject'
+import type { SubjectProgressSummary } from '@/features/plan/utils/progressBySubject'
 
 function makeSummary(childId: string, subjectName: string, rate: number): SubjectProgressSummary {
   return {

@@ -44,21 +44,25 @@ export default function QuranPage() {
   const [dateSort, setDateSort] = useState<DateSort>('desc')
 
   useEffect(() => {
-    const urlChildId = searchParams.get('childId')
     childrenApi.getAllChildren()
-      .then(res => {
-        setChildren(res.data)
-        if (urlChildId) {
-          const matched = res.data.find((c: StudentProfile) => c.id === urlChildId)
-          if (matched) setFilterChildId(matched.id)
-        }
-      })
+      .then(res => setChildren(res.data))
       .catch(() => {})
+  }, [])
+
+  useEffect(() => {
     quranApi.getSessions()
       .then(res => setSessions(res.data.sessions ?? []))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  // Sync URL childId → filterChildId after children load and on URL changes
+  useEffect(() => {
+    if (children.length === 0) return
+    const urlChildId = searchParams.get('childId')
+    const matched = urlChildId ? children.find(c => c.id === urlChildId) : null
+    setFilterChildId(matched ? matched.id : '')
+  }, [searchParams, children])
 
   const displayedSessions = useMemo(() => {
     let list = sessions
