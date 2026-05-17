@@ -1,8 +1,7 @@
 import { createMemoryStore } from '@/features/lib/server/memoryStore'
-import type { Task, Alert, QuranSession, DashboardRecord, Child, SubjectProgress } from '@/features/lib/types'
+import type { Task, QuranSession, DashboardRecord, Child, SubjectProgress } from '@/features/lib/types'
 import {
   SEED_TASKS,
-  SEED_ALERTS,
   SEED_QURAN_SESSIONS,
   SEED_RECORDS,
   SEED_CHILDREN,
@@ -10,7 +9,6 @@ import {
 } from './seed'
 
 export const tasksStore = createMemoryStore<Task>(SEED_TASKS)
-export const alertsStore = createMemoryStore<Alert>(SEED_ALERTS)
 export const quranSessionsStore = createMemoryStore<QuranSession>(SEED_QURAN_SESSIONS)
 export const recordsStore = createMemoryStore<DashboardRecord>(SEED_RECORDS)
 export const childrenStore = createMemoryStore<Child>(SEED_CHILDREN)

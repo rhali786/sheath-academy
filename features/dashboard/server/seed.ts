@@ -1,4 +1,4 @@
-import type { Child, Task, Alert, QuranSession, DashboardRecord, SubjectProgress } from '@/features/lib/types'
+import type { Child, Task, QuranSession, DashboardRecord, SubjectProgress } from '@/features/lib/types'
 import { SEED_IDS } from '@/features/lib/seedIds'
 
 export const SEED_CHILDREN: Child[] = [
@@ -134,48 +134,6 @@ export const SEED_TASKS: Task[] = [
   },
 ]
 
-export const SEED_ALERTS: Alert[] = [
-  {
-    id: 'alert_001',
-    childId: SEED_IDS.zayd,
-    title: 'Two overdue lessons',
-    detail: 'Algebra and History from last week',
-    priority: 'amber',
-    actionButton: 'Review',
-  },
-  {
-    id: 'alert_002',
-    childId: SEED_IDS.adam,
-    title: 'Quran revision missed',
-    detail: 'Al-Mulk needs review before new memorization, 2 days overdue',
-    priority: 'amber',
-    actionButton: 'Review',
-  },
-  {
-    id: 'alert_003',
-    childId: null,
-    title: 'Friday attendance not logged',
-    detail: 'Reports cannot generate without attendance data',
-    priority: 'amber',
-    actionButton: 'Log',
-  },
-  {
-    id: 'alert_004',
-    childId: null,
-    title: 'Portfolio thin this week',
-    detail: 'Only 1 item captured, Islamic Studies prompt ready',
-    priority: 'gray',
-    actionButton: 'Add',
-  },
-  {
-    id: 'alert_005',
-    childId: null,
-    title: 'Weekly report due Friday',
-    detail: '80% ready, needs 2 teacher notes',
-    priority: 'gray',
-    actionButton: 'Complete',
-  },
-]
 
 export const SEED_QURAN_SESSIONS: QuranSession[] = [
   {
