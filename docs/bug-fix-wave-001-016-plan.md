@@ -1,181 +1,209 @@
-# Plan: Bug Fix Wave — BUG-001 through BUG-016
+# Plan: Bug Fix + Feedback Implementation — BUG-001–016, FB-001–014
 
 ## Context
 
-16 bugs identified through manual QA on the live Render site. 14 feedback items also logged.
-This plan addresses all 16 bugs in focused waves, each with unit tests, integration tests,
-and Playwright E2E tests (TDD — failing tests written first).
-
-Feedback items FB-001 through FB-014 are noted where they overlap with bugs, but feature
-expansions are scoped out of this plan and belong in a separate plan.
+16 open bugs (manual QA on live site) and 14 feedback items. All are addressed in this plan.
+Bugs and feedback that touch the same area are grouped into the same wave.
+TDD throughout: failing tests written before implementation at every layer.
 
 ---
 
-## What this plan covers
+## Decisions locked
 
-- All 16 open bugs (BUG-001 to BUG-016)
-- TDD: unit tests first, integration tests first, Playwright specs written before fixes land
-- One wave per session message — strict file scope per wave
-
-## What this plan does NOT cover
-
-- FB-001 to FB-014 (feature expansions — separate plan)
-- New features or major UI redesigns
-- Refactors not required to fix the listed bugs
-
----
-
-## Bug summary
-
-| ID | Area | Title | Wave |
-|----|------|-------|------|
-| BUG-001 | Dashboard | Setup prompt remains stuck on first lesson | 3 |
-| BUG-002 | Dashboard | Child selector filtering inconsistent across sections | 3 |
-| BUG-003 | Dashboard | Needs Attention alert shows raw child ID | 1 |
-| BUG-004 | Dashboard | Sort by date does not change order | 1 |
-| BUG-005 | Quran Logging | Quran session card shows stale seed data | 4 |
-| BUG-006 | Quran Logging | Weekly Sessions chart hardcoded | 4 |
-| BUG-007 | Dashboard | Today metrics hardcoded / mismatched | 3 |
-| BUG-008 | Reports | Export says "prepared" but no download occurs | 6 |
-| BUG-009 | Planner | Duplicate Quran Memorisation subject rows | 5 |
-| BUG-010 | Planner | Week navigation buttons do not change week | 5 |
-| BUG-011 | Lessons | Today section only shows first child's lesson | 4 |
-| BUG-012 | Attendance | Duplicate records + missing child names | 2 |
-| BUG-013 | Attendance | Missing days metric not shown | 2 |
-| BUG-014 | Settings | Week Starts On radio both appear checked | 1 |
-| BUG-015 | Child Archive | Archived child data persists in active views | ✓ (previous plan) |
-| BUG-016 | Lessons | Lesson status saved but not shown on card | 1 |
-
-> BUG-015 (archive cascade) is covered in the previous wave already merged.
-> This plan picks up remaining 15 bugs.
+| Question | Decision |
+|----------|----------|
+| BUG-004: Sort by date | Implement — add `date` field to alert items and sort by it |
+| BUG-013: Missing days definition | Mon–Fri only within school year range |
+| BUG-008: Export behavior | Print / PDF flow via `window.print()` |
+| BUG-002: Per-Child Progress selector | Unify — remove its own selector, follow global top selector |
+| Wave ordering | Wave 0 first (nav + directory rename), then Wave 1 (display fixes) |
+| FB-001: Directory rename | Yes — `features/planner` → `features/plan`, `features/reports` → `features/records` |
+| FB-001: Growth tab | portfolio + progress features; `features/portfolio` maps to Growth |
+| FB-001: Resources tab | Stub page + route only at MVP |
+| FB-002/003 scope | Full implementation (enrollment model, instructor assignment, transcript fields) |
+| FB-005/012/013 scope | Full implementation waves |
 
 ---
 
-## Feedback overlap notes
+## Bug + feedback map
 
-| Feedback | Bug overlap | In scope? |
-|---------|-------------|-----------|
-| FB-001: Nav tab rename | None — cosmetic | **Out** (separate PR) |
-| FB-002: Children sub-tab | No direct overlap | **Out** |
-| FB-003: Subjects sub-tab | No direct overlap | **Out** |
-| FB-004: Today dashboard refinement | Overlaps BUG-001, BUG-002, BUG-007 | Partial — fix bugs, not redesign |
-| FB-006: Weekly Plan | Overlaps BUG-009, BUG-010 | Partial — fix bugs, not redesign |
-| FB-011: Lessons page refinement | Overlaps BUG-011, BUG-016 | Partial — fix bugs, not redesign |
-| FB-014: Attendance engine | Overlaps BUG-012, BUG-013 | Partial — fix bugs, not redesign |
-| FB-005, 007–010, 012–013 | No bug overlap | **Out** |
+| ID | Type | Area | Title | Wave |
+|----|------|------|-------|------|
+| FB-001 | Feedback | Nav | Tab rename + directory rename | 0 |
+| BUG-003 | Bug | Dashboard | Needs Attention shows raw child ID | 1 |
+| BUG-004 | Bug | Dashboard | Sort by date no-op | 1 |
+| BUG-014 | Bug | Settings | Week Starts On radio both checked | 1 |
+| BUG-016 | Bug | Lessons | Lesson status not shown on card | 1 |
+| FB-007 | Feedback | Settings | Household Settings expansion | 1 |
+| BUG-012 | Bug | Attendance | Duplicate records + missing child names | 2 |
+| BUG-013 | Bug | Attendance | Missing days metric | 2 |
+| FB-014 | Feedback | Attendance | Attendance as records/compliance engine | 2 |
+| BUG-001 | Bug | Dashboard | Setup prompt stuck | 3 |
+| BUG-002 | Bug | Dashboard | Child selector filtering inconsistent | 3 |
+| BUG-007 | Bug | Dashboard | Today metrics hardcoded | 3 |
+| FB-004 | Feedback | Dashboard | Today as priority command center | 3 |
+| BUG-005 | Bug | Quran | Session card shows stale data | 4 |
+| BUG-006 | Bug | Quran | Weekly Sessions chart hardcoded | 4 |
+| BUG-011 | Bug | Lessons | Today shows only first child | 4 |
+| FB-011 | Feedback | Lessons | Lessons as work management hub | 4 |
+| BUG-009 | Bug | Planner | Duplicate subject rows | 5 |
+| BUG-010 | Bug | Planner | Week navigation stuck | 5 |
+| FB-006 | Feedback | Planner | Planner as planning control board | 5 |
+| BUG-008 | Bug | Reports | Export says prepared, nothing downloads | 6 |
+| FB-002 | Feedback | Children | Children sub-tab full refinement | 7 |
+| FB-003 | Feedback | Subjects | Subjects/Courses sub-tab full refinement | 8 |
+| FB-008 | Feedback | Settings | Settings architecture reorganization | 9 |
+| FB-009 | Feedback | School Year | School Year as academic calendar foundation | 10 |
+| FB-010 | Feedback | Islamic Calendar | Muslim-native calendar reminders | 11 |
+| FB-005 | Feedback | Schedule | Live schedule / classroom timing workflow | 12 |
+| FB-012 | Feedback | Resources | Curriculum / resource pacing engine | 13 |
+| FB-013 | Feedback | Resources | Community curriculum intelligence | 14 |
+
+> BUG-015 (archive cascade) was addressed in the previous wave plan.
 
 ---
 
 ## Pre-implementation audit (per CLAUDE.md)
 
-Before each wave session, run:
-
+Before each wave:
 ```bash
 git fetch origin && git merge origin/master
 ```
-
-Then read every file listed in that wave's file index before touching anything.
+Read every file in the wave's file index before touching anything.
 
 ---
 
-## Wave 1 — Display-only fixes
+## Wave 0 — Navigation tab rename + feature directory rename
+
+**Source:** FB-001
+
+**Scope:**
+- Rename nav tabs: Today (unchanged), Weekly → **Plan**, Reports → **Records**, add **Growth**, add **Resources**, Settings (unchanged), About (unchanged)
+- Rename `features/planner` → `features/plan` (all imports, test paths, routes)
+- Rename `features/reports` → `features/records` (all imports, test paths, routes)
+- `features/portfolio` becomes the backing feature for the **Growth** tab
+- Add `/growth` route pointing to portfolio+progress page
+- Add `/resources` route pointing to a stub "Coming soon" page (`features/resources/`)
+- Update `app/api/[...slug]/route.ts` router for new slug prefixes
+- Update all `@/features/planner/...` imports → `@/features/plan/...`
+- Update all `@/features/reports/...` imports → `@/features/records/...`
+
+**Risk:** This wave touches every file that imports from `features/planner` or `features/reports`.
+It must be done in isolation before any other wave to avoid merge conflicts.
+
+**TDD:**
+
+Unit:
+- Router test: `GET /api/plan/...` routes to the correct handler (previously `/api/planner/...`).
+- Router test: `GET /api/records/...` routes to the correct handler (previously `/api/reports/...`).
+
+Integration:
+- Render `Header` — assert nav contains links with text "Plan", "Records", "Growth", "Resources".
+- Assert nav does NOT contain "Weekly" or "Reports" as link text.
+- Render `Header` — assert "Growth" link points to `/growth`.
+- Render `Header` — assert "Resources" link points to `/resources`.
+
+Playwright (`e2e/auth.spec.ts`, `e2e/nav.spec.ts`):
+- Navigate to `/`, assert nav item "Plan" is visible and "Weekly" is not.
+- Click "Plan" → assert URL is `/plan` (or `/planner` if route alias used).
+- Click "Records" → assert URL is `/records`.
+- Click "Growth" → assert portfolio/growth page loads.
+- Click "Resources" → assert stub page loads without error.
+
+**File index:**
+
+| File | Change |
+|------|--------|
+| `features/layout/front/components/Header.tsx` | Update link labels and hrefs |
+| `features/plan/` (renamed from `features/planner/`) | Rename directory, update all internal imports |
+| `features/records/` (renamed from `features/reports/`) | Rename directory, update all internal imports |
+| `features/resources/` (new) | Stub feature directory + stub page |
+| `app/(shell)/plan/page.tsx` (renamed from `/planner/page.tsx`) | Route rename |
+| `app/(shell)/records/page.tsx` (renamed from `/reports/page.tsx`) | Route rename |
+| `app/(shell)/growth/page.tsx` (new) | Route → PortfolioPage (growth view) |
+| `app/(shell)/resources/page.tsx` (new) | Route → ResourcesStubPage |
+| `app/api/[...slug]/route.ts` | Add `plan`, `records`, `resources` slug cases |
+| `features/plan/api/router.ts` | Update router slug prefix |
+| `features/records/api/router.ts` | Update router slug prefix |
+| All files importing `@/features/planner/...` | Global import path update |
+| All files importing `@/features/reports/...` | Global import path update |
+| `e2e/nav.spec.ts` (new) | Nav label + routing E2E |
+| `features/layout/__tests__/Header.test.tsx` | Update for new link labels |
+
+---
+
+## Wave 1 — Display fixes + Household Settings
 
 **Bugs:** BUG-003, BUG-004, BUG-014, BUG-016
-
-These are rendering/state bugs requiring no data model changes. Fastest wins.
-
----
-
-### BUG-003 — Needs Attention alert shows raw child ID
-
-**Root cause:** Alert item component hardcodes child ID string instead of resolving child name
-from the children context or a lookup.
-
-**Files to touch:**
-- `features/dashboard/front/components/NeedsAttentionCard.tsx` (or alert item sub-component)
-- `features/dashboard/__tests__/integration/NeedsAttentionCard.test.tsx` (new or extend)
-
-**TDD:**
-- Integration test: render `NeedsAttentionCard` with a mock alert containing `childId: 'student_seed_adam_001'`
-  and a mock children context containing `{ id: 'student_seed_adam_001', name: 'Adam' }`.
-  Assert rendered text includes `"Adam"` and does NOT include `"student_seed_adam_001"`.
-- Playwright E2E (`e2e/dashboard.spec.ts`): navigate to `/`, find Needs Attention section,
-  assert no element with text matching `/student_seed_.*_\d{3}/`.
-
-**Implementation:**
-- Inject the children list via `useHousehold()` or `useDashboard()`.
-- Replace raw `alert.childId` display with `children.find(c => c.id === alert.childId)?.name ?? alert.childId`.
+**Feedback:** FB-007 (Household Settings expansion)
 
 ---
 
-### BUG-004 — Sort by date does not change order
+### BUG-003 — Needs Attention shows raw child ID
 
-**Root cause:** Alert data has no `date` field, so "By Date" sort has nothing to sort on.
-Exposing the option before the behavior exists misleads users.
-
-**Decision: implement date sorting** — add a `date` field to alert items and sort by it.
-
-**Files to touch:**
-- `features/dashboard/front/components/NeedsAttentionCard.tsx` (sort UI)
-- `features/dashboard/types.ts` — add `date: string` to alert item type
-- `features/dashboard/server/service.ts` — populate `date` on each alert item
-- `features/dashboard/__tests__/integration/NeedsAttentionCard.test.tsx`
+**Root cause:** Alert item renders `alert.childId` directly instead of resolving the name.
 
 **TDD:**
-- Unit test: `sortAlerts(alerts, 'date')` returns alerts ordered oldest→newest by `alert.date`.
-- Integration test: render with two alerts (different dates), select "By Date",
-  assert rendered order matches date sort.
-- Integration test: `alert.date` is a valid ISO date string in rendered output.
+- Integration: render `NeedsAttentionCard` with `childId: 'student_seed_adam_001'` and
+  children context containing `{ id: 'student_seed_adam_001', name: 'Adam' }`.
+  Assert rendered text is "Adam", not "student_seed_adam_001".
+- Playwright: navigate to `/`, assert no text matching `/student_seed_.*_\d{3}/` exists.
 
-**Playwright E2E (`e2e/dashboard.spec.ts`):**
-- Select "By Date" sort. Assert first alert has an earlier date than the second alert.
+**Implementation:** `children.find(c => c.id === alert.childId)?.name ?? alert.childId`
 
 ---
 
-### BUG-014 — Week Starts On radio both appear checked
+### BUG-004 — Sort by date implements
 
-**Root cause:** Controlled input mismatch — likely a `defaultValue` used instead of `value`,
-or state not updating on save response.
-
-**Files to touch:**
-- `features/settings/front/components/HouseholdSettingsTab.tsx` (or week-start sub-form)
-- `features/settings/__tests__/integration/HouseholdSettingsTab.test.tsx` (new or extend)
+**Decision:** Implement — add `date: string` (ISO) to alert items.
 
 **TDD:**
-- Integration test: render settings form with `weekStart: 'monday'`.
-  Assert Monday radio is checked, Sunday radio is not checked.
-  Simulate clicking Sunday. Assert Sunday radio is checked, Monday radio is not.
-  Simulate save. Assert only Sunday remains checked after re-render with updated value.
-- Playwright E2E (`e2e/settings.spec.ts`): navigate to `/settings`, select Sunday,
-  assert only one radio is checked after the success toast appears.
-
-**Implementation:**
-- Switch to fully controlled radio group: bind `checked={weekStart === 'sunday'}` etc.
-- On save response, update local state from the response value, not from the click event alone.
+- Unit: `sortAlerts(alerts, 'date')` returns alerts sorted oldest→newest by `alert.date`.
+- Integration: two alerts with different dates, select "By Date" → assert rendered order is date-ascending.
+- Playwright: select "By Date" sort → assert first alert date is earlier than second.
 
 ---
 
-### BUG-016 — Lesson status not shown on lesson card
+### BUG-014 + FB-007 — Week Starts On radio fix + Household Settings expansion
 
-**Root cause:** Lesson card component renders lesson fields but omits the `status` field,
-even though `status` is persisted and returned by the API.
+**BUG-014 root cause:** Uncontrolled radio input — `defaultValue` used instead of `value`.
 
-**Files to touch:**
-- `features/planner/front/components/LessonCard.tsx` (or equivalent lesson list item)
-- `features/planner/__tests__/integration/LessonCard.test.tsx` (new or extend)
+**BUG-014 TDD:**
+- Integration: render settings with `weekStart: 'monday'`. Assert Monday checked, Sunday not.
+  Simulate click Sunday. Assert Sunday checked, Monday not. Save. Assert only Sunday checked after update.
+- Playwright: navigate to `/settings`, click Sunday, assert only one radio checked after toast.
+
+**FB-007 additions (same wave, same files):**
+- Expand `weekStart` to support all 7 days (not just Mon/Sun).
+- Add **Default School Days** checkboxes (all 7 days).
+- Add **Day-load preference** per day: Off, Light, Normal, Heavy.
+- Add **Household/School reporting name** field (for transcripts, exports).
+- Add **Timezone** selector.
+- Add **Date Display** preference: Gregorian only, Gregorian + English Hijri, Full bilingual.
+- Add optional **Jumu'ah protected time** (leave window / return window).
+- Add **unsaved-change warning** when navigating away with edits.
+- Organize Household page into sections: Household Identity, Weekly Rhythm, Protected Time, Calendar & Time.
+
+**FB-007 TDD:**
+- Integration: render expanded Household settings, assert all 7 weekday checkboxes present.
+- Integration: change day-load preference for Monday, save, assert preference persists.
+- Integration: set reporting name, save, assert it appears on reports.
+- Integration: set Jumu'ah window, save, assert it persists.
+- Playwright: navigate to `/settings → Household`, assert Date Display preference selector exists.
+
+---
+
+### BUG-016 — Lesson status not shown on card
+
+**Root cause:** Lesson card does not render the `status` field.
 
 **TDD:**
-- Integration test: render `LessonCard` with `status: 'completed'`. Assert a badge or
-  text element displaying "Completed" (or equivalent label) is visible.
-- Integration test: render with `status: 'planned'`. Assert "Planned" badge is visible.
-- Integration test: render with `status: 'missed'`. Assert "Missed" badge is visible.
-- Playwright E2E (`e2e/planner.spec.ts`): navigate to `/lessons`, find a lesson card,
-  assert a status indicator is present.
+- Integration: render `LessonCard` with `status: 'completed'` → assert "Completed" badge visible.
+- Integration: `status: 'missed'` → assert "Missed" badge.
+- Integration: `status: 'planned'` → assert "Planned" badge.
+- Playwright: navigate to `/plan` (was `/planner`), find lesson card, assert status indicator present.
 
-**Implementation:**
-- Read `lesson.status` in the card component.
-- Render a small status badge using a `STATUS_LABELS` map (`planned` → "Planned", `completed` → "Completed", etc.).
-- Use Tailwind color classes per status (e.g., green for completed, amber for planned, red for missed).
+**Implementation:** `STATUS_LABELS` map + Tailwind color classes per status.
 
 ---
 
@@ -183,93 +211,83 @@ even though `status` is persisted and returned by the API.
 
 | File | Change |
 |------|--------|
-| `features/dashboard/front/components/NeedsAttentionCard.tsx` | Resolve child name from context |
+| `features/dashboard/front/components/NeedsAttentionCard.tsx` | Resolve child name |
 | `features/dashboard/__tests__/integration/NeedsAttentionCard.test.tsx` | New/extend |
-| `features/settings/front/components/HouseholdSettingsTab.tsx` | Fix controlled radio |
+| `features/settings/front/components/HouseholdSettingsTab.tsx` | Fix radio + expand fields |
+| `features/settings/server/service.ts` | Add new household fields |
+| `features/household/types.ts` | Expand `HouseholdProfile` with new fields |
 | `features/settings/__tests__/integration/HouseholdSettingsTab.test.tsx` | New/extend |
-| `features/planner/front/components/LessonCard.tsx` | Render status badge |
-| `features/planner/__tests__/integration/LessonCard.test.tsx` | New/extend |
-| `e2e/dashboard.spec.ts` | New spec |
-| `e2e/settings.spec.ts` | New spec |
+| `features/plan/front/components/LessonCard.tsx` | Add status badge |
+| `features/plan/__tests__/integration/LessonCard.test.tsx` | New/extend |
+| `e2e/dashboard.spec.ts` | raw ID assertion |
+| `e2e/settings.spec.ts` | radio + household fields |
+| `e2e/nav.spec.ts` | lesson status assertion |
 
 ---
 
-## Wave 2 — Attendance data integrity
+## Wave 2 — Attendance integrity + compliance engine
 
 **Bugs:** BUG-012, BUG-013
+**Feedback:** FB-014
 
 ---
 
 ### BUG-012 — Duplicate attendance records + missing child names
 
-**Root cause (two issues):**
-1. Service/API does not check for an existing record before inserting.
-   Multiple submissions for the same `childId + date` create new records instead of updating.
-2. The records list UI omits the child name column.
-
-**Files to touch:**
-- `features/attendance/server/service.ts` — add upsert logic
-- `features/attendance/api/routes/attendance.ts` — confirm POST/PUT flow
-- `features/attendance/front/components/AttendanceList.tsx` — add child name column
-- `features/attendance/__tests__/api/attendance-service.test.ts` (new/extend)
-- `features/attendance/__tests__/integration/AttendancePage.test.tsx` (extend)
+**Root cause:**
+1. Service does not upsert — same `childId + date` creates a new record each time.
+2. Records list UI omits child name column.
 
 **TDD:**
-
-Unit tests (service):
-- `createOrUpdateAttendance({ childId, date, status: 'present' })` twice for same child/date
-  → store contains exactly one record; second call updates, does not insert.
-- `createOrUpdateAttendance({ childId: 'A', date })` and `createOrUpdateAttendance({ childId: 'B', date })`
-  → store contains two records (different children, same date — both valid).
-
-Integration test (AttendancePage):
-- Render page, submit Present twice for same child/date.
-  Assert records list shows exactly one record for that child/date.
-- Assert records list renders a child name column, not just a date and status.
-
-Playwright E2E (`e2e/attendance.spec.ts`):
-- Navigate to `/attendance`, mark Present, mark Present again, assert only one record visible.
-- Assert record row contains child name text (not a UUID).
-
-**Implementation:**
-- In `attendance/server/service.ts`: before inserting, check for existing record with
-  same `childId + date`. If found, update `status` and `updatedAt`. Otherwise insert.
-- In `AttendanceList.tsx`: ensure child name is rendered per record (already partially addressed
-  in previous wave — confirm or extend).
+- Unit: `createOrUpdateAttendance({childId, date, status})` called twice same child/date →
+  store has exactly 1 record; second call updates, does not insert.
+- Unit: different children, same date → 2 records (valid).
+- Integration: submit Present twice same child/date → records list shows exactly 1 row.
+- Integration: records list renders child name column (not UUID).
+- Playwright: mark Present twice → assert only 1 record; assert row contains learner name.
 
 ---
 
-### BUG-013 — Missing days metric not shown
+### BUG-013 — Missing days metric
 
-**Root cause:** The attendance summary only counts present/absent/partial.
-Feature 23 acceptance criteria requires a "missing days" metric (school days with no record).
-This needs school year date range data to compute expected days vs recorded days.
-
-**Files to touch:**
-- `features/attendance/server/service.ts` — add `missingDays` to summary calculation
-- `features/school-year/server/service.ts` — confirm `getSchoolYear(householdId)` returns
-  `startDate` and `endDate`
-- `features/attendance/types.ts` — add `missingDays: number` to `AttendanceSummary`
-- `features/attendance/front/components/AttendanceSummary.tsx` — render missing days
-- `features/attendance/__tests__/api/attendance-service.test.ts` — extend
+**Decision:** Mon–Fri only within school year range.
 
 **TDD:**
+- Unit: school year Sep 1 – Jun 30, 5 records for a child through today →
+  `getAttendanceSummary(childId)` returns `missingDays = weekdaysElapsed - recordCount`.
+- Unit: record for every elapsed weekday → `missingDays: 0`.
+- Integration: render `AttendanceSummary` with `missingDays: 3` → assert "3" visible in Missing label.
+- Playwright: navigate to `/records/attendance` (new path), assert Summary shows Missing metric.
 
-Unit tests (service):
-- Given school year 2025-09-01 to 2026-06-30, and 5 attendance records for a child
-  through today, `getAttendanceSummary(childId, startDate, endDate)` returns
-  `missingDays = (schoolDaysElapsed - recordCount)` where schoolDaysElapsed excludes
-  weekends.
-- A child with a record for every elapsed school day returns `missingDays: 0`.
+---
 
-Integration test (AttendanceSummary):
-- Render `AttendanceSummary` with `{ present: 10, absent: 2, partial: 1, missingDays: 3 }`.
-  Assert "3 days" (or equivalent label) is visible.
+### FB-014 — Attendance as records/compliance engine
 
-Playwright E2E (`e2e/attendance.spec.ts`):
-- Navigate to `/attendance`, assert Summary section contains a "Missing" or "No record" label.
+**MVP additions (same wave):**
+- Rename **Child → Learner** across all attendance UI.
+- **Date defaults to today** in the attendance form.
+- Add **daily batch attendance mode**: mark all learners at once.
+- Add **quick actions**: Mark all present, Mark all absent, Copy previous school day.
+- Expand status options: Present, Absent, Partial, Excused absence, Sick day, Holiday/break,
+  Field trip, Co-op day, Makeup day, Not a school day.
+- Distinguish planned school day from non-school day in absence logic.
+- Add **attendance type/context** field: Regular, Field trip, Co-op, Tutor, Masjid, Project day, etc.
+- Add **reason templates** per status (sick, appointment, travel, etc.).
+- Add **filters**: Today, This week, This month, This school year, Custom range, Learner, Status.
+- Replace Delete action with safer **Archive / Void** with confirmation.
+- Add **export actions**: Print attendance log, Export CSV (MVP).
+- Add compliance progress display: "X of Y configured school days complete."
+- Add **unsaved-change warning** when navigating away.
+- Inherit school-year tracking method (days only / hours only / days + hours / flexible).
 
-> **Decision: Mon–Fri only** — any weekday within the school year start/end range counts as a school day. No holiday awareness in this wave.
+**FB-014 TDD:**
+- Integration: render form → assert date field defaults to today.
+- Integration: render batch mode → assert all active learners shown as a group.
+- Integration: click "Mark all present" → assert all learner statuses set to Present.
+- Integration: status dropdown includes "Field trip" and "Co-op day" options.
+- Integration: Delete button → confirm dialog appears; record archived, not hard-deleted.
+- Integration: filter by learner → assert only that learner's records shown.
+- Playwright: open `/records/attendance`, mark all present via batch mode, assert all rows show Present.
 
 ---
 
@@ -277,119 +295,91 @@ Playwright E2E (`e2e/attendance.spec.ts`):
 
 | File | Change |
 |------|--------|
-| `features/attendance/server/service.ts` | Upsert logic + missingDays |
-| `features/attendance/api/routes/attendance.ts` | Confirm upsert call |
-| `features/attendance/types.ts` | Add `missingDays` to summary type |
-| `features/attendance/front/components/AttendanceList.tsx` | Child name (confirm/extend) |
-| `features/attendance/front/components/AttendanceSummary.tsx` | Render missingDays |
-| `features/school-year/server/service.ts` | Read-only: verify date range API |
+| `features/attendance/server/service.ts` | Upsert + missingDays + archiveByChildId |
+| `features/attendance/api/routes/attendance.ts` | Upsert call; batch route |
+| `features/attendance/types.ts` | Add `missingDays`, expand status enum, add type/reason |
+| `features/attendance/front/components/AttendanceSummary.tsx` | missingDays metric |
+| `features/attendance/front/components/AttendanceList.tsx` | Child name, filters, safe delete |
+| `features/attendance/front/components/AttendanceForm.tsx` | Date default, Learner label, batch mode |
+| `features/attendance/front/components/BatchAttendanceForm.tsx` (new) | Batch entry for all learners |
+| `features/attendance/front/pages/AttendancePage.tsx` | Wire new components |
+| `features/school-year/server/service.ts` | Read-only: verify date range |
 | `features/attendance/__tests__/api/attendance-service.test.ts` | New/extend |
 | `features/attendance/__tests__/integration/AttendancePage.test.tsx` | Extend |
 | `e2e/attendance.spec.ts` | Extend |
 
 ---
 
-## Wave 3 — Dashboard data wiring
+## Wave 3 — Dashboard data wiring + Today command center
 
 **Bugs:** BUG-001, BUG-002, BUG-007
-
-These are the most complex. They require a full data-flow audit of the dashboard before
-touching any files.
+**Feedback:** FB-004
 
 ---
 
-### BUG-001 — Setup prompt stuck on "Plan your first lesson"
+### BUG-001 — Setup prompt stuck
 
-**Root cause:** `setupStatus` is hardcoded as `{ hasLessons: false, hasAttendance: false, hasPortfolio: false }`.
-
-**Files to touch:**
-- `features/dashboard/api/routes/summary.ts` (or setup status route)
-- `features/dashboard/server/service.ts` (or setup status service)
-- `features/dashboard/__tests__/api/summary.test.ts` (extend)
-- `features/dashboard/__tests__/integration/Dashboard.test.tsx` (extend)
+**Root cause:** `hasLessons: false`, `hasAttendance: false`, `hasPortfolio: false` hardcoded.
 
 **TDD:**
-
-Unit test (service):
-- `getSetupStatus(householdId)` when lessons exist for household → `hasLessons: true`.
-- `getSetupStatus(householdId)` when no lessons → `hasLessons: false`.
-- Same pattern for `hasAttendance` and `hasPortfolio`.
-
-Integration test:
-- Render Dashboard with mocked API returning `hasLessons: true`. Assert setup strip does not say "Plan your first lesson."
-- Render with `hasLessons: false`. Assert setup strip shows "Plan your first lesson."
-
-Playwright E2E (`e2e/dashboard.spec.ts`):
-- Navigate to `/`, create a lesson, navigate back, assert setup strip has advanced past the first step.
+- Unit: `getSetupStatus(householdId)` returns `hasLessons: true` when lessons exist.
+- Integration: Dashboard with `hasLessons: true` → setup strip does not say "Plan your first lesson."
+- Playwright: create a lesson, return to Today → assert setup strip advances past first step.
 
 ---
 
-### BUG-007 — Today metrics hardcoded/mismatched
+### BUG-007 — Today metrics hardcoded
 
-**Root cause:** Several summary fields in the Today metrics bar are hardcoded
-(e.g., Needs Attention count, Attendance Ready count).
-
-**Files to touch:**
-- `features/dashboard/api/routes/summary.ts`
-- `features/dashboard/front/components/TodayMetricsBar.tsx` (or equivalent)
-- `features/dashboard/__tests__/api/summary.test.ts` (extend)
-- `features/dashboard/__tests__/integration/TodayMetricsBar.test.tsx` (new/extend)
+**Root cause:** Needs Attention count, Attendance Ready, and other metric bar fields are hardcoded.
 
 **TDD:**
-
-Unit test (API route):
-- `GET /api/dashboard/summary` with seed data returns `needsAttentionCount` equal to
-  actual count of alert items in the seed.
-- `attendanceReadyCount` matches actual attendance records count.
-
-Integration test:
-- Render `TodayMetricsBar` with mocked summary. Assert displayed numbers match mock values.
-
-Playwright E2E (`e2e/dashboard.spec.ts`):
-- Navigate to `/`, read Needs Attention count from metric bar, count visible alert cards in
-  Needs Attention section. Assert they match.
+- Unit: `GET /api/dashboard/summary` with seed data → `needsAttentionCount` equals actual alert count.
+- Integration: render `TodayMetricsBar` with mocked summary → displayed numbers match mock.
+- Playwright: count visible alert cards, assert metric bar count matches.
 
 ---
 
 ### BUG-002 — Child selector filtering inconsistent
 
-**Root cause:** The top child selector updates some sections but not all.
-Quran Logging, Per-Child Progress, Records & Proof, and top metrics all have
-independent or missing child-filter wiring.
+**Decision:** Per-Child Progress removes its own selector and follows global top selector.
 
-**Decision: Per-Child Progress removes its own selector and follows the global top selector.**
+**Audit before touching (trace each section):**
 
-**Audit approach (read before touching):**
-
-Before writing any code, trace each dashboard section:
-
-| Section | Data source | Filtered by selected child? |
-|---------|-------------|----------------------------|
-| Today's State | `summary` API | Confirm |
-| Do Today | `tasks` API | Confirm |
-| Needs Attention | `alerts` API | Confirm |
-| Per-Child Progress | **Remove own selector → follow top selector** | Implement |
-| Quran Logging | `quran-sessions` API | Likely missing filter |
-| Records & Proof | `records` API | Confirm |
-
-**Files to touch:**
-- `features/dashboard/front/context/DashboardProvider.tsx`
-- `features/dashboard/front/pages/Dashboard.tsx`
-- `features/dashboard/front/components/QuranLoggingSection.tsx` (or equivalent)
-- `features/dashboard/front/components/RecordsSection.tsx` (or equivalent)
-- `features/dashboard/__tests__/integration/Dashboard.test.tsx` (extend)
+| Section | Expected filter |
+|---------|----------------|
+| Today's State | selectedChildId |
+| Do Today | selectedChildId |
+| Needs Attention | selectedChildId |
+| Per-Child Progress | selectedChildId (remove own selector) |
+| Quran Logging | selectedChildId |
+| Records & Proof | selectedChildId |
 
 **TDD:**
+- Integration: render Dashboard, select child B → Quran Logging section shows only B's sessions.
+- Integration: Per-Child Progress section has no child selector of its own.
+- Playwright: select Adam → assert Quran section updates; select Khadijah → assert it updates again.
 
-Integration test:
-- Render Dashboard with two children. Select child B. Assert Quran Logging section only
-  shows child B's sessions.
-- Select child A. Assert Quran Logging section shows child A's sessions.
-- Assert Records & Proof section updates on child change.
+---
 
-Playwright E2E (`e2e/dashboard.spec.ts`):
-- Select "Adam" from child selector. Assert Quran section contains "Adam" data only.
-- Select "Khadijah". Assert section updates.
+### FB-004 — Today as priority command center
+
+**MVP additions (same wave):**
+- Replace "Plan your first lesson / Coming soon" hero with **Today's Homeschool Status** summary card.
+  Includes: attendance status, overdue count, Quran logging status, daily readiness %.
+- Move **Needs Attention** directly below the status summary.
+- Add **School Year Progress** card: Day X of 180, Week X of 36, remaining school days.
+- Add bilingual Islamic date display: Arabic Hijri + English Hijri + Gregorian.
+- Rename **Records & Proof** → **Records Readiness** with clear readiness state.
+- Surface pacing awareness: "On pace / Behind / Ahead" indicator.
+- Add **Now & Next** live schedule preview card (minimal: next planned lesson + time).
+- All metrics must derive from live API data (no hardcoded values after BUG-007 fix).
+
+**FB-004 TDD:**
+- Integration: render Today → assert `TodayStatusSummary` card is present.
+- Integration: render Today with school year data → assert "Day X of 180" visible.
+- Integration: Islamic date display enabled → assert Hijri date text is rendered.
+- Integration: `NeedsAttention` renders directly below status summary.
+- Playwright: navigate to Today → assert "School Year Progress" card visible with non-zero day count.
 
 ---
 
@@ -397,13 +387,17 @@ Playwright E2E (`e2e/dashboard.spec.ts`):
 
 | File | Change |
 |------|--------|
-| `features/dashboard/api/routes/summary.ts` | Real setup status + metrics |
-| `features/dashboard/server/service.ts` | `getSetupStatus()` using real services |
-| `features/dashboard/front/context/DashboardProvider.tsx` | Propagate selectedChildId |
-| `features/dashboard/front/pages/Dashboard.tsx` | Wire filter to all sections |
-| `features/dashboard/front/components/TodayMetricsBar.tsx` | Read real metric values |
-| `features/dashboard/front/components/QuranLoggingSection.tsx` | Accept + use selectedChildId |
-| `features/dashboard/front/components/RecordsSection.tsx` | Accept + use selectedChildId |
+| `features/dashboard/api/routes/summary.ts` | Real setup status + real metrics |
+| `features/dashboard/server/service.ts` | `getSetupStatus()`, `getTodayMetrics()` |
+| `features/dashboard/front/context/DashboardProvider.tsx` | Propagate selectedChildId to all sections |
+| `features/dashboard/front/pages/Dashboard.tsx` | Wire filter; add new FB-004 sections |
+| `features/dashboard/front/components/TodayMetricsBar.tsx` | Live metric values |
+| `features/dashboard/front/components/TodayStatusSummary.tsx` (new) | Status card |
+| `features/dashboard/front/components/SchoolYearProgressCard.tsx` (new) | Day/week progress |
+| `features/dashboard/front/components/IslamicDateDisplay.tsx` (new) | Hijri + Gregorian date |
+| `features/dashboard/front/components/QuranLoggingSection.tsx` | Accept + filter by selectedChildId |
+| `features/dashboard/front/components/PerChildProgressSection.tsx` | Remove own selector |
+| `features/dashboard/front/components/RecordsReadinessSection.tsx` (rename) | Rename + readiness state |
 | `features/dashboard/__tests__/api/summary.test.ts` | Extend |
 | `features/dashboard/__tests__/integration/Dashboard.test.tsx` | Extend |
 | `features/dashboard/__tests__/integration/TodayMetricsBar.test.tsx` | New/extend |
@@ -411,80 +405,75 @@ Playwright E2E (`e2e/dashboard.spec.ts`):
 
 ---
 
-## Wave 4 — Quran + Lessons data flow
+## Wave 4 — Quran + Lessons data flow + Lessons hub
 
 **Bugs:** BUG-005, BUG-006, BUG-011
+**Feedback:** FB-011
 
 ---
 
 ### BUG-005 — Quran session card shows stale seed data
 
-**Root cause:** Dashboard displays first matching session record rather than the newest
-(likely `store.getAll().filter(s => s.childId === id)[0]` — no sort).
-
-**Files to touch:**
-- `features/dashboard/api/routes/quran-sessions.ts` (or records route)
-- `features/dashboard/server/service.ts` — sort sessions by date desc, return latest
-- `features/dashboard/__tests__/api/quran-sessions.test.ts` (new/extend)
+**Root cause:** Service returns first matching session, not newest.
 
 **TDD:**
-
-Unit test (service):
-- Given two sessions for child A (older: Al-Mulk 1–5, newer: Al-Fatiha),
-  `getLatestQuranSession(childId)` returns the Al-Fatiha session.
-
-Integration test:
-- Render Quran card with mocked latest session. Assert card shows newest session data.
-
-Playwright E2E (`e2e/dashboard.spec.ts`):
-- Log a new Quran session. Navigate back to dashboard. Assert card shows new session details,
-  not the seed session.
+- Unit: two sessions for child A (older: Al-Mulk 1–5, newer: Al-Fatiha) →
+  `getLatestQuranSession(childId)` returns Al-Fatiha session.
+- Integration: Quran card with mocked latest session → shows newest session data.
+- Playwright: log new session, return to Today → card shows new session, not seed.
 
 ---
 
 ### BUG-006 — Weekly Sessions chart hardcoded
 
-**Root cause:** Dashboard loads chart data from API but passes a hardcoded default array
-to the chart component instead of the API response.
-
-**Files to touch:**
-- `features/dashboard/front/components/QuranLoggingSection.tsx`
-- `features/dashboard/__tests__/integration/QuranLoggingSection.test.tsx` (new/extend)
+**Root cause:** Hardcoded default array passed to chart instead of API response.
 
 **TDD:**
-
-Integration test:
-- Render `QuranLoggingSection` with mocked API data returning 3 sessions this week.
-  Assert chart component receives a `data` prop with 3 entries (not the hardcoded default).
-
-Playwright E2E (`e2e/dashboard.spec.ts`):
-- Log a session. Navigate back. Assert chart visually updates (non-zero bar for today's date).
+- Integration: `QuranLoggingSection` with mocked API returning 3 sessions this week →
+  chart prop has 3 entries (not the hardcoded default).
+- Playwright: log a session, return to Today → chart updates for today's date.
 
 ---
 
-### BUG-011 — Today section only shows first child's lesson
+### BUG-011 — Today section only shows first child
 
-**Root cause:** Lessons page renders Today card with `childId={children[0].id}` — hardcoded
-to first child.
-
-**Files to touch:**
-- `features/planner/front/pages/LessonsPage.tsx`
-- `features/planner/__tests__/integration/LessonsPage.test.tsx` (new/extend)
+**Root cause:** `LessonsPage` renders Today card with `childId={children[0].id}`.
 
 **TDD:**
+- Integration: two children (Adam, Khadijah) both with lessons today →
+  Today section renders lessons for both (or renders all children's today lessons).
+- Playwright: navigate to `/plan/lessons` (new path), assert Today section includes lessons for
+  all children with lessons today.
 
-Integration test:
-- Render `LessonsPage` with two children (Adam, Khadijah) both having lessons today.
-  Assert Today section renders at least one lesson for each child, or renders all today's
-  lessons without child scoping. Assert Khadijah's lesson is present.
+**Implementation:** Iterate over all children, collect today lessons, or pass `null` childId.
 
-Playwright E2E (`e2e/planner.spec.ts`):
-- Navigate to `/lessons`. Assert Today section does not exclusively show one child's lessons
-  when multiple children have lessons today.
+---
 
-**Implementation:**
-- Iterate over all children and collect their today lessons, or pass `null` as `childId`
-  to render all children's lessons.
+### FB-011 — Lessons page as work management hub
+
+**MVP additions (same wave):**
+- Move Lessons under Plan tab as a subview (`/plan/lessons`).
+- Rename form fields: Child → **Learner(s)**, Subject → **Course/Subject**, Due date → **Planned date**.
+- Add **Estimated duration** field (15 min, 30 min, 45 min, 1 hr, custom).
+- Add **Lesson type** dropdown (adaptive per course category):
+  General: Lesson, Assignment, Reading, Practice, Review, Project, Assessment, Other.
+  Quran: Memorisation, Revision, Recitation, Tajweed, Listening.
+- Add **overdue labeling**: past planned date + not completed = "Overdue" badge.
+- Add **filters and grouping**: by learner, course/subject, date range, status, overdue, lesson type.
+- Expand lesson actions: Complete, Move, Edit, Skip, Add evidence.
+- Replace Delete with **Archive/Remove** with confirmation for lessons with records.
+- Add helper text when Course/Subject is empty: "Choose learner first to see active courses."
+- Fix internal ID leaks in labels, filters, validation.
+
+**FB-011 TDD:**
+- Integration: render form → assert "Learner" label, not "Child".
+- Integration: render form → assert "Planned date" label.
+- Integration: render form → assert Lesson type dropdown present with Quran-specific options
+  when Quran course is selected.
+- Integration: lesson with past planned date + `status: 'planned'` → assert "Overdue" badge.
+- Integration: Delete button → assert confirmation dialog; after confirm, lesson archived not deleted.
+- Integration: filter by lesson type → assert only matching lessons shown.
+- Playwright: open `/plan/lessons`, add lesson, assert Lesson type dropdown contains "Revision" for Quran.
 
 ---
 
@@ -492,81 +481,84 @@ Playwright E2E (`e2e/planner.spec.ts`):
 
 | File | Change |
 |------|--------|
-| `features/dashboard/api/routes/quran-sessions.ts` | Sort by date desc |
+| `features/dashboard/api/routes/quran-sessions.ts` | Sort sessions by date desc |
 | `features/dashboard/server/service.ts` | `getLatestQuranSession()` fix |
 | `features/dashboard/front/components/QuranLoggingSection.tsx` | Pass API chart data |
-| `features/planner/front/pages/LessonsPage.tsx` | Fix hardcoded `children[0]` |
+| `features/plan/front/pages/LessonsPage.tsx` | Fix hardcoded `children[0]`; rename fields; add subview |
+| `features/plan/front/components/LessonForm.tsx` | Rename fields, add duration, lesson type |
+| `features/plan/front/components/LessonCard.tsx` | Overdue badge, expanded actions |
+| `features/plan/front/components/LessonFilters.tsx` (new) | Filters + grouping |
+| `features/plan/types.ts` | Add `estimatedDuration`, `lessonType`, `plannedDate` |
+| `app/(shell)/plan/lessons/page.tsx` (new) | Route for `/plan/lessons` |
 | `features/dashboard/__tests__/api/quran-sessions.test.ts` | New/extend |
 | `features/dashboard/__tests__/integration/QuranLoggingSection.test.tsx` | New/extend |
-| `features/planner/__tests__/integration/LessonsPage.test.tsx` | New/extend |
-| `e2e/dashboard.spec.ts` | Extend |
-| `e2e/planner.spec.ts` | Extend |
+| `features/plan/__tests__/integration/LessonsPage.test.tsx` | New/extend |
+| `e2e/dashboard.spec.ts` | Quran session/chart assertions |
+| `e2e/planner.spec.ts` | Lessons Today, lesson type assertions |
 
 ---
 
-## Wave 5 — Planner fixes
+## Wave 5 — Planner fixes + planning control board
 
 **Bugs:** BUG-009, BUG-010
+**Feedback:** FB-006
 
 ---
 
-### BUG-009 — Duplicate Quran Memorisation subject rows
+### BUG-009 — Duplicate subject rows
 
-**Root cause:** Either the seed creates duplicate subject records for the same course,
-or the planner query returns the same subject twice (e.g., by joining subjects + lessons
-and grouping incorrectly).
-
-**Two root cause paths — audit before implementing:**
-1. Check seed: does `features/subjects/server/seed.ts` insert Quran Memorisation twice?
-2. Check planner query: does `getPlannerWeek` return duplicate subject rows?
-
-**Files to touch:**
-- `features/subjects/server/seed.ts` — read/audit
-- `features/planner/server/service.ts` — read/audit dedup logic
-- `features/planner/__tests__/api/planner-service.test.ts` (new/extend)
-- `features/planner/__tests__/integration/WeekGrid.test.tsx` (new/extend)
+**Root cause:** Audit seed and planner query — either seed inserts duplicate rows or
+planner query doesn't dedup subjects with multiple lessons.
 
 **TDD:**
-
-Unit test (service):
-- `getPlannerWeek(householdId, weekStart)` returns rows where each subject appears exactly once
-  per child, even if the subject has multiple lessons.
-
-Integration test (`WeekGrid`):
-- Render `WeekGrid` with mock data where child Adam has two lessons under Quran Memorisation.
-  Assert subject row "Quran Memorisation" appears exactly once in Adam's row group.
-
-Playwright E2E (`e2e/planner.spec.ts`):
-- Navigate to `/planner`, open subject filter, count occurrences of "Quran Memorisation".
-  Assert count equals 1.
+- Unit: `getPlannerWeek(householdId, weekStart)` → each subject appears once per child
+  even with multiple lessons.
+- Integration: `WeekGrid` with Adam having two lessons under Quran Memorisation →
+  "Quran Memorisation" row appears exactly once.
+- Playwright: open `/plan`, filter subjects → "Quran Memorisation" count = 1.
 
 ---
 
 ### BUG-010 — Week navigation stuck
 
-**Root cause:** Navigation buttons either do not update week state, or state updates but does
-not propagate to the grid query. Likely: local state updates but `currentWeekStart` prop
-passed to grid is not re-derived.
-
-**Files to touch:**
-- `features/planner/front/pages/PlannerPage.tsx` (or `WeeklyPlannerPage.tsx`)
-- `features/planner/front/components/WeekGrid.tsx`
-- `features/planner/__tests__/integration/PlannerPage.test.tsx` (new/extend)
+**Root cause:** Navigation buttons don't propagate updated `weekStart` to the grid.
 
 **TDD:**
+- Integration: render `PlannerPage` → click Previous → week label changes to prior week.
+  Click Next twice → label shows week after current.
+- Playwright: navigate to `/plan`, click Previous → assert week range changes in header.
 
-Integration test:
-- Render `PlannerPage`. Find week label (e.g., "May 11–17").
-  Click Previous. Assert week label changes to the prior week (e.g., "May 4–10").
-  Click Next. Assert week label returns to "May 11–17".
-  Click Next again. Assert week label advances to "May 18–24".
+---
 
-Playwright E2E (`e2e/planner.spec.ts`):
-- Navigate to `/planner`. Note displayed week. Click Previous. Assert week range changes.
+### FB-006 — Planner as planning control board
 
-**Implementation:**
-- Confirm week state is derived correctly (e.g., `startOfWeek(addWeeks(currentDate, offset))`).
-- Confirm the grid receives the updated `weekStart` as a prop and re-fetches or refilters.
+**MVP additions (same wave):**
+- Default to week containing **today** (not hardcoded week).
+- **Highlight today's column** visually in the weekly grid.
+- Improve **active filter display**: "Children: All 3 · Subjects: Quran, Math."
+- Add **collapsible child groups** in the grid.
+- Add **Scheduled-only vs All-subjects** view toggle.
+- Remove/prevent duplicate subject rows (from BUG-009 fix).
+- Add **Family/Shared Work** section in grid.
+- Add **direct "+ Add lesson" affordance** in empty cells.
+- Add lesson cell actions: Edit, Move, Duplicate, Complete, Add evidence.
+- Support **estimated lesson durations** in cells.
+- Auto-calculate **daily scheduled time totals** (e.g., "Monday: 6 lessons · 4h 20m").
+- Add family-configurable **workload thresholds** (from Household settings).
+  Frame warnings around settings: "Monday exceeds your preferred daily lesson target."
+- Add **Week Balance summary**: total lessons, total instructional time, overloaded days.
+- Add **Carry Forward Unfinished Work** action: move to next school day, next week, mark skipped.
+- Add **print/export weekly plan** (via `window.print()`).
+- Add **school week indicator**: "School Week 15 of 36."
+
+**FB-006 TDD:**
+- Integration: render `PlannerPage` → assert today's column is highlighted.
+- Integration: render with active filters → assert filter summary text is visible.
+- Integration: click "+ Add lesson" in empty cell → assert add-lesson form/modal opens.
+- Integration: lesson with duration 30 min → daily total updates to reflect it.
+- Integration: day exceeding threshold → assert warning message appears.
+- Integration: click "Carry Forward" on an overdue lesson → assert move dialog appears.
+- Playwright: navigate to `/plan`, assert school week indicator ("Week X of") is visible.
 
 ---
 
@@ -574,84 +566,425 @@ Playwright E2E (`e2e/planner.spec.ts`):
 
 | File | Change |
 |------|--------|
-| `features/subjects/server/seed.ts` | Audit for duplicate records (read-only first) |
-| `features/planner/server/service.ts` | Dedup subject rows if needed |
-| `features/planner/front/pages/PlannerPage.tsx` | Fix week navigation state |
-| `features/planner/front/components/WeekGrid.tsx` | Consume updated weekStart prop |
-| `features/planner/__tests__/api/planner-service.test.ts` | New/extend |
-| `features/planner/__tests__/integration/WeekGrid.test.tsx` | New/extend |
-| `features/planner/__tests__/integration/PlannerPage.test.tsx` | New/extend |
+| `features/subjects/server/seed.ts` | Audit + remove duplicate records |
+| `features/plan/server/service.ts` | Dedup subject rows; default to current week |
+| `features/plan/front/pages/PlannerPage.tsx` | Fix week nav; add week indicator; carry forward |
+| `features/plan/front/components/WeekGrid.tsx` | Highlight today; add cell actions; duration totals |
+| `features/plan/front/components/WeekGridFilters.tsx` | Improve filter display; add view toggle |
+| `features/plan/front/components/SharedWorkSection.tsx` (new) | Family/shared lesson section |
+| `features/plan/front/components/WeekBalanceSummary.tsx` (new) | Totals + threshold warnings |
+| `features/plan/front/components/CarryForwardModal.tsx` (new) | Move unfinished work dialog |
+| `features/plan/__tests__/api/planner-service.test.ts` | New/extend |
+| `features/plan/__tests__/integration/WeekGrid.test.tsx` | New/extend |
+| `features/plan/__tests__/integration/PlannerPage.test.tsx` | New/extend |
 | `e2e/planner.spec.ts` | Extend |
 
 ---
 
-## Wave 6 — Reports export
+## Wave 6 — Records export (print/PDF)
 
 **Bug:** BUG-008
 
----
+### BUG-008 — Export says prepared, nothing downloads
 
-### BUG-008 — Export says "prepared" but no download occurs
-
-**Root cause:** The "Attendance Report" button opens a modal that says the report is being
-prepared and to check downloads, but no download/export actually fires.
-
-**Decision: print / PDF flow** — trigger `window.print()` (or navigate to the reports
-page print view) so the user gets a real printable output. Remove the misleading
-"being prepared, check downloads" copy entirely.
-
-**Files to touch:**
-- `features/reports/front/components/AttendanceReportModal.tsx` (or equivalent export modal)
-- `features/dashboard/__tests__/integration/RecordsSection.test.tsx` (new/extend)
+**Decision:** Print/PDF flow via `window.print()` or navigate to print view.
 
 **TDD:**
+- Integration: spy on `window.print`. Click "Attendance Report" button → assert `window.print` called.
+- Integration: modal does NOT contain "being prepared" or "check your downloads."
+- Playwright: click export → assert print dialog triggered or print view navigated to.
 
-Integration test:
-- Spy on `window.print`. Click "Attendance Report" button. Assert `window.print` was called.
-- Assert the modal no longer contains "being prepared" or "check your downloads."
-
-Playwright E2E (`e2e/reports.spec.ts`):
-- Click the Attendance Report button. Assert `window.print` is called (or assert
-  navigation to the reports/print page).
-
----
-
-### Wave 6 — File index
+**File index:**
 
 | File | Change |
 |------|--------|
-| `features/reports/front/components/AttendanceReportModal.tsx` | Fix copy or implement export |
+| `features/records/front/components/AttendanceReportModal.tsx` | Replace copy; wire `window.print()` |
 | `features/dashboard/__tests__/integration/RecordsSection.test.tsx` | New/extend |
 | `e2e/reports.spec.ts` | Extend |
 
 ---
 
+## Wave 7 — Children sub-tab full refinement
+
+**Source:** FB-002
+
+**Scope:** Full implementation of transcript-safe learner records model.
+
+**Changes:**
+- Split "Child's name" into **First name*** + **Last name*** (required).
+- Add helper text: "Names entered here may appear on reports, transcripts, and exported records."
+- Change **Grade/Level** from free text to dropdown: PK, K, Grade 1–12, Other/custom.
+- Keep DOB optional; show on card only when present, formatted cleanly.
+- Remove **Teacher/Instructor** from child profile — instructor belongs at course/enrollment level.
+- Add **"Allow learner to sign in"** toggle. Show Username/Password only when enabled.
+- On learner cards: replace raw Username with "Learner login: Enabled / Not enabled."
+- Rename **Edit** → **Edit profile** on cards.
+- Archive behavior: keep records, hide from active planning, restorable.
+- Add "Show archived" count display.
+
+**TDD:**
+- Unit: `createStudent({ firstName, lastName, ... })` → student stored with `firstName` and `lastName` fields.
+- Unit: `archiveStudentProfile(id)` → student `isActive: false`, related data follows.
+- Integration: render `AddChildForm` → assert "First name" and "Last name" fields present.
+- Integration: render `AddChildForm` → assert Grade dropdown contains "PK", "K", "Grade 1"–"Grade 12".
+- Integration: render `AddChildForm` → assert "Teacher/Instructor" field absent.
+- Integration: "Allow learner to sign in" toggle off → Username/Password fields hidden.
+- Integration: toggle on → Username/Password fields visible.
+- Integration: render learner card → assert displays first + last name.
+- Integration: render learner card → assert no raw username; assert "Learner login: Enabled" label.
+- Playwright: navigate to `/settings`, open Children tab, add child with first + last name →
+  assert card shows full name.
+
+**File index:**
+
+| File | Change |
+|------|--------|
+| `features/children/types.ts` | Add `firstName`, `lastName`; remove `teacherName` |
+| `features/children/server/service.ts` | Update to firstName/lastName |
+| `features/children/server/seed.ts` | Update seed to firstName/lastName |
+| `features/children/front/components/ChildForm.tsx` | Split name; grade dropdown; learner login toggle |
+| `features/children/front/components/ChildCard.tsx` | Full name; login status; rename Edit |
+| `features/settings/front/pages/SettingsPage.tsx` | Wire updated child components |
+| `features/children/__tests__/api/child.test.ts` | Extend |
+| `features/children/__tests__/integration/ChildForm.test.tsx` | New/extend |
+| `e2e/settings.spec.ts` | Children tab assertions |
+
+---
+
+## Wave 8 — Subjects/Courses sub-tab full refinement
+
+**Source:** FB-003
+
+**Scope:** Full implementation of course/enrollment management model.
+
+**Changes:**
+- Rename "Subject name" → **Course / Subject name**.
+- Add optional **Instructor/Teacher** field (course-level, not child-level).
+- Add optional **Level/Grade** field (e.g., Grade 5, Algebra I, Arabic Level 2).
+- Associate courses with a **School Year**.
+- Replace child-tab assignment with **Learner multi-select** inside the course form.
+  - Support shared/family courses (one record, multiple learners).
+- Fix **category formatting**: "IslamicStudies" → "Islamic Studies".
+- Expand category list to include: Quran, Arabic, Islamic Studies, Math, English/ELA,
+  Reading, Writing, Science, History, Social Studies, Geography, Art, PE/Health,
+  Technology, Nature Study, Logic, Life Skills, Civics, Economics, Handwriting,
+  Vocabulary/Spelling, Foreign Language, Other/Custom.
+- Add **custom category** field when "Other/Custom" selected.
+- Update **All Subjects table** → Course/Enrollment Management table.
+  Columns: Learner(s), Course/Subject, Category, Level/Grade, School Year, Instructor, Status, Actions.
+- For shared courses: show course once with learner chips, not duplicate rows.
+- Archive behavior: keep records, hide from active planning, restorable.
+- Standardize spelling: "Quran Memorization" (US English).
+
+**TDD:**
+- Unit: `createSubject({ learnerIds: ['A', 'B'], courseName, category })` → one subject record,
+  enrolled for two learners.
+- Unit: `getSubjectsByLearner(childId)` returns only that learner's enrolled courses.
+- Integration: render `AddSubjectForm` → assert "Learner(s)" multi-select present.
+- Integration: category dropdown contains "Quran" (first), "Arabic", "Islamic Studies".
+- Integration: select "Other/Custom" → assert custom category text field appears.
+- Integration: subject shared between Adam and Khadijah → All Subjects table shows one row with both learner chips.
+- Integration: "IslamicStudies" category → displays as "Islamic Studies".
+- Playwright: navigate to `/settings`, open Subjects tab, create shared course for two learners →
+  assert table shows one row with two learner chips.
+
+**File index:**
+
+| File | Change |
+|------|--------|
+| `features/subjects/types.ts` | Add `instructorName`, `level`, `schoolYearId`, `learnerIds[]` |
+| `features/subjects/server/service.ts` | Enrollment model; dedup |
+| `features/subjects/server/seed.ts` | Update seed with proper categories + shared courses |
+| `features/subjects/front/components/SubjectForm.tsx` | Learner multi-select; new fields |
+| `features/subjects/front/components/SubjectTable.tsx` | Enrollment table; learner chips |
+| `features/settings/front/pages/SettingsPage.tsx` | Wire updated subject components |
+| `features/subjects/__tests__/api/subject.test.ts` | Extend |
+| `features/subjects/__tests__/integration/SubjectForm.test.tsx` | New/extend |
+| `e2e/settings.spec.ts` | Subjects tab assertions |
+
+---
+
+## Wave 9 — Settings architecture reorganization
+
+**Source:** FB-008
+
+**Scope:** Reorganize Settings sub-tabs to align with confirmed top-level tab structure.
+
+**New Settings sub-tabs:**
+- Household (already exists — expanded in Wave 1)
+- School Year (already exists — expanded in Wave 10)
+- Learners (replaces Children)
+- Courses (replaces Subjects)
+- Planning Defaults (new): planning style, workload thresholds, carry-forward behavior.
+- Records & Compliance Defaults (new): tracking method, days vs hours, export format.
+- Access & Privacy (new): learner login, data export, archive/delete.
+
+**TDD:**
+- Integration: render SettingsPage → assert tabs include "Learners", "Courses",
+  "Planning Defaults", "Records & Compliance", "Access & Privacy".
+- Integration: render SettingsPage → assert tabs do NOT include raw "Children" or "Subjects" labels
+  (or keep friendly names while internally renaming).
+- Integration: render Planning Defaults tab → assert workload threshold fields present.
+- Playwright: navigate to `/settings`, assert sub-tab navigation contains new tabs.
+
+**File index:**
+
+| File | Change |
+|------|--------|
+| `features/settings/front/pages/SettingsPage.tsx` | Update tab navigation |
+| `features/settings/front/components/PlanningDefaultsTab.tsx` (new) | Planning defaults UI |
+| `features/settings/front/components/RecordsComplianceDefaultsTab.tsx` (new) | Compliance defaults UI |
+| `features/settings/front/components/AccessPrivacyTab.tsx` (new) | Access/privacy settings |
+| `features/settings/server/service.ts` | Extend to support new settings domains |
+| `features/settings/__tests__/integration/SettingsPage.test.tsx` | New/extend |
+| `e2e/settings.spec.ts` | Tab navigation assertions |
+
+---
+
+## Wave 10 — School Year Settings as academic calendar foundation
+
+**Source:** FB-009
+
+**Scope:** Full expansion of School Year Settings.
+
+**MVP additions:**
+- **Active school year card**: show name, Gregorian + Hijri start/end dates, day count, week count.
+  Example: "Day 72 of 180 planned school days · Week 15 of 36."
+- Prefill current active year when editing.
+- Distinguish: Edit active year / Create new year / Create next year.
+- Add **required school days** and/or **required instructional hours**.
+- Add **tracking method**: Days only / Hours only / Days + hours / Flexible.
+- Add **breaks, holidays, and custom non-school days** (Eid break, Ramadan light schedule, etc.).
+- Add **terms/reporting periods**: full year, semesters, quarters, trimesters.
+- Add **school day counting rules** and week numbering.
+- Add **live academic-year preview** before saving: planned school days, required days,
+  weeks remaining, target status.
+- Add **compliance note**: location/state requirements with "informational, not legal advice" disclaimer.
+- Add **planned school days calculator**: start/end dates + household school days + breaks.
+
+**TDD:**
+- Unit: `calculatePlannedSchoolDays({ startDate, endDate, schoolDays: ['mon','tue','wed','thu','fri'], breaks: [] })` → correct day count.
+- Unit: add a 5-day Eid break → day count decreases by 5.
+- Integration: render school year card → assert "Day X of Y" visible with real data.
+- Integration: add a break (Eid) → preview updates day count.
+- Integration: render tracking method selector → assert "Days only", "Hours only" options present.
+- Playwright: navigate to `/settings`, open School Year tab → assert day count card is visible.
+
+**File index:**
+
+| File | Change |
+|------|--------|
+| `features/school-year/types.ts` | Add `requiredDays`, `requiredHours`, `trackingMethod`, `breaks[]`, `terms[]` |
+| `features/school-year/server/service.ts` | `calculatePlannedDays()`, `getSchoolYearProgress()` |
+| `features/school-year/front/components/SchoolYearCard.tsx` | Day/week progress display |
+| `features/school-year/front/components/SchoolYearForm.tsx` | New fields + live preview |
+| `features/school-year/front/components/BreakManager.tsx` (new) | Add/edit breaks |
+| `features/school-year/__tests__/api/school-year.test.ts` | New/extend |
+| `features/school-year/__tests__/integration/SchoolYearForm.test.tsx` | New/extend |
+| `e2e/settings.spec.ts` | School Year tab assertions |
+
+---
+
+## Wave 11 — Islamic calendar reminders
+
+**Source:** FB-010
+
+**Scope:** Muslim-native calendar layer — countdowns, reminders, dashboard display.
+
+**Features:**
+- Built-in countdowns for: Ramadan, Eid al-Fitr, Eid al-Adha, Day of Arafah, Ashura,
+  White Days (13th/14th/15th of each Hijri month), Sacred Months (Muharram, Rajab, Dhul-Qa'dah, Dhul-Hijjah).
+- Support **custom Islamic date reminders** and **custom Gregorian date reminders**.
+- Settings toggle per reminder: enabled/disabled via checkboxes.
+- Surface selected reminders on **Today dashboard**:
+  "Ramadan begins in 23 days" / "White Days begin tomorrow" / "We are in Rajab."
+- Optional interaction with Planner and School Year (Eid break, Ramadan light schedule).
+- Hijri date calculation (auto-computed, with manual adjustment later).
+
+**TDD:**
+- Unit: `getIslamicCalendarCountdowns(today)` returns correct days-remaining for next Eid given known test date.
+- Unit: White Days calculation returns correct Hijri dates for a given month.
+- Integration: render `IslamicCalendarCard` with upcoming Ramadan → assert "Ramadan begins in X days."
+- Integration: reminder disabled in settings → assert that reminder does not appear on Today.
+- Playwright: navigate to Today → assert at least one Islamic calendar indicator is visible.
+
+**File index:**
+
+| File | Change |
+|------|--------|
+| `features/islamic-calendar/` (new) | New feature directory |
+| `features/islamic-calendar/types.ts` | Reminder, countdown types |
+| `features/islamic-calendar/server/service.ts` | Hijri calculations, countdown logic |
+| `features/islamic-calendar/front/components/IslamicCalendarCard.tsx` | Countdown display |
+| `features/dashboard/front/pages/Dashboard.tsx` | Surface Islamic calendar card on Today |
+| `features/settings/front/components/IslamicCalendarSettings.tsx` (new) | Toggle reminders |
+| `features/islamic-calendar/__tests__/api/islamic-calendar.test.ts` | New |
+| `features/islamic-calendar/__tests__/integration/IslamicCalendarCard.test.tsx` | New |
+| `e2e/dashboard.spec.ts` | Assert Islamic calendar indicator |
+
+---
+
+## Wave 12 — Live schedule / classroom timing workflow
+
+**Source:** FB-005
+
+**Scope:** Dedicated Schedule/Classroom screen + "Now & Next" preview on Today.
+
+**Features:**
+- **Now & Next preview card** on Today dashboard: current lesson block, time remaining, next block.
+- **Dedicated `/plan/schedule` route**: visual daily schedule.
+- Display current lesson block, start/end times, current time, live time fill, upcoming preview.
+- **Pause Day / Resume Day** workflow.
+- **Dynamic Day Reflow** actions: shift remaining, swap order, pull independent work forward, compress/extend day, convert to light day, reschedule unfinished.
+- **Instruction mode** per lesson block: Teacher-led, Guided, Independent, Shared/family, Tutor-led, Co-op, Async.
+- **Flexibility state** per block: Locked, Flexible, Optional.
+- **Independent work bank**: lessons that can be pulled forward when schedule changes.
+- **Transition/break time** support between blocks; protected break types (lunch, prayer, Jumu'ah, toddler care).
+- **Schedule templates**: Standard Monday, Co-op Tuesday, Light Friday, Ramadan schedule.
+
+**TDD:**
+- Unit: `buildDailySchedule(lessons, settings)` returns blocks with correct start/end times
+  accounting for transition time.
+- Unit: `reflow('compress', schedule, currentTime)` returns schedule with remaining blocks compressed.
+- Integration: render `NowNextCard` with 2 lessons → assert current lesson and next lesson both visible.
+- Integration: click "Pause Day" → assert reflow options appear.
+- Integration: lesson with `flexibilityState: 'locked'` → assert it cannot be moved in reflow.
+- Playwright: navigate to `/plan/schedule`, assert time-fill progress bar visible for current block.
+
+**File index:**
+
+| File | Change |
+|------|--------|
+| `features/schedule/` (new) | New feature directory |
+| `features/schedule/types.ts` | ScheduleBlock, DaySchedule, ReflowAction types |
+| `features/schedule/server/service.ts` | `buildDailySchedule()`, `reflow()` |
+| `features/schedule/front/pages/SchedulePage.tsx` | Visual daily schedule |
+| `features/schedule/front/components/ScheduleBlock.tsx` | Block card with live time fill |
+| `features/schedule/front/components/NowNextCard.tsx` | Today dashboard preview |
+| `features/schedule/front/components/ReflowPanel.tsx` | Reflow action panel |
+| `features/dashboard/front/pages/Dashboard.tsx` | Surface `NowNextCard` on Today |
+| `app/(shell)/plan/schedule/page.tsx` (new) | Route |
+| `features/schedule/__tests__/api/schedule.test.ts` | New |
+| `features/schedule/__tests__/integration/SchedulePage.test.tsx` | New |
+| `e2e/planner.spec.ts` | Schedule route + Now & Next assertions |
+
+---
+
+## Wave 13 — Curriculum / resource pacing engine
+
+**Source:** FB-012
+
+**Scope:** Resources tab + pacing engine connected to Plan, Lessons, and Growth.
+
+**Features:**
+- `features/resources/` (scaffold started in Wave 0 as stub — expand here).
+- Structured resource metadata: title, publisher, author, edition, grade/level, subject/category,
+  ISBN, resource type (textbook/workbook/online course/Quran text/etc.),
+  total pages, lesson count, units/chapters/modules, table of contents sequence.
+- **Lesson generation from resource structure**: by pages, chapters, lessons, surahs/ayahs.
+- **Pacing calculation**: resource length ÷ course schedule days = pages/lessons per day.
+- **Pacing targets**: finish by school year end, finish by custom date, X pages/lessons per week.
+- **Progress tracking**: completed through page X of Y; recalculate needed pace.
+- **Adaptive recalculation** (user-confirms before changing plans).
+- **Shared/verified resource database**: one entry per resource; admin verification workflow.
+- Edition-exact matching, verification status (User-submitted / Needs review / Verified / Deprecated).
+- Copyright guardrails: no redistribution of copyrighted content.
+
+**TDD:**
+- Unit: `calculatePace({ totalPages: 360, schoolDays: 150 })` → `pagesPerDay: 2.4`.
+- Unit: `calculatePace` with completed pages → returns remaining days needed and pace.
+- Unit: `generateLessons({ resource, paceTarget: 'byChapter', chapters: 30, schoolDays: 36 })` →
+  returns 30 lesson stubs across the school year.
+- Integration: render ResourceForm → assert title, publisher, edition, resource type fields present.
+- Integration: render ResourceForm → assert lesson generation button present after metadata entered.
+- Integration: render PacingCard with behind-pace state → assert "You need X pages/day to finish on time" visible.
+- Integration: shared resource with verification status "Verified" → assert "Verified" badge visible.
+- Playwright: navigate to `/resources`, add a resource, trigger lesson generation →
+  assert lessons appear in plan.
+
+**File index:**
+
+| File | Change |
+|------|--------|
+| `features/resources/` (expand from Wave 0 stub) | Full feature directory |
+| `features/resources/types.ts` | Resource, PacingTarget, VerificationStatus types |
+| `features/resources/server/service.ts` | `createResource()`, `calculatePace()`, `generateLessons()` |
+| `features/resources/front/pages/ResourcesPage.tsx` | Resource library list |
+| `features/resources/front/components/ResourceForm.tsx` | Metadata entry form |
+| `features/resources/front/components/PacingCard.tsx` | Pacing status + adaptive alert |
+| `features/resources/front/components/LessonGenerationPanel.tsx` | Generate lessons from resource |
+| `app/(shell)/resources/page.tsx` | Expand from stub |
+| `features/resources/__tests__/api/resources.test.ts` | New |
+| `features/resources/__tests__/integration/ResourcesPage.test.tsx` | New |
+| `e2e/planner.spec.ts` | Pacing + lesson generation assertions |
+
+---
+
+## Wave 14 — Community curriculum intelligence
+
+**Source:** FB-013
+
+**Scope:** Community-informed resource intelligence with moderation and privacy controls.
+
+**Features:**
+- Parent feedback layer on resources/lessons: rating, difficulty, actual time, vocab load,
+  parent prep, supplies, independent/teacher-led fit, Islamic compatibility note.
+- **Muslim-native review signals**: Generally compatible / Needs parent context /
+  Contains worldview concern / Contains sensitive content / Strongly beneficial / Not reviewed.
+- Parent notes shared only by opt-in; not auto-exposed to other users.
+- **Sheath Community Note** per resource: distilled vetted insight in consistent format
+  (difficulty, time, prep, supplies, Islamic note, vocab warnings, pacing pattern, modifications).
+- **Community pacing signals**: "Most families spend 2 days on this lesson."
+- Contribution guards: no copyrighted content redistribution.
+- Moderation/review workflow before community notes are broadly visible.
+- Privacy controls: anonymous / named / private / share with Sheath for review.
+- Future: resource recommendations based on grade, subject, Islamic compatibility, pacing, budget.
+
+**TDD:**
+- Unit: `createResourceFeedback({ resourceId, parentId, compatibility: 'needsContext', ... })` →
+  feedback stored with status "pending review".
+- Unit: `getVerifiedCommunityNote(resourceId)` returns null when no verified notes exist.
+- Unit: feedback with copyrighted content flag → blocked from submission.
+- Integration: render ResourceCard → assert "Community Note" section only shows when verified note exists.
+- Integration: render FeedbackForm → assert Islamic compatibility selector present.
+- Integration: anonymous contribution selected → feedback stored without parent attribution.
+- Playwright: navigate to resource, open feedback form, submit feedback →
+  assert "Under review" status shown; assert note not publicly visible until verified.
+
+**File index:**
+
+| File | Change |
+|------|--------|
+| `features/resources/types.ts` | Add ResourceFeedback, CommunityNote types |
+| `features/resources/server/service.ts` | `createFeedback()`, `getCommunityNote()`, `moderateNote()` |
+| `features/resources/front/components/FeedbackForm.tsx` | Parent feedback form |
+| `features/resources/front/components/CommunityNoteCard.tsx` | Vetted note display |
+| `features/resources/front/components/IslamicCompatibilityBadge.tsx` | Compatibility signal |
+| `features/resources/server/moderation.ts` (new) | Moderation workflow |
+| `features/resources/__tests__/api/community.test.ts` | New |
+| `features/resources/__tests__/integration/FeedbackForm.test.tsx` | New |
+| `e2e/planner.spec.ts` | Community note + feedback form assertions |
+
+---
+
 ## E2E specs summary
 
-| Spec file | Bugs covered |
-|-----------|-------------|
-| `e2e/dashboard.spec.ts` | BUG-001, BUG-002, BUG-003, BUG-004, BUG-005, BUG-006, BUG-007 |
-| `e2e/attendance.spec.ts` | BUG-012, BUG-013 |
-| `e2e/settings.spec.ts` | BUG-014 |
-| `e2e/planner.spec.ts` | BUG-009, BUG-010, BUG-011, BUG-016 |
-| `e2e/reports.spec.ts` | BUG-008 |
+| Spec file | Waves covered |
+|-----------|---------------|
+| `e2e/nav.spec.ts` | 0 |
+| `e2e/dashboard.spec.ts` | 1, 3, 4, 11 |
+| `e2e/settings.spec.ts` | 1, 7, 8, 9, 10 |
+| `e2e/attendance.spec.ts` | 2 |
+| `e2e/planner.spec.ts` | 4, 5, 12, 13, 14 |
+| `e2e/reports.spec.ts` | 6 |
+| `e2e/auth.spec.ts` | 0 (route changes) |
 
 ---
 
 ## Session discipline
 
 Each wave = one session message with explicit file scope.
-Write failing tests first. Then implement until tests pass. Then push.
+Write failing tests first (Jest for unit/integration, Playwright for E2E).
+Then implement until tests pass. Then push.
 Do not read or modify files outside the wave's file list without explicit approval.
-
----
-
-## Decisions (locked)
-
-| Question | Decision |
-|----------|----------|
-| BUG-004: Sort by date | Implement — add `date` field to alert items and sort by it |
-| BUG-013: Missing days definition | Mon–Fri only within school year range. No holiday awareness in this wave. |
-| BUG-008: Export behavior | Print / PDF flow — `window.print()` or navigate to reports print view |
-| BUG-002: Per-Child Progress selector | Unify — remove its own selector, follow global top selector |
-| Wave ordering | Wave 1 first (quick display wins) |
+Wave 0 must complete and merge before any other wave begins.
