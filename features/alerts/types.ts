@@ -11,6 +11,8 @@ export type AlertSourceFeature =
 export interface Alert {
   id: string
   childId: string | null
+  childName?: string
+  href?: string
   date?: string
   type: string
   status: AlertStatus

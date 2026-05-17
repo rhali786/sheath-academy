@@ -28,6 +28,8 @@ export function getAlerts(childId?: string): Alert[] {
       alerts.push({
         id: `pending_lessons_${child.id}`,
         childId: child.id,
+        childName: child.name,
+        href: '/lessons',
         date: today,
         type: 'pending_lessons',
         status: 'open',
@@ -50,6 +52,7 @@ export function getAlerts(childId?: string): Alert[] {
       alerts.push({
         id: `attendance_missing_${today}`,
         childId: null,
+        href: '/attendance',
         date: today,
         type: 'attendance_missing',
         status: 'open',
@@ -68,6 +71,8 @@ export function getAlerts(childId?: string): Alert[] {
         alerts.push({
           id: `attendance_missing_${today}`,
           childId,
+          childName: child.name,
+          href: '/attendance',
           date: today,
           type: 'attendance_missing',
           status: 'open',
