@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Link from 'next/link'
 import { CheckCircle, TrendingUp, Folder, BookOpen } from 'lucide-react'
 import type { DashboardRecord } from '../types'
 
@@ -11,6 +12,13 @@ const iconMap: Record<string, React.ReactNode> = {
   TrendingUp:  <TrendingUp  className="w-5 h-5 text-sky-600" />,
   Folder:      <Folder      className="w-5 h-5 text-violet-600" />,
   BookOpen:    <BookOpen    className="w-5 h-5 text-amber-600" />,
+}
+
+const RECORD_ROUTES: Record<string, string> = {
+  record_attendance: '/attendance',
+  record_progress: '/planner',
+  record_portfolio: '/portfolio',
+  record_quran: '/quran',
 }
 
 const exportButtons = [
@@ -42,9 +50,13 @@ export function RecordsProof({ records }: RecordsProofProps) {
                 <span className="text-lg font-medium text-slate-300">/{record.maxCount}</span>
               ) : null}
             </p>
-            <button className="mt-3 text-xs font-semibold text-sky-600 hover:text-sky-700 transition-colors">
-              {record.viewButton} →
-            </button>
+            {RECORD_ROUTES[record.id] ? (
+              <Link href={RECORD_ROUTES[record.id]} className="mt-3 text-xs font-semibold text-sky-600 hover:text-sky-700 transition-colors">
+                {record.viewButton} →
+              </Link>
+            ) : (
+              <span className="mt-3 text-xs font-semibold text-slate-400">{record.viewButton} →</span>
+            )}
           </div>
         ))}
       </div>
