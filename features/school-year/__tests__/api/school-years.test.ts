@@ -1,22 +1,17 @@
-import { getSchoolYears, getSchoolYear, createSchoolYear, resetStore } from '@/features/school-year/server/service'
+import { getSchoolYears, getSchoolYear, createSchoolYear, resetStore, getActiveSchoolYear, seedSchoolYears } from '@/features/school-year/server/service'
 import { SEED_SCHOOL_YEARS } from '@/features/school-year/server/seed'
-import { resetStore as resetHouseholdStore } from '@/features/household/server/service'
+import { resetStore as resetHouseholdStore, seedWorkspace } from '@/features/household/server/service'
 import { SEED_IDS } from '@/features/lib/seedIds'
-
-// Pre-seed the household workspace so createSchoolYear can resolve a workspaceId
-const { workspacesStore } = require('@/features/household/server/store')
 
 beforeEach(() => {
   resetStore()
   resetHouseholdStore()
-  workspacesStore.reset([
-    {
-      id: SEED_IDS.workspace,
-      name: 'Test Workspace',
-      ownerId: 'user_test',
-      createdAt: '2026-01-01T00:00:00.000Z',
-    },
-  ])
+  seedWorkspace({
+    id: SEED_IDS.workspace,
+    name: 'Test Workspace',
+    ownerId: 'user_test',
+    createdAt: '2026-01-01T00:00:00.000Z',
+  })
 })
 
 describe('School Years - List and Create', () => {
@@ -27,14 +22,12 @@ describe('School Years - List and Create', () => {
     })
 
     it('GET /school-years returns empty array when no seed', () => {
-      const { schoolYearsStore } = require('@/features/school-year/server/store')
-      schoolYearsStore.reset([])
+      seedSchoolYears([])
       const years = getSchoolYears()
       expect(years).toEqual([])
     })
 
     it('GET /school-years/active returns the active year', () => {
-      const { getActiveSchoolYear } = require('@/features/school-year/server/service')
       const active = getActiveSchoolYear()
       expect(active).not.toBeNull()
       expect(active!.isActive).toBe(true)
@@ -42,9 +35,7 @@ describe('School Years - List and Create', () => {
     })
 
     it('GET /school-years/active returns null when none active', () => {
-      const { schoolYearsStore } = require('@/features/school-year/server/store')
-      schoolYearsStore.reset([])
-      const { getActiveSchoolYear } = require('@/features/school-year/server/service')
+      seedSchoolYears([])
       // after resetting to empty, no active year exists
       const active = getActiveSchoolYear()
       expect(active).toBeNull()
@@ -106,8 +97,7 @@ describe('School Years - List and Create', () => {
     })
 
     it('deactivates other years when creating with isActive: true', () => {
-      const { schoolYearsStore } = require('@/features/school-year/server/store')
-      schoolYearsStore.reset([])
+      seedSchoolYears([])
       const first = createSchoolYear({
         name: 'First',
         startDate: '2025-08-01',

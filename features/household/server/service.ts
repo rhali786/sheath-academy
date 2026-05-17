@@ -50,3 +50,13 @@ export function resetStore(): void {
   workspacesStore.reset([])
   householdProfilesStore.reset([])
 }
+
+/** Seeds a workspace for tests that need to pre-populate store state. */
+export function seedWorkspace(workspace: Workspace): void {
+  workspacesStore.reset([workspace])
+}
+
+/** Seeds a household profile for tests that need to pre-populate store state. */
+export function seedHouseholdProfile(profile: HouseholdProfile): void {
+  householdProfilesStore.reset([profile])
+}
