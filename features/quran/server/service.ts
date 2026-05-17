@@ -13,6 +13,21 @@ export interface QuranSummary {
   sessionsByType: Array<{ type: string; count: number }>
   recentSessions: QuranSession[]
   dateRange: { startDate?: string; endDate?: string }
+  streakDays: number
+}
+
+function calcStreak(sessions: QuranSession[]): number {
+  const sessionDates = new Set(sessions.map(s => s.date))
+  const today = new Date()
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  let streak = 0
+  const cursor = new Date(today)
+  while (sessionDates.has(fmt(cursor))) {
+    streak++
+    cursor.setDate(cursor.getDate() - 1)
+  }
+  return streak
 }
 
 export function getQuranSummary({
@@ -39,6 +54,7 @@ export function getQuranSummary({
     sessionsByType: Object.entries(byType).map(([type, count]) => ({ type, count })),
     recentSessions: sessions.slice(0, 5),
     dateRange: { startDate, endDate },
+    streakDays: calcStreak(getQuranSessions(childId)),
   }
 }
 
