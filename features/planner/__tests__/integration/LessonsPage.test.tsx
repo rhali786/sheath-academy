@@ -159,4 +159,38 @@ describe('LessonsPage', () => {
 
     expect(mockReplace).toHaveBeenCalledWith('/lessons', { scroll: false })
   })
+
+  it('sets child filter from ?childId query param after children load', async () => {
+    const laythLesson  = makeLesson({ id: 'l1', title: 'Layth lesson',  childId: 'child_001' })
+    const khadijahLesson = makeLesson({ id: 'l2', title: 'Khadijah lesson', childId: 'child_002' })
+    mockGetAllChildren.mockResolvedValue(ok([
+      mockChildren[0],
+      { id: 'child_002', householdId: 'hh_001', name: 'Khadijah', gradeLabel: '3rd', isActive: true, username: 'k', password: 'pw', createdAt: '2026-01-01T00:00:00Z' },
+    ]))
+    mockGetLessons.mockResolvedValue([laythLesson, khadijahLesson])
+    mockSearchParams = new URLSearchParams('childId=child_002')
+
+    render(<LessonsPage />)
+
+    await waitFor(() => {
+      // Find the "All lessons" child filter by the "All children" option
+      const allChildrenSelect = screen.getAllByRole('combobox').find(s =>
+        Array.from((s as HTMLSelectElement).options || []).some(o => o.text === 'All children')
+      ) as HTMLSelectElement
+      expect(allChildrenSelect).toHaveValue('child_002')
+    })
+  })
+
+  it('falls back to All Children filter when ?childId is invalid', async () => {
+    mockSearchParams = new URLSearchParams('childId=nonexistent_child')
+
+    render(<LessonsPage />)
+
+    await waitFor(() => {
+      const allChildrenSelect = screen.getAllByRole('combobox').find(s =>
+        Array.from((s as HTMLSelectElement).options || []).some(o => o.text === 'All children')
+      ) as HTMLSelectElement
+      expect(allChildrenSelect).toHaveValue('')
+    })
+  })
 })
