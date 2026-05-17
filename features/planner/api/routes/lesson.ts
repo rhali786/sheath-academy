@@ -47,6 +47,7 @@ export async function PUT(id: string, request: Request): Promise<NextResponse<Ap
     description: body.description !== undefined ? body.description.trim() : undefined,
     dueDate: body.dueDate,
     order: body.order,
+    status: body.status,
   })
 
   return NextResponse.json({

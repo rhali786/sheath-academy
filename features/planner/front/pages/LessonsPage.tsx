@@ -1,11 +1,11 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { plannerApi } from '@/features/planner/front/services/api'
 import { LessonTaskForm, type LessonFormData } from '@/features/planner/front/components/LessonTaskForm'
 import { LessonTaskList } from '@/features/planner/front/components/LessonTaskList'
-import type { LessonTask } from '@/features/planner/types'
+import type { LessonTask, LessonTaskStatus } from '@/features/planner/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { childrenApi } from '@/features/children/front/services/api'
@@ -43,6 +43,8 @@ function EditIdWatcher({ lessons, onEdit }: EditIdWatcherProps) {
   return null
 }
 
+type DateSort = 'asc' | 'desc'
+
 export function LessonsPage() {
   const { householdProfile } = useHousehold()
   const [children, setChildren] = useState<StudentProfile[]>([])
@@ -51,6 +53,11 @@ export function LessonsPage() {
   const [editingLesson, setEditingLesson] = useState<LessonTask | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Filters
+  const [filterChildId, setFilterChildId] = useState<string>('')
+  const [filterStatus, setFilterStatus] = useState<LessonTaskStatus | ''>('')
+  const [dateSort, setDateSort] = useState<DateSort>('desc')
 
   useEffect(() => {
     const init = async () => {
@@ -84,6 +91,17 @@ export function LessonsPage() {
   useEffect(() => {
     fetchLessons()
   }, [])
+
+  const filteredLessons = useMemo(() => {
+    let list = lessons
+    if (filterChildId) list = list.filter(l => l.childId === filterChildId)
+    if (filterStatus)  list = list.filter(l => l.status === filterStatus)
+    list = [...list].sort((a, b) => {
+      const cmp = a.dueDate.localeCompare(b.dueDate)
+      return dateSort === 'asc' ? cmp : -cmp
+    })
+    return list
+  }, [lessons, filterChildId, filterStatus, dateSort])
 
   async function handleSubmit(data: LessonFormData) {
     const householdId = householdProfile?.id ?? ''
@@ -131,12 +149,51 @@ export function LessonsPage() {
       )}
 
       <div>
-        <h2 className="text-lg font-bold text-slate-900 mb-4">All lessons</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 className="text-lg font-bold text-slate-900">All lessons</h2>
+
+          <div className="flex flex-wrap gap-2">
+            {/* Child filter */}
+            <select
+              value={filterChildId}
+              onChange={e => setFilterChildId(e.target.value)}
+              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
+            >
+              <option value="">All children</option>
+              {children.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+
+            {/* Status filter */}
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value as LessonTaskStatus | '')}
+              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
+            >
+              <option value="">All statuses</option>
+              <option value="not_started">Not started</option>
+              <option value="completed">Completed</option>
+              <option value="skipped">Skipped</option>
+            </select>
+
+            {/* Date sort */}
+            <select
+              value={dateSort}
+              onChange={e => setDateSort(e.target.value as DateSort)}
+              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
+            >
+              <option value="desc">Date: newest first</option>
+              <option value="asc">Date: oldest first</option>
+            </select>
+          </div>
+        </div>
+
         {isLoading ? (
           <p className="text-sm text-slate-400 py-4">Loading…</p>
         ) : (
           <LessonTaskList
-            lessons={lessons}
+            lessons={filteredLessons}
             children={children}
             subjects={subjects}
             error={error}
