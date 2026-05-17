@@ -1,17 +1,25 @@
 'use client'
 
 import type { AttendanceRecord, AttendanceStatus } from '@/features/attendance/types'
+import { STATUS_LABELS } from '@/features/attendance/types'
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
   present: 'bg-green-100 text-green-800 border-green-200',
   absent: 'bg-red-100 text-red-800 border-red-200',
   partial: 'bg-amber-100 text-amber-800 border-amber-200',
+  excused: 'bg-blue-100 text-blue-800 border-blue-200',
+  sick: 'bg-orange-100 text-orange-800 border-orange-200',
+  holiday: 'bg-purple-100 text-purple-800 border-purple-200',
+  field_trip: 'bg-teal-100 text-teal-800 border-teal-200',
+  coop: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+  makeup: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  not_school: 'bg-slate-100 text-slate-600 border-slate-200',
 }
 
 interface Props {
   records: AttendanceRecord[]
   childMap: Record<string, string>
-  onDelete: (id: string) => void
+  onArchive: (id: string) => void
   onEdit: (record: AttendanceRecord) => void
 }
 
@@ -20,9 +28,15 @@ function formatDate(dateStr: string): string {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-export function AttendanceList({ records, childMap, onDelete, onEdit }: Props) {
+export function AttendanceList({ records, childMap, onArchive, onEdit }: Props) {
   if (records.length === 0) {
     return <p className="text-sm text-slate-400 py-6 text-center">No attendance records yet</p>
+  }
+
+  function handleVoid(id: string) {
+    if (window.confirm('Archive this record? It will no longer appear in reports.')) {
+      onArchive(id)
+    }
   }
 
   return (
@@ -31,7 +45,7 @@ export function AttendanceList({ records, childMap, onDelete, onEdit }: Props) {
         <li key={record.id} className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-4 py-3 shadow-sm">
           <div className="flex items-center gap-3">
             <span className={`text-xs font-semibold px-2 py-1 rounded border ${STATUS_STYLES[record.status]}`}>
-              {record.status}
+              {STATUS_LABELS[record.status]}
             </span>
             {childMap[record.childId] && (
               <span className="text-xs font-medium text-slate-600">{childMap[record.childId]}</span>
@@ -64,10 +78,10 @@ export function AttendanceList({ records, childMap, onDelete, onEdit }: Props) {
               Edit
             </button>
             <button
-              onClick={() => onDelete(record.id)}
+              onClick={() => handleVoid(record.id)}
               className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50"
             >
-              Delete
+              Void
             </button>
           </div>
         </li>

@@ -54,11 +54,15 @@ describe('PATCH /api/attendance/:id', () => {
 })
 
 describe('DELETE /api/attendance/:id', () => {
-  it('deletes a record', async () => {
+  it('archives a record (does not hard-delete)', async () => {
     const res = await DELETE(SEED_RECORD_ID)
     expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.message).toMatch(/archive/i)
+    // Record still accessible but marked archived
     const verify = await GET(SEED_RECORD_ID)
-    expect(verify.status).toBe(404)
+    const verifyBody = await verify.json()
+    expect(verifyBody.data.isArchived).toBe(true)
   })
 
   it('returns 404 for unknown id', async () => {

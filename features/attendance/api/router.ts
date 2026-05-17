@@ -19,6 +19,11 @@ export async function handleAttendanceRoute(
     return attendanceHandler.POST(request)
   }
 
+  // POST /attendance/batch — bulk upsert
+  if (slug.length === 1 && slug[0] === 'batch' && method === 'POST') {
+    return attendanceHandler.BATCH(request)
+  }
+
   // GET /attendance/summary — summary counts
   if (slug.length === 1 && slug[0] === 'summary' && method === 'GET') {
     return summaryHandler.GET(request)

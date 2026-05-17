@@ -4,12 +4,19 @@ import { useEffect, useMemo, useState } from 'react'
 import { attendanceApi } from '@/features/attendance/front/services/api'
 import { AttendanceList } from '@/features/attendance/front/components/AttendanceList'
 import { AttendanceSummary } from '@/features/attendance/front/components/AttendanceSummary'
+import { BatchAttendanceForm } from '@/features/attendance/front/components/BatchAttendanceForm'
 import type { AttendanceRecord, AttendanceStatus, AttendanceSummary as SummaryType } from '@/features/attendance/types'
+import { STATUS_LABELS } from '@/features/attendance/types'
 import type { StudentProfile } from '@/features/lib/types'
 import { childrenApi } from '@/features/children/front/services/api'
 import { useHousehold } from '@/features/household/front/context'
 
 type DateSort = 'desc' | 'asc'
+type Mode = 'individual' | 'batch'
+
+const ALL_STATUSES: AttendanceStatus[] = [
+  'present', 'absent', 'partial', 'excused', 'sick', 'holiday', 'field_trip', 'coop', 'makeup', 'not_school',
+]
 
 function todayLocal(): string {
   const d = new Date()
@@ -32,26 +39,24 @@ export function AttendancePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState<AttendanceStatus | ''>('')
+  const [filterChildId, setFilterChildId] = useState<string>('')
   const [dateSort, setDateSort] = useState<DateSort>('desc')
+  const [mode, setMode] = useState<Mode>('individual')
+  const [batchLoading, setBatchLoading] = useState(false)
 
   useEffect(() => {
     childrenApi.getAllChildren().then(res => {
       setChildren(res.data)
       if (res.data.length > 0) setSelectedChildId(res.data[0].id)
-    }).catch(() => setError('Failed to load children'))
+    }).catch(() => setError('Failed to load learners'))
   }, [])
 
-  async function fetchRecords(childId: string) {
-    if (!childId) return
+  async function fetchRecords() {
     try {
       setIsLoading(true)
       setError(null)
-      const [recs, sum] = await Promise.all([
-        attendanceApi.getRecords({ childId }),
-        attendanceApi.getSummary(childId),
-      ])
+      const recs = await attendanceApi.getRecords({})
       setRecords(recs.data)
-      setSummary(sum.data)
     } catch {
       setError('Failed to load attendance')
     } finally {
@@ -59,8 +64,20 @@ export function AttendancePage() {
     }
   }
 
+  async function fetchSummary(childId: string) {
+    if (!childId) return
+    try {
+      const sum = await attendanceApi.getSummary(childId)
+      setSummary(sum.data)
+    } catch { /* ignore summary errors */ }
+  }
+
   useEffect(() => {
-    fetchRecords(selectedChildId)
+    fetchRecords()
+  }, [])
+
+  useEffect(() => {
+    fetchSummary(selectedChildId)
   }, [selectedChildId])
 
   async function markAttendance(status: AttendanceStatus) {
@@ -86,22 +103,39 @@ export function AttendancePage() {
     setNotes('')
     setHours('')
     setMinutes('')
-    await fetchRecords(selectedChildId)
+    await fetchRecords()
+    await fetchSummary(selectedChildId)
   }
 
-  async function handleDelete(id: string) {
-    await attendanceApi.deleteRecord(id)
-    await fetchRecords(selectedChildId)
+  async function handleArchive(id: string) {
+    await attendanceApi.archiveRecord(id)
+    await fetchRecords()
+    await fetchSummary(selectedChildId)
   }
+
+  async function handleBatchSubmit(entries: Array<{ childId: string; status: AttendanceStatus }>) {
+    setBatchLoading(true)
+    try {
+      const householdId = householdProfile?.id ?? ''
+      await attendanceApi.batchRecord({ date, householdId, entries })
+      await fetchRecords()
+      await fetchSummary(selectedChildId)
+    } finally {
+      setBatchLoading(false)
+    }
+  }
+
+  const activeChildren = useMemo(() => children.filter(c => c.isActive), [children])
 
   const filteredRecords = useMemo(() => {
     let list = records
     if (filterStatus) list = list.filter(r => r.status === filterStatus)
+    if (filterChildId) list = list.filter(r => r.childId === filterChildId)
     return [...list].sort((a, b) => {
       const cmp = a.date.localeCompare(b.date)
       return dateSort === 'asc' ? cmp : -cmp
     })
-  }, [records, filterStatus, dateSort])
+  }, [records, filterStatus, filterChildId, dateSort])
 
   function handleEdit(record: AttendanceRecord) {
     setEditingRecord(record)
@@ -109,97 +143,131 @@ export function AttendancePage() {
     setNotes(record.notes ?? '')
     setHours(record.hours !== undefined ? String(record.hours) : '')
     setMinutes(record.minutes !== undefined ? String(record.minutes) : '')
+    setMode('individual')
   }
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-8">
-      <h1 className="text-2xl font-bold text-slate-900">Attendance</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">Attendance</h1>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            Print
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode(m => m === 'individual' ? 'batch' : 'individual')}
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-forest-900 text-white hover:bg-forest-800 transition-colors"
+          >
+            {mode === 'individual' ? 'Batch mode' : 'Individual mode'}
+          </button>
+        </div>
+      </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
         <div className="flex flex-wrap gap-4">
           <div className="flex-1 min-w-40">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Child</label>
-            <select
-              value={selectedChildId}
-              onChange={e => setSelectedChildId(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
-            >
-              {children.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex-1 min-w-40">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+            <label htmlFor="attendance-date" className="block text-sm font-medium text-slate-700 mb-1">Date</label>
             <input
+              id="attendance-date"
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
               className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
             />
           </div>
+          {mode === 'individual' && (
+            <div className="flex-1 min-w-40">
+              <label htmlFor="learner-select" className="block text-sm font-medium text-slate-700 mb-1">Learner</label>
+              <select
+                id="learner-select"
+                value={selectedChildId}
+                onChange={e => setSelectedChildId(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+              >
+                {children.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <label className="block text-sm font-medium text-slate-700 w-full">
-            {editingRecord ? 'Update status' : 'Mark as'}
-          </label>
-          <button
-            onClick={() => markAttendance('present')}
-            className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
-          >
-            Present
-          </button>
-          <button
-            onClick={() => markAttendance('absent')}
-            className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
-          >
-            Absent
-          </button>
-          <button
-            onClick={() => markAttendance('partial')}
-            className="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg transition-colors"
-          >
-            Partial
-          </button>
-        </div>
-
-        <div className="space-y-2">
-          <input
-            type="text"
-            placeholder="Notes (optional)"
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+        {mode === 'batch' ? (
+          <BatchAttendanceForm
+            learners={activeChildren}
+            date={date}
+            onSubmit={handleBatchSubmit}
+            loading={batchLoading}
           />
-          <div className="flex gap-3">
-            <input
-              type="number"
-              placeholder="Hours"
-              value={hours}
-              onChange={e => setHours(e.target.value)}
-              min={0}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
-            />
-            <input
-              type="number"
-              placeholder="Minutes"
-              value={minutes}
-              onChange={e => setMinutes(e.target.value)}
-              min={0}
-              max={59}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
-            />
-          </div>
-        </div>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-2">
+              <label className="block text-sm font-medium text-slate-700 w-full">
+                {editingRecord ? 'Update status' : 'Mark as'}
+              </label>
+              <button
+                onClick={() => markAttendance('present')}
+                className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
+              >
+                Present
+              </button>
+              <button
+                onClick={() => markAttendance('absent')}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
+              >
+                Absent
+              </button>
+              <button
+                onClick={() => markAttendance('partial')}
+                className="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg transition-colors"
+              >
+                Partial
+              </button>
+            </div>
 
-        {editingRecord && (
-          <button
-            onClick={() => { setEditingRecord(null); setNotes(''); setHours(''); setMinutes(''); setDate(todayLocal()) }}
-            className="text-sm text-slate-500 hover:text-slate-700"
-          >
-            Cancel edit
-          </button>
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Notes (optional)"
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+              />
+              <div className="flex gap-3">
+                <input
+                  type="number"
+                  placeholder="Hours"
+                  value={hours}
+                  onChange={e => setHours(e.target.value)}
+                  min={0}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+                />
+                <input
+                  type="number"
+                  placeholder="Minutes"
+                  value={minutes}
+                  onChange={e => setMinutes(e.target.value)}
+                  min={0}
+                  max={59}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+                />
+              </div>
+            </div>
+
+            {editingRecord && (
+              <button
+                onClick={() => { setEditingRecord(null); setNotes(''); setHours(''); setMinutes(''); setDate(todayLocal()) }}
+                className="text-sm text-slate-500 hover:text-slate-700"
+              >
+                Cancel edit
+              </button>
+            )}
+          </>
         )}
       </div>
 
@@ -213,14 +281,25 @@ export function AttendancePage() {
           <h2 className="text-lg font-bold text-slate-900">Records</h2>
           <div className="flex flex-wrap gap-2">
             <select
+              value={filterChildId}
+              onChange={e => setFilterChildId(e.target.value)}
+              aria-label="Filter by learner"
+              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
+            >
+              <option value="">All learners</option>
+              {children.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            <select
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value as AttendanceStatus | '')}
               className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
             >
               <option value="">All statuses</option>
-              <option value="present">Present</option>
-              <option value="absent">Absent</option>
-              <option value="partial">Partial</option>
+              {ALL_STATUSES.map(s => (
+                <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+              ))}
             </select>
             <select
               value={dateSort}
@@ -239,7 +318,7 @@ export function AttendancePage() {
           <AttendanceList
             records={filteredRecords}
             childMap={Object.fromEntries(children.map(c => [c.id, c.name]))}
-            onDelete={handleDelete}
+            onArchive={handleArchive}
             onEdit={handleEdit}
           />
         )}

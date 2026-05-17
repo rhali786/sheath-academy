@@ -13,7 +13,8 @@ jest.mock('@/features/attendance/front/services/api', () => ({
     getRecords: jest.fn(),
     createRecord: jest.fn(),
     updateRecord: jest.fn(),
-    deleteRecord: jest.fn(),
+    archiveRecord: jest.fn(),
+    batchRecord: jest.fn(),
     getSummary: jest.fn(),
   },
 }))
@@ -33,6 +34,8 @@ import { childrenApi } from '@/features/children/front/services/api'
 
 const mockGetRecords = attendanceApi.getRecords as jest.Mock
 const mockCreateRecord = attendanceApi.createRecord as jest.Mock
+const mockArchiveRecord = attendanceApi.archiveRecord as jest.Mock
+const mockBatchRecord = attendanceApi.batchRecord as jest.Mock
 const mockGetSummary = attendanceApi.getSummary as jest.Mock
 const mockGetAllChildren = (childrenApi as any).getAllChildren as jest.Mock
 
@@ -58,10 +61,17 @@ function ok<T>(data: T): ApiResponse<T> {
   return { status: 'success', data, message: '', timestamp: '' }
 }
 
+function todayLocal(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 beforeEach(() => {
   mockGetAllChildren.mockResolvedValue(ok(mockChildren))
   mockGetRecords.mockResolvedValue(ok([]))
   mockCreateRecord.mockResolvedValue(ok(makeRecord()))
+  mockArchiveRecord.mockResolvedValue(ok(null))
+  mockBatchRecord.mockResolvedValue(ok([]))
   mockGetSummary.mockResolvedValue(ok({ childId: 'child_001', totalPresent: 0, totalAbsent: 0, totalPartial: 0, totalRecorded: 0 }))
 })
 
@@ -77,20 +87,20 @@ describe('AttendancePage', () => {
     })
   })
 
-  it('renders a child selector with loaded children', async () => {
+  it('renders a learner selector with loaded children', async () => {
     render(<AttendancePage />)
     await waitFor(() => {
       expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0)
     })
-    expect(screen.getByText('Adam')).toBeInTheDocument()
+    expect(screen.getAllByText('Adam').length).toBeGreaterThan(0)
   })
 
   it('renders Present, Absent, Partial quick-mark buttons', async () => {
     render(<AttendancePage />)
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /present/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /absent/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /partial/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^present$/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^absent$/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^partial$/i })).toBeInTheDocument()
     })
   })
 
@@ -98,7 +108,7 @@ describe('AttendancePage', () => {
     mockGetRecords.mockResolvedValue(ok([makeRecord({ status: 'present', date: '2026-05-12' })]))
     render(<AttendancePage />)
     await waitFor(() => {
-      expect(screen.getByText('present')).toBeInTheDocument()
+      expect(screen.getAllByText('Present').length).toBeGreaterThan(0)
     })
   })
 
@@ -113,9 +123,9 @@ describe('AttendancePage', () => {
   it('clicking Present button calls createRecord with status present', async () => {
     render(<AttendancePage />)
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /present/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^present$/i })).toBeInTheDocument()
     })
-    fireEvent.click(screen.getByRole('button', { name: /present/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^present$/i }))
     await waitFor(() => {
       expect(mockCreateRecord).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'present' })
@@ -135,7 +145,7 @@ describe('AttendancePage', () => {
     mockGetRecords.mockResolvedValue(ok([makeRecord({ childId: 'child_001', status: 'present' })]))
     render(<AttendancePage />)
     await waitFor(() => {
-      expect(screen.getByText('Adam')).toBeInTheDocument()
+      expect(screen.getAllByText('Adam').length).toBeGreaterThan(0)
     })
   })
 
@@ -169,6 +179,95 @@ describe('AttendancePage', () => {
     render(<AttendancePage />)
     await waitFor(() => {
       expect(screen.queryByRole('img', { name: 'Has notes' })).not.toBeInTheDocument()
+    })
+  })
+
+  // FB-014 TDD tests
+
+  it('date field defaults to today', async () => {
+    render(<AttendancePage />)
+    await waitFor(() => {
+      const dateInput = screen.getByLabelText(/^date$/i) as HTMLInputElement
+      expect(dateInput.value).toBe(todayLocal())
+    })
+  })
+
+  it('renders all active learners in batch mode', async () => {
+    render(<AttendancePage />)
+    // Wait for children to load (Adam appears in the learner dropdown)
+    await waitFor(() => expect(screen.getAllByText('Adam').length).toBeGreaterThan(0))
+    fireEvent.click(screen.getByRole('button', { name: /batch mode/i }))
+    await waitFor(() => {
+      expect(screen.getAllByText('Adam').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Khadijah').length).toBeGreaterThan(0)
+    })
+    // In batch mode, each learner has a status dropdown labeled "Status for <name>"
+    expect(screen.getByLabelText('Status for Adam')).toBeInTheDocument()
+    expect(screen.getByLabelText('Status for Khadijah')).toBeInTheDocument()
+  })
+
+  it('clicking Mark all present sets all learner statuses to present', async () => {
+    render(<AttendancePage />)
+    await waitFor(() => expect(screen.getAllByText('Adam').length).toBeGreaterThan(0))
+    fireEvent.click(screen.getByRole('button', { name: /batch mode/i }))
+    await waitFor(() => screen.getByRole('button', { name: /mark all present/i }))
+    fireEvent.click(screen.getByRole('button', { name: /mark all present/i }))
+    const statusSelects = screen.getAllByRole('combobox').filter(
+      el => el.getAttribute('aria-label')?.startsWith('Status for')
+    ) as HTMLSelectElement[]
+    expect(statusSelects.length).toBeGreaterThan(0)
+    statusSelects.forEach(sel => {
+      expect(sel.value).toBe('present')
+    })
+  })
+
+  it('status dropdown includes Field trip and Co-op day options in batch mode', async () => {
+    render(<AttendancePage />)
+    await waitFor(() => expect(screen.getAllByText('Adam').length).toBeGreaterThan(0))
+    fireEvent.click(screen.getByRole('button', { name: /batch mode/i }))
+    await waitFor(() => {
+      const options = screen.getAllByRole('option')
+      expect(options.some(o => o.textContent === 'Field trip')).toBe(true)
+      expect(options.some(o => o.textContent === 'Co-op day')).toBe(true)
+    })
+  })
+
+  it('Void button shows confirm dialog and archives the record', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true)
+    mockGetRecords.mockResolvedValue(ok([makeRecord({ id: 'rec_001', status: 'present' })]))
+    render(<AttendancePage />)
+    await waitFor(() => screen.getByRole('button', { name: /void/i }))
+    fireEvent.click(screen.getByRole('button', { name: /void/i }))
+    expect(confirmSpy).toHaveBeenCalled()
+    await waitFor(() => {
+      expect(mockArchiveRecord).toHaveBeenCalledWith('rec_001')
+    })
+    confirmSpy.mockRestore()
+  })
+
+  it('Void button does not archive when confirm is cancelled', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false)
+    mockGetRecords.mockResolvedValue(ok([makeRecord({ id: 'rec_001', status: 'present' })]))
+    render(<AttendancePage />)
+    await waitFor(() => screen.getByRole('button', { name: /void/i }))
+    fireEvent.click(screen.getByRole('button', { name: /void/i }))
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(mockArchiveRecord).not.toHaveBeenCalled()
+    confirmSpy.mockRestore()
+  })
+
+  it('filter by learner shows only that learner records', async () => {
+    mockGetRecords.mockResolvedValue(ok([
+      makeRecord({ id: 'rec_001', childId: 'child_001', status: 'present', date: '2026-05-12' }),
+      makeRecord({ id: 'rec_002', childId: 'child_002', status: 'absent', date: '2026-05-13' }),
+    ]))
+    render(<AttendancePage />)
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: /void/i })).toHaveLength(2)
+    })
+    fireEvent.change(screen.getByLabelText(/filter by learner/i), { target: { value: 'child_002' } })
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: /void/i })).toHaveLength(1)
     })
   })
 })
