@@ -51,8 +51,8 @@ function makeLesson(
   weeksBack: number,
 ): LessonTask {
   const dueDate = dateForWeekDay(weeksBack, dayOffset)
-  const isPast = weeksBack > 0
-  const completedAt = isPast ? `${dueDate}T15:00:00.000Z` : '2026-01-01T00:00:00.000Z'
+  // Past weeks: all completed. Current week: Mon–Thu completed, Fri not started.
+  const isCompleted = weeksBack > 0 || dayOffset <= 3
   return {
     id: `lesson_seed_${String(idx).padStart(3, '0')}`,
     childId,
@@ -61,17 +61,18 @@ function makeLesson(
     title,
     description: desc,
     dueDate,
-    status: isPast ? 'completed' : 'not_started',
+    status: isCompleted ? 'completed' : 'not_started',
     order: dayOffset + 1,
     createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: completedAt,
+    updatedAt: isCompleted ? `${dueDate}T15:00:00.000Z` : '2026-01-01T00:00:00.000Z',
   }
 }
 
 let lessonIdx = 1
 const lessons: LessonTask[] = []
 
-// 3 weeks: 2 weeks back (all completed), 1 week back (all completed), current week (not_started)
+// 3 weeks: 2 weeks back (all completed), 1 week back (all completed),
+// current week (Mon–Thu completed, Fri not started)
 for (const weeksBack of [2, 1, 0]) {
   for (const child of CHILDREN) {
     for (const [subOff, dayOff, title, desc] of LESSON_TEMPLATES) {

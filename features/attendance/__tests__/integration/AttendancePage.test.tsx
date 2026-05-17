@@ -80,7 +80,7 @@ describe('AttendancePage', () => {
   it('renders a child selector with loaded children', async () => {
     render(<AttendancePage />)
     await waitFor(() => {
-      expect(screen.getByRole('combobox')).toBeInTheDocument()
+      expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0)
     })
     expect(screen.getByText('Adam')).toBeInTheDocument()
   })

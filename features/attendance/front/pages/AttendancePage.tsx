@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { attendanceApi } from '@/features/attendance/front/services/api'
 import { AttendanceList } from '@/features/attendance/front/components/AttendanceList'
 import { AttendanceSummary } from '@/features/attendance/front/components/AttendanceSummary'
@@ -8,6 +8,8 @@ import type { AttendanceRecord, AttendanceStatus, AttendanceSummary as SummaryTy
 import type { StudentProfile } from '@/features/lib/types'
 import { childrenApi } from '@/features/children/front/services/api'
 import { useHousehold } from '@/features/household/front/context'
+
+type DateSort = 'desc' | 'asc'
 
 function todayLocal(): string {
   const d = new Date()
@@ -29,6 +31,8 @@ export function AttendancePage() {
   const [editingRecord, setEditingRecord] = useState<AttendanceRecord | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [filterStatus, setFilterStatus] = useState<AttendanceStatus | ''>('')
+  const [dateSort, setDateSort] = useState<DateSort>('desc')
 
   useEffect(() => {
     childrenApi.getAllChildren().then(res => {
@@ -89,6 +93,15 @@ export function AttendancePage() {
     await attendanceApi.deleteRecord(id)
     await fetchRecords(selectedChildId)
   }
+
+  const filteredRecords = useMemo(() => {
+    let list = records
+    if (filterStatus) list = list.filter(r => r.status === filterStatus)
+    return [...list].sort((a, b) => {
+      const cmp = a.date.localeCompare(b.date)
+      return dateSort === 'asc' ? cmp : -cmp
+    })
+  }, [records, filterStatus, dateSort])
 
   function handleEdit(record: AttendanceRecord) {
     setEditingRecord(record)
@@ -196,13 +209,35 @@ export function AttendancePage() {
       </div>
 
       <div>
-        <h2 className="text-lg font-bold text-slate-900 mb-3">Records</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <h2 className="text-lg font-bold text-slate-900">Records</h2>
+          <div className="flex flex-wrap gap-2">
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value as AttendanceStatus | '')}
+              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
+            >
+              <option value="">All statuses</option>
+              <option value="present">Present</option>
+              <option value="absent">Absent</option>
+              <option value="partial">Partial</option>
+            </select>
+            <select
+              value={dateSort}
+              onChange={e => setDateSort(e.target.value as DateSort)}
+              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
+            >
+              <option value="desc">Date: newest first</option>
+              <option value="asc">Date: oldest first</option>
+            </select>
+          </div>
+        </div>
         {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
         {isLoading ? (
           <p className="text-sm text-slate-400 py-4">Loading…</p>
         ) : (
           <AttendanceList
-            records={records}
+            records={filteredRecords}
             childMap={Object.fromEntries(children.map(c => [c.id, c.name]))}
             onDelete={handleDelete}
             onEdit={handleEdit}

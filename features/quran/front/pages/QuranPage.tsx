@@ -1,11 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Pencil, X, Check } from 'lucide-react'
 import { quranApi } from '@/features/quran/front/services/api'
+import { childrenApi } from '@/features/children/front/services/api'
 import type { QuranSession } from '@/features/lib/types'
+import type { StudentProfile } from '@/features/lib/types'
 
-const SESSION_TYPES = ['Revision', 'Recitation', 'Memorisation', 'Listening', 'Other']
+const SESSION_TYPES = ['New memorisation', 'Revision', 'Recitation', 'Full revision', 'Memorisation', 'Listening', 'Other']
+type DateSort = 'desc' | 'asc'
 
 interface EditState {
   type: string
@@ -29,20 +32,34 @@ function toEditState(s: QuranSession): EditState {
 
 export default function QuranPage() {
   const [sessions, setSessions] = useState<QuranSession[]>([])
+  const [children, setChildren] = useState<StudentProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<EditState | null>(null)
   const [saving, setSaving] = useState(false)
+  const [filterChildId, setFilterChildId] = useState<string>('')
+  const [filterType, setFilterType] = useState<string>('')
+  const [dateSort, setDateSort] = useState<DateSort>('desc')
 
   useEffect(() => {
+    childrenApi.getAllChildren()
+      .then(res => setChildren(res.data))
+      .catch(() => {})
     quranApi.getSessions()
-      .then(res => {
-        const sorted = [...res.data.sessions].sort((a, b) => b.date.localeCompare(a.date))
-        setSessions(sorted)
-      })
+      .then(res => setSessions(res.data.sessions ?? []))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  const displayedSessions = useMemo(() => {
+    let list = sessions
+    if (filterChildId) list = list.filter(s => s.childId === filterChildId)
+    if (filterType)    list = list.filter(s => s.type === filterType)
+    return [...list].sort((a, b) => {
+      const cmp = a.date.localeCompare(b.date)
+      return dateSort === 'asc' ? cmp : -cmp
+    })
+  }, [sessions, filterChildId, filterType, dateSort])
 
   function startEdit(session: QuranSession) {
     setEditingId(session.id)
@@ -66,9 +83,7 @@ export default function QuranPage() {
         notes: editForm.notes.trim(),
         date: editForm.date,
       })
-      setSessions(prev =>
-        [...prev.map(s => s.id === id ? res.data : s)].sort((a, b) => b.date.localeCompare(a.date))
-      )
+      setSessions(prev => prev.map(s => s.id === id ? res.data : s))
       setEditingId(null)
       setEditForm(null)
     } catch {
@@ -83,16 +98,46 @@ export default function QuranPage() {
       <h1 className="text-2xl font-bold text-slate-900 mb-2">Quran Studies</h1>
       <p className="text-sm text-slate-500 mb-8">Track Quran memorisation and recitation sessions.</p>
 
+      {/* Filters */}
+      {!loading && sessions.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          <select
+            value={filterChildId}
+            onChange={e => setFilterChildId(e.target.value)}
+            className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
+          >
+            <option value="">All children</option>
+            {children.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <select
+            value={filterType}
+            onChange={e => setFilterType(e.target.value)}
+            className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
+          >
+            <option value="">All types</option>
+            {SESSION_TYPES.map(t => <option key={t}>{t}</option>)}
+          </select>
+          <select
+            value={dateSort}
+            onChange={e => setDateSort(e.target.value as DateSort)}
+            className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
+          >
+            <option value="desc">Date: newest first</option>
+            <option value="asc">Date: oldest first</option>
+          </select>
+        </div>
+      )}
+
       {loading ? (
         <p className="text-sm text-slate-400">Loading sessions…</p>
-      ) : sessions.length === 0 ? (
+      ) : displayedSessions.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-          <p className="text-slate-400 text-sm">No sessions logged yet.</p>
+          <p className="text-slate-400 text-sm">{sessions.length === 0 ? 'No sessions logged yet.' : 'No sessions match the current filters.'}</p>
         </div>
       ) : (
         <div className="space-y-3">
-          <p className="text-sm font-medium text-slate-600">{sessions.length} session{sessions.length !== 1 ? 's' : ''} logged</p>
-          {sessions.map(s => (
+          <p className="text-sm font-medium text-slate-600">{displayedSessions.length} of {sessions.length} session{sessions.length !== 1 ? 's' : ''}</p>
+          {displayedSessions.map(s => (
             <div key={s.id} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
               {editingId === s.id && editForm ? (
                 <div className="p-4 space-y-3">
