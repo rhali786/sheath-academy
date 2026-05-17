@@ -21,8 +21,8 @@ import { transformPlannerProgress, getAcademicYearRange } from '../utils/transfo
 export default function Dashboard() {
   const { selectedTab } = useNavigation()
   const {
-    children: studentProfiles, tasks, alerts, quranSessions, quranChartData, records, metrics,
-    loading, error, toggleTask, addQuranSession, selectedChildId,
+    children: studentProfiles, alerts, quranSessions, quranChartData, records, metrics,
+    loading, error, addQuranSession, selectedChildId,
   } = useContext_Dashboard()
 
   // Map StudentProfile[] to legacy Child[] for existing components

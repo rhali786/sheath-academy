@@ -43,7 +43,6 @@ jest.mock('@/features/quran/front/services/api', () => ({
 
 jest.mock('@/features/dashboard/front/services/api', () => ({
   dashboardApi: {
-    getTasks: jest.fn(() => Promise.resolve({ data: [] })),
     getQuran: jest.fn(() => Promise.resolve({ data: { sessions: [], chartData: [] } })),
     getRecords: jest.fn(() => Promise.resolve({ data: [] })),
     getSummary: jest.fn(() => Promise.resolve({
