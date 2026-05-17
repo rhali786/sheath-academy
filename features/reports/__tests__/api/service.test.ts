@@ -84,11 +84,12 @@ describe('C1 — attendance date-range filtering', () => {
   })
 
   it('attendance records inside the date range are included', () => {
-    // Seed attendance for adam spans the 2025-26 school year
+    // Seed attendance for adam spans the 2025-26 school year; use today as end to avoid future-date validation
+    const today = new Date().toISOString().slice(0, 10)
     const report = getRecordsReport({
       childId: SEED_IDS.adam,
       startDate: '2025-08-01',
-      endDate: '2026-05-31',
+      endDate: today,
     })
     expect(report.attendance.totalRecorded).toBeGreaterThan(0)
   })

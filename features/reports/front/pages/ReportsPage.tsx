@@ -9,6 +9,11 @@ function percent(value: number): string {
   return `${Math.round(value * 100)}%`
 }
 
+function todayLocal(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export function ReportsPage() {
   const { children, selectedChildId, setSelectedChildId, loading: dashboardLoading } = useContext_Dashboard()
   const [childId, setChildId] = useState<string>('')
@@ -17,6 +22,14 @@ export function ReportsPage() {
   const [report, setReport] = useState<RecordsReport | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const today = todayLocal()
+
+  const dateError = useMemo(() => {
+    if (startDate && startDate > today) return 'Start date cannot be in the future.'
+    if (endDate && endDate > today) return 'End date cannot be in the future.'
+    if (startDate && endDate && startDate > endDate) return 'Start date must be on or before end date.'
+    return null
+  }, [startDate, endDate, today])
 
   const activeChildId = useMemo(() => {
     return childId || selectedChildId || children[0]?.id || ''
@@ -27,7 +40,7 @@ export function ReportsPage() {
   }, [activeChildId, childId])
 
   useEffect(() => {
-    if (!activeChildId) return
+    if (!activeChildId || dateError) return
 
     setLoading(true)
     setError(null)
@@ -40,7 +53,7 @@ export function ReportsPage() {
       .then(res => setReport(res.data))
       .catch(err => setError(err.message ?? 'Failed to load reports'))
       .finally(() => setLoading(false))
-  }, [activeChildId, startDate, endDate])
+  }, [activeChildId, startDate, endDate, dateError])
 
   function handleChildChange(nextChildId: string) {
     setChildId(nextChildId)
@@ -105,6 +118,7 @@ export function ReportsPage() {
               id="report-start"
               type="date"
               value={startDate}
+              max={today}
               onChange={e => setStartDate(e.target.value)}
               className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
             />
@@ -118,11 +132,16 @@ export function ReportsPage() {
               id="report-end"
               type="date"
               value={endDate}
+              max={today}
               onChange={e => setEndDate(e.target.value)}
               className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
             />
           </div>
         </div>
+
+        {dateError && (
+          <p role="alert" className="mt-3 text-sm font-medium text-red-600">{dateError}</p>
+        )}
 
         {loading && <p className="mt-6 text-sm text-slate-500">Loading report...</p>}
         {error && <p className="mt-6 text-sm text-red-600">{error}</p>}

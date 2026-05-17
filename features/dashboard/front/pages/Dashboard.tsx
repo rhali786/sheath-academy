@@ -24,7 +24,7 @@ import { PortfolioTab } from '@/features/portfolio/front/components/PortfolioTab
 export default function Dashboard() {
   const { selectedTab } = useNavigation()
   const {
-    children: studentProfiles, tasks, alerts, quranSessions, records, metrics,
+    children: studentProfiles, tasks, alerts, quranSessions, quranChartData, records, metrics,
     loading, error, toggleTask, addQuranSession, selectedChildId,
   } = useContext_Dashboard()
 
@@ -101,7 +101,12 @@ export default function Dashboard() {
           </div>
 
           <PerChildProgress children={children} progressData={progressData} />
-          <QuranStudies children={children} quranSessions={quranSessions} onAddSession={addQuranSession} />
+          <QuranStudies
+            children={selectedChildId ? children.filter(c => c.id === selectedChildId) : children}
+            quranSessions={quranSessions}
+            chartData={quranChartData}
+            onAddSession={addQuranSession}
+          />
           <RecordsProof records={records} />
 
           <div className="pb-6 text-center">

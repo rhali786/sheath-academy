@@ -3,64 +3,60 @@ import type { ApiResponse, ChartSeries, QuranSessionRequest } from '@/features/l
 import {
   getQuranSessions,
   addQuranSession,
-  getChildren,
 } from '@/features/dashboard/server/service'
+import { getStudentProfiles } from '@/features/children/server/service'
 
 const CHILD_COLORS: Record<string, string> = {
-  adam_001: '#3b82f6',
-  khadijah_001: '#ec4899',
-  zayd_001: '#8b5cf6',
+  student_seed_adam_001: '#3b82f6',
+  student_seed_khadijah_001: '#ec4899',
+  student_seed_zayd_001: '#8b5cf6',
 }
 
-export async function GET(): Promise<NextResponse> {
-  const sessions = getQuranSessions()
-  const children = getChildren()
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const
 
-  // Build chart data: Mon-Fri sessions per child
-  const chartData: ChartSeries[] = children.map(child => {
-    const childSessions = sessions.filter(s => s.childId === child.id)
-    const dayCount: Record<string, number> = {
-      Mon: 0,
-      Tue: 0,
-      Wed: 0,
-      Thu: 0,
-      Fri: 0,
-    }
-
-    // Count sessions per day of week
-    childSessions.forEach(session => {
-      const date = new Date(session.date)
-      const dayOfWeek = date.getDay()
-      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-      const dayName = days[dayOfWeek]
-
-      if (dayName && dayName !== 'Sun' && dayName !== 'Sat') {
-        dayCount[dayName] = (dayCount[dayName] || 0) + 1
-      }
-    })
-
-    return {
-      id: child.name,
-      color: CHILD_COLORS[child.id] || '#6b7280',
-      data: [
-        { x: 'Mon', y: dayCount['Mon'] },
-        { x: 'Tue', y: dayCount['Tue'] },
-        { x: 'Wed', y: dayCount['Wed'] },
-        { x: 'Thu', y: dayCount['Thu'] },
-        { x: 'Fri', y: dayCount['Fri'] },
-      ],
+function buildChartData(sessions: ReturnType<typeof getQuranSessions>, childId: string, name: string): ChartSeries {
+  const dayCount: Record<string, number> = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0 }
+  sessions.filter(s => s.childId === childId).forEach(session => {
+    const dayName = DAYS[new Date(session.date).getDay()]
+    if (dayName && dayName !== 'Sun' && dayName !== 'Sat') {
+      dayCount[dayName] = (dayCount[dayName] || 0) + 1
     }
   })
+  return {
+    id: name,
+    color: CHILD_COLORS[childId] || '#6b7280',
+    data: [
+      { x: 'Mon', y: dayCount['Mon'] },
+      { x: 'Tue', y: dayCount['Tue'] },
+      { x: 'Wed', y: dayCount['Wed'] },
+      { x: 'Thu', y: dayCount['Thu'] },
+      { x: 'Fri', y: dayCount['Fri'] },
+    ],
+  }
+}
 
-  const response: ApiResponse<{
-    sessions: typeof sessions
-    chartData: ChartSeries[]
-  }> = {
+export async function GET(request: Request): Promise<NextResponse> {
+  const { searchParams } = new URL(request.url)
+  const childId = searchParams.get('childId') || undefined
+
+  const allSessions = getQuranSessions()
+  const activeProfiles = getStudentProfiles().filter(p => p.isActive)
+
+  const profilesToShow = childId
+    ? activeProfiles.filter(p => p.id === childId)
+    : activeProfiles
+
+  const chartData: ChartSeries[] = profilesToShow.map(p =>
+    buildChartData(allSessions, p.id, p.name)
+  )
+
+  const sessions = childId
+    ? allSessions.filter(s => s.childId === childId)
+    : allSessions.filter(s => activeProfiles.some(p => p.id === s.childId))
+
+  const response: ApiResponse<{ sessions: typeof sessions; chartData: ChartSeries[] }> = {
     status: 'success',
-    data: {
-      sessions,
-      chartData,
-    },
+    data: { sessions, chartData },
     message: 'Quran sessions retrieved',
     timestamp: new Date().toISOString(),
   }

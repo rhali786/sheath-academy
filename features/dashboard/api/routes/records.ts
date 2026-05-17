@@ -30,17 +30,26 @@ function weekdayCount(start: string, end: string): number {
   return count
 }
 
-export async function GET(): Promise<NextResponse<ApiResponse<DashboardRecord[]>>> {
+export async function GET(request: Request): Promise<NextResponse<ApiResponse<DashboardRecord[]>>> {
+  const { searchParams } = new URL(request.url)
+  const childId = searchParams.get('childId') || undefined
   const { start, end } = getCurrentWeekRange()
 
-  const activeChildren = getStudentProfiles().filter(p => p.isActive)
-  const maxAttendance = activeChildren.length * weekdayCount(start, end)
+  const allProfiles = getStudentProfiles()
+  const archivedIds = new Set(allProfiles.filter(p => !p.isActive).map(p => p.id))
+  const activeChildren = allProfiles.filter(p => p.isActive)
+  const maxAttendance = childId
+    ? weekdayCount(start, end)
+    : activeChildren.length * weekdayCount(start, end)
 
-  const weekAttendance = getAttendanceRecords({ startDate: start, endDate: end })
-  const weekLessons = getLessons().filter(l => l.dueDate >= start && l.dueDate <= end)
+  const weekAttendance = getAttendanceRecords({ childId, startDate: start, endDate: end })
+  const weekLessons = getLessons(childId).filter(l => l.dueDate >= start && l.dueDate <= end)
   const completedLessons = weekLessons.filter(l => l.status === 'completed')
-  const weekEvidence = listEvidenceItems({ startDate: start, endDate: end })
-  const weekQuran = getQuranSessions().filter(s => s.date >= start && s.date <= end)
+  const weekEvidence = listEvidenceItems({ childId, startDate: start, endDate: end })
+  const allWeekQuran = getQuranSessions().filter(s => s.date >= start && s.date <= end)
+  const weekQuran = childId
+    ? allWeekQuran.filter(s => s.childId === childId)
+    : allWeekQuran.filter(s => !archivedIds.has(s.childId))
 
   const records: DashboardRecord[] = [
     {

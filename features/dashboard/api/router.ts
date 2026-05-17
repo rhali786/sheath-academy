@@ -18,7 +18,7 @@ export async function handleDashboardRoute(
 
   // Handle /dashboard/summary
   if (slug.length === 1 && slug[0] === 'summary' && method === 'GET') {
-    return summaryHandler.GET()
+    return summaryHandler.GET(request)
   }
 
   // Handle /dashboard/tasks
@@ -45,7 +45,7 @@ export async function handleDashboardRoute(
   // Handle /dashboard/quran
   if (slug.length === 1 && slug[0] === 'quran') {
     if (method === 'GET') {
-      return quranHandler.GET()
+      return quranHandler.GET(request)
     }
     if (method === 'POST') {
       return quranHandler.POST(request)
@@ -54,7 +54,7 @@ export async function handleDashboardRoute(
 
   // Handle /dashboard/records
   if (slug.length === 1 && slug[0] === 'records' && method === 'GET') {
-    return recordsHandler.GET()
+    return recordsHandler.GET(request)
   }
 
   return null

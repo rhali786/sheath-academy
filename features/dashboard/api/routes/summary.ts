@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { ApiResponse, DashboardMetrics } from '@/features/lib/types'
 import { getRecords as getAttendanceRecords } from '@/features/attendance/server/service'
 import { getLessons } from '@/features/planner/server/service'
-import { getQuranSessions } from '@/features/dashboard/server/service'
+import { getQuranSessions, getAlerts } from '@/features/dashboard/server/service'
 import { listEvidenceItems } from '@/features/portfolio/server/service'
 import { getStudentProfiles } from '@/features/children/server/service'
 
@@ -11,25 +11,39 @@ function todayLocal(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export async function GET(): Promise<NextResponse<ApiResponse<DashboardMetrics>>> {
+export async function GET(request: Request): Promise<NextResponse<ApiResponse<DashboardMetrics>>> {
+  const { searchParams } = new URL(request.url)
+  const childId = searchParams.get('childId') || undefined
   const today = todayLocal()
 
-  const activeChildren = getStudentProfiles().filter(p => p.isActive)
-  const totalChildren = activeChildren.length
+  const allProfiles = getStudentProfiles()
+  const archivedIds = new Set(allProfiles.filter(p => !p.isActive).map(p => p.id))
+  const activeChildren = allProfiles.filter(p => p.isActive)
+  const totalChildren = childId ? 1 : activeChildren.length
 
-  const todayAttendance = getAttendanceRecords({ date: today })
+  const todayAttendance = getAttendanceRecords({ childId, date: today })
   const readyCount = todayAttendance.filter(r => r.status === 'present' || r.status === 'partial').length
 
-  const todayLessons = getLessons().filter(l => l.dueDate === today)
+  const todayLessons = getLessons(childId).filter(l => l.dueDate === today)
 
-  const todayQuran = getQuranSessions().filter(s => s.date === today)
+  const allQuranToday = getQuranSessions().filter(s => s.date === today)
+  const todayQuran = childId
+    ? allQuranToday.filter(s => s.childId === childId)
+    : allQuranToday.filter(s => !archivedIds.has(s.childId))
 
-  const portfolioCount = listEvidenceItems().length
+  const portfolioCount = listEvidenceItems({ childId }).length
+
+  const activeAlerts = getAlerts().filter(
+    a => a.childId === null || !archivedIds.has(a.childId)
+  )
+  const needsAttention = childId
+    ? activeAlerts.filter(a => a.childId === childId || a.childId === null).length
+    : activeAlerts.length
 
   const metrics: DashboardMetrics = {
     attendanceReady: totalChildren > 0 ? `${readyCount}/${totalChildren}` : '0/0',
     lessonsPlanned: todayLessons.length,
-    needsAttention: 0,
+    needsAttention,
     quranLogged: todayQuran.length > 0
       ? `${todayQuran.length} session${todayQuran.length !== 1 ? 's' : ''}`
       : 'None today',
