@@ -136,4 +136,49 @@ test.describe('Dashboard — selected child data regression (Wave 2)', () => {
     // All selectable children should be active (Adam, Khadijah, Zayd)
     expect(options.some(o => o.trim().length > 0)).toBe(true)
   })
+
+  test('All children is selected by default after load', async ({ page }) => {
+    const selector = page.getByRole('combobox').or(page.locator('select')).first()
+
+    // If the selector is not visible there is only one child; skip the check
+    const isVisible = await selector.isVisible()
+    if (!isVisible) {
+      return
+    }
+
+    // The default option (All children) has value '' — no child should be auto-selected
+    await expect(selector).toHaveValue('')
+  })
+
+  test('selecting a child then switching back to All shows aggregate data', async ({ page }) => {
+    const selector = page.getByRole('combobox').or(page.locator('select')).first()
+
+    // Find the first named child option (non-empty value)
+    const options = await selector.locator('option').all()
+    let firstChildValue: string | null = null
+    for (const option of options) {
+      const value = await option.getAttribute('value')
+      if (value && value.trim() !== '') {
+        firstChildValue = value
+        break
+      }
+    }
+
+    if (!firstChildValue) {
+      // Only one option or selector hidden — nothing to test
+      return
+    }
+
+    // Select the first named child
+    await selector.selectOption(firstChildValue)
+    await page.waitForTimeout(800)
+
+    // Switch back to All children (empty value)
+    await selector.selectOption('')
+    await page.waitForTimeout(800)
+
+    // The aggregate Today's State section should render without error
+    const todaySection = page.locator('section').filter({ hasText: /Today.*State/i })
+    await expect(todaySection).toBeVisible()
+  })
 })
