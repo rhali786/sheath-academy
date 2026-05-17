@@ -5,42 +5,57 @@ import Link from 'next/link'
 import { TodayState } from '../components/TodayState'
 import { DoToday } from '../components/DoToday'
 import { NeedsAttention } from '../components/NeedsAttention'
-import { PerChildProgress } from '../components/PerChildProgress'
-import { QuranStudies } from '../components/QuranStudies'
+import { WeeklyActivity } from '../components/WeeklyActivity'
+import { SubjectActivity } from '../components/SubjectActivity'
+import { QuranStreak } from '../components/QuranStreak'
 import { RecordsProof } from '../components/RecordsProof'
 import { useContext_Dashboard } from '../context'
 import { useHousehold } from '@/features/household/front/context'
 import { HouseholdSetup } from '@/features/household/front/components/HouseholdSetup'
 import { useNavigation } from '@/features/layout/front/context/NavigationContext'
-import type { Child } from '../types'
 import { ChildSelector } from '../components/ChildSelector'
 import { NextSetupStrip } from '@/features/setup/front/components/NextSetupStrip'
 import { plannerApi } from '@/features/planner/front/services/api'
-import { transformPlannerProgress, getAcademicYearRange } from '../utils/transformProgress'
+import { subjectsApi } from '@/features/subjects/front/services/api'
+import type { LessonTask } from '@/features/planner/types'
+import type { SubjectCourse } from '@/features/subjects/types'
+import type { StudentProfile } from '@/features/lib/types'
 
 export default function Dashboard() {
   const { selectedTab } = useNavigation()
   const {
-    children: studentProfiles, alerts, quranSessions, quranChartData, records, metrics,
+    children: studentProfiles, alerts, quranSessions, records, metrics,
     loading, error, addQuranSession, selectedChildId,
   } = useContext_Dashboard()
 
-  // Map StudentProfile[] to legacy Child[] for existing components
-  const children: Child[] = studentProfiles.map(p => ({
-    id: p.id,
-    name: p.name,
-    age: 0,
-    grade: parseInt(p.gradeLabel.replace(/\D/g, '')) || 0,
-    avatar: p.avatarInitials || p.name.charAt(0).toUpperCase(),
-  }))
   const { needsSetup, loading: householdLoading } = useHousehold()
 
-  const [progressData, setProgressData] = useState<ReturnType<typeof transformPlannerProgress>>({})
+  const [weeklyLessons, setWeeklyLessons] = useState<LessonTask[]>([])
+  const [subjects, setSubjects] = useState<SubjectCourse[]>([])
 
+  // Fetch subjects once
   useEffect(() => {
-    const range = getAcademicYearRange()
-    plannerApi.getProgress('year', range, selectedChildId ?? undefined)
-      .then(summaries => setProgressData(transformPlannerProgress(summaries)))
+    subjectsApi.getSubjects().then(res => setSubjects(res.data)).catch(() => {})
+  }, [])
+
+  // Fetch all lessons and filter to current week completed
+  useEffect(() => {
+    plannerApi.getLessons(undefined, selectedChildId ? [selectedChildId] : undefined)
+      .then(lessons => {
+        const today = new Date()
+        const sunday = new Date(today)
+        sunday.setDate(today.getDate() - today.getDay())
+        sunday.setHours(0, 0, 0, 0)
+        const saturday = new Date(sunday)
+        saturday.setDate(sunday.getDate() + 6)
+        saturday.setHours(23, 59, 59, 999)
+
+        setWeeklyLessons(lessons.filter(l => {
+          if (l.status !== 'completed') return false
+          const updated = new Date(l.updatedAt)
+          return updated >= sunday && updated <= saturday
+        }))
+      })
       .catch(() => {})
   }, [selectedChildId])
 
@@ -98,13 +113,29 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <PerChildProgress children={children} progressData={progressData} />
-          <QuranStudies
-            children={selectedChildId ? children.filter(c => c.id === selectedChildId) : children}
-            quranSessions={quranSessions}
-            chartData={quranChartData}
-            onAddSession={addQuranSession}
-          />
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            <WeeklyActivity
+              lessons={weeklyLessons}
+              quranSessions={quranSessions}
+              children={studentProfiles}
+              selectedChildId={selectedChildId}
+            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <SubjectActivity
+                lessons={weeklyLessons}
+                subjects={subjects}
+                children={studentProfiles}
+                selectedChildId={selectedChildId}
+              />
+              <QuranStreak
+                quranSessions={quranSessions}
+                children={studentProfiles}
+                selectedChildId={selectedChildId}
+                onAddSession={addQuranSession}
+              />
+            </div>
+          </div>
+
           <RecordsProof records={records} />
 
           <div className="pb-6 text-center">
