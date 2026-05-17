@@ -24,15 +24,24 @@ interface Props {
   item: EvidenceItem
   childName: string
   subjectName: string
+  onEdit?: (item: EvidenceItem) => void
 }
 
-export function EvidenceListItem({ item, childName, subjectName }: Props) {
+export function EvidenceListItem({ item, childName, subjectName, onEdit }: Props) {
   const notesPreview = item.notes && item.notes.length > 80
     ? item.notes.slice(0, 80) + '…'
     : item.notes
 
+  function handleClick(e: React.MouseEvent) {
+    if ((e.target as HTMLElement).closest('a')) return
+    if (onEdit) onEdit(item)
+  }
+
   return (
-    <div className="border border-gray-200 rounded-lg p-4 bg-white space-y-2">
+    <div
+      className={`border border-gray-200 rounded-lg p-4 bg-white space-y-2${onEdit ? ' cursor-pointer hover:bg-gray-50 transition-colors' : ''}`}
+      onClick={onEdit ? handleClick : undefined}
+    >
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-semibold text-gray-900 text-sm">{item.title}</h3>
         <span

@@ -154,4 +154,29 @@ describe('LessonCard display', () => {
     )
     expect(screen.getByText('Learn fractions step by step')).toBeInTheDocument()
   })
+
+  it('clicking the card title area calls onEdit when onEdit is provided', () => {
+    const onEdit = jest.fn()
+    render(
+      <LessonCard
+        lesson={makeLesson({ title: 'Algebra Basics' })}
+        childName="Adam"
+        subjectName="Math"
+        onEdit={onEdit}
+      />
+    )
+    fireEvent.click(screen.getByText('Algebra Basics'))
+    expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 'lesson_001' }))
+  })
+
+  it('does not crash when card title is clicked and onEdit is not provided', () => {
+    render(
+      <LessonCard
+        lesson={makeLesson({ title: 'Algebra Basics' })}
+        childName="Adam"
+        subjectName="Math"
+      />
+    )
+    expect(() => fireEvent.click(screen.getByText('Algebra Basics'))).not.toThrow()
+  })
 })

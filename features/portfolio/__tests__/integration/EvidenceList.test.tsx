@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { EvidenceList } from '@/features/portfolio/front/components/EvidenceList'
 import type { EvidenceItem } from '@/features/portfolio/types'
 
@@ -128,5 +128,40 @@ describe('EvidenceList', () => {
       />
     )
     expect(screen.getByText(/failed to load portfolio/i)).toBeInTheDocument()
+  })
+})
+
+describe('EvidenceList — card click opens edit (Phase 5)', () => {
+  it('calls onEdit when evidence card is clicked', () => {
+    const onEdit = jest.fn()
+    const item = makeItem({ id: 'ev_click', title: 'Clickable Evidence' })
+    render(
+      <EvidenceList
+        items={[item]}
+        childMap={childMap}
+        subjectMap={subjectMap}
+        loading={false}
+        error={null}
+        onEdit={onEdit}
+      />
+    )
+    fireEvent.click(screen.getByText('Clickable Evidence'))
+    expect(onEdit).toHaveBeenCalledWith(item)
+  })
+
+  it('does not call onEdit when onEdit is not provided', () => {
+    const item = makeItem({ title: 'No Edit Handler' })
+    expect(() => {
+      render(
+        <EvidenceList
+          items={[item]}
+          childMap={childMap}
+          subjectMap={subjectMap}
+          loading={false}
+          error={null}
+        />
+      )
+      fireEvent.click(screen.getByText('No Edit Handler'))
+    }).not.toThrow()
   })
 })

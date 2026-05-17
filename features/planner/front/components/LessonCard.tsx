@@ -38,8 +38,16 @@ export function LessonCard({ lesson, childName, subjectName, onEdit, onDelete }:
       : lesson.description
     : undefined
 
+  function handleCardClick(e: React.MouseEvent) {
+    if ((e.target as HTMLElement).closest('button, a')) return
+    if (onEdit) onEdit(lesson)
+  }
+
   return (
-    <div className="p-4 bg-white rounded-lg border border-slate-200 space-y-2">
+    <div
+      className={`p-4 bg-white rounded-lg border border-slate-200 space-y-2${onEdit ? ' cursor-pointer hover:bg-slate-50 transition-colors' : ''}`}
+      onClick={handleCardClick}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-slate-900">{lesson.title}</div>

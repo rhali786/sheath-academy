@@ -10,9 +10,10 @@ interface Props {
   loading: boolean
   error: string | null
   hasActiveFilters?: boolean
+  onEdit?: (item: EvidenceItem) => void
 }
 
-export function EvidenceList({ items, childMap, subjectMap, loading, error, hasActiveFilters }: Props) {
+export function EvidenceList({ items, childMap, subjectMap, loading, error, hasActiveFilters, onEdit }: Props) {
   if (loading) {
     return <p className="text-gray-500 text-sm py-4">Loading portfolio...</p>
   }
@@ -43,6 +44,7 @@ export function EvidenceList({ items, childMap, subjectMap, loading, error, hasA
           item={item}
           childName={childMap[item.childId] ?? item.childId}
           subjectName={subjectMap[item.subjectId] ?? item.subjectId}
+          onEdit={onEdit}
         />
       ))}
       {items.length === 50 && (

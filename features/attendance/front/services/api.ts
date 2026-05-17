@@ -61,4 +61,20 @@ export const attendanceApi = {
     if (endDate) params.set('endDate', endDate)
     return apiFetch(`/api/attendance/summary?${params.toString()}`)
   },
+
+  batchRecord(data: {
+    childIds: string[]
+    householdId: string
+    date: string
+    status: AttendanceRecord['status']
+    notes?: string
+    hours?: number
+    minutes?: number
+  }): Promise<ApiResponse<AttendanceRecord[]>> {
+    return apiFetch('/api/attendance/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+  },
 }

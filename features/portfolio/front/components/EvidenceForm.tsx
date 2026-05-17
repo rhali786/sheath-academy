@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import type { CreateEvidenceItemInput, EvidenceType } from '@/features/portfolio/types'
+import { useState, useEffect } from 'react'
+import type { CreateEvidenceItemInput, EvidenceItem, EvidenceType } from '@/features/portfolio/types'
 
 const EVIDENCE_TYPES: { value: EvidenceType; label: string }[] = [
   { value: 'note', label: 'Note' },
@@ -37,6 +37,8 @@ interface Props {
   lessons: LessonOption[]
   onSave(input: CreateEvidenceItemInput): Promise<void>
   initialChildId?: string | null
+  editingItem?: EvidenceItem | null
+  onCancelEdit?: () => void
 }
 
 interface FormErrors {
@@ -59,6 +61,8 @@ export function EvidenceForm({
   lessons,
   onSave,
   initialChildId,
+  editingItem,
+  onCancelEdit,
 }: Props) {
   const [title, setTitle] = useState('')
   const [childId, setChildId] = useState(initialChildId ?? '')
@@ -71,6 +75,32 @@ export function EvidenceForm({
   const [lessonTaskId, setLessonTaskId] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
   const [submitting, setSubmitting] = useState(false)
+
+  // Pre-fill form when editingItem changes
+  useEffect(() => {
+    if (editingItem) {
+      setTitle(editingItem.title)
+      setChildId(editingItem.childId)
+      setSubjectId(editingItem.subjectId)
+      setDate(editingItem.date)
+      setType(editingItem.type)
+      setNotes(editingItem.notes ?? '')
+      setReflection(editingItem.reflection ?? '')
+      setUrl(editingItem.url ?? '')
+      setLessonTaskId(editingItem.lessonTaskId ?? '')
+    } else {
+      setTitle('')
+      setChildId(initialChildId ?? '')
+      setSubjectId('')
+      setDate(todayStr())
+      setType('')
+      setNotes('')
+      setReflection('')
+      setUrl('')
+      setLessonTaskId('')
+    }
+    setErrors({})
+  }, [editingItem])
 
   const filteredSubjects = childId
     ? subjects.filter(s => s.childId === childId)
@@ -116,15 +146,17 @@ export function EvidenceForm({
         lessonTaskId: lessonTaskId || undefined,
       }
       await onSave(input)
-      setTitle('')
-      setChildId(initialChildId ?? '')
-      setSubjectId('')
-      setDate(todayStr())
-      setType('')
-      setNotes('')
-      setReflection('')
-      setUrl('')
-      setLessonTaskId('')
+      if (!editingItem) {
+        setTitle('')
+        setChildId(initialChildId ?? '')
+        setSubjectId('')
+        setDate(todayStr())
+        setType('')
+        setNotes('')
+        setReflection('')
+        setUrl('')
+        setLessonTaskId('')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -143,7 +175,18 @@ export function EvidenceForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-      <h3 className="font-semibold text-gray-800">Add Evidence</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-gray-800">{editingItem ? 'Edit Evidence' : 'Add Evidence'}</h3>
+        {editingItem && onCancelEdit && (
+          <button
+            type="button"
+            onClick={onCancelEdit}
+            className="text-sm text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-100"
+          >
+            Cancel edit
+          </button>
+        )}
+      </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="ev-title">
@@ -304,7 +347,7 @@ export function EvidenceForm({
         disabled={submitting}
         className="w-full bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
       >
-        {submitting ? 'Saving...' : 'Save Evidence'}
+        {submitting ? 'Saving...' : editingItem ? 'Update Evidence' : 'Save Evidence'}
       </button>
     </form>
   )

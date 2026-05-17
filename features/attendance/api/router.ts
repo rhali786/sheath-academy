@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import * as attendanceHandler from './routes/attendance'
 import * as attendanceIdHandler from './routes/attendance-id'
 import * as summaryHandler from './routes/summary'
+import * as batchHandler from './routes/batch'
 
 export async function handleAttendanceRoute(
   slug: string[],
@@ -22,6 +23,11 @@ export async function handleAttendanceRoute(
   // GET /attendance/summary — summary counts
   if (slug.length === 1 && slug[0] === 'summary' && method === 'GET') {
     return summaryHandler.GET(request)
+  }
+
+  // POST /attendance/batch — batch create records
+  if (slug.length === 1 && slug[0] === 'batch' && method === 'POST') {
+    return batchHandler.POST(request)
   }
 
   // GET /attendance/:id
