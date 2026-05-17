@@ -5,7 +5,18 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { usePlanner } from '../context/PlannerContext'
 import { plannerApi } from '../services/api'
-import type { LessonTask } from '../../types'
+import type { LessonTask, LessonTaskStatus } from '../../types'
+
+const STATUS_BADGE: Record<LessonTaskStatus, string | null> = {
+  not_started: null,
+  completed:   'bg-green-100 text-green-700',
+  skipped:     'bg-amber-100 text-amber-700',
+}
+const STATUS_LABEL: Record<LessonTaskStatus, string> = {
+  not_started: '',
+  completed:   'Done',
+  skipped:     'Skipped',
+}
 
 function getDayOfWeekLabel(dayIndex: number): string {
   const labels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -45,9 +56,16 @@ function DraggableLesson({ lesson, onEdit }: DraggableLessonProps) {
       {...listeners}
       {...attributes}
       onClick={() => onEdit(lesson.id)}
-      className={`p-2.5 bg-forest-50 rounded-md border border-forest-200 hover:shadow-md transition-shadow cursor-pointer select-none ${isDragging ? 'opacity-0' : ''}`}
+      className={`p-2.5 rounded-md border hover:shadow-md transition-shadow cursor-pointer select-none ${isDragging ? 'opacity-0' : ''} ${lesson.status === 'completed' ? 'bg-green-50 border-green-200' : lesson.status === 'skipped' ? 'bg-amber-50 border-amber-200' : 'bg-forest-50 border-forest-200'}`}
     >
-      <div className="font-medium text-forest-900 pointer-events-none">{lesson.title}</div>
+      <div className="flex items-start justify-between gap-1 pointer-events-none">
+        <div className={`font-medium text-sm ${lesson.status === 'completed' ? 'line-through text-slate-400' : 'text-forest-900'}`}>{lesson.title}</div>
+        {STATUS_BADGE[lesson.status] && (
+          <span className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full ${STATUS_BADGE[lesson.status]}`}>
+            {STATUS_LABEL[lesson.status]}
+          </span>
+        )}
+      </div>
       {lesson.description && <div className="text-xs text-forest-700 mt-1 pointer-events-none">{lesson.description}</div>}
     </div>
   )

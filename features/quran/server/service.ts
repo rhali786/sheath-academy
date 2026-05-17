@@ -77,6 +77,13 @@ export function addQuranSession(sessionData: QuranSessionRequest): QuranSession 
   return quranSessionsStore.insert(newSession)
 }
 
+export function updateQuranSession(
+  id: string,
+  patch: Partial<Pick<QuranSession, 'type' | 'surah' | 'fromAyah' | 'toAyah' | 'notes' | 'date'>>
+): QuranSession | null {
+  return quranSessionsStore.update(id, patch)
+}
+
 export function resetStore(): void {
   quranSessionsStore.reset(SEED_QURAN_SESSIONS)
 }

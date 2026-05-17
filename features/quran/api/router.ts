@@ -14,6 +14,12 @@ export async function handleQuranRoute(
     if (method === 'POST') return sessionsHandler.POST(request)
   }
 
+  // Handle /quran/sessions/:id
+  if (slug.length === 2 && slug[0] === 'sessions') {
+    const id = slug[1]
+    if (method === 'PATCH') return sessionsHandler.PATCH(request, { id })
+  }
+
   // Handle /quran/summary
   if (slug.length === 1 && slug[0] === 'summary' && method === 'GET') {
     return summaryHandler.GET(request)

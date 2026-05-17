@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, ChartSeries, QuranSessionRequest } from '@/features/lib/types'
-import { getQuranSessions, addQuranSession } from '@/features/quran/server/service'
+import { getQuranSessions, addQuranSession, updateQuranSession } from '@/features/quran/server/service'
 import { getStudentProfiles } from '@/features/children/server/service'
 
 const CHILD_COLORS: Record<string, string> = {
@@ -73,4 +73,27 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   return NextResponse.json(response, { status: 201 })
+}
+
+export async function PATCH(
+  request: Request,
+  context: { id: string }
+): Promise<NextResponse> {
+  const { id } = context
+  const patch = await request.json()
+  const updated = updateQuranSession(id, patch)
+
+  if (!updated) {
+    return NextResponse.json(
+      { status: 'error', data: null, message: 'Session not found', timestamp: new Date().toISOString() },
+      { status: 404 }
+    )
+  }
+
+  return NextResponse.json({
+    status: 'success',
+    data: updated,
+    message: 'Quran session updated',
+    timestamp: new Date().toISOString(),
+  })
 }

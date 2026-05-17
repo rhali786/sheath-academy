@@ -131,15 +131,17 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     try {
       await quranApi.addSession(session)
       const cid = selectedChildId ?? undefined
-      const [quranRes, recordsRes, summaryRes] = await Promise.all([
+      const [quranRes, recordsRes, summaryRes, alertsRes] = await Promise.all([
         quranApi.getSessions(cid),
         dashboardApi.getRecords(cid),
         dashboardApi.getSummary(cid),
+        alertsApi.getAlerts(cid),
       ])
       setQuranSessions(quranRes.data.sessions)
       setQuranChartData(quranRes.data.chartData ?? [])
       setRecords(recordsRes.data)
       setMetrics(summaryRes.data)
+      setAllAlerts(alertsRes.data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add Quran session')
     }

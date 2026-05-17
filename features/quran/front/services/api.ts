@@ -27,6 +27,19 @@ export const quranApi = {
     return res.json()
   },
 
+  updateSession: async (
+    id: string,
+    patch: Partial<Pick<QuranSession, 'type' | 'surah' | 'fromAyah' | 'toAyah' | 'notes' | 'date'>>
+  ): Promise<ApiResponse<QuranSession>> => {
+    const res = await fetch(`${getApiBaseUrl()}/api/quran/sessions/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
+    if (!res.ok) throw new Error('Failed to update quran session')
+    return res.json()
+  },
+
   getSummary: async ({
     childId,
     startDate,

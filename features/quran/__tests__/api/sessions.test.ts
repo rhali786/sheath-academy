@@ -1,10 +1,11 @@
 /** @jest-environment node */
 
-import { GET, POST } from '@/features/quran/api/routes/sessions'
+import { GET, POST, PATCH } from '@/features/quran/api/routes/sessions'
 
 jest.mock('@/features/quran/server/service', () => ({
   getQuranSessions: jest.fn(),
   addQuranSession: jest.fn(),
+  updateQuranSession: jest.fn(),
 }))
 
 jest.mock('@/features/children/server/service', () => ({
@@ -14,9 +15,10 @@ jest.mock('@/features/children/server/service', () => ({
   ]),
 }))
 
-import { getQuranSessions, addQuranSession } from '@/features/quran/server/service'
+import { getQuranSessions, addQuranSession, updateQuranSession } from '@/features/quran/server/service'
 const mockGet = getQuranSessions as jest.Mock
 const mockAdd = addQuranSession as jest.Mock
+const mockUpdate = updateQuranSession as jest.Mock
 
 const session1 = {
   id: 'quran_001',
@@ -79,5 +81,37 @@ describe('POST /api/quran/sessions', () => {
     const resBody = await res.json()
     expect(resBody.status).toBe('success')
     expect(mockAdd).toHaveBeenCalledWith(body)
+  })
+})
+
+describe('PATCH /api/quran/sessions/:id', () => {
+  beforeEach(() => {
+    mockUpdate.mockReturnValue({ ...session1, surah: 'Al-Baqarah', toAyah: 10 })
+  })
+
+  test('updates session fields and returns the updated session', async () => {
+    const patch = { surah: 'Al-Baqarah', toAyah: 10 }
+    const req = makeRequest('/api/quran/sessions/quran_001', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
+    const res = await PATCH(req, { id: 'quran_001' })
+    expect(res.status).toBe(200)
+    const resBody = await res.json()
+    expect(resBody.status).toBe('success')
+    expect(resBody.data.surah).toBe('Al-Baqarah')
+    expect(mockUpdate).toHaveBeenCalledWith('quran_001', expect.objectContaining({ surah: 'Al-Baqarah', toAyah: 10 }))
+  })
+
+  test('returns 404 when session does not exist', async () => {
+    mockUpdate.mockReturnValue(null)
+    const req = makeRequest('/api/quran/sessions/nonexistent', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ surah: 'Al-Ikhlas' }),
+    })
+    const res = await PATCH(req, { id: 'nonexistent' })
+    expect(res.status).toBe(404)
   })
 })
