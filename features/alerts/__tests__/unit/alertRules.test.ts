@@ -154,4 +154,43 @@ describe('getAlerts — unit tests', () => {
     const childSpecificAlerts = adamAlerts.filter(a => a.childId !== null)
     expect(childSpecificAlerts.every(a => a.childId === activeAdam.id)).toBe(true)
   })
+
+  test('child-scoped lesson alert href includes childId query param', () => {
+    mockGetLessons.mockImplementation((childId?: string) =>
+      !childId || childId === activeAdam.id
+        ? [{ id: 'l1', childId: activeAdam.id, title: 'Math', status: 'not_started', dueDate: YESTERDAY, subjectId: 's1' }]
+        : []
+    )
+    mockGetRecords.mockReturnValue([
+      { childId: activeAdam.id, date: TODAY, status: 'present' },
+      { childId: activeKhadijah.id, date: TODAY, status: 'present' },
+    ])
+
+    const alerts = getAlerts()
+    const adamAlert = alerts.find(a => a.childId === activeAdam.id && a.type === 'pending_lessons')
+    expect(adamAlert).toBeDefined()
+    expect(adamAlert?.href).toBe(`/lessons?childId=${activeAdam.id}`)
+  })
+
+  test('child-scoped attendance alert href includes childId query param', () => {
+    mockGetLessons.mockReturnValue([])
+    // No attendance records for Khadijah today
+    mockGetRecords.mockReturnValue([])
+
+    const alerts = getAlerts(activeKhadijah.id)
+    const attendanceAlert = alerts.find(a => a.id.startsWith('attendance_missing'))
+    expect(attendanceAlert).toBeDefined()
+    expect(attendanceAlert?.href).toBe(`/attendance?childId=${activeKhadijah.id}`)
+  })
+
+  test('household-level attendance alert href does not include childId', () => {
+    mockGetLessons.mockReturnValue([])
+    mockGetRecords.mockReturnValue([])
+
+    const alerts = getAlerts()
+    const attendanceAlert = alerts.find(a => a.id.startsWith('attendance_missing'))
+    expect(attendanceAlert).toBeDefined()
+    expect(attendanceAlert?.href).toBe('/attendance')
+    expect(attendanceAlert?.childId).toBeNull()
+  })
 })

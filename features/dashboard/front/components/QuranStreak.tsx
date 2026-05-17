@@ -1,8 +1,10 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { X } from 'lucide-react'
 import { childColors } from '../theme'
+import { childScopedHref } from '@/features/lib/front/navigation'
 import type { QuranSession } from '../types'
 import type { StudentProfile } from '@/features/lib/types'
 
@@ -90,7 +92,12 @@ export function QuranStreak({ quranSessions, children, selectedChildId, onAddSes
       ) : (
         <div className="flex flex-wrap gap-6 mt-2">
           {streaks.map(({ child, streak, color }) => (
-            <div key={child.id} className="flex flex-col items-center gap-2">
+            <Link
+              key={child.id}
+              href={childScopedHref('/quran', child.id)}
+              className="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity"
+              aria-label={child.name}
+            >
               <div
                 className="w-20 h-20 rounded-full flex flex-col items-center justify-center shadow-sm border-4"
                 style={{ borderColor: color }}
@@ -99,7 +106,7 @@ export function QuranStreak({ quranSessions, children, selectedChildId, onAddSes
                 <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">days</span>
               </div>
               <p className="text-xs font-medium text-slate-600">{child.name}</p>
-            </div>
+            </Link>
           ))}
         </div>
       )}

@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { CheckCircle, TrendingUp, Folder, BookOpen } from 'lucide-react'
+import { childScopedHref } from '@/features/lib/front/navigation'
 import type { DashboardRecord } from '../types'
 
 interface RecordsProofProps {
   records: DashboardRecord[]
+  selectedChildId?: string | null
 }
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -14,9 +16,9 @@ const iconMap: Record<string, React.ReactNode> = {
   BookOpen:    <BookOpen    className="w-5 h-5 text-amber-600" />,
 }
 
-const RECORD_ROUTES: Record<string, string> = {
+const RECORD_BASE_ROUTES: Record<string, string> = {
   record_attendance: '/attendance',
-  record_progress: '/planner',
+  record_progress: '/lessons',
   record_portfolio: '/portfolio',
   record_quran: '/quran',
 }
@@ -29,7 +31,7 @@ const exportButtons = [
   { key: 'islamic',    label: 'Islamic Studies',   style: 'bg-rose-50 text-rose-700 hover:bg-rose-100 border-rose-200' },
 ]
 
-export function RecordsProof({ records }: RecordsProofProps) {
+export function RecordsProof({ records, selectedChildId }: RecordsProofProps) {
   const [selectedExport, setSelectedExport] = useState<string | null>(null)
 
   return (
@@ -50,8 +52,8 @@ export function RecordsProof({ records }: RecordsProofProps) {
                 <span className="text-lg font-medium text-slate-300">/{record.maxCount}</span>
               ) : null}
             </p>
-            {RECORD_ROUTES[record.id] ? (
-              <Link href={RECORD_ROUTES[record.id]} className="mt-3 text-xs font-semibold text-sky-600 hover:text-sky-700 transition-colors">
+            {RECORD_BASE_ROUTES[record.id] ? (
+              <Link href={childScopedHref(RECORD_BASE_ROUTES[record.id], selectedChildId)} className="mt-3 text-xs font-semibold text-sky-600 hover:text-sky-700 transition-colors">
                 {record.viewButton} →
               </Link>
             ) : (

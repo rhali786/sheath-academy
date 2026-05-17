@@ -47,6 +47,7 @@ type DateSort = 'asc' | 'desc'
 
 export function LessonsPage() {
   const { householdProfile } = useHousehold()
+  const searchParams = useSearchParams()
   const [children, setChildren] = useState<StudentProfile[]>([])
   const [subjects, setSubjects] = useState<SubjectCourse[]>([])
   const [lessons, setLessons] = useState<LessonTask[]>([])
@@ -60,6 +61,7 @@ export function LessonsPage() {
   const [dateSort, setDateSort] = useState<DateSort>('desc')
 
   useEffect(() => {
+    const urlChildId = searchParams.get('childId')
     const init = async () => {
       try {
         const [kidsRes, subsRes] = await Promise.all([
@@ -68,6 +70,10 @@ export function LessonsPage() {
         ])
         setChildren(kidsRes.data)
         setSubjects(subsRes.data)
+        if (urlChildId) {
+          const matched = kidsRes.data.find((c: StudentProfile) => c.id === urlChildId)
+          if (matched) setFilterChildId(matched.id)
+        }
       } catch {
         setError('Failed to load setup data')
       }

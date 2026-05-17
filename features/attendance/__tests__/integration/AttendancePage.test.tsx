@@ -4,8 +4,10 @@ import { AttendancePage } from '@/features/attendance/front/pages/AttendancePage
 import type { AttendanceRecord } from '@/features/attendance/types'
 import type { StudentProfile, ApiResponse } from '@/features/lib/types'
 
+let mockSearchParams = new URLSearchParams()
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+  useSearchParams: () => mockSearchParams,
 }))
 
 jest.mock('@/features/attendance/front/services/api', () => ({
@@ -67,6 +69,7 @@ function todayLocal(): string {
 }
 
 beforeEach(() => {
+  mockSearchParams = new URLSearchParams()
   mockGetAllChildren.mockResolvedValue(ok(mockChildren))
   mockGetRecords.mockResolvedValue(ok([]))
   mockCreateRecord.mockResolvedValue(ok(makeRecord()))
@@ -268,6 +271,33 @@ describe('AttendancePage', () => {
     fireEvent.change(screen.getByLabelText(/filter by learner/i), { target: { value: 'child_002' } })
     await waitFor(() => {
       expect(screen.getAllByRole('button', { name: /void/i })).toHaveLength(1)
+    })
+  })
+
+  it('selects the child from ?childId query param after children load', async () => {
+    mockSearchParams = new URLSearchParams('childId=child_002')
+    mockGetSummary.mockResolvedValue(ok({ childId: 'child_002', totalPresent: 0, totalAbsent: 0, totalPartial: 0, totalRecorded: 0 }))
+    render(<AttendancePage />)
+    await waitFor(() => {
+      const selector = screen.getAllByRole('combobox')[0]
+      expect(selector).toHaveValue('child_002')
+    })
+  })
+
+  it('falls back to first child when ?childId is invalid', async () => {
+    mockSearchParams = new URLSearchParams('childId=invalid_id')
+    render(<AttendancePage />)
+    await waitFor(() => {
+      const selector = screen.getAllByRole('combobox')[0]
+      expect(selector).toHaveValue('child_001')
+    })
+  })
+
+  it('uses first child when no ?childId param', async () => {
+    render(<AttendancePage />)
+    await waitFor(() => {
+      const selector = screen.getAllByRole('combobox')[0]
+      expect(selector).toHaveValue('child_001')
     })
   })
 })

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Pencil, X, Check } from 'lucide-react'
 import { quranApi } from '@/features/quran/front/services/api'
 import { childrenApi } from '@/features/children/front/services/api'
@@ -31,6 +32,7 @@ function toEditState(s: QuranSession): EditState {
 }
 
 export default function QuranPage() {
+  const searchParams = useSearchParams()
   const [sessions, setSessions] = useState<QuranSession[]>([])
   const [children, setChildren] = useState<StudentProfile[]>([])
   const [loading, setLoading] = useState(true)
@@ -42,8 +44,15 @@ export default function QuranPage() {
   const [dateSort, setDateSort] = useState<DateSort>('desc')
 
   useEffect(() => {
+    const urlChildId = searchParams.get('childId')
     childrenApi.getAllChildren()
-      .then(res => setChildren(res.data))
+      .then(res => {
+        setChildren(res.data)
+        if (urlChildId) {
+          const matched = res.data.find((c: StudentProfile) => c.id === urlChildId)
+          if (matched) setFilterChildId(matched.id)
+        }
+      })
       .catch(() => {})
     quranApi.getSessions()
       .then(res => setSessions(res.data.sessions ?? []))
