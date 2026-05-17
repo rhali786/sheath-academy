@@ -11,11 +11,12 @@ import { RecordsProof } from '../components/RecordsProof'
 import { useContext_Dashboard } from '../context'
 import { useHousehold } from '@/features/household/front/context'
 import { HouseholdSetup } from '@/features/household/front/components/HouseholdSetup'
-import { dashboardApi } from '../services/api'
 import { useNavigation } from '@/features/layout/front/context/NavigationContext'
 import type { Child } from '../types'
 import { ChildSelector } from '../components/ChildSelector'
 import { NextSetupStrip } from '@/features/setup/front/components/NextSetupStrip'
+import { plannerApi } from '@/features/planner/front/services/api'
+import { transformPlannerProgress, getAcademicYearRange } from '../utils/transformProgress'
 
 export default function Dashboard() {
   const { selectedTab } = useNavigation()
@@ -34,13 +35,14 @@ export default function Dashboard() {
   }))
   const { needsSetup, loading: householdLoading } = useHousehold()
 
-  const [progressData, setProgressData] = useState({})
+  const [progressData, setProgressData] = useState<ReturnType<typeof transformPlannerProgress>>({})
 
   useEffect(() => {
-    dashboardApi.getProgress()
-      .then(res => setProgressData(res.data))
-      .catch(err => console.error('Failed to fetch progress data:', err))
-  }, [])
+    const range = getAcademicYearRange()
+    plannerApi.getProgress('year', range, selectedChildId ?? undefined)
+      .then(summaries => setProgressData(transformPlannerProgress(summaries)))
+      .catch(() => {})
+  }, [selectedChildId])
 
   if (loading || householdLoading) {
     return (
