@@ -100,20 +100,24 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }, [workspace?.id, householdProfile?.id, householdLoading])
 
   // Re-fetch per-child data whenever selected child changes (after initial load)
+  // Runs when selectedChildId changes to null ("All children") or to a specific child ID
   useEffect(() => {
-    if (!initialLoadDone || !selectedChildId) return
+    if (!initialLoadDone) return
 
+    const cid = selectedChildId ?? undefined
     const refetch = async () => {
       try {
-        const [quranRes, recordsRes, summaryRes] = await Promise.all([
-          quranApi.getSessions(selectedChildId),
-          dashboardApi.getRecords(selectedChildId),
-          dashboardApi.getSummary(selectedChildId),
+        const [quranRes, recordsRes, summaryRes, alertsRes] = await Promise.all([
+          quranApi.getSessions(cid),
+          dashboardApi.getRecords(cid),
+          dashboardApi.getSummary(cid),
+          alertsApi.getAlerts(cid),
         ])
         setQuranSessions(quranRes.data.sessions)
         setQuranChartData(quranRes.data.chartData ?? [])
         setRecords(recordsRes.data)
         setMetrics(summaryRes.data)
+        setAllAlerts(alertsRes.data)
       } catch {
         // Suppress — the initial load error handler covers this
       }
@@ -121,12 +125,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
     void refetch()
   }, [selectedChildId, initialLoadDone])
-
-  useEffect(() => {
-    if (!selectedChildId && studentProfiles.length > 0) {
-      setSelectedChildId(studentProfiles[0].id)
-    }
-  }, [studentProfiles, selectedChildId, setSelectedChildId])
 
   const tasks = useMemo(() => {
     if (!selectedChildId) {
