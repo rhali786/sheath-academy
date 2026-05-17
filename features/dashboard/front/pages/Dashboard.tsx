@@ -16,10 +16,6 @@ import { useNavigation } from '@/features/layout/front/context/NavigationContext
 import type { Child } from '../types'
 import { ChildSelector } from '../components/ChildSelector'
 import { NextSetupStrip } from '@/features/setup/front/components/NextSetupStrip'
-import { SubjectProgressCard } from '../components/SubjectProgressCard'
-import { RecentLessonsCard } from '../components/RecentLessonsCard'
-import { WeekAttendanceCard } from '../components/WeekAttendanceCard'
-import { PortfolioTab } from '@/features/portfolio/front/components/PortfolioTab'
 
 export default function Dashboard() {
   const { selectedTab } = useNavigation()
@@ -116,18 +112,6 @@ export default function Dashboard() {
           </div>
         </>
       )}
-
-      {selectedTab === 'Reports' && (
-        <div className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <SubjectProgressCard childId={selectedChildId ?? undefined} />
-            <WeekAttendanceCard childId={selectedChildId} />
-            <RecentLessonsCard childId={selectedChildId ?? undefined} limit={10} />
-          </div>
-        </div>
-      )}
-
-      {selectedTab === 'Portfolio' && <PortfolioTab />}
 
     </div>
   )

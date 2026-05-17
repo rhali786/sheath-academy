@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useContext_Dashboard } from '@/features/dashboard/front/context'
+import { useHousehold } from '@/features/household/front/context'
+import { childrenApi } from '@/features/children/front/services/api'
+import type { StudentProfile } from '@/features/lib/types'
 import type { RecordsReport } from '@/features/reports/types'
 import { reportsApi } from '../services/api'
 
@@ -15,14 +17,30 @@ function todayLocal(): string {
 }
 
 export function ReportsPage() {
-  const { children, selectedChildId, setSelectedChildId, loading: dashboardLoading } = useContext_Dashboard()
-  const [childId, setChildId] = useState<string>('')
+  const { workspace, householdProfile, loading: householdLoading } = useHousehold()
+  const [studentProfiles, setStudentProfiles] = useState<StudentProfile[]>([])
+  const [childrenLoading, setChildrenLoading] = useState(true)
+  const [selectedChildId, setSelectedChildId] = useState<string>('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [report, setReport] = useState<RecordsReport | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const today = todayLocal()
+
+  useEffect(() => {
+    if (householdLoading) return
+    const householdId = householdProfile?.id ?? workspace?.id
+    if (!householdId) { setChildrenLoading(false); return }
+    childrenApi.getChildren(householdId, false)
+      .then(res => {
+        const profiles = (res.data ?? []).filter((p: StudentProfile) => p.isActive)
+        setStudentProfiles(profiles)
+        if (profiles.length > 0) setSelectedChildId(profiles[0].id)
+      })
+      .catch(() => {})
+      .finally(() => setChildrenLoading(false))
+  }, [householdLoading, workspace?.id, householdProfile?.id])
 
   const dateError = useMemo(() => {
     if (startDate && startDate > today) return 'Start date cannot be in the future.'
@@ -31,40 +49,26 @@ export function ReportsPage() {
     return null
   }, [startDate, endDate, today])
 
-  const activeChildId = useMemo(() => {
-    return childId || selectedChildId || children[0]?.id || ''
-  }, [childId, selectedChildId, children])
-
   useEffect(() => {
-    if (!childId && activeChildId) setChildId(activeChildId)
-  }, [activeChildId, childId])
-
-  useEffect(() => {
-    if (!activeChildId || dateError) return
-
+    if (!selectedChildId || dateError) return
     setLoading(true)
     setError(null)
     reportsApi
       .getRecordsReport({
-        childId: activeChildId,
+        childId: selectedChildId,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
       })
       .then(res => setReport(res.data))
       .catch(err => setError(err.message ?? 'Failed to load reports'))
       .finally(() => setLoading(false))
-  }, [activeChildId, startDate, endDate, dateError])
+  }, [selectedChildId, startDate, endDate, dateError])
 
-  function handleChildChange(nextChildId: string) {
-    setChildId(nextChildId)
-    setSelectedChildId(nextChildId)
-  }
-
-  if (dashboardLoading) {
+  if (householdLoading || childrenLoading) {
     return <p className="p-6 text-sm text-slate-500">Loading reports...</p>
   }
 
-  if (children.length === 0) {
+  if (studentProfiles.length === 0) {
     return (
       <main className="max-w-5xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
         <h1 className="text-2xl font-bold text-slate-900">Records summary</h1>
@@ -98,11 +102,11 @@ export function ReportsPage() {
             </label>
             <select
               id="report-child"
-              value={activeChildId}
-              onChange={e => handleChildChange(e.target.value)}
+              value={selectedChildId}
+              onChange={e => setSelectedChildId(e.target.value)}
               className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
             >
-              {children.map(child => (
+              {studentProfiles.map(child => (
                 <option key={child.id} value={child.id}>
                   {child.name}
                 </option>

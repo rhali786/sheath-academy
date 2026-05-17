@@ -124,14 +124,11 @@ describe('Tab switching — NavigationContext regression', () => {
     })
   })
 
-  test('Portfolio tab shows Portfolio content', async () => {
+  test('Portfolio link is present in navigation', async () => {
     renderWithShell()
     await waitForDashboard()
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Portfolio' })[0])
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Portfolio' })).toBeInTheDocument()
-    })
+    expect(screen.getAllByRole('link', { name: 'Portfolio' })[0]).toBeInTheDocument()
   })
 
   test('Settings link is present in navigation', async () => {
