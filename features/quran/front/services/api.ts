@@ -1,4 +1,5 @@
 import type { ApiResponse, QuranSession, ChartSeries, QuranSessionRequest } from '@/features/lib/types'
+import type { QuranSummary } from '@/features/quran/server/service'
 
 function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
@@ -23,6 +24,25 @@ export const quranApi = {
       body: JSON.stringify(session),
     })
     if (!res.ok) throw new Error('Failed to add quran session')
+    return res.json()
+  },
+
+  getSummary: async ({
+    childId,
+    startDate,
+    endDate,
+  }: {
+    childId?: string
+    startDate?: string
+    endDate?: string
+  } = {}): Promise<ApiResponse<QuranSummary>> => {
+    const params = new URLSearchParams()
+    if (childId) params.set('childId', childId)
+    if (startDate) params.set('startDate', startDate)
+    if (endDate) params.set('endDate', endDate)
+    const query = params.toString() ? `?${params.toString()}` : ''
+    const res = await fetch(`${getApiBaseUrl()}/api/quran/summary${query}`)
+    if (!res.ok) throw new Error('Failed to fetch quran summary')
     return res.json()
   },
 }
