@@ -41,16 +41,33 @@ describe('household profile (household data layer)', () => {
   })
 
   test('updateHouseholdProfile returns null when no profile exists', () => {
-    const result = updateHouseholdProfile('New Name')
+    const result = updateHouseholdProfile({ familyName: 'New Name' })
     expect(result).toBeNull()
   })
 
   test('updateHouseholdProfile changes the family name', () => {
     const workspace = createWorkspace('Ahmed Academy')
     createHouseholdProfile(workspace.id, 'Ahmed Family')
-    const updated = updateHouseholdProfile('Ahmed Academy')
+    const updated = updateHouseholdProfile({ familyName: 'Ahmed Academy' })
     expect(updated!.familyName).toBe('Ahmed Academy')
     expect(getHouseholdProfile()!.familyName).toBe('Ahmed Academy')
+  })
+
+  test('updateHouseholdProfile persists new household settings fields', () => {
+    const workspace = createWorkspace('Ahmed Academy')
+    createHouseholdProfile(workspace.id, 'Ahmed Family')
+    const updated = updateHouseholdProfile({
+      weekStartDay: 'Saturday',
+      schoolDays: ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday'],
+      reportingName: 'Al-Noor Academy',
+      timezone: 'Asia/Dubai',
+      dateDisplay: 'bilingual',
+    })
+    expect(updated!.weekStartDay).toBe('Saturday')
+    expect(updated!.schoolDays).toContain('Saturday')
+    expect(updated!.reportingName).toBe('Al-Noor Academy')
+    expect(updated!.timezone).toBe('Asia/Dubai')
+    expect(updated!.dateDisplay).toBe('bilingual')
   })
 
   test('resetStore clears the profile', () => {

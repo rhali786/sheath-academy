@@ -118,7 +118,7 @@ export function SettingsPage() {
     setRenameError(null)
     setRenameSuccess(false)
     try {
-      await householdApi.updateProfile(renameName.trim())
+      await householdApi.updateProfile({ familyName: renameName.trim() })
       refetch()
       setRenameSuccess(true)
     } catch {
