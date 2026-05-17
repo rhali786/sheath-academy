@@ -17,11 +17,11 @@ test.describe('Alerts — child names and navigation links', () => {
     }
   })
 
-  test('attendance alert links to /attendance', async ({ page }) => {
-    // Find any alert that is a link to /attendance
+  test('household attendance alert links to /attendance (no childId)', async ({ page }) => {
+    // The household-level attendance alert has no childId query param
     const attendanceLink = page.locator('a[href="/attendance"]').first()
     if (await attendanceLink.count() === 0) {
-      // No attendance alert present — seed may be in different state
+      // No household attendance alert present — seed may be in different state
       test.skip()
       return
     }
@@ -30,15 +30,20 @@ test.describe('Alerts — child names and navigation links', () => {
     await expect(page).toHaveURL(/\/attendance/)
   })
 
-  test('lesson alert links to /lessons', async ({ page }) => {
-    const lessonLink = page.locator('a[href="/lessons"]').first()
+  test('lesson alert links to /lessons with childId query param', async ({ page }) => {
+    // Lesson alerts now include ?childId=<id> in the href
+    const lessonLink = page.locator('a[href*="/lessons?childId="]').first()
     if (await lessonLink.count() === 0) {
+      // No lesson alert present — seed may be in different state
       test.skip()
       return
     }
+    const href = await lessonLink.getAttribute('href')
+    expect(href).toMatch(/\/lessons\?childId=/)
     await lessonLink.click()
     await page.waitForURL(/\/lessons/, { timeout: 5000 })
     await expect(page).toHaveURL(/\/lessons/)
+    await expect(page).toHaveURL(/childId=/)
   })
 })
 
