@@ -3,7 +3,6 @@ import * as summaryHandler from './routes/summary'
 import * as tasksHandler from './routes/tasks'
 import * as tasksCompleteHandler from './routes/tasks-complete'
 import * as alertsHandler from './routes/alerts'
-import * as progressHandler from './routes/progress'
 import * as quranHandler from './routes/quran'
 import * as recordsHandler from './routes/records'
 
@@ -35,11 +34,6 @@ export async function handleDashboardRoute(
   // Handle /dashboard/alerts
   if (slug.length === 1 && slug[0] === 'alerts' && method === 'GET') {
     return alertsHandler.GET(request)
-  }
-
-  // Handle /dashboard/progress
-  if (slug.length === 1 && slug[0] === 'progress' && method === 'GET') {
-    return progressHandler.GET()
   }
 
   // Handle /dashboard/quran

@@ -13,7 +13,7 @@ import { getRecords as getAttendanceRecords } from '@/features/attendance/server
 import { getLessons } from '@/features/planner/server/service'
 import { resetStore as resetPlannerStore } from '@/features/planner/server/service'
 import { resetStore as resetAttendanceStore } from '@/features/attendance/server/service'
-import { getQuranSessions } from '@/features/dashboard/server/service'
+import { getQuranSessions, resetStore as resetQuranStore } from '@/features/quran/server/service'
 
 function resetAll() {
   resetChildrenStore()
@@ -21,6 +21,7 @@ function resetAll() {
   resetEvidenceStore()
   resetPlannerStore()
   resetAttendanceStore()
+  resetQuranStore()
 }
 
 describe('Archive filtering — alerts must exclude archived students', () => {

@@ -2,15 +2,15 @@ import {
   getTasks,
   updateTask,
   getChildren,
-  getQuranSessions,
-  getRecords,
   resetStore,
 } from '@/features/dashboard/server/service'
 import { getAlerts } from '@/features/alerts/server/service'
+import { getQuranSessions, resetStore as resetQuranStore } from '@/features/quran/server/service'
 
 describe('TestCRUDOperations', () => {
   beforeEach(() => {
     resetStore()
+    resetQuranStore()
   })
 
   test('load data initializes with all required fields', () => {
@@ -18,7 +18,6 @@ describe('TestCRUDOperations', () => {
     expect(getTasks()).toBeDefined()
     expect(getAlerts()).toBeDefined()
     expect(getQuranSessions()).toBeDefined()
-    expect(getRecords()).toBeDefined()
   })
 
   test('get children returns all three children', () => {
