@@ -8,12 +8,10 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Al
 
   const alerts = getAlerts(childId)
 
-  const response: ApiResponse<Alert[]> = {
+  return NextResponse.json({
     status: 'success',
     data: alerts,
     message: 'Alerts retrieved',
     timestamp: new Date().toISOString(),
-  }
-
-  return NextResponse.json(response)
+  })
 }

@@ -34,7 +34,7 @@ export async function handleDashboardRoute(
 
   // Handle /dashboard/alerts
   if (slug.length === 1 && slug[0] === 'alerts' && method === 'GET') {
-    return alertsHandler.GET()
+    return alertsHandler.GET(request)
   }
 
   // Handle /dashboard/progress

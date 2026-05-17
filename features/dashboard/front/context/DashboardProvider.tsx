@@ -3,6 +3,7 @@
 import React, { createContext, useState, useEffect, useMemo, ReactNode } from 'react'
 import type { Task, Alert, QuranSession, DashboardRecord, DashboardMetrics, StudentProfile, NivoLineSeries } from '@/features/lib/types'
 import { dashboardApi } from '@/features/dashboard/front/services/api'
+import { alertsApi } from '@/features/alerts/front/services/api'
 import { childrenApi } from '@/features/children/front/services/api'
 import { useSelectedChild } from '@/features/dashboard/front/hooks/useSelectedChild'
 import { useHousehold } from '@/features/household/front/context'
@@ -70,7 +71,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
         const [tasksRes, alertsRes, quranRes, recordsRes, summaryRes, childrenRes] = await Promise.all([
           dashboardApi.getTasks(),
-          dashboardApi.getAlerts(),
+          alertsApi.getAlerts(selectedChildId ?? undefined),
           dashboardApi.getQuran(selectedChildId ?? undefined),
           dashboardApi.getRecords(selectedChildId ?? undefined),
           dashboardApi.getSummary(selectedChildId ?? undefined),

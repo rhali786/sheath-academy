@@ -5,7 +5,7 @@
 import { SEED_IDS } from '@/features/lib/seedIds'
 import { archiveStudentProfile, resetStore as resetChildrenStore } from '@/features/children/server/service'
 import { resetStore as resetDashboardStore } from '@/features/dashboard/server/service'
-import { getAlerts } from '@/features/dashboard/server/service'
+import { getAlerts } from '@/features/alerts/server/service'
 import { getStudentProfiles } from '@/features/children/server/service'
 import { listEvidenceItems } from '@/features/portfolio/server/service'
 import { resetEvidenceStore } from '@/features/portfolio/server/service'

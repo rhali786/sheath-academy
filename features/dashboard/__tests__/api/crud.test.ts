@@ -2,11 +2,11 @@ import {
   getTasks,
   updateTask,
   getChildren,
-  getAlerts,
   getQuranSessions,
   getRecords,
   resetStore,
 } from '@/features/dashboard/server/service'
+import { getAlerts } from '@/features/alerts/server/service'
 
 describe('TestCRUDOperations', () => {
   beforeEach(() => {

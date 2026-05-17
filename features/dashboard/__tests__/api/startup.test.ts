@@ -1,12 +1,12 @@
 import {
   getTasks,
   getChildren,
-  getAlerts,
   getQuranSessions,
   getRecords,
   getProgressData,
   resetStore,
 } from '@/features/dashboard/server/service'
+import { getAlerts } from '@/features/alerts/server/service'
 
 describe('TestStartup', () => {
   beforeEach(() => {
