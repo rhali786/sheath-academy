@@ -3,7 +3,7 @@ import type { ApiResponse, DashboardRecord } from '@/features/lib/types'
 import { getRecords as getAttendanceRecords } from '@/features/attendance/server/service'
 import { getLessons } from '@/features/planner/server/service'
 import { listEvidenceItems } from '@/features/portfolio/server/service'
-import { getQuranSessions } from '@/features/dashboard/server/service'
+import { getQuranSessions } from '@/features/quran/server/service'
 import { getStudentProfiles } from '@/features/children/server/service'
 
 function getCurrentWeekRange(): { start: string; end: string } {

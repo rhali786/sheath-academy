@@ -4,6 +4,7 @@ import React, { createContext, useState, useEffect, useMemo, ReactNode } from 'r
 import type { Task, Alert, QuranSession, DashboardRecord, DashboardMetrics, StudentProfile, NivoLineSeries } from '@/features/lib/types'
 import { dashboardApi } from '@/features/dashboard/front/services/api'
 import { alertsApi } from '@/features/alerts/front/services/api'
+import { quranApi } from '@/features/quran/front/services/api'
 import { childrenApi } from '@/features/children/front/services/api'
 import { useSelectedChild } from '@/features/dashboard/front/hooks/useSelectedChild'
 import { useHousehold } from '@/features/household/front/context'
@@ -72,7 +73,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         const [tasksRes, alertsRes, quranRes, recordsRes, summaryRes, childrenRes] = await Promise.all([
           dashboardApi.getTasks(),
           alertsApi.getAlerts(selectedChildId ?? undefined),
-          dashboardApi.getQuran(selectedChildId ?? undefined),
+          quranApi.getSessions(selectedChildId ?? undefined),
           dashboardApi.getRecords(selectedChildId ?? undefined),
           dashboardApi.getSummary(selectedChildId ?? undefined),
           childrenPromise,
@@ -105,7 +106,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     const refetch = async () => {
       try {
         const [quranRes, recordsRes, summaryRes] = await Promise.all([
-          dashboardApi.getQuran(selectedChildId),
+          quranApi.getSessions(selectedChildId),
           dashboardApi.getRecords(selectedChildId),
           dashboardApi.getSummary(selectedChildId),
         ])
@@ -156,11 +157,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const addQuranSession = async (session: any) => {
     try {
-      await dashboardApi.addQuranSession(session)
+      await quranApi.addSession(session)
       // Re-fetch per-child data so chart, sessions, metrics, and records all update
       const cid = selectedChildId ?? undefined
       const [quranRes, recordsRes, summaryRes] = await Promise.all([
-        dashboardApi.getQuran(cid),
+        quranApi.getSessions(cid),
         dashboardApi.getRecords(cid),
         dashboardApi.getSummary(cid),
       ])

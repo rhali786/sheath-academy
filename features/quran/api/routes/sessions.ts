@@ -47,9 +47,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     buildChartData(allSessions, p.id, p.name)
   )
 
-  const sessions = childId
-    ? allSessions.filter(s => s.childId === childId)
-    : allSessions.filter(s => activeProfiles.some(p => p.id === s.childId))
+  const sessions = getQuranSessions(childId)
+    .filter(s => !childId ? activeProfiles.some(p => p.id === s.childId) : true)
 
   const response: ApiResponse<{ sessions: typeof sessions; chartData: ChartSeries[] }> = {
     status: 'success',

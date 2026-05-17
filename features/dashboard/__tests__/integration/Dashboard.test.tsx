@@ -34,6 +34,13 @@ jest.mock('@/features/planner/front/services/api', () => ({
   },
 }))
 
+jest.mock('@/features/quran/front/services/api', () => ({
+  quranApi: {
+    getSessions: jest.fn(() => Promise.resolve({ data: { sessions: [], chartData: [] } })),
+    addSession: jest.fn(),
+  },
+}))
+
 jest.mock('@/features/dashboard/front/services/api', () => ({
   dashboardApi: {
     getTasks: jest.fn(() => Promise.resolve({ data: [] })),
