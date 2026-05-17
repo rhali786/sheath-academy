@@ -64,8 +64,8 @@ describe('getAlerts — unit tests', () => {
     const alerts = getAlerts()
     const adamAlert = alerts.find(a => a.childId === activeAdam.id)
     expect(adamAlert).toBeDefined()
-    expect(adamAlert?.detail).toMatch(/overdue/i)
-    expect(adamAlert?.priority).toBe('amber')
+    expect(adamAlert?.message).toMatch(/overdue/i)
+    expect(adamAlert?.severity).toBe('high')
   })
 
   test('produces a due-today alert (not overdue) when lesson due date is today', () => {
@@ -82,8 +82,8 @@ describe('getAlerts — unit tests', () => {
     const alerts = getAlerts()
     const adamAlert = alerts.find(a => a.childId === activeAdam.id)
     expect(adamAlert).toBeDefined()
-    expect(adamAlert?.detail).toMatch(/due today/i)
-    expect(adamAlert?.priority).toBe('gray')
+    expect(adamAlert?.message).toMatch(/due today/i)
+    expect(adamAlert?.severity).toBe('medium')
   })
 
   test('completed lessons do not produce an alert', () => {
@@ -123,8 +123,8 @@ describe('getAlerts — unit tests', () => {
     const alerts = getAlerts()
     const attendanceAlert = alerts.find(a => a.id.startsWith('attendance_missing'))
     expect(attendanceAlert).toBeDefined()
-    expect(attendanceAlert?.detail).toMatch(/Adam/i)
-    expect(attendanceAlert?.detail).toMatch(/Khadijah/i)
+    expect(attendanceAlert?.message).toMatch(/Adam/i)
+    expect(attendanceAlert?.message).toMatch(/Khadijah/i)
   })
 
   test('attendance alert excludes children who have attendance logged', () => {
@@ -136,8 +136,8 @@ describe('getAlerts — unit tests', () => {
     const alerts = getAlerts()
     const attendanceAlert = alerts.find(a => a.id.startsWith('attendance_missing'))
     expect(attendanceAlert).toBeDefined()
-    expect(attendanceAlert?.detail).toMatch(/Khadijah/i)
-    expect(attendanceAlert?.detail).not.toMatch(/Adam/i)
+    expect(attendanceAlert?.message).toMatch(/Khadijah/i)
+    expect(attendanceAlert?.message).not.toMatch(/Adam/i)
   })
 
   test('getAlerts filters by childId when provided', () => {

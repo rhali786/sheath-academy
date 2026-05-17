@@ -34,12 +34,10 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Da
 
   const portfolioCount = listEvidenceItems({ childId }).length
 
-  const activeAlerts = getAlerts().filter(
-    a => a.childId === null || !archivedIds.has(a.childId)
-  )
-  const needsAttention = childId
-    ? activeAlerts.filter(a => a.childId === childId || a.childId === null).length
-    : activeAlerts.length
+  const relevantAlerts = getAlerts(childId)
+    .filter(a => a.status === 'open')
+    .filter(a => childId ? a.childId === childId : (a.childId === null || !archivedIds.has(a.childId ?? '')))
+  const needsAttention = relevantAlerts.length
 
   const metrics: DashboardMetrics = {
     attendanceReady: totalChildren > 0 ? `${readyCount}/${totalChildren}` : '0/0',

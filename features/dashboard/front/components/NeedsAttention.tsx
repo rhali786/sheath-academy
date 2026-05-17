@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AlertItem } from './shared/AlertItem'
-import type { Alert } from '../types'
+import type { Alert } from '@/features/alerts/types'
 
 interface NeedsAttentionProps {
   alerts: Alert[]
@@ -11,9 +11,13 @@ export function NeedsAttention({ alerts }: NeedsAttentionProps) {
 
   const sorted = [...alerts].sort((a, b) => {
     if (sortBy === 'priority') {
-      const order = { red: 0, amber: 1, gray: 2 }
-      return (order[a.priority as keyof typeof order] ?? 3) -
-             (order[b.priority as keyof typeof order] ?? 3)
+      const order: Record<string, number> = { high: 0, medium: 1, low: 2 }
+      return (order[a.severity] ?? 3) - (order[b.severity] ?? 3)
+    }
+    if (sortBy === 'date') {
+      const dateA = a.date ?? a.createdAt ?? ''
+      const dateB = b.date ?? b.createdAt ?? ''
+      return dateB.localeCompare(dateA)
     }
     return 0
   })

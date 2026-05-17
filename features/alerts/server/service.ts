@@ -1,4 +1,4 @@
-import type { Alert } from '@/features/lib/types'
+import type { Alert } from '@/features/alerts/types'
 import { getLessons } from '@/features/planner/server/service'
 import { getRecords as getAttendanceRecords } from '@/features/attendance/server/service'
 import { getStudentProfiles } from '@/features/children/server/service'
@@ -14,6 +14,7 @@ export function getAlerts(childId?: string): Alert[] {
   const activeChildren = allProfiles.filter(p => p.isActive)
   const targetChildren = childId ? activeChildren.filter(c => c.id === childId) : activeChildren
   const alerts: Alert[] = []
+  const now = new Date().toISOString()
 
   for (const child of targetChildren) {
     const pendingLessons = getLessons(child.id).filter(
@@ -21,15 +22,21 @@ export function getAlerts(childId?: string): Alert[] {
     )
     if (pendingLessons.length > 0) {
       const overdue = pendingLessons.filter(l => l.dueDate < today)
+      const message = overdue.length > 0
+        ? `${overdue.length} overdue: ${overdue.map(l => l.title).slice(0, 2).join(', ')}`
+        : `Due today: ${pendingLessons.map(l => l.title).slice(0, 2).join(', ')}`
       alerts.push({
         id: `pending_lessons_${child.id}`,
         childId: child.id,
+        date: today,
+        type: 'pending_lessons',
+        status: 'open',
+        severity: overdue.length > 0 ? 'high' : 'medium',
         title: `${pendingLessons.length} lesson${pendingLessons.length !== 1 ? 's' : ''} not completed`,
-        detail: overdue.length > 0
-          ? `${overdue.length} overdue: ${overdue.map(l => l.title).slice(0, 2).join(', ')}`
-          : `Due today: ${pendingLessons.map(l => l.title).slice(0, 2).join(', ')}`,
-        priority: overdue.length > 0 ? 'amber' : 'gray',
-        actionButton: 'Review',
+        message,
+        sourceFeature: 'planner',
+        sourceId: child.id,
+        createdAt: now,
       })
     }
   }
@@ -43,10 +50,14 @@ export function getAlerts(childId?: string): Alert[] {
       alerts.push({
         id: `attendance_missing_${today}`,
         childId: null,
+        date: today,
+        type: 'attendance_missing',
+        status: 'open',
+        severity: 'medium',
         title: 'Attendance not logged today',
-        detail: `Missing for: ${missingAttendance.map(c => c.name).join(', ')}`,
-        priority: 'amber',
-        actionButton: 'Log',
+        message: `Missing for: ${missingAttendance.map(c => c.name).join(', ')}`,
+        sourceFeature: 'attendance',
+        createdAt: now,
       })
     }
   } else {
@@ -57,10 +68,14 @@ export function getAlerts(childId?: string): Alert[] {
         alerts.push({
           id: `attendance_missing_${today}`,
           childId,
+          date: today,
+          type: 'attendance_missing',
+          status: 'open',
+          severity: 'medium',
           title: 'Attendance not logged today',
-          detail: `Missing for: ${child.name}`,
-          priority: 'amber',
-          actionButton: 'Log',
+          message: `Missing for: ${child.name}`,
+          sourceFeature: 'attendance',
+          createdAt: now,
         })
       }
     }
