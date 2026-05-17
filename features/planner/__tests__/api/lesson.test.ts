@@ -102,4 +102,25 @@ describe('PATCH /api/planner/lessons/:id/complete', () => {
 
     expect(completed).toBeNull()
   })
+
+  it('sets status to skipped when skipped status is passed', () => {
+    const skipped = completeLessonTask('lesson_seed_001', 'skipped')
+
+    expect(skipped).not.toBeNull()
+    expect(skipped?.status).toBe('skipped')
+  })
+
+  it('defaults to completed when no status argument is given', () => {
+    const completed = completeLessonTask('lesson_seed_001')
+
+    expect(completed).not.toBeNull()
+    expect(completed?.status).toBe('completed')
+  })
+
+  it('sets status to completed when completed status is explicitly passed', () => {
+    const completed = completeLessonTask('lesson_seed_001', 'completed')
+
+    expect(completed).not.toBeNull()
+    expect(completed?.status).toBe('completed')
+  })
 })

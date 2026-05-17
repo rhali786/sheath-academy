@@ -77,8 +77,8 @@ export const plannerApi = {
     return response.data
   },
 
-  completeLesson: async (id: string): Promise<LessonTask> => {
-    const response = await patch<LessonTask>(`/api/planner/lessons/${id}/complete`)
+  completeLesson: async (id: string, status: 'completed' | 'skipped' = 'completed'): Promise<LessonTask> => {
+    const response = await patch<LessonTask>(`/api/planner/lessons/${id}/complete`, { status })
     return response.data
   },
 
