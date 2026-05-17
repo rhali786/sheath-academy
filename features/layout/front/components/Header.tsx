@@ -167,6 +167,16 @@ export function Header() {
             Attendance
           </Link>
           <Link
+            href="/quran"
+            className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
+              pathname.startsWith('/quran')
+                ? 'bg-forest-900 text-white'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            Quran
+          </Link>
+          <Link
             href="/settings"
             className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
               pathname.startsWith('/settings')
@@ -269,6 +279,17 @@ export function Header() {
               }`}
             >
               Attendance
+            </Link>
+            <Link
+              href="/quran"
+              onClick={() => setMenuOpen(false)}
+              className={`block px-4 py-3 text-sm font-medium transition-colors ${
+                pathname.startsWith('/quran')
+                  ? 'bg-forest-50 text-forest-900'
+                  : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              Quran
             </Link>
             <Link
               href="/settings"
