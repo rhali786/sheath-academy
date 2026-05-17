@@ -19,18 +19,18 @@ describe('GET /api/reports/summary', () => {
   })
 
   it('returns a records report for the selected child', async () => {
-    const res = await GET(makeGetRequest({ childId: SEED_IDS.adam }))
+    const res = await GET(makeGetRequest({ childId: SEED_IDS.layth }))
     const body = await res.json()
 
     expect(res.status).toBe(200)
     expect(body.status).toBe('success')
-    expect(body.data.child.id).toBe(SEED_IDS.adam)
+    expect(body.data.child.id).toBe(SEED_IDS.layth)
     expect(body.data.portfolio.count).toBeGreaterThan(0)
   })
 
   it('passes date range filters to the report service', async () => {
     const res = await GET(makeGetRequest({
-      childId: SEED_IDS.adam,
+      childId: SEED_IDS.layth,
       startDate: '2000-01-01',
       endDate: '2000-12-31',
     }))

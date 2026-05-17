@@ -24,7 +24,7 @@ describe('GET /api/attendance/:id', () => {
     const body = await res.json()
     expect(body.status).toBe('success')
     expect(body.data.id).toBe(SEED_RECORD_ID)
-    expect(body.data.childId).toBe(SEED_IDS.adam)
+    expect(body.data.childId).toBe(SEED_IDS.layth)
   })
 
   it('returns 404 for unknown id', async () => {

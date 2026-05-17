@@ -27,19 +27,19 @@ function resetAll() {
 describe('Archive filtering — alerts must exclude archived students', () => {
   beforeEach(resetAll)
 
-  test('alerts for active Adam are included', () => {
+  test('alerts for active Layth are included', () => {
     const archivedIds = new Set(
       getStudentProfiles().filter(p => !p.isActive).map(p => p.id)
     )
     const activeAlerts = getAlerts().filter(
       a => a.childId === null || !archivedIds.has(a.childId)
     )
-    const adamAlerts = activeAlerts.filter(a => a.childId === SEED_IDS.adam)
-    expect(adamAlerts.length).toBeGreaterThan(0)
+    const laythAlerts = activeAlerts.filter(a => a.childId === SEED_IDS.layth)
+    expect(laythAlerts.length).toBeGreaterThan(0)
   })
 
-  test('after archiving Adam, alerts for Adam are excluded from active dashboard alerts', () => {
-    archiveStudentProfile(SEED_IDS.adam)
+  test('after archiving Layth, alerts for Layth are excluded from active dashboard alerts', () => {
+    archiveStudentProfile(SEED_IDS.layth)
 
     const archivedIds = new Set(
       getStudentProfiles().filter(p => !p.isActive).map(p => p.id)
@@ -47,12 +47,12 @@ describe('Archive filtering — alerts must exclude archived students', () => {
     const activeAlerts = getAlerts().filter(
       a => a.childId === null || !archivedIds.has(a.childId)
     )
-    const adamAlerts = activeAlerts.filter(a => a.childId === SEED_IDS.adam)
-    expect(adamAlerts).toHaveLength(0)
+    const laythAlerts = activeAlerts.filter(a => a.childId === SEED_IDS.layth)
+    expect(laythAlerts).toHaveLength(0)
   })
 
-  test('after archiving Adam, family-wide alerts (childId=null) are still included', () => {
-    archiveStudentProfile(SEED_IDS.adam)
+  test('after archiving Layth, family-wide alerts (childId=null) are still included', () => {
+    archiveStudentProfile(SEED_IDS.layth)
 
     const archivedIds = new Set(
       getStudentProfiles().filter(p => !p.isActive).map(p => p.id)
@@ -64,8 +64,8 @@ describe('Archive filtering — alerts must exclude archived students', () => {
     expect(familyAlerts.length).toBeGreaterThan(0)
   })
 
-  test('after archiving Adam, Zayd alerts are still included', () => {
-    archiveStudentProfile(SEED_IDS.adam)
+  test('after archiving Layth, Talut alerts are still included', () => {
+    archiveStudentProfile(SEED_IDS.layth)
 
     const archivedIds = new Set(
       getStudentProfiles().filter(p => !p.isActive).map(p => p.id)
@@ -73,92 +73,92 @@ describe('Archive filtering — alerts must exclude archived students', () => {
     const activeAlerts = getAlerts().filter(
       a => a.childId === null || !archivedIds.has(a.childId)
     )
-    const zaydAlerts = activeAlerts.filter(a => a.childId === SEED_IDS.zayd)
-    expect(zaydAlerts.length).toBeGreaterThan(0)
+    const talutAlerts = activeAlerts.filter(a => a.childId === SEED_IDS.talut)
+    expect(talutAlerts.length).toBeGreaterThan(0)
   })
 })
 
 describe('Archive filtering — quran sessions must exclude archived students', () => {
   beforeEach(resetAll)
 
-  test('quran sessions for active Adam are present in all sessions', () => {
+  test('quran sessions for active Layth are present in all sessions', () => {
     const allSessions = getQuranSessions()
-    const adamSessions = allSessions.filter(s => s.childId === SEED_IDS.adam)
-    expect(adamSessions.length).toBeGreaterThan(0)
+    const laythSessions = allSessions.filter(s => s.childId === SEED_IDS.layth)
+    expect(laythSessions.length).toBeGreaterThan(0)
   })
 
-  test('after archiving Adam, active-student quran sessions exclude Adam', () => {
-    archiveStudentProfile(SEED_IDS.adam)
+  test('after archiving Layth, active-student quran sessions exclude Layth', () => {
+    archiveStudentProfile(SEED_IDS.layth)
 
     const archivedIds = new Set(
       getStudentProfiles().filter(p => !p.isActive).map(p => p.id)
     )
     const activeSessions = getQuranSessions().filter(s => !archivedIds.has(s.childId))
-    const adamSessions = activeSessions.filter(s => s.childId === SEED_IDS.adam)
-    expect(adamSessions).toHaveLength(0)
+    const laythSessions = activeSessions.filter(s => s.childId === SEED_IDS.layth)
+    expect(laythSessions).toHaveLength(0)
   })
 })
 
 describe('Per-child isolation — portfolio evidence', () => {
   beforeEach(resetAll)
 
-  test('listEvidenceItems with no filter returns all 3 seed items (all for Adam)', () => {
-    // All seed evidence is for Adam — selecting Khadijah should return 0
+  test('listEvidenceItems with no filter returns all seed items', () => {
     const all = listEvidenceItems()
     expect(all.length).toBeGreaterThan(0)
   })
 
-  test('listEvidenceItems filtered by Khadijah returns zero items', () => {
-    // Seed evidence is only for Adam — Khadijah has no evidence
-    const khadijalItems = listEvidenceItems({ childId: SEED_IDS.khadijah })
-    expect(khadijalItems).toHaveLength(0)
+  test('listEvidenceItems filtered by Samurai returns only Samurai items', () => {
+    const samuraiItems = listEvidenceItems({ childId: SEED_IDS.samurai })
+    expect(samuraiItems.length).toBeGreaterThan(0)
+    samuraiItems.forEach(item => expect(item.childId).toBe(SEED_IDS.samurai))
   })
 
-  test('listEvidenceItems filtered by Adam returns all Adam items', () => {
-    const adamItems = listEvidenceItems({ childId: SEED_IDS.adam })
-    expect(adamItems.length).toBeGreaterThan(0)
-    adamItems.forEach(item => expect(item.childId).toBe(SEED_IDS.adam))
+  test('listEvidenceItems filtered by Layth returns only Layth items', () => {
+    const laythItems = listEvidenceItems({ childId: SEED_IDS.layth })
+    expect(laythItems.length).toBeGreaterThan(0)
+    laythItems.forEach(item => expect(item.childId).toBe(SEED_IDS.layth))
   })
 })
 
 describe('Per-child isolation — lessons and attendance', () => {
   beforeEach(resetAll)
 
-  test('getLessons filtered by Khadijah returns only Khadijah lessons', () => {
-    const lessons = getLessons(SEED_IDS.khadijah)
+  test('getLessons filtered by Hawa returns only Hawa lessons', () => {
+    const lessons = getLessons(SEED_IDS.hawa)
     expect(lessons.length).toBeGreaterThan(0)
-    lessons.forEach(l => expect(l.childId).toBe(SEED_IDS.khadijah))
+    lessons.forEach(l => expect(l.childId).toBe(SEED_IDS.hawa))
   })
 
-  test('getLessons filtered by Adam does not include Khadijah lessons', () => {
-    const adamLessons = getLessons(SEED_IDS.adam)
-    const khadijaInAdam = adamLessons.filter(l => l.childId === SEED_IDS.khadijah)
-    expect(khadijaInAdam).toHaveLength(0)
+  test('getLessons filtered by Layth does not include Hawa lessons', () => {
+    const laythLessons = getLessons(SEED_IDS.layth)
+    const hawaInLayth = laythLessons.filter(l => l.childId === SEED_IDS.hawa)
+    expect(hawaInLayth).toHaveLength(0)
   })
 
-  test('getAttendanceRecords filtered by Khadijah excludes other children', () => {
-    const records = getAttendanceRecords({ childId: SEED_IDS.khadijah })
-    records.forEach(r => expect(r.childId).toBe(SEED_IDS.khadijah))
+  test('getAttendanceRecords filtered by Hawa excludes other children', () => {
+    const records = getAttendanceRecords({ childId: SEED_IDS.hawa })
+    records.forEach(r => expect(r.childId).toBe(SEED_IDS.hawa))
   })
 })
 
 describe('Archive filtering — quran chart data uses active studentProfiles', () => {
   beforeEach(resetAll)
 
-  test('active students include Adam, Khadijah, Zayd by default', () => {
+  test('active students include Layth, Hawa, Talut, Samurai by default', () => {
     const activeProfiles = getStudentProfiles().filter(p => p.isActive)
     const names = activeProfiles.map(p => p.name)
-    expect(names).toContain('Adam')
-    expect(names).toContain('Khadijah')
-    expect(names).toContain('Zayd')
+    expect(names).toContain('Layth')
+    expect(names).toContain('Hawa')
+    expect(names).toContain('Talut')
+    expect(names).toContain('Samurai')
   })
 
-  test('after archiving Adam, active students do not include Adam', () => {
-    archiveStudentProfile(SEED_IDS.adam)
+  test('after archiving Layth, active students do not include Layth', () => {
+    archiveStudentProfile(SEED_IDS.layth)
     const activeProfiles = getStudentProfiles().filter(p => p.isActive)
     const names = activeProfiles.map(p => p.name)
-    expect(names).not.toContain('Adam')
-    expect(names).toContain('Khadijah')
-    expect(names).toContain('Zayd')
+    expect(names).not.toContain('Layth')
+    expect(names).toContain('Hawa')
+    expect(names).toContain('Talut')
   })
 })

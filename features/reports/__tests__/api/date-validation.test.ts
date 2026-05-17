@@ -34,32 +34,32 @@ describe('Report date validation — server-side', () => {
 
   test('end date in the future throws a validation error', () => {
     expect(() =>
-      getRecordsReport({ childId: SEED_IDS.khadijah, endDate: FAR_FUTURE })
+      getRecordsReport({ childId: SEED_IDS.hawa, endDate: FAR_FUTURE })
     ).toThrow(/end date.*future|future.*end date/i)
   })
 
   test('start date in the future throws a validation error', () => {
     expect(() =>
-      getRecordsReport({ childId: SEED_IDS.khadijah, startDate: FAR_FUTURE })
+      getRecordsReport({ childId: SEED_IDS.hawa, startDate: FAR_FUTURE })
     ).toThrow(/start date.*future|future.*start date/i)
   })
 
   test('end date of tomorrow throws a validation error', () => {
     expect(() =>
-      getRecordsReport({ childId: SEED_IDS.khadijah, endDate: TOMORROW })
+      getRecordsReport({ childId: SEED_IDS.hawa, endDate: TOMORROW })
     ).toThrow()
   })
 
   test('start date of tomorrow throws a validation error', () => {
     expect(() =>
-      getRecordsReport({ childId: SEED_IDS.khadijah, startDate: TOMORROW })
+      getRecordsReport({ childId: SEED_IDS.hawa, startDate: TOMORROW })
     ).toThrow()
   })
 
   test('start date after end date throws a validation error', () => {
     expect(() =>
       getRecordsReport({
-        childId: SEED_IDS.khadijah,
+        childId: SEED_IDS.hawa,
         startDate: TODAY,
         endDate: YESTERDAY,
       })
@@ -69,7 +69,7 @@ describe('Report date validation — server-side', () => {
   test('valid past date range does not throw', () => {
     expect(() =>
       getRecordsReport({
-        childId: SEED_IDS.khadijah,
+        childId: SEED_IDS.hawa,
         startDate: YESTERDAY,
         endDate: TODAY,
       })
@@ -79,7 +79,7 @@ describe('Report date validation — server-side', () => {
   test('no dates provided (defaults to school year) does not throw', () => {
     // School year end date may be in the future — server should not cap the default
     expect(() =>
-      getRecordsReport({ childId: SEED_IDS.khadijah })
+      getRecordsReport({ childId: SEED_IDS.hawa })
     ).not.toThrow()
   })
 })

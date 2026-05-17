@@ -13,7 +13,7 @@ describe('TodayState Component', () => {
     
     // Check that key metrics are displayed
     expect(screen.getByText(/attendance/i)).toBeInTheDocument()
-    expect(screen.getByText('3/5')).toBeInTheDocument()
+    expect(screen.getByText('4/4')).toBeInTheDocument()
   })
 
   test('displays correct metric values', () => {
@@ -23,6 +23,6 @@ describe('TodayState Component', () => {
     expect(screen.getByText(/lessons planned/i)).toBeInTheDocument()
     expect(screen.getByText(/need attention/i)).toBeInTheDocument()
     expect(screen.getByText(/quran logged/i)).toBeInTheDocument()
-    expect(screen.getByText(/1 session/i)).toBeInTheDocument()
+    expect(screen.getByText(/58 sessions/i)).toBeInTheDocument()
   })
 })

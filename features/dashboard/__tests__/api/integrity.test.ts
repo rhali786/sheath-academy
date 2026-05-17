@@ -33,7 +33,7 @@ describe('TestDataIntegrity', () => {
 
   test('quran sessions have valid child id', () => {
     const sessions = getQuranSessions()
-    const validIds = new Set([SEED_IDS.adam, SEED_IDS.khadijah, SEED_IDS.zayd])
+    const validIds = new Set([SEED_IDS.layth, SEED_IDS.hawa, SEED_IDS.talut, SEED_IDS.samurai])
 
     sessions.forEach(session => {
       expect(validIds.has(session.childId)).toBe(true)

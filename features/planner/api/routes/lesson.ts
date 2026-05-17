@@ -45,6 +45,7 @@ export async function PUT(id: string, request: Request): Promise<NextResponse<Ap
   const updated = updateLessonTask(id, {
     title: body.title !== undefined ? body.title.trim() : undefined,
     description: body.description !== undefined ? body.description.trim() : undefined,
+    resourceLink: body.resourceLink !== undefined ? (body.resourceLink as string).trim() : undefined,
     dueDate: body.dueDate,
     order: body.order,
     status: body.status,

@@ -11,27 +11,29 @@ beforeEach(() => {
 })
 
 describe('history route data pipeline (service + utility)', () => {
-  it('returns empty array when no lessons are completed', () => {
-    const lessons = getLessons()
-    const result = getCompletedLessonHistory(lessons)
+  it('returns empty array when passed only not-started lessons', () => {
+    const notStarted = getLessons().filter(l => l.status === 'not_started')
+    const result = getCompletedLessonHistory(notStarted)
     expect(result).toEqual([])
   })
 
   it('returns completed lesson after marking one complete', () => {
     const all = getLessons()
-    completeLessonTask(all[0].id)
+    const beforeCount = getCompletedLessonHistory(all).length
+    const pending = all.find(l => l.status === 'not_started')!
+    completeLessonTask(pending.id)
     const lessons = getLessons()
     const result = getCompletedLessonHistory(lessons)
-    expect(result).toHaveLength(1)
-    expect(result[0].id).toBe(all[0].id)
+    expect(result).toHaveLength(beforeCount + 1)
+    expect(result.some(l => l.id === pending.id)).toBe(true)
   })
 
   it('filters by childId', () => {
-    const adamLessons = getLessons(SEED_IDS.adam)
+    const adamLessons = getLessons(SEED_IDS.layth)
     completeLessonTask(adamLessons[0].id)
     const lessons = getLessons()
-    const result = getCompletedLessonHistory(lessons, { childId: SEED_IDS.adam })
-    expect(result.every(l => l.childId === SEED_IDS.adam)).toBe(true)
+    const result = getCompletedLessonHistory(lessons, { childId: SEED_IDS.layth })
+    expect(result.every(l => l.childId === SEED_IDS.layth)).toBe(true)
     expect(result.length).toBeGreaterThan(0)
   })
 

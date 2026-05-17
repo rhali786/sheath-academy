@@ -1,68 +1,31 @@
-import type { SubjectCourse } from '@/features/subjects/types'
+import type { SubjectCourse, SubjectCourseCategory } from '@/features/subjects/types'
 import { SEED_IDS } from '@/features/lib/seedIds'
 
+// Subject IDs: 001-006 Layth, 007-012 Hawa, 013-018 Talut, 019-024 Samurai
+const SUBJECTS: { name: string; category: SubjectCourseCategory; order: number }[] = [
+  { name: 'Islamic Studies', category: 'IslamicStudies', order: 1 },
+  { name: 'Mathematics',     category: 'Math',           order: 2 },
+  { name: 'English',         category: 'English',        order: 3 },
+  { name: 'Science',         category: 'Science',        order: 4 },
+  { name: 'Language Arts',   category: 'LanguageArts',   order: 5 },
+  { name: 'Technology',      category: 'Technology',     order: 6 },
+]
+
+function makeSubjects(childId: string, idOffset: number): SubjectCourse[] {
+  return SUBJECTS.map((s, i) => ({
+    id: `subject_seed_${String(idOffset + i + 1).padStart(3, '0')}`,
+    childId,
+    name: s.name,
+    category: s.category,
+    isActive: true,
+    order: s.order,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  }))
+}
+
 export const SEED_SUBJECTS: SubjectCourse[] = [
-  {
-    id: 'subject_seed_001',
-    childId: SEED_IDS.adam,
-    name: 'Quran Memorisation',
-    category: 'Quran',
-    isActive: true,
-    order: 1,
-    createdAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'subject_seed_002',
-    childId: SEED_IDS.adam,
-    name: 'Mathematics',
-    category: 'Math',
-    isActive: true,
-    order: 2,
-    createdAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'subject_seed_003',
-    childId: SEED_IDS.adam,
-    name: 'Arabic Language',
-    category: 'Arabic',
-    isActive: true,
-    order: 3,
-    createdAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'subject_seed_004',
-    childId: SEED_IDS.khadijah,
-    name: 'Quran Memorisation',
-    category: 'Quran',
-    isActive: true,
-    order: 1,
-    createdAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'subject_seed_005',
-    childId: SEED_IDS.khadijah,
-    name: 'Reading',
-    category: 'Reading',
-    isActive: true,
-    order: 2,
-    createdAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'subject_seed_006',
-    childId: SEED_IDS.zayd,
-    name: 'Islamic Studies',
-    category: 'IslamicStudies',
-    isActive: true,
-    order: 1,
-    createdAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'subject_seed_007',
-    childId: SEED_IDS.zayd,
-    name: 'History',
-    category: 'History',
-    isActive: true,
-    order: 2,
-    createdAt: '2026-01-01T00:00:00.000Z',
-  },
+  ...makeSubjects(SEED_IDS.layth,   0),   // subject_seed_001 – 006
+  ...makeSubjects(SEED_IDS.hawa,    6),   // subject_seed_007 – 012
+  ...makeSubjects(SEED_IDS.talut,   12),  // subject_seed_013 – 018
+  ...makeSubjects(SEED_IDS.samurai, 18),  // subject_seed_019 – 024
 ]

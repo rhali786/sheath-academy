@@ -38,8 +38,8 @@ describe('progress route data pipeline (service + utility)', () => {
   it('filters by childId', () => {
     const { childNames, subjectNames } = buildNameMaps()
     const lessons = getLessons()
-    const summaries = computeProgressBySubject(lessons, WEEK, [SEED_IDS.adam], childNames, subjectNames, 'week')
-    expect(summaries.every(s => s.childId === SEED_IDS.adam)).toBe(true)
+    const summaries = computeProgressBySubject(lessons, WEEK, [SEED_IDS.layth], childNames, subjectNames, 'week')
+    expect(summaries.every(s => s.childId === SEED_IDS.layth)).toBe(true)
   })
 
   it('each summary has expected shape', () => {
@@ -62,10 +62,12 @@ describe('progress route data pipeline (service + utility)', () => {
 
   it('completedCount reflects completed lessons', () => {
     const { childNames, subjectNames } = buildNameMaps()
-    const adamLessons = getLessons(SEED_IDS.adam)
-    completeLessonTask(adamLessons[0].id)
+    const laythLessons = getLessons(SEED_IDS.layth)
+    // Complete a current-week (not_started) lesson so it falls within WEEK range
+    const pending = laythLessons.find(l => l.status === 'not_started')!
+    completeLessonTask(pending.id)
     const lessons = getLessons()
-    const summaries = computeProgressBySubject(lessons, WEEK, [SEED_IDS.adam], childNames, subjectNames, 'week')
+    const summaries = computeProgressBySubject(lessons, WEEK, [SEED_IDS.layth], childNames, subjectNames, 'week')
     const total = summaries.reduce((acc, s) => acc + s.completedCount, 0)
     expect(total).toBe(1)
   })

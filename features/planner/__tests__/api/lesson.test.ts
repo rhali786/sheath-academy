@@ -10,7 +10,7 @@ describe('GET /api/planner/lessons/:id', () => {
     const lesson = getLessonTask('lesson_seed_001')
     expect(lesson).toBeDefined()
     expect(lesson?.id).toBe('lesson_seed_001')
-    expect(lesson?.title).toBe('Math Lesson 1 - Fractions')
+    expect(lesson?.title).toBe('Islamic Studies — Pillars of Islam')
   })
 
   it('returns 404 when id does not exist', () => {
@@ -22,7 +22,7 @@ describe('GET /api/planner/lessons/:id', () => {
 describe('POST /api/planner/lessons', () => {
   it('creates a lesson with valid childId and subjectId', () => {
     const lesson = createLessonTask({
-      childId: SEED_IDS.adam,
+      childId: SEED_IDS.layth,
       subjectId: 'subject_seed_002',
       householdId: SEED_IDS.household,
       title: 'New Math Lesson',
@@ -34,7 +34,7 @@ describe('POST /api/planner/lessons', () => {
 
     expect(lesson).not.toBeNull()
     expect(lesson?.title).toBe('New Math Lesson')
-    expect(lesson?.childId).toBe(SEED_IDS.adam)
+    expect(lesson?.childId).toBe(SEED_IDS.layth)
   })
 
   it('returns null when childId does not exist in children service', () => {
@@ -53,7 +53,7 @@ describe('POST /api/planner/lessons', () => {
 
   it('returns null when subjectId does not exist in subjects service', () => {
     const lesson = createLessonTask({
-      childId: SEED_IDS.adam,
+      childId: SEED_IDS.layth,
       subjectId: 'non_existent_subject',
       householdId: SEED_IDS.household,
       title: 'New Lesson',

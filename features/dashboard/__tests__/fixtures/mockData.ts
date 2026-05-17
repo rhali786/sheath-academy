@@ -1,25 +1,26 @@
 import type { Child, Task, Alert, QuranSession, DashboardRecord, DashboardMetrics } from '@/features/lib/types'
 
 export const mockChildren: Child[] = [
-  { id: 'adam_001', name: 'Adam', age: 11, grade: 5, avatar: 'A' },
-  { id: 'khadijah_001', name: 'Khadijah', age: 8, grade: 3, avatar: 'K' },
-  { id: 'zayd_001', name: 'Zayd', age: 14, grade: 8, avatar: 'Z' },
+  { id: 'layth_001',   name: 'Layth',   age: 10, grade: 4, avatar: 'L' },
+  { id: 'hawa_001',    name: 'Hawa',    age: 7,  grade: 1, avatar: 'H' },
+  { id: 'talut_001',   name: 'Talut',   age: 13, grade: 7, avatar: 'T' },
+  { id: 'samurai_001', name: 'Samurai', age: 10, grade: 4, avatar: 'S' },
 ]
 
 export const mockTasks: Task[] = [
   {
     id: 'task_001',
-    childId: 'adam_001',
+    childId: 'layth_001',
     subject: 'Math',
-    description: 'Complete Ch 5 exercises',
+    description: 'Multiplication tables 7–9',
     status: 'in-progress',
     completed: false,
   },
   {
     id: 'task_002',
-    childId: 'khadijah_001',
-    subject: 'Reading',
-    description: 'Read 20 pages',
+    childId: 'hawa_001',
+    subject: 'English',
+    description: 'Letter sounds worksheet',
     status: 'pending',
     completed: false,
   },
@@ -27,7 +28,7 @@ export const mockTasks: Task[] = [
     id: 'task_003',
     childId: 'family',
     subject: 'Quran',
-    description: 'Group Halaqa',
+    description: 'Friday family Quran circle',
     status: 'in-progress',
     completed: true,
   },
@@ -36,26 +37,29 @@ export const mockTasks: Task[] = [
 export const mockAlerts: Alert[] = [
   {
     id: 'alert_001',
-    childId: 'zayd_001',
-    date: '2026-05-17',
-    type: 'portfolio',
-    status: 'open',
-    severity: 'medium',
-    title: 'Missing weekly portfolio update',
-    message: 'Missing weekly portfolio update',
-    sourceFeature: 'portfolio',
-    createdAt: '2026-05-17T08:00:00Z',
-  },
-  {
-    id: 'alert_002',
-    childId: 'adam_001',
+    childId: 'talut_001',
+    childName: 'Talut',
+    href: '/lessons',
     date: '2026-05-17',
     type: 'pending_lessons',
     status: 'open',
     severity: 'high',
-    title: 'Math test score below target',
-    message: 'Math test score below target',
+    title: '3 lessons not completed',
+    message: '3 overdue: Algebra review, Essay draft, Science lab',
     sourceFeature: 'planner',
+    createdAt: '2026-05-17T08:00:00Z',
+  },
+  {
+    id: 'alert_002',
+    childId: null,
+    href: '/attendance',
+    date: '2026-05-17',
+    type: 'attendance_missing',
+    status: 'open',
+    severity: 'medium',
+    title: 'Attendance not logged today',
+    message: 'Missing for: Layth, Hawa',
+    sourceFeature: 'attendance',
     createdAt: '2026-05-17T09:00:00Z',
   },
 ]
@@ -63,66 +67,67 @@ export const mockAlerts: Alert[] = [
 export const mockQuranSessions: QuranSession[] = [
   {
     id: 'quran_001',
-    childId: 'adam_001',
-    type: 'New memorization',
+    childId: 'layth_001',
+    type: 'New memorisation',
     surah: 'Al-Mulk',
     fromAyah: 1,
     toAyah: 5,
     date: new Date().toISOString(),
-    notes: 'Smooth',
+    notes: 'Good focus',
+    lastLogged: 'Today',
   },
   {
     id: 'quran_002',
-    childId: 'khadijah_001',
+    childId: 'hawa_001',
     type: 'Revision',
     surah: 'Al-Ikhlas',
     fromAyah: 1,
     toAyah: 4,
     date: new Date().toISOString(),
     notes: '',
+    lastLogged: 'Today',
   },
 ]
 
 export const mockRecords: DashboardRecord[] = [
   {
     id: 'record_001',
-    category: 'Attendance',
-    child: 'Adam',
-    subject: 'Math',
-    description: 'Present for 4/5 days',
-    icon: '✓',
-    action: 'View Details',
+    title: 'Attendance',
+    count: 16,
+    maxCount: 20,
+    icon: 'CheckCircle',
+    viewButton: 'View',
   },
 ]
 
 export const mockMetrics: DashboardMetrics = {
-  attendanceReady: '3/5',
-  lessonsPlanned: 2,
-  needsAttention: 2,
-  quranLogged: '1 session',
-  portfolioItems: 1,
+  attendanceReady: '4/4',
+  lessonsPlanned: 40,
+  needsAttention: 3,
+  quranLogged: '58 sessions',
+  portfolioItems: 8,
 }
 
 export const mockProgressData = {
-  adam_001: {
+  layth_001: {
     subjects: [
-      { subject: 'Math', completion: 75 },
+      { subject: 'Math', completion: 80 },
       { subject: 'English', completion: 85 },
-      { subject: 'Science', completion: 70 },
+      { subject: 'Science', completion: 75 },
     ]
   },
-  khadijah_001: {
+  hawa_001: {
     subjects: [
-      { subject: 'Math', completion: 65 },
+      { subject: 'Math', completion: 70 },
       { subject: 'English', completion: 90 },
-      { subject: 'Science', completion: 60 },
+      { subject: 'Islamic Studies', completion: 95 },
     ]
   },
-  zayd_001: {
+  talut_001: {
     subjects: [
-      { subject: 'Math', completion: 95 },
-      { subject: 'English', completion: 80 },
+      { subject: 'Math', completion: 88 },
       { subject: 'Science', completion: 92 },
+      { subject: 'Islamic Studies', completion: 97 },
     ]
   },
 }

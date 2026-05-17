@@ -7,6 +7,8 @@ export type SubjectCourseCategory =
   | 'Science'
   | 'History'
   | 'English'
+  | 'LanguageArts'
+  | 'Technology'
   | 'Other'
 
 export interface SubjectCourse {

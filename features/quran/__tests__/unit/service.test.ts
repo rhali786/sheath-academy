@@ -15,9 +15,9 @@ describe('getQuranSessions', () => {
   })
 
   test('returns only sessions for the given childId', () => {
-    const sessions = getQuranSessions(SEED_IDS.adam)
+    const sessions = getQuranSessions(SEED_IDS.layth)
     expect(sessions.length).toBeGreaterThan(0)
-    sessions.forEach(s => expect(s.childId).toBe(SEED_IDS.adam))
+    sessions.forEach(s => expect(s.childId).toBe(SEED_IDS.layth))
   })
 
   test('returns empty array for a childId with no sessions', () => {
@@ -28,28 +28,28 @@ describe('getQuranSessions', () => {
 
 describe('addQuranSession', () => {
   test('creates a new session with the provided data', () => {
-    const before = getQuranSessions(SEED_IDS.khadijah).length
+    const before = getQuranSessions(SEED_IDS.hawa).length
     addQuranSession({
-      childId: SEED_IDS.khadijah,
+      childId: SEED_IDS.hawa,
       type: 'Revision',
       surah: 'Al-Fatihah',
       fromAyah: 1,
       toAyah: 7,
       notes: 'Test',
     })
-    const after = getQuranSessions(SEED_IDS.khadijah)
+    const after = getQuranSessions(SEED_IDS.hawa)
     expect(after).toHaveLength(before + 1)
     expect(after[after.length - 1].surah).toBe('Al-Fatihah')
   })
 
   test('assigned new session a unique id', () => {
-    const s1 = addQuranSession({ childId: SEED_IDS.adam, type: 'Revision', surah: 'Al-Ikhlas', fromAyah: 1, toAyah: 4, notes: '' })
-    const s2 = addQuranSession({ childId: SEED_IDS.adam, type: 'Revision', surah: 'Al-Ikhlas', fromAyah: 1, toAyah: 4, notes: '' })
+    const s1 = addQuranSession({ childId: SEED_IDS.layth, type: 'Revision', surah: 'Al-Ikhlas', fromAyah: 1, toAyah: 4, notes: '' })
+    const s2 = addQuranSession({ childId: SEED_IDS.layth, type: 'Revision', surah: 'Al-Ikhlas', fromAyah: 1, toAyah: 4, notes: '' })
     expect(s1.id).not.toBe(s2.id)
   })
 
   test('new session has a date field', () => {
-    const session = addQuranSession({ childId: SEED_IDS.zayd, type: 'Recitation', surah: 'Juz 30', fromAyah: 1, toAyah: 50, notes: '' })
+    const session = addQuranSession({ childId: SEED_IDS.talut, type: 'Recitation', surah: 'Juz 30', fromAyah: 1, toAyah: 50, notes: '' })
     expect(session.date).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 })
@@ -61,9 +61,9 @@ describe('getQuranSummary', () => {
   })
 
   test('returns only that child sessions when childId is provided', () => {
-    const summary = getQuranSummary({ childId: SEED_IDS.adam })
+    const summary = getQuranSummary({ childId: SEED_IDS.layth })
     expect(summary.sessionsLogged).toBeGreaterThan(0)
-    summary.recentSessions.forEach(s => expect(s.childId).toBe(SEED_IDS.adam))
+    summary.recentSessions.forEach(s => expect(s.childId).toBe(SEED_IDS.layth))
   })
 
   test('filters by startDate and endDate', () => {
@@ -83,7 +83,7 @@ describe('getQuranSummary', () => {
   })
 
   test('groups sessions by type correctly', () => {
-    const summary = getQuranSummary({ childId: SEED_IDS.adam })
+    const summary = getQuranSummary({ childId: SEED_IDS.layth })
     const revisionEntry = summary.sessionsByType.find(e => e.type === 'Revision')
     const recitationEntry = summary.sessionsByType.find(e => e.type === 'Recitation')
     // Adam has 2 Revision and 2 Recitation sessions in seed
@@ -99,8 +99,8 @@ describe('getQuranSummary', () => {
   })
 
   test('summary includes childId when provided', () => {
-    const summary = getQuranSummary({ childId: SEED_IDS.khadijah })
-    expect(summary.childId).toBe(SEED_IDS.khadijah)
+    const summary = getQuranSummary({ childId: SEED_IDS.hawa })
+    expect(summary.childId).toBe(SEED_IDS.hawa)
   })
 
   test('summary includes dateRange when provided', () => {

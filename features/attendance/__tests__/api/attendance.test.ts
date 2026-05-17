@@ -31,11 +31,11 @@ describe('GET /api/attendance', () => {
   })
 
   it('filters by childId', async () => {
-    const res = await GET(makeGetRequest({ childId: SEED_IDS.adam }))
+    const res = await GET(makeGetRequest({ childId: SEED_IDS.layth }))
     const body = await res.json()
     expect(body.status).toBe('success')
     body.data.forEach((r: { childId: string }) => {
-      expect(r.childId).toBe(SEED_IDS.adam)
+      expect(r.childId).toBe(SEED_IDS.layth)
     })
   })
 
@@ -57,7 +57,7 @@ describe('GET /api/attendance', () => {
 describe('POST /api/attendance', () => {
   it('creates a record with required fields', async () => {
     const res = await POST(makePostRequest({
-      childId: SEED_IDS.adam,
+      childId: SEED_IDS.layth,
       householdId: SEED_IDS.household,
       date: '2026-06-01',
       status: 'present',
@@ -65,7 +65,7 @@ describe('POST /api/attendance', () => {
     const body = await res.json()
     expect(res.status).toBe(201)
     expect(body.status).toBe('success')
-    expect(body.data.childId).toBe(SEED_IDS.adam)
+    expect(body.data.childId).toBe(SEED_IDS.layth)
     expect(body.data.status).toBe('present')
     expect(body.data.date).toBe('2026-06-01')
     expect(body.data.id).toBeDefined()
@@ -73,7 +73,7 @@ describe('POST /api/attendance', () => {
 
   it('creates a record with optional hours and notes', async () => {
     const res = await POST(makePostRequest({
-      childId: SEED_IDS.khadijah,
+      childId: SEED_IDS.hawa,
       householdId: SEED_IDS.household,
       date: '2026-06-02',
       status: 'partial',
@@ -89,7 +89,7 @@ describe('POST /api/attendance', () => {
   })
 
   it('returns 400 when required fields are missing', async () => {
-    const res = await POST(makePostRequest({ childId: SEED_IDS.adam }))
+    const res = await POST(makePostRequest({ childId: SEED_IDS.layth }))
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.status).toBe('error')
@@ -97,7 +97,7 @@ describe('POST /api/attendance', () => {
 
   it('returns 400 for invalid status', async () => {
     const res = await POST(makePostRequest({
-      childId: SEED_IDS.adam,
+      childId: SEED_IDS.layth,
       householdId: SEED_IDS.household,
       date: '2026-06-01',
       status: 'invalid_status',
