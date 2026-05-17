@@ -24,9 +24,9 @@ describe('Subjects — List and Create', () => {
     })
 
     it('GET /subjects?childId=X returns only subjects belonging to X', () => {
-      const adamSubjects = getSubjects(SEED_IDS.adam)
+      const adamSubjects = getSubjects(SEED_IDS.layth)
       expect(adamSubjects.length).toBeGreaterThan(0)
-      adamSubjects.forEach(s => expect(s.childId).toBe(SEED_IDS.adam))
+      adamSubjects.forEach(s => expect(s.childId).toBe(SEED_IDS.layth))
     })
 
     it('returns empty array for unknown childId', () => {
@@ -38,7 +38,7 @@ describe('Subjects — List and Create', () => {
   describe('createSubject()', () => {
     it('POST /subjects creates a subject with valid childId', () => {
       const subject = createSubject({
-        childId: SEED_IDS.adam,
+        childId: SEED_IDS.layth,
         name: 'English Reading',
         category: 'Reading',
         order: 5,
@@ -46,7 +46,7 @@ describe('Subjects — List and Create', () => {
 
       expect(subject).not.toBeNull()
       expect(subject!.id).toMatch(/^subject_/)
-      expect(subject!.childId).toBe(SEED_IDS.adam)
+      expect(subject!.childId).toBe(SEED_IDS.layth)
       expect(subject!.name).toBe('English Reading')
       expect(subject!.category).toBe('Reading')
       expect(subject!.isActive).toBe(true)
@@ -56,7 +56,7 @@ describe('Subjects — List and Create', () => {
 
     it('POST /subjects uses default order of 0 when order not provided', () => {
       const subject = createSubject({
-        childId: SEED_IDS.adam,
+        childId: SEED_IDS.layth,
         name: 'Science',
         category: 'Science',
       })
@@ -67,7 +67,7 @@ describe('Subjects — List and Create', () => {
     it('POST /subjects returns 400 when required fields are missing', () => {
       // Service returns null when name is missing
       const result = createSubject({
-        childId: SEED_IDS.adam,
+        childId: SEED_IDS.layth,
         name: '',
         category: 'Math',
       })
@@ -76,17 +76,17 @@ describe('Subjects — List and Create', () => {
 
     it('persists created subject in the store', () => {
       const subject = createSubject({
-        childId: SEED_IDS.khadijah,
+        childId: SEED_IDS.hawa,
         name: 'History',
         category: 'History',
       })
-      const found = getSubjects(SEED_IDS.khadijah).find(s => s.id === subject!.id)
+      const found = getSubjects(SEED_IDS.hawa).find(s => s.id === subject!.id)
       expect(found).toBeDefined()
     })
 
     it('generates unique IDs for each subject', () => {
-      const s1 = createSubject({ childId: SEED_IDS.adam, name: 'A', category: 'Other' })
-      const s2 = createSubject({ childId: SEED_IDS.adam, name: 'B', category: 'Other' })
+      const s1 = createSubject({ childId: SEED_IDS.layth, name: 'A', category: 'Other' })
+      const s2 = createSubject({ childId: SEED_IDS.layth, name: 'B', category: 'Other' })
       expect(s1!.id).not.toBe(s2!.id)
     })
   })

@@ -25,24 +25,6 @@ function buildBarData(lineData: NivoLineSeries[]) {
   })
 }
 
-const defaultChartData: NivoLineSeries[] = [
-  {
-    id: 'Adam',
-    color: childColors[0],
-    data: [{ x: 'Mon', y: 1 }, { x: 'Tue', y: 1 }, { x: 'Wed', y: 0 }, { x: 'Thu', y: 1 }, { x: 'Fri', y: 0 }],
-  },
-  {
-    id: 'Khadijah',
-    color: childColors[1],
-    data: [{ x: 'Mon', y: 1 }, { x: 'Tue', y: 0 }, { x: 'Wed', y: 1 }, { x: 'Thu', y: 1 }, { x: 'Fri', y: 0 }],
-  },
-  {
-    id: 'Zayd',
-    color: childColors[2],
-    data: [{ x: 'Mon', y: 0 }, { x: 'Tue', y: 1 }, { x: 'Wed', y: 1 }, { x: 'Thu', y: 0 }, { x: 'Fri', y: 0 }],
-  },
-]
-
 export function QuranStudies({ children, quranSessions, onAddSession, chartData }: QuranStudiesProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [formData, setFormData] = useState({
@@ -54,7 +36,7 @@ export function QuranStudies({ children, quranSessions, onAddSession, chartData 
     notes: '',
   })
 
-  const rawData = Array.isArray(chartData) ? chartData : defaultChartData
+  const rawData = Array.isArray(chartData) && chartData.length > 0 ? chartData : []
   const barData = buildBarData(rawData)
   const childKeys = rawData.map(s => s.id as string)
   const barColors = rawData.map((_, i) => childColors[i] || childColors[0])
@@ -139,6 +121,11 @@ export function QuranStudies({ children, quranSessions, onAddSession, chartData 
             ))}
           </div>
 
+          {rawData.length === 0 ? (
+            <div className="flex items-center justify-center h-[280px]">
+              <p className="text-sm text-slate-400">No sessions logged this week</p>
+            </div>
+          ) : (
           <ChartContainer height={280}>
             <ResponsiveBar
               data={barData}
@@ -177,6 +164,7 @@ export function QuranStudies({ children, quranSessions, onAddSession, chartData 
               )}
             />
           </ChartContainer>
+          )}
         </div>
       </div>
 

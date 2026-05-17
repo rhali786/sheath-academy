@@ -3,6 +3,18 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePlanner } from '../context/PlannerContext'
+import type { LessonTaskStatus } from '@/features/planner/types'
+
+const STATUS_BADGE: Record<LessonTaskStatus, string> = {
+  not_started: 'bg-slate-100 text-slate-600',
+  completed:   'bg-green-100 text-green-700',
+  skipped:     'bg-amber-100 text-amber-700',
+}
+const STATUS_LABEL: Record<LessonTaskStatus, string> = {
+  not_started: 'Not started',
+  completed:   'Completed',
+  skipped:     'Skipped',
+}
 
 function getDayOfWeekLabel(dayIndex: number): string {
   const labels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -122,7 +134,12 @@ export function WeeklyList() {
                 {dayLessons.length > 0 ? (
                   dayLessons.map(lesson => (
                     <div key={lesson.id} onClick={() => router.push(`/lessons?editId=${lesson.id}`)} className="p-4 bg-white rounded-lg border border-forest-200 hover:shadow-md transition-shadow cursor-pointer">
-                      <div className="font-semibold text-forest-900">{lesson.title}</div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="font-semibold text-forest-900">{lesson.title}</div>
+                        <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_BADGE[lesson.status]}`}>
+                          {STATUS_LABEL[lesson.status]}
+                        </span>
+                      </div>
                       <div className="text-sm text-slate-600 mt-2 space-y-1">
                         <div>Child: <span className="font-medium text-slate-900">{resolveChildName(lesson.childId)}</span></div>
                         <div>Subject: <span className="font-medium text-slate-900">{resolveSubjectName(lesson.subjectId)}</span></div>

@@ -79,6 +79,17 @@ export function getRecordsReport(options: RecordsReportOptions): RecordsReport {
     throw new Error('Child not found')
   }
 
+  const today = new Date().toISOString().slice(0, 10)
+  if (options.startDate && options.startDate > today) {
+    throw new Error('Start date cannot be in the future')
+  }
+  if (options.endDate && options.endDate > today) {
+    throw new Error('End date cannot be in the future')
+  }
+  if (options.startDate && options.endDate && options.startDate > options.endDate) {
+    throw new Error('Start date must be on or before end date')
+  }
+
   const dateRange = defaultDateRange(options)
   const subjects = getSubjects(options.childId).filter(subject => subject.isActive)
   const lessons = getLessons(options.childId)

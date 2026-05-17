@@ -22,7 +22,7 @@ describe('About page', () => {
     expect(screen.getByText('1A — Foundation')).toBeInTheDocument()
     expect(screen.getByText('1B — Planning spine')).toBeInTheDocument()
     expect(screen.getByText('1C — Records spine')).toBeInTheDocument()
-    expect(screen.getByText('1D — Proof and export')).toBeInTheDocument()
+    expect(screen.getByText('1D — Proof and records')).toBeInTheDocument()
   })
 
   test('renders the sign-in link in the footer', () => {

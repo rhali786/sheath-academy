@@ -59,11 +59,11 @@ export function updateLessonTask(id: string, patch: Partial<LessonTask>): Lesson
   return lessonsStore.update(id, allowedPatch)
 }
 
-export function completeLessonTask(id: string): LessonTask | null {
+export function completeLessonTask(id: string, status: 'completed' | 'skipped' = 'completed'): LessonTask | null {
   const lesson = lessonsStore.getById(id)
   if (!lesson) return null
 
-  return lessonsStore.update(id, { status: 'completed', updatedAt: new Date().toISOString() })
+  return lessonsStore.update(id, { status, updatedAt: new Date().toISOString() })
 }
 
 export function deleteLessonTask(id: string): boolean {
@@ -71,6 +71,10 @@ export function deleteLessonTask(id: string): boolean {
   if (!lesson) return false
   return lessonsStore.remove(id)
 }
+
+// Lesson history is preserved for reporting; no isActive field on LessonTask.
+export function archiveByChildId(_childId: string): void {}
+export function archiveBySubjectId(_subjectId: string): void {}
 
 export function resetStore(): void {
   lessonsStore.reset(SEED_LESSONS)

@@ -141,7 +141,7 @@ describe('Dashboard Components - Unit Tests', () => {
       render(<RecordsProof records={mockRecords} />)
 
       mockRecords.forEach(record => {
-        expect(screen.getByText(new RegExp(record.category))).toBeInTheDocument()
+        expect(screen.getByText(record.title)).toBeInTheDocument()
       })
     })
   })

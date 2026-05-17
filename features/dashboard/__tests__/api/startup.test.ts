@@ -1,12 +1,9 @@
 import {
   getTasks,
   getChildren,
-  getAlerts,
-  getQuranSessions,
-  getRecords,
-  getProgressData,
   resetStore,
 } from '@/features/dashboard/server/service'
+import { getAlerts } from '@/features/alerts/server/service'
 
 describe('TestStartup', () => {
   beforeEach(() => {
@@ -23,17 +20,15 @@ describe('TestStartup', () => {
     expect(getChildren()).toBeDefined()
     expect(getTasks()).toBeDefined()
     expect(getAlerts()).toBeDefined()
-    expect(getQuranSessions()).toBeDefined()
-    expect(getRecords()).toBeDefined()
-    expect(getProgressData()).toBeDefined()
   })
 
   test('should initialize with correct number of children', () => {
     const children = getChildren()
-    expect(children).toHaveLength(3)
+    expect(children).toHaveLength(4)
     const childNames = children.map(c => c.name)
-    expect(childNames).toContain('Adam')
-    expect(childNames).toContain('Khadijah')
-    expect(childNames).toContain('Zayd')
+    expect(childNames).toContain('Layth')
+    expect(childNames).toContain('Hawa')
+    expect(childNames).toContain('Talut')
+    expect(childNames).toContain('Samurai')
   })
 })

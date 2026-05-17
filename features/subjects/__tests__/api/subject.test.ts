@@ -18,7 +18,7 @@ describe('Subjects — Individual Operations', () => {
 
   beforeEach(() => {
     const subject = createSubject({
-      childId: SEED_IDS.adam,
+      childId: SEED_IDS.layth,
       name: 'Test Subject',
       category: 'Math',
       order: 1,
@@ -59,10 +59,10 @@ describe('Subjects — Individual Operations', () => {
 
     it('updates childId when reassigned to another student', () => {
       const updated = updateSubject(testSubjectId, {
-        childId: SEED_IDS.khadijah,
+        childId: SEED_IDS.hawa,
       })
       expect(updated).not.toBeNull()
-      expect(updated!.childId).toBe(SEED_IDS.khadijah)
+      expect(updated!.childId).toBe(SEED_IDS.hawa)
     })
 
     it('returns null when childId does not exist', () => {
@@ -127,7 +127,7 @@ describe('Subjects — Individual Operations', () => {
   describe('getSubjects() after mutations', () => {
     it('getSubjects returns updated list after create', () => {
       const before = getSubjects().length
-      createSubject({ childId: SEED_IDS.zayd, name: 'New', category: 'Other' })
+      createSubject({ childId: SEED_IDS.talut, name: 'New', category: 'Other' })
       expect(getSubjects().length).toBe(before + 1)
     })
   })

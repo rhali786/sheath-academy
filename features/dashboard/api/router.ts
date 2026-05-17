@@ -3,7 +3,6 @@ import * as summaryHandler from './routes/summary'
 import * as tasksHandler from './routes/tasks'
 import * as tasksCompleteHandler from './routes/tasks-complete'
 import * as alertsHandler from './routes/alerts'
-import * as progressHandler from './routes/progress'
 import * as quranHandler from './routes/quran'
 import * as recordsHandler from './routes/records'
 
@@ -18,7 +17,7 @@ export async function handleDashboardRoute(
 
   // Handle /dashboard/summary
   if (slug.length === 1 && slug[0] === 'summary' && method === 'GET') {
-    return summaryHandler.GET()
+    return summaryHandler.GET(request)
   }
 
   // Handle /dashboard/tasks
@@ -34,18 +33,13 @@ export async function handleDashboardRoute(
 
   // Handle /dashboard/alerts
   if (slug.length === 1 && slug[0] === 'alerts' && method === 'GET') {
-    return alertsHandler.GET()
-  }
-
-  // Handle /dashboard/progress
-  if (slug.length === 1 && slug[0] === 'progress' && method === 'GET') {
-    return progressHandler.GET()
+    return alertsHandler.GET(request)
   }
 
   // Handle /dashboard/quran
   if (slug.length === 1 && slug[0] === 'quran') {
     if (method === 'GET') {
-      return quranHandler.GET()
+      return quranHandler.GET(request)
     }
     if (method === 'POST') {
       return quranHandler.POST(request)
@@ -54,7 +48,7 @@ export async function handleDashboardRoute(
 
   // Handle /dashboard/records
   if (slug.length === 1 && slug[0] === 'records' && method === 'GET') {
-    return recordsHandler.GET()
+    return recordsHandler.GET(request)
   }
 
   return null

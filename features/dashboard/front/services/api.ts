@@ -27,8 +27,9 @@ export const dashboardApi = {
     return response.data
   },
 
-  getSummary: async (): Promise<ApiResponse<DashboardMetrics>> => {
-    const response = await api.get('/api/dashboard/summary')
+  getSummary: async (childId?: string): Promise<ApiResponse<DashboardMetrics>> => {
+    const params = childId ? `?childId=${encodeURIComponent(childId)}` : ''
+    const response = await api.get(`/api/dashboard/summary${params}`)
     return response.data
   },
 
@@ -47,8 +48,9 @@ export const dashboardApi = {
     return response.data
   },
 
-  getQuran: async (): Promise<any> => {
-    const response = await api.get('/api/dashboard/quran')
+  getQuran: async (childId?: string): Promise<any> => {
+    const params = childId ? `?childId=${encodeURIComponent(childId)}` : ''
+    const response = await api.get(`/api/dashboard/quran${params}`)
     return response.data
   },
 
@@ -57,8 +59,9 @@ export const dashboardApi = {
     return response.data
   },
 
-  getRecords: async (): Promise<ApiResponse<DashboardRecord[]>> => {
-    const response = await api.get('/api/dashboard/records')
+  getRecords: async (childId?: string): Promise<ApiResponse<DashboardRecord[]>> => {
+    const params = childId ? `?childId=${encodeURIComponent(childId)}` : ''
+    const response = await api.get(`/api/dashboard/records${params}`)
     return response.data
   },
 

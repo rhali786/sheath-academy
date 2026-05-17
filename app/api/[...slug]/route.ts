@@ -9,6 +9,8 @@ import { handlePlannerRoute } from '@/features/planner/api/router'
 import { handleAttendanceRoute } from '@/features/attendance/api/router'
 import { handlePortfolioRoute } from '@/features/portfolio/api/router'
 import { handleReportsRoute } from '@/features/reports/api/router'
+import { handleAlertsRoute } from '@/features/alerts/api/router'
+import { handleQuranRoute } from '@/features/quran/api/router'
 
 async function handleRoute(slug: string[], request: Request): Promise<NextResponse | null> {
   if (slug[0] === 'dashboard') {
@@ -49,6 +51,14 @@ async function handleRoute(slug: string[], request: Request): Promise<NextRespon
 
   if (slug[0] === 'reports') {
     return await handleReportsRoute(slug.slice(1), request)
+  }
+
+  if (slug[0] === 'alerts') {
+    return await handleAlertsRoute(slug.slice(1), request)
+  }
+
+  if (slug[0] === 'quran') {
+    return await handleQuranRoute(slug.slice(1), request)
   }
 
   return null

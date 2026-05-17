@@ -90,3 +90,8 @@ export function resetStore(): void {
   schoolYearsStore.reset(SEED_SCHOOL_YEARS)
   resetIdCounter()
 }
+
+/** Seeds school years for tests that need to pre-populate store state. */
+export function seedSchoolYears(years: SchoolYear[]): void {
+  schoolYearsStore.reset(years)
+}

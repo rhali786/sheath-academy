@@ -73,3 +73,8 @@ export function resetStore(): void {
   studentProfilesStore.reset(SEED_STUDENT_PROFILES)
   resetIdCounter()
 }
+
+/** Seeds student profiles for tests that need to pre-populate store state. */
+export function seedStudentProfiles(profiles: StudentProfile[]): void {
+  studentProfilesStore.reset(profiles)
+}

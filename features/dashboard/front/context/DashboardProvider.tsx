@@ -1,25 +1,25 @@
 'use client'
 
 import React, { createContext, useState, useEffect, useMemo, ReactNode } from 'react'
-import type { Task, Alert, QuranSession, DashboardRecord, DashboardMetrics, StudentProfile } from '@/features/lib/types'
+import type { Alert, QuranSession, DashboardRecord, DashboardMetrics, StudentProfile, NivoLineSeries } from '@/features/lib/types'
 import { dashboardApi } from '@/features/dashboard/front/services/api'
+import { alertsApi } from '@/features/alerts/front/services/api'
+import { quranApi } from '@/features/quran/front/services/api'
 import { childrenApi } from '@/features/children/front/services/api'
 import { useSelectedChild } from '@/features/dashboard/front/hooks/useSelectedChild'
 import { useHousehold } from '@/features/household/front/context'
 
 export interface DashboardContextType {
   children: StudentProfile[]
-  tasks: Task[]
-  setTasks: (tasks: Task[]) => void
   alerts: Alert[]
   setAlerts: (alerts: Alert[]) => void
   quranSessions: QuranSession[]
   setQuranSessions: (sessions: QuranSession[]) => void
+  quranChartData: NivoLineSeries[]
   records: DashboardRecord[]
   setRecords: (records: DashboardRecord[]) => void
   metrics: DashboardMetrics | null
   setMetrics: (metrics: DashboardMetrics) => void
-  toggleTask: (taskId: string, completed: boolean) => Promise<void>
   addQuranSession: (session: any) => Promise<void>
   loading: boolean
   error: string | null
@@ -40,12 +40,13 @@ export function useContext_Dashboard() {
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const { workspace, householdProfile, loading: householdLoading } = useHousehold()
   const [studentProfiles, setStudentProfiles] = useState<StudentProfile[]>([])
-  const [allTasks, setAllTasks] = useState<Task[]>([])
   const [allAlerts, setAllAlerts] = useState<Alert[]>([])
   const [quranSessions, setQuranSessions] = useState<QuranSession[]>([])
+  const [quranChartData, setQuranChartData] = useState<NivoLineSeries[]>([])
   const [records, setRecords] = useState<DashboardRecord[]>([])
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [loading, setLoading] = useState(true)
+  const [initialLoadDone, setInitialLoadDone] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedChildId, setSelectedChildId] = useSelectedChild()
 
@@ -64,22 +65,22 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
               timestamp: '',
             })
 
-        const [tasksRes, alertsRes, quranRes, recordsRes, summaryRes, childrenRes] = await Promise.all([
-          dashboardApi.getTasks(),
-          dashboardApi.getAlerts(),
-          dashboardApi.getQuran(),
-          dashboardApi.getRecords(),
-          dashboardApi.getSummary(),
+        const [alertsRes, quranRes, recordsRes, summaryRes, childrenRes] = await Promise.all([
+          alertsApi.getAlerts(selectedChildId ?? undefined),
+          quranApi.getSessions(selectedChildId ?? undefined),
+          dashboardApi.getRecords(selectedChildId ?? undefined),
+          dashboardApi.getSummary(selectedChildId ?? undefined),
           childrenPromise,
         ])
 
-        setAllTasks(tasksRes.data)
         setAllAlerts(alertsRes.data)
         setQuranSessions(quranRes.data.sessions)
+        setQuranChartData(quranRes.data.chartData ?? [])
         setRecords(recordsRes.data)
         setMetrics(summaryRes.data)
         setStudentProfiles(childrenRes.data ?? [])
         setLoading(false)
+        setInitialLoadDone(true)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load dashboard')
         setLoading(false)
@@ -87,22 +88,35 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
 
     void fetchData()
+    // selectedChildId intentionally excluded — re-fetch is handled by the effect below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspace?.id, householdProfile?.id, householdLoading])
 
+  // Re-fetch per-child data whenever selected child changes (after initial load)
   useEffect(() => {
-    if (!selectedChildId && studentProfiles.length > 0) {
-      setSelectedChildId(studentProfiles[0].id)
-    }
-  }, [studentProfiles, selectedChildId, setSelectedChildId])
+    if (!initialLoadDone) return
 
-  const tasks = useMemo(() => {
-    if (!selectedChildId) {
-      return allTasks
+    const cid = selectedChildId ?? undefined
+    const refetch = async () => {
+      try {
+        const [quranRes, recordsRes, summaryRes, alertsRes] = await Promise.all([
+          quranApi.getSessions(cid),
+          dashboardApi.getRecords(cid),
+          dashboardApi.getSummary(cid),
+          alertsApi.getAlerts(cid),
+        ])
+        setQuranSessions(quranRes.data.sessions)
+        setQuranChartData(quranRes.data.chartData ?? [])
+        setRecords(recordsRes.data)
+        setMetrics(summaryRes.data)
+        setAllAlerts(alertsRes.data)
+      } catch {
+        // Suppress — the initial load error handler covers this
+      }
     }
-    return allTasks.filter(
-      (t) => t.childId === selectedChildId || t.childId === 'family'
-    )
-  }, [allTasks, selectedChildId])
+
+    void refetch()
+  }, [selectedChildId, initialLoadDone])
 
   const alerts = useMemo(() => {
     if (!selectedChildId) {
@@ -113,19 +127,21 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     )
   }, [allAlerts, selectedChildId])
 
-  const toggleTask = async (taskId: string, completed: boolean) => {
-    try {
-      await dashboardApi.completeTask(taskId, completed)
-      setAllTasks(allTasks.map((t) => (t.id === taskId ? { ...t, completed } : t)))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update task')
-    }
-  }
-
   const addQuranSession = async (session: any) => {
     try {
-      const res = await dashboardApi.addQuranSession(session)
-      setQuranSessions([...quranSessions, res.data])
+      await quranApi.addSession(session)
+      const cid = selectedChildId ?? undefined
+      const [quranRes, recordsRes, summaryRes, alertsRes] = await Promise.all([
+        quranApi.getSessions(cid),
+        dashboardApi.getRecords(cid),
+        dashboardApi.getSummary(cid),
+        alertsApi.getAlerts(cid),
+      ])
+      setQuranSessions(quranRes.data.sessions)
+      setQuranChartData(quranRes.data.chartData ?? [])
+      setRecords(recordsRes.data)
+      setMetrics(summaryRes.data)
+      setAllAlerts(alertsRes.data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add Quran session')
     }
@@ -133,17 +149,15 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const value: DashboardContextType = {
     children: studentProfiles,
-    tasks,
-    setTasks: setAllTasks,
     alerts,
     setAlerts: setAllAlerts,
     quranSessions,
     setQuranSessions,
+    quranChartData,
     records,
     setRecords,
     metrics,
     setMetrics,
-    toggleTask,
     addQuranSession,
     loading,
     error,

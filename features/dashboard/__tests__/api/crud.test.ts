@@ -2,15 +2,15 @@ import {
   getTasks,
   updateTask,
   getChildren,
-  getAlerts,
-  getQuranSessions,
-  getRecords,
   resetStore,
 } from '@/features/dashboard/server/service'
+import { getAlerts } from '@/features/alerts/server/service'
+import { getQuranSessions, resetStore as resetQuranStore } from '@/features/quran/server/service'
 
 describe('TestCRUDOperations', () => {
   beforeEach(() => {
     resetStore()
+    resetQuranStore()
   })
 
   test('load data initializes with all required fields', () => {
@@ -18,27 +18,27 @@ describe('TestCRUDOperations', () => {
     expect(getTasks()).toBeDefined()
     expect(getAlerts()).toBeDefined()
     expect(getQuranSessions()).toBeDefined()
-    expect(getRecords()).toBeDefined()
   })
 
-  test('get children returns all three children', () => {
+  test('get children returns all four children', () => {
     const children = getChildren()
-    expect(children).toHaveLength(3)
+    expect(children).toHaveLength(4)
 
     const childNames = new Set(children.map(c => c.name))
-    expect(childNames.has('Adam')).toBe(true)
-    expect(childNames.has('Khadijah')).toBe(true)
-    expect(childNames.has('Zayd')).toBe(true)
+    expect(childNames.has('Layth')).toBe(true)
+    expect(childNames.has('Hawa')).toBe(true)
+    expect(childNames.has('Talut')).toBe(true)
+    expect(childNames.has('Samurai')).toBe(true)
   })
 
-  test('get tasks returns 15 total tasks', () => {
+  test('get tasks returns 16 total tasks', () => {
     const tasks = getTasks()
-    expect(tasks).toHaveLength(15)
+    expect(tasks).toHaveLength(16)
   })
 
-  test('get quran sessions returns 11 sessions', () => {
+  test('get quran sessions returns 58 sessions', () => {
     const sessions = getQuranSessions()
-    expect(sessions).toHaveLength(11)
+    expect(sessions).toHaveLength(58)
   })
 
   test('update task persists in memory', () => {

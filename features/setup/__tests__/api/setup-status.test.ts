@@ -1,11 +1,9 @@
 import { getSetupStatus } from '@/features/setup/server/service'
-import { resetStore as resetHousehold } from '@/features/household/server/service'
-import { resetStore as resetChildren } from '@/features/children/server/service'
+import { resetStore as resetHousehold, seedWorkspace, seedHouseholdProfile } from '@/features/household/server/service'
+import { resetStore as resetChildren, seedStudentProfiles } from '@/features/children/server/service'
 import { resetStore as resetSubjects } from '@/features/subjects/server/service'
 import { resetStore as resetDashboard } from '@/features/dashboard/server/service'
 import { SEED_IDS } from '@/features/lib/seedIds'
-import { workspacesStore, householdProfilesStore } from '@/features/household/server/store'
-import { studentProfilesStore } from '@/features/children/server/store'
 
 beforeEach(() => {
   resetHousehold()
@@ -16,23 +14,19 @@ beforeEach(() => {
 
 describe('getSetupStatus', () => {
   it('returns nextStep "firstChild" when household exists but no children', () => {
-    workspacesStore.reset([
-      {
-        id: SEED_IDS.workspace,
-        name: 'W',
-        ownerId: 'u',
-        createdAt: '2026-01-01T00:00:00.000Z',
-      },
-    ])
-    householdProfilesStore.reset([
-      {
-        id: SEED_IDS.household,
-        workspaceId: SEED_IDS.workspace,
-        familyName: 'F',
-        createdAt: '2026-01-01T00:00:00.000Z',
-      },
-    ])
-    studentProfilesStore.reset([])
+    seedWorkspace({
+      id: SEED_IDS.workspace,
+      name: 'W',
+      ownerId: 'u',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    })
+    seedHouseholdProfile({
+      id: SEED_IDS.household,
+      workspaceId: SEED_IDS.workspace,
+      familyName: 'F',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    })
+    seedStudentProfiles([])
 
     const body = getSetupStatus()
     expect(body.nextStep).toBe('firstChild')
@@ -40,22 +34,18 @@ describe('getSetupStatus', () => {
   })
 
   it('returns nextStep "firstSubject" when child exists but no subjects', () => {
-    workspacesStore.reset([
-      {
-        id: SEED_IDS.workspace,
-        name: 'W',
-        ownerId: 'u',
-        createdAt: '2026-01-01T00:00:00.000Z',
-      },
-    ])
-    householdProfilesStore.reset([
-      {
-        id: SEED_IDS.household,
-        workspaceId: SEED_IDS.workspace,
-        familyName: 'F',
-        createdAt: '2026-01-01T00:00:00.000Z',
-      },
-    ])
+    seedWorkspace({
+      id: SEED_IDS.workspace,
+      name: 'W',
+      ownerId: 'u',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    })
+    seedHouseholdProfile({
+      id: SEED_IDS.household,
+      workspaceId: SEED_IDS.workspace,
+      familyName: 'F',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    })
     resetChildren()
     resetSubjects([])
 

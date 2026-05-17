@@ -32,6 +32,7 @@ export function TodayLessonCard({ childId, today, externalLessons }: TodayLesson
   const [fetchedLessons, setFetchedLessons] = useState<LessonTask[]>([])
   const [isLoading, setIsLoading] = useState(externalLessons === undefined)
   const [error, setError] = useState<string | null>(null)
+  const [localStatuses, setLocalStatuses] = useState<Record<string, LessonTaskStatus>>({})
 
   const formattedToday = new Date(`${today}T00:00:00`).toLocaleDateString('en-US', {
     weekday: 'long',
@@ -68,11 +69,32 @@ export function TodayLessonCard({ childId, today, externalLessons }: TodayLesson
     return () => { cancelled = true }
   }, [childId, today, externalLessons])
 
-  const lessons = externalLessons !== undefined
+  const baseLessons = externalLessons !== undefined
     ? externalLessons.filter(l => l.dueDate === today && l.childId === childId)
     : fetchedLessons
 
+  const lessons = baseLessons.map(l =>
+    localStatuses[l.id] !== undefined
+      ? { ...l, status: localStatuses[l.id] }
+      : l
+  )
+
   const loading = externalLessons !== undefined ? false : isLoading
+
+  async function handleAction(lesson: LessonTask, status: 'completed' | 'skipped') {
+    // Optimistic update
+    setLocalStatuses(prev => ({ ...prev, [lesson.id]: status }))
+    try {
+      await plannerApi.completeLesson(lesson.id, status)
+    } catch {
+      // Revert on failure
+      setLocalStatuses(prev => {
+        const next = { ...prev }
+        delete next[lesson.id]
+        return next
+      })
+    }
+  }
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
@@ -98,6 +120,7 @@ export function TodayLessonCard({ childId, today, externalLessons }: TodayLesson
         <ul className="space-y-2">
           {lessons.map(lesson => {
             const badge = STATUS_BADGE[lesson.status]
+            const isPending = lesson.status === 'not_started'
             return (
               <li
                 key={lesson.id}
@@ -108,11 +131,29 @@ export function TodayLessonCard({ childId, today, externalLessons }: TodayLesson
                 <span className={`text-sm ${lesson.status === 'completed' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                   {lesson.title}
                 </span>
-                {badge && (
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${badge.cls}`}>
-                    {badge.label}
-                  </span>
-                )}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {badge && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.cls}`}>
+                      {badge.label}
+                    </span>
+                  )}
+                  {isPending && (
+                    <>
+                      <button
+                        onClick={() => handleAction(lesson, 'completed')}
+                        className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+                      >
+                        Mark done
+                      </button>
+                      <button
+                        onClick={() => handleAction(lesson, 'skipped')}
+                        className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors"
+                      >
+                        Skip
+                      </button>
+                    </>
+                  )}
+                </div>
               </li>
             )
           })}

@@ -1,7 +1,10 @@
+import Link from 'next/link'
+
 interface MetricCardProps {
   label: string
   value: string | number
   statusColor: 'green' | 'amber' | 'red' | 'blue' | 'gray'
+  href?: string
 }
 
 const colorMap = {
@@ -12,11 +15,11 @@ const colorMap = {
   gray:  { numeral: 'text-slate-500',  bar: 'bg-slate-400' },
 }
 
-export function MetricCard({ label, value, statusColor }: MetricCardProps) {
+export function MetricCard({ label, value, statusColor, href }: MetricCardProps) {
   const c = colorMap[statusColor]
 
-  return (
-    <div className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
+  const inner = (
+    <>
       <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3 leading-none">
         {label}
       </p>
@@ -24,6 +27,20 @@ export function MetricCard({ label, value, statusColor }: MetricCardProps) {
         {value}
       </p>
       <div className={`mt-4 h-0.5 w-8 rounded-full ${c.bar}`} />
+    </>
+  )
+
+  if (href) {
+    return (
+      <Link href={href} className="block bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
+        {inner}
+      </Link>
+    )
+  }
+
+  return (
+    <div className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
+      {inner}
     </div>
   )
 }

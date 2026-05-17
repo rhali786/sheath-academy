@@ -40,10 +40,15 @@ jest.mock('@/features/household/front/services/api', () => ({
   },
 }))
 
+jest.mock('@/features/alerts/front/services/api', () => ({
+  alertsApi: {
+    getAlerts: jest.fn(() => Promise.resolve({ data: [] })),
+  },
+}))
+
 jest.mock('@/features/dashboard/front/services/api', () => ({
   dashboardApi: {
     getTasks: jest.fn(() => Promise.resolve({ data: [] })),
-    getAlerts: jest.fn(() => Promise.resolve({ data: [] })),
     getQuran: jest.fn(() => Promise.resolve({ data: { sessions: [], chartData: [] } })),
     getRecords: jest.fn(() => Promise.resolve({ data: [] })),
     getSummary: jest.fn(() => Promise.resolve({
@@ -66,6 +71,20 @@ jest.mock('@/features/planner/front/services/api', () => ({
   plannerApi: {
     getProgress: jest.fn(() => Promise.resolve([])),
     getHistory: jest.fn(() => Promise.resolve([])),
+    getLessons: jest.fn(() => Promise.resolve([])),
+  },
+}))
+
+jest.mock('@/features/subjects/front/services/api', () => ({
+  subjectsApi: {
+    getSubjects: jest.fn(() => Promise.resolve({ data: [] })),
+  },
+}))
+
+jest.mock('@/features/quran/front/services/api', () => ({
+  quranApi: {
+    getSessions: jest.fn(() => Promise.resolve({ data: { sessions: [], chartData: [] } })),
+    addSession: jest.fn(),
   },
 }))
 
@@ -124,14 +143,11 @@ describe('Tab switching — NavigationContext regression', () => {
     })
   })
 
-  test('Portfolio tab shows Portfolio content', async () => {
+  test('Portfolio link is present in navigation', async () => {
     renderWithShell()
     await waitForDashboard()
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Portfolio' })[0])
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Portfolio' })).toBeInTheDocument()
-    })
+    expect(screen.getAllByRole('link', { name: 'Portfolio' })[0]).toBeInTheDocument()
   })
 
   test('Settings link is present in navigation', async () => {

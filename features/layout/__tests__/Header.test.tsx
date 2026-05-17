@@ -151,11 +151,10 @@ describe('Header — tab navigation on dashboard page', () => {
     mockUsePathname.mockReturnValue('/')
   })
 
-  test('renders dashboard tabs and Settings/About links on desktop', () => {
+  test('renders dashboard tab buttons and nav links on desktop', () => {
     render(<Header />)
-    ;['Today', 'Portfolio'].forEach((tab) => {
-      expect(screen.getAllByRole('button', { name: tab }).length).toBeGreaterThan(0)
-    })
+    expect(screen.getAllByRole('button', { name: 'Today' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: 'Portfolio' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'Reports' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'Weekly' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'Settings' }).length).toBeGreaterThan(0)
@@ -165,14 +164,14 @@ describe('Header — tab navigation on dashboard page', () => {
   test('active tab has distinct active styling', () => {
     mockUseNavigation.mockImplementation(() => ({
       ...defaultNavigation(),
-      selectedTab: 'Portfolio',
+      selectedTab: 'Today',
     }))
     render(<Header />)
-    const portfolioButtons = screen.getAllByRole('button', { name: 'Portfolio' })
-    expect(portfolioButtons.some((b) => b.className.includes('bg-forest-900'))).toBe(true)
+    const todayButtons = screen.getAllByRole('button', { name: 'Today' })
+    expect(todayButtons.some((b) => b.className.includes('bg-forest-900'))).toBe(true)
   })
 
-  test('clicking a tab calls setSelectedTab and does NOT push router when already on /', () => {
+  test('clicking Today tab calls setSelectedTab and does NOT push router when already on /', () => {
     const setSelectedTab = jest.fn()
     const push = jest.fn()
     mockUseNavigation.mockImplementation(() => ({
@@ -181,9 +180,18 @@ describe('Header — tab navigation on dashboard page', () => {
     }))
     mockUseRouter.mockImplementation(() => ({ push }))
     render(<Header />)
-    fireEvent.click(screen.getAllByRole('button', { name: 'Portfolio' })[0])
-    expect(setSelectedTab).toHaveBeenCalledWith('Portfolio')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Today' })[0])
+    expect(setSelectedTab).toHaveBeenCalledWith('Today')
     expect(push).not.toHaveBeenCalled()
+  })
+
+  test('Portfolio link points to /portfolio', () => {
+    render(<Header />)
+    const portfolioLinks = screen.getAllByRole('link', { name: 'Portfolio' })
+    expect(portfolioLinks.length).toBeGreaterThan(0)
+    portfolioLinks.forEach(link => {
+      expect(link).toHaveAttribute('href', '/portfolio')
+    })
   })
 })
 
@@ -193,7 +201,7 @@ describe('Header — tab navigation from non-dashboard page', () => {
     mockUsePathname.mockReturnValue('/about')
   })
 
-  test('clicking a tab from /about calls setSelectedTab AND navigates to /', () => {
+  test('clicking Today tab from /about calls setSelectedTab AND navigates to /', () => {
     const setSelectedTab = jest.fn()
     const push = jest.fn()
     mockUseNavigation.mockImplementation(() => ({
@@ -202,8 +210,8 @@ describe('Header — tab navigation from non-dashboard page', () => {
     }))
     mockUseRouter.mockImplementation(() => ({ push }))
     render(<Header />)
-    fireEvent.click(screen.getAllByRole('button', { name: 'Portfolio' })[0])
-    expect(setSelectedTab).toHaveBeenCalledWith('Portfolio')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Today' })[0])
+    expect(setSelectedTab).toHaveBeenCalledWith('Today')
     expect(push).toHaveBeenCalledWith('/')
   })
 

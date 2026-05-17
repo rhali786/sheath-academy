@@ -1,8 +1,42 @@
 import React from 'react'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { ReportsPage } from '@/features/reports/front/pages/ReportsPage'
-import { DashboardContext, type DashboardContextType } from '@/features/dashboard/front/context'
 import type { RecordsReport } from '@/features/reports/types'
+
+jest.mock('@/features/household/front/context', () => ({
+  useHousehold: jest.fn(() => ({
+    workspace: { id: 'ws_001', name: 'Test', ownerId: 'u', createdAt: '2026-01-01T00:00:00.000Z' },
+    householdProfile: { id: 'hh_001', workspaceId: 'ws_001', familyName: 'Test', createdAt: '2026-01-01T00:00:00.000Z' },
+    loading: false,
+    needsSetup: false,
+    familyName: 'Test',
+  })),
+}))
+
+jest.mock('@/features/children/front/services/api', () => ({
+  childrenApi: {
+    getChildren: jest.fn(() =>
+      Promise.resolve({
+        data: [
+          {
+            id: 'child_a',
+            householdId: 'hh_001',
+            name: 'Adam',
+            gradeLabel: 'Grade 5',
+            username: 'adam',
+            password: 'password',
+            isActive: true,
+            avatarInitials: 'A',
+            createdAt: '2026-01-01T00:00:00Z',
+          },
+        ],
+        status: 'success',
+        message: '',
+        timestamp: '',
+      })
+    ),
+  },
+}))
 
 jest.mock('@/features/reports/front/services/api', () => ({
   reportsApi: {
@@ -11,22 +45,22 @@ jest.mock('@/features/reports/front/services/api', () => ({
 }))
 
 import { reportsApi } from '@/features/reports/front/services/api'
+import { childrenApi } from '@/features/children/front/services/api'
 
 const mockReportsApi = reportsApi as jest.Mocked<typeof reportsApi>
-
-const child = {
-  id: 'child_a',
-  householdId: 'household_1',
-  name: 'Adam',
-  gradeLabel: 'Grade 5',
-  username: 'adam',
-  password: 'password',
-  isActive: true,
-  createdAt: '2026-01-01T00:00:00Z',
-}
+const mockChildrenApi = childrenApi as jest.Mocked<typeof childrenApi>
 
 const report: RecordsReport = {
-  child,
+  child: {
+    id: 'child_a',
+    householdId: 'hh_001',
+    name: 'Adam',
+    gradeLabel: 'Grade 5',
+    username: 'adam',
+    password: 'password',
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00Z',
+  },
   dateRange: { start: '2025-08-01', end: '2026-05-31' },
   subjects: [
     {
@@ -91,37 +125,6 @@ const report: RecordsReport = {
   generatedAt: '2026-05-16T00:00:00Z',
 }
 
-function contextValue(overrides: Partial<DashboardContextType> = {}): DashboardContextType {
-  return {
-    children: [child],
-    tasks: [],
-    setTasks: jest.fn(),
-    alerts: [],
-    setAlerts: jest.fn(),
-    quranSessions: [],
-    setQuranSessions: jest.fn(),
-    records: [],
-    setRecords: jest.fn(),
-    metrics: null,
-    setMetrics: jest.fn(),
-    toggleTask: jest.fn(),
-    addQuranSession: jest.fn(),
-    loading: false,
-    error: null,
-    selectedChildId: 'child_a',
-    setSelectedChildId: jest.fn(),
-    ...overrides,
-  }
-}
-
-function renderReportsPage(value = contextValue()) {
-  return render(
-    <DashboardContext.Provider value={value}>
-      <ReportsPage />
-    </DashboardContext.Provider>
-  )
-}
-
 describe('ReportsPage', () => {
   beforeEach(() => {
     mockReportsApi.getRecordsReport.mockResolvedValue({
@@ -132,15 +135,19 @@ describe('ReportsPage', () => {
     })
   })
 
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
+
   it('renders a records summary report for the selected child', async () => {
-    renderReportsPage()
+    render(<ReportsPage />)
 
     await waitFor(() => {
-      expect(screen.getByText('Records summary')).toBeInTheDocument()
-    })
+      expect(screen.getAllByText('Mathematics').length).toBeGreaterThan(0)
+    }, { timeout: 3000 })
 
+    expect(screen.getByText('Records summary')).toBeInTheDocument()
     expect(screen.getAllByText('Adam').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Mathematics').length).toBeGreaterThan(0)
     expect(screen.getByText('Portfolio evidence')).toBeInTheDocument()
     expect(screen.getByText('This shows steady growth.')).toBeInTheDocument()
     expect(screen.getByText('Missing attendance records')).toBeInTheDocument()
@@ -150,7 +157,7 @@ describe('ReportsPage', () => {
     const print = jest.fn()
     Object.defineProperty(window, 'print', { value: print, writable: true })
 
-    renderReportsPage()
+    render(<ReportsPage />)
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /print records/i })).toBeInTheDocument()
@@ -160,9 +167,18 @@ describe('ReportsPage', () => {
     expect(print).toHaveBeenCalledTimes(1)
   })
 
-  it('shows an empty state when there are no children to report on', () => {
-    renderReportsPage(contextValue({ children: [], selectedChildId: null }))
+  it('shows an empty state when there are no children to report on', async () => {
+    mockChildrenApi.getChildren.mockResolvedValueOnce({
+      data: [],
+      status: 'success',
+      message: '',
+      timestamp: '',
+    })
 
-    expect(screen.getByText(/add a child before generating reports/i)).toBeInTheDocument()
+    render(<ReportsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/add a child before generating reports/i)).toBeInTheDocument()
+    })
   })
 })

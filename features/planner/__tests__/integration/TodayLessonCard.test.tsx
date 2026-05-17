@@ -1,16 +1,18 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { TodayLessonCard } from '@/features/planner/front/components/TodayLessonCard'
 import type { LessonTask } from '@/features/planner/types'
 
 jest.mock('@/features/planner/front/services/api', () => ({
   plannerApi: {
     getLessons: jest.fn(),
+    completeLesson: jest.fn(),
   },
 }))
 
 import { plannerApi } from '@/features/planner/front/services/api'
 const mockGetLessons = plannerApi.getLessons as jest.Mock
+const mockCompleteLesson = plannerApi.completeLesson as jest.Mock
 
 const makeLessons = (overrides: Partial<LessonTask>[] = []): LessonTask[] =>
   overrides.map((o, i) => ({
@@ -29,6 +31,19 @@ const makeLessons = (overrides: Partial<LessonTask>[] = []): LessonTask[] =>
 
 beforeEach(() => {
   mockGetLessons.mockReset()
+  mockCompleteLesson.mockReset()
+  mockCompleteLesson.mockResolvedValue({
+    id: 'lesson_0',
+    childId: 'child_001',
+    subjectId: 'subj_001',
+    householdId: 'hh_001',
+    title: 'Lesson 0',
+    dueDate: '2026-05-12',
+    status: 'completed',
+    order: 0,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  })
 })
 
 describe('TodayLessonCard', () => {
@@ -91,7 +106,7 @@ describe('TodayLessonCard', () => {
     })
   })
 
-  it('not_started lessons show no badge', async () => {
+  it('not_started lessons show no status badge', async () => {
     mockGetLessons.mockResolvedValue(makeLessons([
       { title: 'Pending lesson', dueDate: '2026-05-12', status: 'not_started' },
     ]))
@@ -99,10 +114,10 @@ describe('TodayLessonCard', () => {
     await waitFor(() => {
       expect(screen.getByText('Pending lesson')).toBeInTheDocument()
     })
-    // Should not show a status badge for not_started
+    // Should not show a status badge for not_started (no "Done" badge, no "Skipped" badge)
     expect(screen.queryByText(/not started/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/done/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/skipped/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^done$/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^skipped$/i)).not.toBeInTheDocument()
   })
 
   it('re-fetches when childId prop changes', async () => {
@@ -169,6 +184,128 @@ describe('TodayLessonCard', () => {
       expect(screen.getByText('Initial lesson')).toBeInTheDocument()
       expect(screen.getByText('New lesson')).toBeInTheDocument()
       expect(mockGetLessons).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Mark done and Skip actions', () => {
+    it('renders "Mark done" button for not_started lesson', async () => {
+      mockGetLessons.mockResolvedValue(makeLessons([
+        { title: 'Pending lesson', dueDate: '2026-05-12', status: 'not_started' },
+      ]))
+      render(<TodayLessonCard childId="child_001" today="2026-05-12" />)
+      await waitFor(() => {
+        expect(screen.getByText('Mark done')).toBeInTheDocument()
+      })
+    })
+
+    it('renders "Skip" button for not_started lesson', async () => {
+      mockGetLessons.mockResolvedValue(makeLessons([
+        { title: 'Pending lesson', dueDate: '2026-05-12', status: 'not_started' },
+      ]))
+      render(<TodayLessonCard childId="child_001" today="2026-05-12" />)
+      await waitFor(() => {
+        expect(screen.getByText('Skip')).toBeInTheDocument()
+      })
+    })
+
+    it('does not render action buttons for completed lesson', async () => {
+      mockGetLessons.mockResolvedValue(makeLessons([
+        { title: 'Done lesson', dueDate: '2026-05-12', status: 'completed' },
+      ]))
+      render(<TodayLessonCard childId="child_001" today="2026-05-12" />)
+      await waitFor(() => {
+        expect(screen.getByText('Done lesson')).toBeInTheDocument()
+      })
+      expect(screen.queryByText('Mark done')).not.toBeInTheDocument()
+      expect(screen.queryByText('Skip')).not.toBeInTheDocument()
+    })
+
+    it('does not render action buttons for skipped lesson', async () => {
+      mockGetLessons.mockResolvedValue(makeLessons([
+        { title: 'Skipped lesson', dueDate: '2026-05-12', status: 'skipped' },
+      ]))
+      render(<TodayLessonCard childId="child_001" today="2026-05-12" />)
+      await waitFor(() => {
+        expect(screen.getByText('Skipped lesson')).toBeInTheDocument()
+      })
+      expect(screen.queryByText('Mark done')).not.toBeInTheDocument()
+      expect(screen.queryByText('Skip')).not.toBeInTheDocument()
+    })
+
+    it('clicking "Mark done" calls plannerApi.completeLesson with completed status', async () => {
+      mockGetLessons.mockResolvedValue(makeLessons([
+        { id: 'lesson_0', title: 'Pending lesson', dueDate: '2026-05-12', status: 'not_started' },
+      ]))
+      render(<TodayLessonCard childId="child_001" today="2026-05-12" />)
+      await waitFor(() => {
+        expect(screen.getByText('Mark done')).toBeInTheDocument()
+      })
+      fireEvent.click(screen.getByText('Mark done'))
+      expect(mockCompleteLesson).toHaveBeenCalledWith('lesson_0', 'completed')
+    })
+
+    it('clicking "Skip" calls plannerApi.completeLesson with skipped status', async () => {
+      mockGetLessons.mockResolvedValue(makeLessons([
+        { id: 'lesson_0', title: 'Pending lesson', dueDate: '2026-05-12', status: 'not_started' },
+      ]))
+      mockCompleteLesson.mockResolvedValue({
+        id: 'lesson_0',
+        childId: 'child_001',
+        subjectId: 'subj_001',
+        householdId: 'hh_001',
+        title: 'Pending lesson',
+        dueDate: '2026-05-12',
+        status: 'skipped',
+        order: 0,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      })
+      render(<TodayLessonCard childId="child_001" today="2026-05-12" />)
+      await waitFor(() => {
+        expect(screen.getByText('Skip')).toBeInTheDocument()
+      })
+      fireEvent.click(screen.getByText('Skip'))
+      expect(mockCompleteLesson).toHaveBeenCalledWith('lesson_0', 'skipped')
+    })
+
+    it('after clicking "Mark done", lesson shows "Done" badge (optimistic update)', async () => {
+      mockGetLessons.mockResolvedValue(makeLessons([
+        { id: 'lesson_0', title: 'Pending lesson', dueDate: '2026-05-12', status: 'not_started' },
+      ]))
+      render(<TodayLessonCard childId="child_001" today="2026-05-12" />)
+      await waitFor(() => {
+        expect(screen.getByText('Mark done')).toBeInTheDocument()
+      })
+      fireEvent.click(screen.getByText('Mark done'))
+      await waitFor(() => {
+        expect(screen.getByText('Done')).toBeInTheDocument()
+      })
+    })
+
+    it('after clicking "Skip", lesson shows "Skipped" badge (optimistic update)', async () => {
+      mockGetLessons.mockResolvedValue(makeLessons([
+        { id: 'lesson_0', title: 'Pending lesson', dueDate: '2026-05-12', status: 'not_started' },
+      ]))
+      mockCompleteLesson.mockResolvedValue({
+        id: 'lesson_0',
+        childId: 'child_001',
+        subjectId: 'subj_001',
+        householdId: 'hh_001',
+        title: 'Pending lesson',
+        dueDate: '2026-05-12',
+        status: 'skipped',
+        order: 0,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      })
+      render(<TodayLessonCard childId="child_001" today="2026-05-12" />)
+      await waitFor(() => {
+        expect(screen.getByText('Skip')).toBeInTheDocument()
+      })
+      fireEvent.click(screen.getByText('Skip'))
+      await waitFor(() => {
+        expect(screen.getByText('Skipped')).toBeInTheDocument()
+      })
     })
   })
 })

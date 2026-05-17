@@ -23,10 +23,10 @@ describe('GET /api/attendance/summary', () => {
   })
 
   it('returns summary counts for a child', async () => {
-    const res = await GET(makeGetRequest({ childId: SEED_IDS.adam }))
+    const res = await GET(makeGetRequest({ childId: SEED_IDS.layth }))
     const body = await res.json()
     expect(body.status).toBe('success')
-    expect(body.data.childId).toBe(SEED_IDS.adam)
+    expect(body.data.childId).toBe(SEED_IDS.layth)
     expect(typeof body.data.totalPresent).toBe('number')
     expect(typeof body.data.totalAbsent).toBe('number')
     expect(typeof body.data.totalPartial).toBe('number')
@@ -36,7 +36,7 @@ describe('GET /api/attendance/summary', () => {
   })
 
   it('counts match the seed records for adam', async () => {
-    const res = await GET(makeGetRequest({ childId: SEED_IDS.adam }))
+    const res = await GET(makeGetRequest({ childId: SEED_IDS.layth }))
     const body = await res.json()
     // Seed has at least one present record for adam
     expect(body.data.totalPresent).toBeGreaterThan(0)
@@ -50,7 +50,7 @@ describe('GET /api/attendance/summary', () => {
   })
 
   it('filters summary by date range', async () => {
-    const res = await GET(makeGetRequest({ childId: SEED_IDS.adam, startDate: '2000-01-01', endDate: '2000-12-31' }))
+    const res = await GET(makeGetRequest({ childId: SEED_IDS.layth, startDate: '2000-01-01', endDate: '2000-12-31' }))
     const body = await res.json()
     expect(body.status).toBe('success')
     expect(body.data.totalRecorded).toBe(0)

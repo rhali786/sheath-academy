@@ -19,8 +19,8 @@ describe('GET /api/planner/lessons', () => {
   })
 
   it('filters lessons by childId when childIds query param provided', () => {
-    const lessons = getLessons(SEED_IDS.adam)
-    expect(lessons.every(l => l.childId === SEED_IDS.adam)).toBe(true)
+    const lessons = getLessons(SEED_IDS.layth)
+    expect(lessons.every(l => l.childId === SEED_IDS.layth)).toBe(true)
     expect(lessons.length).toBeGreaterThan(0)
   })
 
@@ -30,8 +30,8 @@ describe('GET /api/planner/lessons', () => {
   })
 
   it('filters by both childIds and subjectIds when both provided', () => {
-    const lessons = getLessons(SEED_IDS.adam, 'subject_seed_002')
-    expect(lessons.every(l => l.childId === SEED_IDS.adam && l.subjectId === 'subject_seed_002')).toBe(true)
+    const lessons = getLessons(SEED_IDS.layth, 'subject_seed_002')
+    expect(lessons.every(l => l.childId === SEED_IDS.layth && l.subjectId === 'subject_seed_002')).toBe(true)
   })
 
   it('returns 400 when week param is not a valid ISO date', () => {

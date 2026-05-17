@@ -10,6 +10,7 @@ const STATUS_STYLES: Record<AttendanceStatus, string> = {
 
 interface Props {
   records: AttendanceRecord[]
+  childMap: Record<string, string>
   onDelete: (id: string) => void
   onEdit: (record: AttendanceRecord) => void
 }
@@ -19,7 +20,7 @@ function formatDate(dateStr: string): string {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-export function AttendanceList({ records, onDelete, onEdit }: Props) {
+export function AttendanceList({ records, childMap, onDelete, onEdit }: Props) {
   if (records.length === 0) {
     return <p className="text-sm text-slate-400 py-6 text-center">No attendance records yet</p>
   }
@@ -32,11 +33,26 @@ export function AttendanceList({ records, onDelete, onEdit }: Props) {
             <span className={`text-xs font-semibold px-2 py-1 rounded border ${STATUS_STYLES[record.status]}`}>
               {record.status}
             </span>
+            {childMap[record.childId] && (
+              <span className="text-xs font-medium text-slate-600">{childMap[record.childId]}</span>
+            )}
             <span className="text-sm font-medium text-slate-700">{formatDate(record.date)}</span>
-            {record.notes && <span className="text-xs text-slate-500 italic">{record.notes}</span>}
-            {(record.hours !== undefined || record.minutes !== undefined) && (
+            {record.notes && (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4 text-slate-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-label="Has notes"
+                role="img"
+              >
+                <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" />
+              </svg>
+            )}
+            {((record.hours ?? 0) > 0 || (record.minutes ?? 0) > 0) && (
               <span className="text-xs text-slate-500">
-                {record.hours ?? 0}h {record.minutes ?? 0}m
+                {(record.hours ?? 0) > 0 && `${record.hours}h`}{' '}
+                {(record.minutes ?? 0) > 0 && `${record.minutes}m`}
               </span>
             )}
           </div>

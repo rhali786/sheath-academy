@@ -1,4 +1,5 @@
 // TypeScript interfaces for all dashboard data models
+import type { Alert } from '@/features/alerts/types'
 
 export interface Child {
   id: string
@@ -31,14 +32,7 @@ export interface Task {
   completed: boolean
 }
 
-export interface Alert {
-  id: string
-  childId: string | null
-  title: string
-  detail: string
-  priority: string
-  actionButton: string
-}
+export type { Alert, AlertStatus, AlertSeverity, AlertSourceFeature } from '@/features/alerts/types'
 
 export interface QuranSession {
   id: string

@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useContext_Dashboard } from '@/features/dashboard/front/context'
+import { useHousehold } from '@/features/household/front/context'
+import { childrenApi } from '@/features/children/front/services/api'
+import type { StudentProfile } from '@/features/lib/types'
 import type { RecordsReport } from '@/features/reports/types'
 import { reportsApi } from '../services/api'
 
@@ -9,49 +11,64 @@ function percent(value: number): string {
   return `${Math.round(value * 100)}%`
 }
 
+function todayLocal(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export function ReportsPage() {
-  const { children, selectedChildId, setSelectedChildId, loading: dashboardLoading } = useContext_Dashboard()
-  const [childId, setChildId] = useState<string>('')
+  const { workspace, householdProfile, loading: householdLoading } = useHousehold()
+  const [studentProfiles, setStudentProfiles] = useState<StudentProfile[]>([])
+  const [childrenLoading, setChildrenLoading] = useState(true)
+  const [selectedChildId, setSelectedChildId] = useState<string>('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [report, setReport] = useState<RecordsReport | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  const activeChildId = useMemo(() => {
-    return childId || selectedChildId || children[0]?.id || ''
-  }, [childId, selectedChildId, children])
+  const today = todayLocal()
 
   useEffect(() => {
-    if (!childId && activeChildId) setChildId(activeChildId)
-  }, [activeChildId, childId])
+    if (householdLoading) return
+    const householdId = householdProfile?.id ?? workspace?.id
+    if (!householdId) { setChildrenLoading(false); return }
+    childrenApi.getChildren(householdId, false)
+      .then(res => {
+        const profiles = (res.data ?? []).filter((p: StudentProfile) => p.isActive)
+        setStudentProfiles(profiles)
+        if (profiles.length > 0) setSelectedChildId(profiles[0].id)
+      })
+      .catch(() => {})
+      .finally(() => setChildrenLoading(false))
+  }, [householdLoading, workspace?.id, householdProfile?.id])
+
+  const dateError = useMemo(() => {
+    if (startDate && startDate > today) return 'Start date cannot be in the future.'
+    if (endDate && endDate > today) return 'End date cannot be in the future.'
+    if (startDate && endDate && startDate > endDate) return 'Start date must be on or before end date.'
+    return null
+  }, [startDate, endDate, today])
 
   useEffect(() => {
-    if (!activeChildId) return
-
+    if (!selectedChildId || dateError) return
     setLoading(true)
     setError(null)
     reportsApi
       .getRecordsReport({
-        childId: activeChildId,
+        childId: selectedChildId,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
       })
       .then(res => setReport(res.data))
       .catch(err => setError(err.message ?? 'Failed to load reports'))
       .finally(() => setLoading(false))
-  }, [activeChildId, startDate, endDate])
+  }, [selectedChildId, startDate, endDate, dateError])
 
-  function handleChildChange(nextChildId: string) {
-    setChildId(nextChildId)
-    setSelectedChildId(nextChildId)
-  }
-
-  if (dashboardLoading) {
+  if (householdLoading || childrenLoading) {
     return <p className="p-6 text-sm text-slate-500">Loading reports...</p>
   }
 
-  if (children.length === 0) {
+  if (studentProfiles.length === 0) {
     return (
       <main className="max-w-5xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
         <h1 className="text-2xl font-bold text-slate-900">Records summary</h1>
@@ -85,11 +102,11 @@ export function ReportsPage() {
             </label>
             <select
               id="report-child"
-              value={activeChildId}
-              onChange={e => handleChildChange(e.target.value)}
+              value={selectedChildId}
+              onChange={e => setSelectedChildId(e.target.value)}
               className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
             >
-              {children.map(child => (
+              {studentProfiles.map(child => (
                 <option key={child.id} value={child.id}>
                   {child.name}
                 </option>
@@ -105,6 +122,7 @@ export function ReportsPage() {
               id="report-start"
               type="date"
               value={startDate}
+              max={today}
               onChange={e => setStartDate(e.target.value)}
               className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
             />
@@ -118,11 +136,16 @@ export function ReportsPage() {
               id="report-end"
               type="date"
               value={endDate}
+              max={today}
               onChange={e => setEndDate(e.target.value)}
               className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
             />
           </div>
         </div>
+
+        {dateError && (
+          <p role="alert" className="mt-3 text-sm font-medium text-red-600">{dateError}</p>
+        )}
 
         {loading && <p className="mt-6 text-sm text-slate-500">Loading report...</p>}
         {error && <p className="mt-6 text-sm text-red-600">{error}</p>}
@@ -147,7 +170,7 @@ export function ReportsPage() {
               ) : (
                 <ul className="mt-3 space-y-2">
                   {report.checklist.map(item => (
-                    <li key={item.id} className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+                    <li key={item.id} className="print-callout rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
                       <p className="text-sm font-semibold text-amber-900">{item.label}</p>
                       <p className="text-sm text-amber-800">{item.detail}</p>
                     </li>
@@ -156,7 +179,7 @@ export function ReportsPage() {
               )}
             </section>
 
-            <section className="grid gap-4 md:grid-cols-3">
+            <section className="print-stats grid gap-4 md:grid-cols-3">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Attendance</h3>
                 <p className="mt-2 text-3xl font-bold text-slate-900">{report.attendance.totalRecorded}</p>

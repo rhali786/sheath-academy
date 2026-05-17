@@ -30,9 +30,9 @@ export async function handlePlannerRoute(
     return lessonHandler.PUT(slug[1], request)
   }
 
-  // PATCH /lessons/:id/complete — mark lesson as complete
+  // PATCH /lessons/:id/complete — mark lesson as complete or skipped
   if (slug.length === 3 && slug[0] === 'lessons' && slug[2] === 'complete' && method === 'PATCH') {
-    return lessonHandler.COMPLETE(slug[1])
+    return lessonHandler.COMPLETE(slug[1], request)
   }
 
   // DELETE /lessons/:id — delete lesson

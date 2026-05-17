@@ -26,19 +26,19 @@ const pains = [
 const wave1 = [
   {
     label: '1A — Foundation',
-    description: 'Parent account, household workspace, child profiles, subject setup, school year, dashboard shell.',
+    description: 'Magic-link sign-in, household workspace, child profiles, subject setup, school year config, dashboard shell.',
   },
   {
     label: '1B — Planning spine',
-    description: "Weekly planner, lesson creation, lesson status states, recurring patterns, today's lessons card.",
+    description: "Weekly planner, per-child lesson scheduling, drag-to-reschedule, lesson status states, today's lessons card.",
   },
   {
     label: '1C — Records spine',
-    description: 'Attendance by child and date, progress by subject, completed lesson history, dashboard cards.',
+    description: 'Attendance by child and date, missing-day detection, progress by subject, completed lesson history, dashboard cards.',
   },
   {
-    label: '1D — Proof and export',
-    description: 'Portfolio evidence, file and photo capture, records report, export, review checklist.',
+    label: '1D — Proof and records',
+    description: 'Portfolio evidence (text notes, URL links), parent reflections, records report, browser print, advisory review checklist.',
   },
 ]
 
@@ -46,12 +46,12 @@ const changelog = [
   {
     version: '0.35.0',
     label: 'Portfolio completion + Reports spine (current)',
-    detail: 'F31–F35: Parent reflection on evidence. Portfolio filters by child, subject, type, and date range. Separate /reports page with sectioned records summary, print-optimised output, and an advisory records review checklist. No PDF generation — browser print only.',
+    detail: 'F31–F35: Parent reflection on evidence. Portfolio filters by child, subject, type, and date range. Separate /reports page with sectioned records summary, print-optimised output, and advisory records review checklist. No PDF generation — browser print only.',
   },
   {
     version: '0.30.0',
     label: 'Portfolio evidence',
-    detail: 'F27–F30: Evidence data model, API, and UI. Parents can capture text note and URL evidence linked to a child, subject, and lesson. Evidence appears in a dedicated Portfolio tab. Safe URL rendering — http/https only.',
+    detail: 'F27–F30a: Evidence data model, API, and UI. Parents can capture text note and URL evidence linked to a child, subject, and lesson. Evidence appears in a dedicated Portfolio tab. http/https-only URL validation.',
   },
   {
     version: '0.26.0',
@@ -59,44 +59,59 @@ const changelog = [
     detail: 'F24–F26: Progress by subject with per-subject completion rates. Completed lesson history per child and subject. Records dashboard cards surface progress and history at a glance.',
   },
   {
+    version: '0.23.0',
+    label: 'Attendance tracking',
+    detail: 'F20–F23: Daily attendance records by child. Attendance dashboard card. Missing-day detection flags weekdays inside the active school year without a record.',
+  },
+  {
+    version: '0.10.20',
+    label: 'Planner stabilisation',
+    detail: 'WeekGrid date formula corrected. Today section refreshes on lesson mutations. DoToday auto-select fixed. Lesson cards gain drag-to-reschedule and click-to-edit. F14: Today section wired into the /lessons page.',
+  },
+  {
     version: '0.10.0',
     label: 'Weekly planner',
-    detail: 'F11: Per-child lesson scheduling across the week. WeekNavigator and weekly lesson list. Linked child/subject filters. Week start day preference in household settings. Planner integrated into app routing with its own tab.',
+    detail: 'F11: Per-child lesson scheduling across the week. WeekNavigator, WeekGrid, and weekly lesson list. Linked child/subject filters. Week start day preference in household settings.',
   },
   {
     version: '0.5.1',
     label: 'Subjects, settings, and setup wizard',
-    detail: 'F5–F10: Subject/Course data model and admin UI. Unified settings page. Progressive household setup cards. Child selector. Header date display. Per-feature data stores replace the shared dataStore.',
+    detail: 'F5–F10: Subject/Course data model and admin UI. Unified settings page. Progressive household setup cards. Child selector. Header Hijri date display. Per-feature data stores replace the shared dataStore.',
   },
   {
     version: '0.4.0',
     label: 'Child profiles',
-    detail: 'F4: Child data model, API routes, and management UI. Parents can add, edit, and remove children from the household. Child list drives the per-child progress and Quran tracking sections.',
+    detail: 'F4: Child data model, API routes, and management UI. Parents can add, edit, and remove children. Child list drives per-child progress and Quran tracking.',
   },
   {
     version: '0.3.4',
-    label: 'Worklog public + household fixes',
-    detail: 'AppShell owns Header — removed duplicate rendering from Dashboard. Household settings restored to full rename form. Worklog linked from About footer. Semantic versioning via pre-commit hook keeps package.json in sync across commits.',
+    label: 'Shell stabilisation',
+    detail: 'AppShell owns Header — removed duplicate rendering from Dashboard. Household settings restored to full rename form. Worklog linked from About. Pre-commit hook keeps package.json version in sync.',
   },
   {
     version: '0.1.17',
-    label: 'Shell & navigation',
-    detail: 'AppShell architecture — header and household context live in one shell component shared by all pages. NavigationContext keeps tab state in sync between header and dashboard. Tab buttons navigate back to the dashboard from any page.',
+    label: 'Shell and navigation',
+    detail: 'AppShell architecture — header and household context in one shell shared by all pages. NavigationContext keeps tab state in sync. Tab buttons navigate back to dashboard from any page.',
   },
   {
     version: '0.1.10',
     label: 'Household workspace',
-    detail: 'Workspace and household profile API. First-login setup flow — new accounts name their household before the dashboard loads. Family name in the header. Household settings tab to rename at any time.',
+    detail: 'F2–F3: Workspace and household profile API. First-login setup flow names the household before the dashboard loads. Family name in the header. Household settings tab to rename at any time.',
   },
   {
     version: '0.1.4',
     label: 'Parent sign-in',
-    detail: 'Magic-link email authentication via Resend. Session management with NextAuth. Route protection — unauthenticated requests redirect to the login page. Dev bypass for local testing.',
+    detail: 'F1: Magic-link email authentication via Resend. NextAuth session management. Middleware route protection. Dev bypass for local testing.',
+  },
+  {
+    version: '0.1.1',
+    label: 'Next.js stack',
+    detail: 'Migrated from Python/FastAPI prototype to Next.js 15 App Router. All business logic moved into features/. TypeScript types, mock data, API routes, Jest suite, GitHub Actions CI, and Render deploy config established.',
   },
   {
     version: '0.1.0',
     label: 'Foundation',
-    detail: 'Next.js 15 App Router, TypeScript, Tailwind design system, in-memory data store, dashboard shell with four tab panels, responsive navigation, About page.',
+    detail: 'Modular features/ architecture. Dashboard shell with four tab panels. In-memory data store. 35 Wave 1 feature specs scaffolded. About page and CLAUDE.md development guide.',
   },
 ]
 
@@ -207,7 +222,7 @@ export function AboutPage() {
           <div className="space-y-2">
             {changelog.map((entry) => (
               <div key={entry.version} className="bg-white rounded-xl px-5 py-4 shadow-sm flex items-start gap-4">
-                <span className="text-xs font-bold text-forest-900 tabular-nums mt-0.5 w-10 flex-shrink-0">{entry.version}</span>
+                <span className="text-xs font-bold text-forest-900 tabular-nums mt-0.5 w-16 flex-shrink-0">{entry.version}</span>
                 <div>
                   <p className="text-sm font-semibold text-slate-900">{entry.label}</p>
                   <p className="text-xs text-slate-500 mt-0.5">{entry.detail}</p>

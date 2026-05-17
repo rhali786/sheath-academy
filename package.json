@@ -1,6 +1,6 @@
 {
   "name": "sheath-academy",
-  "version": "0.35.0",
+  "version": "0.35.32",
   "private": true,
   "engines": {
     "node": ">=22.22.2"
@@ -13,6 +13,8 @@
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "smoke": "node scripts/smoke.cjs",
     "setup-hooks": "sh scripts/setup-hooks.sh",
     "prepare": "sh scripts/setup-hooks.sh"
@@ -34,6 +36,7 @@
     "tailwind-merge": "^2.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@testing-library/jest-dom": "^6.1.0",
     "@testing-library/react": "^14.0.0",
     "@testing-library/user-event": "^14.6.1",
