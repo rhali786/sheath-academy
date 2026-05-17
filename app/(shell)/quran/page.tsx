@@ -1,5 +1,6 @@
 import QuranPage from '@/features/quran/front/pages/QuranPage'
 
+export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Quran Studies — Sheath Academy' }
 
 export default function Page() {

@@ -100,7 +100,7 @@ export default function Dashboard() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 flex justify-end">
             <ChildSelector />
           </div>
-          <TodayState metrics={metrics} />
+          <TodayState metrics={metrics} selectedChildId={selectedChildId} />
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -136,7 +136,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <RecordsProof records={records} />
+          <RecordsProof records={records} selectedChildId={selectedChildId} />
 
           <div className="pb-6 text-center">
             <Link href="/worklog" className="text-xs text-slate-300 hover:text-slate-400 transition-colors">

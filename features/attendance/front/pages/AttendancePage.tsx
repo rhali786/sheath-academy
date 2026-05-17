@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { attendanceApi } from '@/features/attendance/front/services/api'
 import { AttendanceList } from '@/features/attendance/front/components/AttendanceList'
 import { AttendanceSummary } from '@/features/attendance/front/components/AttendanceSummary'
@@ -20,6 +21,7 @@ const DEFAULT_SUMMARY: SummaryType = { childId: '', totalPresent: 0, totalAbsent
 
 export function AttendancePage() {
   const { householdProfile } = useHousehold()
+  const searchParams = useSearchParams()
   const [children, setChildren] = useState<StudentProfile[]>([])
   const [selectedChildId, setSelectedChildId] = useState<string>('')
   const [date, setDate] = useState<string>(todayLocal())
@@ -35,9 +37,13 @@ export function AttendancePage() {
   const [dateSort, setDateSort] = useState<DateSort>('desc')
 
   useEffect(() => {
+    const urlChildId = searchParams.get('childId')
     childrenApi.getAllChildren().then(res => {
       setChildren(res.data)
-      if (res.data.length > 0) setSelectedChildId(res.data[0].id)
+      if (res.data.length > 0) {
+        const matched = urlChildId ? res.data.find(c => c.id === urlChildId) : null
+        setSelectedChildId(matched ? matched.id : res.data[0].id)
+      }
     }).catch(() => setError('Failed to load children'))
   }, [])
 
