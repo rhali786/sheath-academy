@@ -115,7 +115,7 @@ describe('LessonCard display', () => {
     expect(screen.getByText(/Science/)).toBeInTheDocument()
   })
 
-  it('renders Edit button when onEdit is provided', () => {
+  it('renders Edit (Pencil) icon button when onEdit is provided', () => {
     const onEdit = jest.fn()
     render(
       <LessonCard
@@ -125,13 +125,13 @@ describe('LessonCard display', () => {
         onEdit={onEdit}
       />
     )
-    const editBtn = screen.getByText('Edit')
+    const editBtn = screen.getByRole('button', { name: /edit lesson/i })
     expect(editBtn).toBeInTheDocument()
     fireEvent.click(editBtn)
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 'lesson_001' }))
   })
 
-  it('renders Delete button when onDelete is provided', () => {
+  it('renders Delete (Trash) icon button when onDelete is provided', () => {
     const onDelete = jest.fn()
     render(
       <LessonCard
@@ -141,7 +141,7 @@ describe('LessonCard display', () => {
         onDelete={onDelete}
       />
     )
-    expect(screen.getByText('Delete')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /delete lesson/i })).toBeInTheDocument()
   })
 
   it('shows description excerpt when description is present', () => {
@@ -155,21 +155,22 @@ describe('LessonCard display', () => {
     expect(screen.getByText('Learn fractions step by step')).toBeInTheDocument()
   })
 
-  it('clicking the card title area calls onEdit when onEdit is provided', () => {
-    const onEdit = jest.fn()
+  it('clicking Pencil icon with onUpdate expands inline edit form', () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
     render(
       <LessonCard
         lesson={makeLesson({ title: 'Algebra Basics' })}
         childName="Adam"
         subjectName="Math"
-        onEdit={onEdit}
+        onUpdate={onUpdate}
       />
     )
-    fireEvent.click(screen.getByText('Algebra Basics'))
-    expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 'lesson_001' }))
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(screen.getByRole('button', { name: /save lesson/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /cancel edit/i })).toBeInTheDocument()
   })
 
-  it('does not crash when card title is clicked and onEdit is not provided', () => {
+  it('does not crash when card title is clicked and no onEdit/onUpdate is provided', () => {
     render(
       <LessonCard
         lesson={makeLesson({ title: 'Algebra Basics' })}

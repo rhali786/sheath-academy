@@ -18,6 +18,7 @@ export async function handleQuranRoute(
   if (slug.length === 2 && slug[0] === 'sessions') {
     const id = slug[1]
     if (method === 'PATCH') return sessionsHandler.PATCH(request, { id })
+    if (method === 'DELETE') return sessionsHandler.DELETE(request, { id })
   }
 
   // Handle /quran/summary

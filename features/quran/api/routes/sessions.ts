@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, ChartSeries, QuranSessionRequest } from '@/features/lib/types'
-import { getQuranSessions, addQuranSession, updateQuranSession } from '@/features/quran/server/service'
+import { getQuranSessions, addQuranSession, updateQuranSession, deleteQuranSession } from '@/features/quran/server/service'
 import { getStudentProfiles } from '@/features/children/server/service'
 
 const CHILD_COLORS: Record<string, string> = {
@@ -94,6 +94,28 @@ export async function PATCH(
     status: 'success',
     data: updated,
     message: 'Quran session updated',
+    timestamp: new Date().toISOString(),
+  })
+}
+
+export async function DELETE(
+  _request: Request,
+  context: { id: string }
+): Promise<NextResponse> {
+  const { id } = context
+  const removed = deleteQuranSession(id)
+
+  if (!removed) {
+    return NextResponse.json(
+      { status: 'error', data: null, message: 'Session not found', timestamp: new Date().toISOString() },
+      { status: 404 }
+    )
+  }
+
+  return NextResponse.json({
+    status: 'success',
+    data: null,
+    message: 'Quran session deleted',
     timestamp: new Date().toISOString(),
   })
 }

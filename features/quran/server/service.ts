@@ -84,6 +84,10 @@ export function updateQuranSession(
   return quranSessionsStore.update(id, patch)
 }
 
+export function deleteQuranSession(id: string): boolean {
+  return quranSessionsStore.remove(id)
+}
+
 export function resetStore(): void {
   quranSessionsStore.reset(SEED_QURAN_SESSIONS)
 }

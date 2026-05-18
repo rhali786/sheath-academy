@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { AttendanceList } from '@/features/attendance/front/components/AttendanceList'
 import type { AttendanceRecord } from '@/features/attendance/types'
 
@@ -25,41 +25,41 @@ describe('AttendanceList — empty state', () => {
         records={[]}
         childMap={childMap}
         onArchive={jest.fn()}
-        onEdit={jest.fn()}
+        onUpdate={jest.fn()}
       />
     )
     expect(screen.getByText(/no attendance records yet/i)).toBeInTheDocument()
   })
 })
 
-describe('AttendanceList — void confirmation (Phase 2)', () => {
-  it('shows Void button initially (no confirm UI)', () => {
+describe('AttendanceList — void confirmation', () => {
+  it('shows Void icon button initially (no confirm UI)', () => {
     render(
       <AttendanceList
         records={[makeRecord()]}
         childMap={childMap}
         onArchive={jest.fn()}
-        onEdit={jest.fn()}
+        onUpdate={jest.fn()}
       />
     )
-    expect(screen.getByRole('button', { name: /void/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /void record/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /confirm void/i })).not.toBeInTheDocument()
-    expect(screen.queryByText(/are you sure/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/void this record/i)).not.toBeInTheDocument()
   })
 
-  it('clicking Void shows inline confirm UI', () => {
+  it('clicking Void icon shows inline confirm UI', () => {
     render(
       <AttendanceList
         records={[makeRecord()]}
         childMap={childMap}
         onArchive={jest.fn()}
-        onEdit={jest.fn()}
+        onUpdate={jest.fn()}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /^void$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /void record/i }))
     expect(screen.getByRole('button', { name: /confirm void/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^void$/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /cancel void/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /void record/i })).not.toBeInTheDocument()
   })
 
   it('clicking Confirm void calls onArchive with the record id', () => {
@@ -69,10 +69,10 @@ describe('AttendanceList — void confirmation (Phase 2)', () => {
         records={[makeRecord({ id: 'rec_abc' })]}
         childMap={childMap}
         onArchive={onArchive}
-        onEdit={jest.fn()}
+        onUpdate={jest.fn()}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /^void$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /void record/i }))
     fireEvent.click(screen.getByRole('button', { name: /confirm void/i }))
     expect(onArchive).toHaveBeenCalledWith('rec_abc')
   })
@@ -84,48 +84,75 @@ describe('AttendanceList — void confirmation (Phase 2)', () => {
         records={[makeRecord()]}
         childMap={childMap}
         onArchive={onArchive}
-        onEdit={jest.fn()}
+        onUpdate={jest.fn()}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /^void$/i }))
-    fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
+    fireEvent.click(screen.getByRole('button', { name: /void record/i }))
+    fireEvent.click(screen.getByRole('button', { name: /cancel void/i }))
     expect(onArchive).not.toHaveBeenCalled()
     // Should return to normal state
-    expect(screen.getByRole('button', { name: /^void$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /void record/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /confirm void/i })).not.toBeInTheDocument()
   })
 })
 
-describe('AttendanceList — card click opens edit (Phase 3)', () => {
-  it('clicking a record row calls onEdit with that record', () => {
-    const onEdit = jest.fn()
-    const record = makeRecord({ id: 'rec_xyz', status: 'absent', date: '2026-05-15' })
+describe('AttendanceList — inline edit expansion', () => {
+  it('shows Edit (Pencil) icon button in read state', () => {
     render(
       <AttendanceList
-        records={[record]}
+        records={[makeRecord()]}
         childMap={childMap}
         onArchive={jest.fn()}
-        onEdit={onEdit}
+        onUpdate={jest.fn()}
       />
     )
-    // Click the list item itself (not a button)
-    const listItem = screen.getByRole('listitem')
-    fireEvent.click(listItem)
-    expect(onEdit).toHaveBeenCalledWith(record)
+    expect(screen.getByRole('button', { name: /edit record/i })).toBeInTheDocument()
   })
 
-  it('clicking the Edit button still calls onEdit', () => {
-    const onEdit = jest.fn()
-    const record = makeRecord()
+  it('clicking Edit icon expands inline form', () => {
     render(
       <AttendanceList
-        records={[record]}
+        records={[makeRecord()]}
         childMap={childMap}
         onArchive={jest.fn()}
-        onEdit={onEdit}
+        onUpdate={jest.fn()}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /^edit$/i }))
-    expect(onEdit).toHaveBeenCalledWith(record)
+    fireEvent.click(screen.getByRole('button', { name: /edit record/i }))
+    expect(screen.getByRole('button', { name: /save record/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /cancel edit/i })).toBeInTheDocument()
+  })
+
+  it('Cancel edit collapses form without calling onUpdate', () => {
+    const onUpdate = jest.fn()
+    render(
+      <AttendanceList
+        records={[makeRecord()]}
+        childMap={childMap}
+        onArchive={jest.fn()}
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit record/i }))
+    fireEvent.click(screen.getByRole('button', { name: /cancel edit/i }))
+    expect(onUpdate).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: /edit record/i })).toBeInTheDocument()
+  })
+
+  it('Save calls onUpdate with record id and patch', async () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <AttendanceList
+        records={[makeRecord({ id: 'rec_xyz', status: 'present', date: '2026-05-12' })]}
+        childMap={childMap}
+        onArchive={jest.fn()}
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit record/i }))
+    fireEvent.click(screen.getByRole('button', { name: /save record/i }))
+    await waitFor(() => {
+      expect(onUpdate).toHaveBeenCalledWith('rec_xyz', expect.objectContaining({ status: 'present', date: '2026-05-12' }))
+    })
   })
 })

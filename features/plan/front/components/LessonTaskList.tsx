@@ -10,11 +10,13 @@ interface LessonTaskListProps {
   children: StudentProfile[]
   subjects: SubjectCourse[]
   error?: string | null
+  onUpdate?: (id: string, patch: Partial<LessonTask>) => Promise<void>
+  /** Legacy: passed through to LessonCard when onUpdate is not available */
   onEdit?: (lesson: LessonTask) => void
   onDelete?: (id: string) => void
 }
 
-export function LessonTaskList({ lessons, children, subjects, error, onEdit, onDelete }: LessonTaskListProps) {
+export function LessonTaskList({ lessons, children, subjects, error, onUpdate, onEdit, onDelete }: LessonTaskListProps) {
   if (error) {
     return <p className="text-sm text-red-600 py-4">Could not load lessons. Please refresh.</p>
   }
@@ -39,6 +41,9 @@ export function LessonTaskList({ lessons, children, subjects, error, onEdit, onD
           lesson={lesson}
           childName={resolveChildName(lesson.childId)}
           subjectName={resolveSubjectName(lesson.subjectId)}
+          children={children}
+          subjects={subjects}
+          onUpdate={onUpdate}
           onEdit={onEdit}
           onDelete={onDelete}
         />

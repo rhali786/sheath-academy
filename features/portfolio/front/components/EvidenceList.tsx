@@ -1,7 +1,11 @@
 'use client'
 
-import type { EvidenceItem } from '@/features/portfolio/types'
+import type { EvidenceItem, CreateEvidenceItemInput } from '@/features/portfolio/types'
 import { EvidenceListItem } from './EvidenceListItem'
+
+interface ChildOption { id: string; name: string }
+interface SubjectOption { id: string; name: string; childId: string }
+interface LessonOption { id: string; title: string; dueDate: string; childId: string; subjectId: string }
 
 interface Props {
   items: EvidenceItem[]
@@ -10,10 +14,19 @@ interface Props {
   loading: boolean
   error: string | null
   hasActiveFilters?: boolean
+  /** When provided, enables inline edit expansion on each card */
+  onUpdate?: (id: string, patch: Partial<CreateEvidenceItemInput>) => Promise<void>
+  /** When provided, enables inline delete confirmation on each card */
+  onDelete?: (id: string) => Promise<void>
+  /** Legacy: called when card is clicked (top-form pattern) */
   onEdit?: (item: EvidenceItem) => void
+  /** Options for the edit form dropdowns */
+  childOptions?: ChildOption[]
+  subjects?: SubjectOption[]
+  lessons?: LessonOption[]
 }
 
-export function EvidenceList({ items, childMap, subjectMap, loading, error, hasActiveFilters, onEdit }: Props) {
+export function EvidenceList({ items, childMap, subjectMap, loading, error, hasActiveFilters, onUpdate, onDelete, onEdit, childOptions, subjects, lessons }: Props) {
   if (loading) {
     return <p className="text-gray-500 text-sm py-4">Loading portfolio...</p>
   }
@@ -44,7 +57,12 @@ export function EvidenceList({ items, childMap, subjectMap, loading, error, hasA
           item={item}
           childName={childMap[item.childId] ?? item.childId}
           subjectName={subjectMap[item.subjectId] ?? item.subjectId}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
           onEdit={onEdit}
+          childOptions={childOptions}
+          subjects={subjects}
+          lessons={lessons}
         />
       ))}
       {items.length === 50 && (

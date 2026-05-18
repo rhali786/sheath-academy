@@ -21,28 +21,6 @@ function todayLocal(): string {
   return `${y}-${m}-${dd}`
 }
 
-interface EditIdWatcherProps {
-  lessons: LessonTask[]
-  onEdit: (lesson: LessonTask) => void
-}
-
-function EditIdWatcher({ lessons, onEdit }: EditIdWatcherProps) {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-
-  useEffect(() => {
-    const editId = searchParams.get('editId')
-    if (!editId || lessons.length === 0) return
-    const lesson = lessons.find(l => l.id === editId)
-    if (lesson) {
-      onEdit(lesson)
-      router.replace('/lessons', { scroll: false })
-    }
-  }, [searchParams, lessons])
-
-  return null
-}
-
 type DateSort = 'asc' | 'desc'
 
 export function LessonsPage() {
@@ -51,7 +29,6 @@ export function LessonsPage() {
   const [children, setChildren] = useState<StudentProfile[]>([])
   const [subjects, setSubjects] = useState<SubjectCourse[]>([])
   const [lessons, setLessons] = useState<LessonTask[]>([])
-  const [editingLesson, setEditingLesson] = useState<LessonTask | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -114,12 +91,12 @@ export function LessonsPage() {
 
   async function handleSubmit(data: LessonFormData) {
     const householdId = householdProfile?.id ?? ''
-    if (editingLesson) {
-      await plannerApi.updateLesson(editingLesson.id, { ...data, householdId })
-      setEditingLesson(undefined)
-    } else {
-      await plannerApi.createLesson({ ...data, householdId })
-    }
+    await plannerApi.createLesson({ ...data, householdId })
+    await fetchLessons()
+  }
+
+  async function handleUpdate(id: string, patch: Partial<LessonTask>) {
+    await plannerApi.updateLesson(id, patch)
     await fetchLessons()
   }
 
@@ -130,22 +107,13 @@ export function LessonsPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-8">
-      <Suspense>
-        <EditIdWatcher lessons={lessons} onEdit={setEditingLesson} />
-      </Suspense>
-
       <div>
-        <h2 className="text-lg font-bold text-slate-900 mb-4">
-          {editingLesson ? 'Edit lesson' : 'Add lesson'}
-        </h2>
+        <h2 className="text-lg font-bold text-slate-900 mb-4">Add lesson</h2>
         <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
           <LessonTaskForm
-            key={editingLesson?.id ?? 'new'}
             children={children}
             subjects={subjects}
-            editingLesson={editingLesson}
             onSubmit={handleSubmit}
-            onCancel={() => setEditingLesson(undefined)}
           />
         </div>
       </div>
@@ -206,7 +174,7 @@ export function LessonsPage() {
             children={children}
             subjects={subjects}
             error={error}
-            onEdit={setEditingLesson}
+            onUpdate={handleUpdate}
             onDelete={handleDelete}
           />
         )}

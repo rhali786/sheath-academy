@@ -146,18 +146,17 @@ describe('LessonsPage', () => {
     })
   })
 
-  it('pre-populates the form when ?editId is in the URL', async () => {
+  it('always shows the Add lesson form heading (inline edit is per-card, not top form)', async () => {
     const editLesson = makeLesson({ id: 'edit_001', title: 'Lesson To Edit' })
     mockGetLessons.mockResolvedValue([editLesson])
-    mockSearchParams = new URLSearchParams('editId=edit_001')
 
     render(<LessonsPage />)
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /edit lesson/i })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /add lesson/i })).toBeInTheDocument()
     })
-
-    expect(mockReplace).toHaveBeenCalledWith('/lessons', { scroll: false })
+    // Top form is always "Add lesson" — edit is inline per card
+    expect(screen.queryByRole('heading', { name: /edit lesson/i })).not.toBeInTheDocument()
   })
 
   it('sets child filter from ?childId query param after children load', async () => {

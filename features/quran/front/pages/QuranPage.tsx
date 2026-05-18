@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Pencil, X, Check } from 'lucide-react'
+import { Pencil, Trash2, X, Check } from 'lucide-react'
 import { quranApi } from '@/features/quran/front/services/api'
 import { childrenApi } from '@/features/children/front/services/api'
 import type { QuranSession } from '@/features/lib/types'
@@ -39,6 +39,8 @@ export default function QuranPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<EditState | null>(null)
   const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [filterChildId, setFilterChildId] = useState<string>('')
   const [filterType, setFilterType] = useState<string>('')
   const [dateSort, setDateSort] = useState<DateSort>('desc')
@@ -75,6 +77,7 @@ export default function QuranPage() {
   }, [sessions, filterChildId, filterType, dateSort])
 
   function startEdit(session: QuranSession) {
+    setConfirmDeleteId(null)
     setEditingId(session.id)
     setEditForm(toEditState(session))
   }
@@ -103,6 +106,29 @@ export default function QuranPage() {
       // keep form open on error
     } finally {
       setSaving(false)
+    }
+  }
+
+  function startConfirmDelete(id: string) {
+    setEditingId(null)
+    setEditForm(null)
+    setConfirmDeleteId(id)
+  }
+
+  function cancelDelete() {
+    setConfirmDeleteId(null)
+  }
+
+  async function confirmDelete(id: string) {
+    setDeletingId(id)
+    try {
+      await quranApi.deleteSession(id)
+      setSessions(prev => prev.filter(s => s.id !== id))
+      setConfirmDeleteId(null)
+    } catch {
+      // keep confirmation open on error
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -153,6 +179,7 @@ export default function QuranPage() {
           {displayedSessions.map(s => (
             <div key={s.id} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
               {editingId === s.id && editForm ? (
+                /* Edit expansion */
                 <div className="p-4 space-y-3">
                   <div className="flex gap-3 flex-wrap">
                     <div className="flex-1 min-w-32">
@@ -218,6 +245,7 @@ export default function QuranPage() {
                   <div className="flex gap-2 justify-end">
                     <button
                       onClick={cancelEdit}
+                      aria-label="Cancel edit"
                       className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 border border-slate-200 rounded-lg transition-colors"
                     >
                       <X className="w-3 h-3" /> Cancel
@@ -225,13 +253,40 @@ export default function QuranPage() {
                     <button
                       onClick={() => saveEdit(s.id)}
                       disabled={saving}
+                      aria-label="Save session"
                       className="flex items-center gap-1 text-xs text-white bg-forest-900 hover:bg-forest-800 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
                     >
                       <Check className="w-3 h-3" /> {saving ? 'Saving…' : 'Save'}
                     </button>
                   </div>
                 </div>
+              ) : confirmDeleteId === s.id ? (
+                /* Delete confirmation panel */
+                <div className="p-4 bg-red-50 border-t border-red-100">
+                  <p className="text-sm text-red-700 font-medium mb-3">Delete this session?</p>
+                  <p className="text-xs text-red-600 mb-3">
+                    {s.surah} · {s.type} · {s.date}
+                  </p>
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={cancelDelete}
+                      aria-label="Cancel delete"
+                      className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 border border-slate-200 rounded-lg bg-white transition-colors"
+                    >
+                      <X className="w-3 h-3" /> Cancel
+                    </button>
+                    <button
+                      onClick={() => confirmDelete(s.id)}
+                      disabled={deletingId === s.id}
+                      aria-label="Confirm delete session"
+                      className="flex items-center gap-1 text-xs text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3 h-3" /> {deletingId === s.id ? 'Deleting…' : 'Delete'}
+                    </button>
+                  </div>
+                </div>
               ) : (
+                /* Read state */
                 <div className="flex items-center justify-between gap-4 p-4">
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-900 text-sm">{s.surah}</p>
@@ -246,6 +301,13 @@ export default function QuranPage() {
                       className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                     >
                       <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => startConfirmDelete(s.id)}
+                      aria-label="Delete session"
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>

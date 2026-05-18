@@ -155,7 +155,7 @@ describe('LessonTaskList', () => {
     expect(screen.getByText(/A{80}…/)).toBeInTheDocument()
   })
 
-  it('calls onEdit when Edit button clicked', () => {
+  it('calls onEdit when Pencil icon button clicked (legacy mode)', () => {
     const onEdit = jest.fn()
     render(
       <LessonTaskList
@@ -165,11 +165,11 @@ describe('LessonTaskList', () => {
         onEdit={onEdit}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /edit/i }))
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
     expect(onEdit).toHaveBeenCalledWith(baseLesson)
   })
 
-  it('Delete button shows confirmation before calling onDelete', () => {
+  it('Delete button (Trash icon) shows inline confirmation before calling onDelete', () => {
     const onDelete = jest.fn()
     render(
       <LessonTaskList
@@ -179,10 +179,10 @@ describe('LessonTaskList', () => {
         onDelete={onDelete}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /delete/i }))
+    fireEvent.click(screen.getByRole('button', { name: /delete lesson/i }))
     expect(onDelete).not.toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: /yes/i })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /yes/i }))
+    expect(screen.getByRole('button', { name: /confirm delete lesson/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /confirm delete lesson/i }))
     expect(onDelete).toHaveBeenCalledWith('lesson_001')
   })
 
@@ -196,9 +196,9 @@ describe('LessonTaskList', () => {
         onDelete={onDelete}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /delete/i }))
-    fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
-    expect(screen.queryByRole('button', { name: /yes/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: /cancel delete/i }))
+    expect(screen.queryByRole('button', { name: /confirm delete/i })).not.toBeInTheDocument()
     expect(onDelete).not.toHaveBeenCalled()
   })
 })

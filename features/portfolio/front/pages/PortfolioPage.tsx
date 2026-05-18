@@ -27,7 +27,6 @@ export function PortfolioPage() {
   const [filterEndDate, setFilterEndDate] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [editingItem, setEditingItem] = useState<EvidenceItem | null>(null)
 
   // Fetch children when household is ready
   useEffect(() => {
@@ -103,24 +102,19 @@ export function PortfolioPage() {
     setItems(Array.isArray(res.data) ? res.data : [])
   }
 
-  async function handleSave(input: CreateEvidenceItemInput) {
-    if (editingItem) {
-      await portfolioApi.updateEvidence(editingItem.id, input)
-      setEditingItem(null)
-    } else {
-      await portfolioApi.createEvidence(input)
-    }
+  async function handleCreate(input: CreateEvidenceItemInput) {
+    await portfolioApi.createEvidence(input)
     await refreshItems()
   }
 
-  function handleEdit(item: EvidenceItem) {
-    setEditingItem(item)
-    // Scroll to top of form
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+  async function handleUpdate(id: string, patch: Partial<CreateEvidenceItemInput>) {
+    await portfolioApi.updateEvidence(id, patch)
+    await refreshItems()
   }
 
-  function handleCancelEdit() {
-    setEditingItem(null)
+  async function handleDelete(id: string) {
+    await portfolioApi.deleteEvidence(id)
+    await refreshItems()
   }
 
   const children = studentProfiles.map(p => ({ id: p.id, name: p.name }))
@@ -135,15 +129,13 @@ export function PortfolioPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-4">
       <h2 className="text-xl font-bold text-gray-900">Portfolio</h2>
 
+      {/* Top form — always "Add evidence" for new items only */}
       <EvidenceForm
-        key={editingItem?.id ?? 'new'}
         children={children}
         subjects={subjectOptions}
         lessons={lessonOptions}
-        onSave={handleSave}
+        onSave={handleCreate}
         initialChildId={filterChildId}
-        editingItem={editingItem}
-        onCancelEdit={handleCancelEdit}
       />
 
       <EvidenceFilters
@@ -168,7 +160,11 @@ export function PortfolioPage() {
         loading={loading}
         error={error}
         hasActiveFilters={!!(filterSubjectId || filterType || filterStartDate || filterEndDate)}
-        onEdit={handleEdit}
+        onUpdate={handleUpdate}
+        onDelete={handleDelete}
+        childOptions={children}
+        subjects={subjectOptions}
+        lessons={lessonOptions}
       />
     </div>
   )

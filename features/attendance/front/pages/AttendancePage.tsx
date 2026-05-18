@@ -37,7 +37,6 @@ export function AttendancePage() {
   const [minutes, setMinutes] = useState<string>('')
   const [records, setRecords] = useState<AttendanceRecord[]>([])
   const [summary, setSummary] = useState<SummaryType>(DEFAULT_SUMMARY)
-  const [editingRecord, setEditingRecord] = useState<AttendanceRecord | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState<AttendanceStatus | ''>('')
@@ -102,13 +101,7 @@ export function AttendancePage() {
       minutes: minutes !== '' ? Number(minutes) : undefined,
     }
 
-    if (editingRecord) {
-      await attendanceApi.updateRecord(editingRecord.id, { status, notes: data.notes, hours: data.hours, minutes: data.minutes, date })
-      setEditingRecord(null)
-    } else {
-      await attendanceApi.createRecord(data)
-    }
-
+    await attendanceApi.createRecord(data)
     setNotes('')
     setHours('')
     setMinutes('')
@@ -118,6 +111,12 @@ export function AttendancePage() {
 
   async function handleArchive(id: string) {
     await attendanceApi.archiveRecord(id)
+    await fetchRecords()
+    await fetchSummary(selectedChildId)
+  }
+
+  async function handleUpdate(id: string, patch: Partial<AttendanceRecord>) {
+    await attendanceApi.updateRecord(id, patch)
     await fetchRecords()
     await fetchSummary(selectedChildId)
   }
@@ -146,15 +145,6 @@ export function AttendancePage() {
     })
   }, [records, filterStatus, filterChildId, dateSort])
 
-  function handleEdit(record: AttendanceRecord) {
-    setEditingRecord(record)
-    setDate(record.date)
-    setNotes(record.notes ?? '')
-    setHours(record.hours !== undefined ? String(record.hours) : '')
-    setMinutes(record.minutes !== undefined ? String(record.minutes) : '')
-    setMode('individual')
-  }
-
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-8">
       <div className="flex items-center justify-between">
@@ -177,6 +167,7 @@ export function AttendancePage() {
         </div>
       </div>
 
+      {/* Quick mark / batch form */}
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
         <div className="flex flex-wrap gap-4">
           <div className="flex-1 min-w-40">
@@ -216,9 +207,7 @@ export function AttendancePage() {
         ) : (
           <>
             <div className="flex flex-wrap gap-2">
-              <label className="block text-sm font-medium text-slate-700 w-full">
-                {editingRecord ? 'Update status' : 'Mark as'}
-              </label>
+              <label className="block text-sm font-medium text-slate-700 w-full">Mark as</label>
               <button
                 onClick={() => markAttendance('present')}
                 className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
@@ -267,15 +256,6 @@ export function AttendancePage() {
                 />
               </div>
             </div>
-
-            {editingRecord && (
-              <button
-                onClick={() => { setEditingRecord(null); setNotes(''); setHours(''); setMinutes(''); setDate(todayLocal()) }}
-                className="text-sm text-slate-500 hover:text-slate-700"
-              >
-                Cancel edit
-              </button>
-            )}
           </>
         )}
       </div>
@@ -328,7 +308,7 @@ export function AttendancePage() {
             records={filteredRecords}
             childMap={Object.fromEntries(children.map(c => [c.id, c.name]))}
             onArchive={handleArchive}
-            onEdit={handleEdit}
+            onUpdate={handleUpdate}
           />
         )}
       </div>
