@@ -29,6 +29,41 @@ If the code path cannot be fully traced, say exactly what was traced and what re
 
 ---
 
+## UI Audit Addition
+
+For each affected UI section, report:
+
+1. The existing visual and interaction pattern.
+2. The closest approved pattern in `docs/ui-style-guide.md`.
+3. The icons currently used.
+4. The icons that should be used.
+5. The confirmation pattern currently used.
+6. Whether the implementation should reuse, extend, or replace the pattern.
+7. Whether the page uses the approved app shell and page-width pattern.
+8. Whether charts follow the approved Nivo rules.
+9. The tests needed to prove the approved pattern was followed.
+
+Do not write a UI implementation plan from memory.
+
+Before planning UI changes, inspect the current components and the style guide.
+
+If the implementation changes editable record cards, the plan must explicitly state whether the card will:
+
+- Expand inline.
+- Open a modal.
+- Navigate to another page.
+- Reuse a top-level form.
+
+If the answer is not inline expansion, explain why the approved pattern does not apply.
+
+For destructive actions, the plan must specify the confirmation pattern and prove that `window.confirm` is not used.
+
+For icon-only actions, the plan must specify accessible labels.
+
+For Nivo charts, the plan must specify the data contract, empty state, legend behavior, color source, and browser/manual verification because Jest mocks Nivo.
+
+---
+
 ## Planning Mode Selection
 
 Before writing the plan, classify the work into one mode. Use the lightest mode that still protects correctness.
@@ -313,23 +348,37 @@ For each affected UI section, list:
 
 State which feature owns the data and what will happen if current code violates that ownership.
 
-### 5. Acceptance Criteria
+### 5. UI Pattern Audit
+
+For every affected UI section, list:
+
+- Existing visual and interaction pattern.
+- Closest approved pattern in `docs/ui-style-guide.md`.
+- Current icons and required icons.
+- Current confirmation pattern and required confirmation pattern.
+- Whether the pattern will be reused, extended, or replaced.
+- Shell/page-width compliance.
+- Nivo compliance for charts.
+- Accessibility requirements, including icon-only labels.
+- Tests proving the approved pattern was followed.
+
+### 6. Acceptance Criteria
 
 List exact observable outcomes.
 
-### 6. Data Model / Contract Changes
+### 7. Data Model / Contract Changes
 
 Include types, fields, enums, validation, and backward-compatibility concerns.
 
-### 7. API / Store / Service Plan
+### 8. API / Store / Service Plan
 
 Describe route changes, service changes, store/repository changes, and response shapes.
 
-### 8. UI Plan
+### 9. UI Plan
 
 Describe components, screens, states, empty states, mobile behavior, and accessibility requirements.
 
-### 9. Testing Plan
+### 10. Testing Plan
 
 List failing tests first:
 
@@ -338,23 +387,23 @@ List failing tests first:
 - Integration tests.
 - Playwright tests.
 
-### 10. Build Phases
+### 11. Build Phases
 
 Break work into safe, ordered phases.
 
-### 11. Out of Scope
+### 12. Out of Scope
 
 Name what will not be built.
 
-### 12. Manual QA Plan
+### 13. Manual QA Plan
 
 List click-by-click verification steps.
 
-### 13. Branch and Commit Plan
+### 14. Branch and Commit Plan
 
 Name the branch and planned commit sequence.
 
-### 14. Risks and Rollback
+### 15. Risks and Rollback
 
 List main risks, mitigations, and how to back out if needed.
 
@@ -702,6 +751,12 @@ Before finalizing a plan, verify:
 - The affected code path was audited.
 - The source of truth is identified.
 - Ownership violations are handled explicitly.
+- The UI pattern audit is included for every affected UI section.
+- The closest approved pattern in `docs/ui-style-guide.md` is identified for UI changes.
+- Editable record-card plans state whether they use inline expansion, modal, navigation, or top-level form reuse.
+- Destructive-action plans specify the confirmation pattern and confirm `window.confirm` is not used.
+- Icon-only actions have accessible labels specified.
+- Nivo chart plans specify data contract, empty state, legend behavior, color source, and browser/manual verification.
 - Acceptance criteria are observable.
 - Failing tests are listed first.
 - Unit/API/integration/Playwright responsibilities are clear.
