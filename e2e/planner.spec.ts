@@ -13,6 +13,17 @@ test.describe('Schedule page — layout (Wave 12)', () => {
   })
 })
 
+test.describe('Resources page — lesson generation (Wave 13)', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginDev(page)
+  })
+
+  test('Resources page is reachable', async ({ page }) => {
+    await page.goto('/resources')
+    await expect(page.getByTestId('resources-page')).toBeVisible()
+  })
+})
+
 test.describe('Planner page — layout (Wave A1)', () => {
   test.beforeEach(async ({ page }) => {
     await loginDev(page)
