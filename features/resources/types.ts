@@ -75,3 +75,45 @@ export interface GeneratedLesson {
   order: number
   description?: string
 }
+
+// ── Wave 14 — Community intelligence ─────────────────────────────────────────
+
+export type CompatibilitySignal =
+  | 'generally-compatible'
+  | 'needsContext'
+  | 'worldviewConcern'
+  | 'sensitivContent'
+  | 'stronglyBeneficial'
+  | 'notReviewed'
+
+export type FeedbackPrivacyLevel = 'anonymous' | 'named' | 'private' | 'shareForReview'
+
+export type FeedbackStatus = 'pending_review' | 'verified' | 'rejected'
+
+export interface ResourceFeedback {
+  id: string
+  resourceId: string
+  parentId: string
+  displayParentId?: string   // undefined when privacyLevel is 'anonymous'
+  compatibility: CompatibilitySignal
+  rating?: number            // 1–5
+  difficulty?: string
+  actualTimeMinutes?: number
+  islamicNote?: string
+  worksIndependently?: boolean
+  worksTeacherLed?: boolean
+  privacyLevel: FeedbackPrivacyLevel
+  status: FeedbackStatus
+  createdAt: string
+}
+
+export interface CommunityNote {
+  id: string
+  resourceId: string
+  feedbackId: string        // source feedback
+  difficulty?: string
+  islamicNote?: string
+  status: FeedbackStatus
+  createdAt: string
+  updatedAt: string
+}

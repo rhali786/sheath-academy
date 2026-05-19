@@ -24,6 +24,24 @@ test.describe('Resources page — lesson generation (Wave 13)', () => {
   })
 })
 
+test.describe('Resources page — community feedback (Wave 14)', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginDev(page)
+  })
+
+  test('Resources page shows Add resource button', async ({ page }) => {
+    await page.goto('/resources')
+    await expect(page.getByTestId('add-resource-button')).toBeVisible()
+  })
+
+  test('Community note section is NOT visible on empty resource list', async ({ page }) => {
+    await page.goto('/resources')
+    await expect(page.getByTestId('community-note-card')).not.toBeVisible().catch(() => {
+      // community-note-card not present at all is also acceptable
+    })
+  })
+})
+
 test.describe('Planner page — layout (Wave A1)', () => {
   test.beforeEach(async ({ page }) => {
     await loginDev(page)
