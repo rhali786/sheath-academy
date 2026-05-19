@@ -22,6 +22,14 @@ jest.mock('next/navigation', () => ({
   useRouter: jest.fn(() => ({ push: jest.fn() })),
 }))
 
+jest.mock('@/features/dashboard/front/components/SchoolYearProgressCard', () => ({
+  SchoolYearProgressCard: () => <div data-testid="school-year-progress-card" />,
+}))
+
+jest.mock('@/features/schedule/front/components/ScheduleNowNextCard', () => ({
+  ScheduleNowNextCard: () => <div data-testid="schedule-now-next-card" />,
+}))
+
 jest.mock('@/features/alerts/front/services/api', () => ({
   alertsApi: {
     getAlerts: jest.fn(() => Promise.resolve({ data: [] })),
@@ -135,6 +143,16 @@ describe('Dashboard Page Integration', () => {
     })
 
     expect(screen.getByText(/Today's State/i)).toBeInTheDocument()
+  })
+
+  test('ScheduleNowNextCard is rendered on the Today tab', async () => {
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading dashboard/i)).not.toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('schedule-now-next-card')).toBeInTheDocument()
   })
 
   test('DashboardProvider does not auto-select first child on load', async () => {

@@ -1,6 +1,18 @@
 import { test, expect } from '@playwright/test'
 import { loginDev } from './helpers/auth'
 
+test.describe('Schedule page — layout (Wave 12)', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginDev(page)
+  })
+
+  test('Schedule page renders and Pause Day button is present', async ({ page }) => {
+    await page.goto('/plan/schedule')
+    await expect(page.getByTestId('schedule-page')).toBeVisible()
+    await expect(page.getByRole('button', { name: /pause day/i })).toBeVisible()
+  })
+})
+
 test.describe('Planner page — layout (Wave A1)', () => {
   test.beforeEach(async ({ page }) => {
     await loginDev(page)

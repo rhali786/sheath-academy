@@ -1,14 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { TodayState } from '../components/TodayState'
+import { TodayStatusSummary } from '../components/TodayStatusSummary'
+import { SchoolYearProgressCard } from '../components/SchoolYearProgressCard'
+import { IslamicDateDisplay } from '../components/IslamicDateDisplay'
 import { DoToday } from '../components/DoToday'
 import { NeedsAttention } from '../components/NeedsAttention'
 import { WeeklyActivity } from '../components/WeeklyActivity'
 import { SubjectActivity } from '../components/SubjectActivity'
 import { QuranStreak } from '../components/QuranStreak'
 import { RecordsProof } from '../components/RecordsProof'
+import { IslamicCalendarCard } from '@/features/islamic-calendar/front/components/IslamicCalendarCard'
+import { getIslamicCalendarCountdowns } from '@/features/islamic-calendar/front/lib/countdowns'
+import { useIslamicReminderSettings } from '@/features/islamic-calendar/front/lib/useIslamicReminderSettings'
+import { ScheduleNowNextCard } from '@/features/schedule/front/components/ScheduleNowNextCard'
+import { buildDailySchedule } from '@/features/schedule/server/service'
 import { useContext_Dashboard } from '../context'
 import { useHousehold } from '@/features/household/front/context'
 import { HouseholdSetup } from '@/features/household/front/components/HouseholdSetup'
@@ -19,7 +27,17 @@ import { plannerApi } from '@/features/plan/front/services/api'
 import { subjectsApi } from '@/features/subjects/front/services/api'
 import type { LessonTask } from '@/features/plan/types'
 import type { SubjectCourse } from '@/features/subjects/types'
-import type { StudentProfile } from '@/features/lib/types'
+import type { DaySchedule } from '@/features/schedule/types'
+
+function getTodayStr(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
+function getCurrentTime(): string {
+  const now = new Date()
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+}
 
 export default function Dashboard() {
   const { selectedTab } = useNavigation()
@@ -30,32 +48,54 @@ export default function Dashboard() {
 
   const { needsSetup, loading: householdLoading } = useHousehold()
 
-  const [weeklyLessons, setWeeklyLessons] = useState<LessonTask[]>([])
+  const [allLessons, setAllLessons] = useState<LessonTask[]>([])
   const [subjects, setSubjects] = useState<SubjectCourse[]>([])
+
+  // Compute Islamic calendar countdowns client-side (pure calculation, no API needed)
+  const islamicCountdowns = useMemo(() => getIslamicCalendarCountdowns(getTodayStr()), [])
+  const topCountdowns = islamicCountdowns.slice(0, 3)
+
+  // Reminder settings persisted in localStorage
+  const { enabled: reminderEnabled } = useIslamicReminderSettings()
+
+  // Completed lessons this week — for WeeklyActivity and SubjectActivity
+  const weeklyLessons = useMemo(() => {
+    const today = new Date()
+    const sunday = new Date(today)
+    sunday.setDate(today.getDate() - today.getDay())
+    sunday.setHours(0, 0, 0, 0)
+    const saturday = new Date(sunday)
+    saturday.setDate(sunday.getDate() + 6)
+    saturday.setHours(23, 59, 59, 999)
+    return allLessons.filter(l => {
+      if (l.status !== 'completed') return false
+      const updated = new Date(l.updatedAt)
+      return updated >= sunday && updated <= saturday
+    })
+  }, [allLessons])
+
+  // Today's schedule — for ScheduleNowNextCard
+  const todaySchedule = useMemo((): DaySchedule => {
+    const todayStr = getTodayStr()
+    const todayLessons = allLessons
+      .filter(l => l.dueDate === todayStr)
+      .sort((a, b) => a.order - b.order)
+    return buildDailySchedule(todayLessons, {
+      startTime: '08:30',
+      transitionMinutes: 10,
+      defaultDurationMinutes: 30,
+    })
+  }, [allLessons])
 
   // Fetch subjects once
   useEffect(() => {
     subjectsApi.getSubjects().then(res => setSubjects(res.data)).catch(() => {})
   }, [])
 
-  // Fetch all lessons and filter to current week completed
+  // Fetch all lessons; derive weeklyLessons and todaySchedule via useMemo
   useEffect(() => {
     plannerApi.getLessons(undefined, selectedChildId ? [selectedChildId] : undefined)
-      .then(lessons => {
-        const today = new Date()
-        const sunday = new Date(today)
-        sunday.setDate(today.getDate() - today.getDay())
-        sunday.setHours(0, 0, 0, 0)
-        const saturday = new Date(sunday)
-        saturday.setDate(sunday.getDate() + 6)
-        saturday.setHours(23, 59, 59, 999)
-
-        setWeeklyLessons(lessons.filter(l => {
-          if (l.status !== 'completed') return false
-          const updated = new Date(l.updatedAt)
-          return updated >= sunday && updated <= saturday
-        }))
-      })
+      .then(lessons => setAllLessons(lessons))
       .catch(() => {})
   }, [selectedChildId])
 
@@ -64,7 +104,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-center h-screen bg-slate-50">
         <div className="text-center">
           <div className="w-10 h-10 rounded-full border-4 border-forest-100 border-t-forest-900 animate-spin mx-auto mb-4" />
-          <p className="text-sm text-slate-400 font-medium">Loading dashboard…</p>
+          <p className="text-sm text-slate-400 font-medium">Loading dashboard...</p>
         </div>
       </div>
     )
@@ -97,18 +137,34 @@ export default function Dashboard() {
       {selectedTab === 'Today' && (
         <>
           <NextSetupStrip />
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 flex justify-end">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <IslamicDateDisplay />
             <ChildSelector />
           </div>
+
+          <TodayStatusSummary metrics={metrics} />
           <TodayState metrics={metrics} selectedChildId={selectedChildId} />
 
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <NeedsAttention alerts={alerts} />
+          </div>
+
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2">
                 <DoToday />
               </div>
-              <div>
-                <NeedsAttention alerts={alerts} />
+              <div className="space-y-6">
+                <ScheduleNowNextCard schedule={todaySchedule} currentTime={getCurrentTime()} />
+                <SchoolYearProgressCard />
+                {topCountdowns.filter(c => reminderEnabled[c.name]).map(c => (
+                  <IslamicCalendarCard
+                    key={c.id}
+                    event={c.name}
+                    daysUntil={c.daysUntil}
+                    description={c.description}
+                  />
+                ))}
               </div>
             </div>
           </div>

@@ -84,6 +84,57 @@ const loadedHousehold: HouseholdContextType = {
   refetch: jest.fn(),
 }
 
+describe('IslamicRemindersSection toggle', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockSearchParams = new URLSearchParams()
+    useHousehold.mockReturnValue(loadedHousehold)
+    localStorage.clear()
+  })
+
+  afterEach(() => {
+    localStorage.clear()
+  })
+
+  it('unchecking "Ramadan" persists the change to localStorage', async () => {
+    render(<SettingsPage />)
+    // Household tab is active by default and contains the IslamicRemindersSection
+    const checkbox = screen.getByRole('checkbox', { name: /Ramadan/ })
+    expect(checkbox).toBeChecked()
+
+    await userEvent.click(checkbox)
+
+    expect(checkbox).not.toBeChecked()
+    const stored = JSON.parse(localStorage.getItem('islamicReminderSettings') ?? '{}')
+    expect(stored['Ramadan']).toBe(false)
+  })
+})
+
+describe('Wave 9 — SettingsPage tab restructure', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockSearchParams = new URLSearchParams()
+    useHousehold.mockReturnValue(loadedHousehold)
+  })
+
+  it('tab labels include "Learners", "Courses", "Planning Defaults", "Records & Compliance", "Access & Privacy"', () => {
+    render(<SettingsPage />)
+    expect(screen.getByRole('tab', { name: 'Learners' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Courses' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Planning Defaults' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Records & Compliance' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Access & Privacy' })).toBeInTheDocument()
+  })
+
+  it('does NOT show "Children" or "Subjects" as tab labels', () => {
+    render(<SettingsPage />)
+    const tabs = screen.getAllByRole('tab')
+    const tabLabels = tabs.map(t => t.textContent)
+    expect(tabLabels).not.toContain('Children')
+    expect(tabLabels).not.toContain('Subjects')
+  })
+})
+
 describe('parseSettingsTab', () => {
   it('defaults invalid or missing tab to household', () => {
     expect(parseSettingsTab(null)).toBe('household')
