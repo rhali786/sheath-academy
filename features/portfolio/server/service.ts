@@ -128,7 +128,7 @@ export function listEvidenceByLessonTask(lessonTaskId: string): EvidenceItem[] {
 // Evidence items are historical records preserved for reporting; no isActive field.
 export function archiveByChildId(_childId: string): void {}
 
-export function resetEvidenceStore(): void {
-  evidenceStore.reset(SEED_EVIDENCE)
+export function resetEvidenceStore(seed?: EvidenceItem[]): void {
+  evidenceStore.reset(seed ?? SEED_EVIDENCE)
   resetIdCounter()
 }

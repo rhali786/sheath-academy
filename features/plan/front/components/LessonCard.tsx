@@ -62,6 +62,9 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     day: 'numeric',
   })
 
+  const today = todayLocal()
+  const isOverdue = lesson.status === 'not_started' && lesson.dueDate < today
+
   const descriptionExcerpt = lesson.description
     ? lesson.description.length > 80
       ? lesson.description.slice(0, 80) + '…'
@@ -268,6 +271,11 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          {isOverdue && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">
+              Overdue
+            </span>
+          )}
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE_CLASS[lesson.status]}`}>
             {STATUS_LABELS[lesson.status]}
           </span>

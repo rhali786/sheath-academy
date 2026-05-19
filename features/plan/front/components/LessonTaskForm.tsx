@@ -1,9 +1,20 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
+import type { LessonTask, LessonTaskStatus, LessonDuration } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
+
+const GENERAL_LESSON_TYPES = ['Lesson', 'Assignment', 'Reading', 'Practice', 'Review', 'Project', 'Assessment', 'Other']
+const QURAN_LESSON_TYPES   = ['Memorisation', 'Revision', 'Recitation', 'Tajweed', 'Listening']
+
+const DURATION_OPTIONS: { value: LessonDuration; label: string }[] = [
+  { value: '15min', label: '15 minutes' },
+  { value: '30min', label: '30 minutes' },
+  { value: '45min', label: '45 minutes' },
+  { value: '1hr',   label: '1 hour' },
+  { value: 'custom', label: 'Custom' },
+]
 
 function todayLocal(): string {
   const d = new Date()
@@ -22,6 +33,8 @@ export interface LessonFormData {
   dueDate: string
   status: LessonTaskStatus
   order: number
+  estimatedDuration?: LessonDuration
+  lessonType?: string
 }
 
 interface LessonTaskFormProps {
@@ -48,6 +61,8 @@ export function LessonTaskForm({
   const [resourceLink, setResourceLink] = useState(editingLesson?.resourceLink ?? '')
   const [dueDate, setDueDate] = useState(editingLesson?.dueDate ?? todayLocal())
   const [status, setStatus] = useState<LessonTaskStatus>(editingLesson?.status ?? 'not_started')
+  const [estimatedDuration, setEstimatedDuration] = useState<LessonDuration | ''>(editingLesson?.estimatedDuration ?? '')
+  const [lessonType, setLessonType] = useState(editingLesson?.lessonType ?? '')
   const [titleError, setTitleError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -61,6 +76,8 @@ export function LessonTaskForm({
   }, [childId, prevChildId])
 
   const filteredSubjects = subjects.filter(s => s.childId === childId)
+  const selectedSubject = filteredSubjects.find(s => s.id === subjectId)
+  const lessonTypes = selectedSubject?.category === 'Quran' ? QURAN_LESSON_TYPES : GENERAL_LESSON_TYPES
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -87,6 +104,8 @@ export function LessonTaskForm({
         dueDate,
         status,
         order: editingLesson?.order ?? 0,
+        estimatedDuration: estimatedDuration || undefined,
+        lessonType: lessonType || undefined,
       })
     } finally {
       setIsSubmitting(false)
@@ -98,7 +117,7 @@ export function LessonTaskForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="childId" className="block text-sm font-medium text-slate-700 mb-1">
-            Child
+            Learner(s)
           </label>
           <select
             id="childId"
@@ -115,16 +134,16 @@ export function LessonTaskForm({
 
         <div>
           <label htmlFor="subjectId" className="block text-sm font-medium text-slate-700 mb-1">
-            Subject
+            Course/Subject
           </label>
           <select
             id="subjectId"
             value={subjectId}
-            onChange={e => setSubjectId(e.target.value)}
+            onChange={e => { setSubjectId(e.target.value); setLessonType('') }}
             disabled={!childId}
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 disabled:opacity-50"
           >
-            <option value="">Select subject</option>
+            <option value="">{!childId ? 'Choose a learner first to see active courses.' : 'Select course/subject'}</option>
             {filteredSubjects.map(s => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
@@ -150,7 +169,7 @@ export function LessonTaskForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="dueDate" className="block text-sm font-medium text-slate-700 mb-1">
-            Due date
+            Planned date
           </label>
           <input
             id="dueDate"
@@ -174,6 +193,42 @@ export function LessonTaskForm({
             <option value="not_started">Not started</option>
             <option value="completed">Completed</option>
             <option value="skipped">Skipped</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="estimatedDuration" className="block text-sm font-medium text-slate-700 mb-1">
+            Estimated duration <span className="text-slate-400 font-normal">(optional)</span>
+          </label>
+          <select
+            id="estimatedDuration"
+            value={estimatedDuration}
+            onChange={e => setEstimatedDuration(e.target.value as LessonDuration | '')}
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+          >
+            <option value="">Select duration</option>
+            {DURATION_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="lessonType" className="block text-sm font-medium text-slate-700 mb-1">
+            Lesson type <span className="text-slate-400 font-normal">(optional)</span>
+          </label>
+          <select
+            id="lessonType"
+            value={lessonType}
+            onChange={e => setLessonType(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+          >
+            <option value="">Select type</option>
+            {lessonTypes.map(t => (
+              <option key={t} value={t}>{t}</option>
+            ))}
           </select>
         </div>
       </div>

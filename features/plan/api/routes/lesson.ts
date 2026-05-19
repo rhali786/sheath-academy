@@ -49,6 +49,8 @@ export async function PUT(id: string, request: Request): Promise<NextResponse<Ap
     dueDate: body.dueDate,
     order: body.order,
     status: body.status,
+    estimatedDuration: body.estimatedDuration,
+    lessonType: body.lessonType,
   })
 
   return NextResponse.json({

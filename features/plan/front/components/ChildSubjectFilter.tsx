@@ -104,6 +104,19 @@ export function ChildSubjectFilter() {
             Clear
           </button>
 
+          {/* Active filter summary */}
+          {(selectedChildCount < children.length || selectedSubjectCount < subjects.length) && (
+            <span className="text-xs text-slate-500 ml-1">
+              {selectedChildCount < children.length
+                ? `${selectedChildCount} of ${children.length} children`
+                : 'All children'}
+              {' · '}
+              {selectedSubjectCount < subjects.length
+                ? `${selectedSubjectCount} of ${subjects.length} subjects`
+                : 'All subjects'}
+            </span>
+          )}
+
           {/* Close dropdowns when clicking outside */}
           {(showChildrenDropdown || showSubjectsDropdown) && (
             <div

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { plannerApi } from '@/features/plan/front/services/api'
 import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
+import type { StudentProfile } from '@/features/lib/types'
 
 function mondayOfWeek(today: string): string {
   const d = new Date(`${today}T00:00:00`)
@@ -22,17 +23,21 @@ const STATUS_BADGE: Record<LessonTaskStatus, { label: string; cls: string } | nu
 }
 
 interface TodayLessonCardProps {
-  childId: string
+  children: StudentProfile[]
   today: string
   /** When provided, skips the internal fetch and uses these lessons directly. */
   externalLessons?: LessonTask[]
 }
 
-export function TodayLessonCard({ childId, today, externalLessons }: TodayLessonCardProps) {
+export function TodayLessonCard({ children, today, externalLessons }: TodayLessonCardProps) {
   const [fetchedLessons, setFetchedLessons] = useState<LessonTask[]>([])
   const [isLoading, setIsLoading] = useState(externalLessons === undefined)
   const [error, setError] = useState<string | null>(null)
   const [localStatuses, setLocalStatuses] = useState<Record<string, LessonTaskStatus>>({})
+
+  const childIds = children.map(c => c.id)
+  const childIdsKey = childIds.join(',')
+  const childById = Object.fromEntries(children.map(c => [c.id, c]))
 
   const formattedToday = new Date(`${today}T00:00:00`).toLocaleDateString('en-US', {
     weekday: 'long',
@@ -50,7 +55,7 @@ export function TodayLessonCard({ childId, today, externalLessons }: TodayLesson
       setError(null)
       try {
         const week = mondayOfWeek(today)
-        const all = await plannerApi.getLessons(week, [childId])
+        const all = await plannerApi.getLessons(week, childIds)
         if (!cancelled) {
           setFetchedLessons(all.filter(l => l.dueDate === today))
         }
@@ -67,10 +72,11 @@ export function TodayLessonCard({ childId, today, externalLessons }: TodayLesson
 
     doFetch()
     return () => { cancelled = true }
-  }, [childId, today, externalLessons])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [today, externalLessons, childIdsKey])
 
   const baseLessons = externalLessons !== undefined
-    ? externalLessons.filter(l => l.dueDate === today && l.childId === childId)
+    ? externalLessons.filter(l => l.dueDate === today && childIds.includes(l.childId))
     : fetchedLessons
 
   const lessons = baseLessons.map(l =>
@@ -121,6 +127,7 @@ export function TodayLessonCard({ childId, today, externalLessons }: TodayLesson
           {lessons.map(lesson => {
             const badge = STATUS_BADGE[lesson.status]
             const isPending = lesson.status === 'not_started'
+            const childName = childById[lesson.childId]?.name
             return (
               <li
                 key={lesson.id}
@@ -128,9 +135,16 @@ export function TodayLessonCard({ childId, today, externalLessons }: TodayLesson
                   lesson.status !== 'not_started' ? 'opacity-60' : ''
                 }`}
               >
-                <span className={`text-sm ${lesson.status === 'completed' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
-                  {lesson.title}
-                </span>
+                <div className="flex items-center gap-2 min-w-0">
+                  {childName && children.length > 1 && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium flex-shrink-0">
+                      {childName}
+                    </span>
+                  )}
+                  <span className={`text-sm ${lesson.status === 'completed' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                    {lesson.title}
+                  </span>
+                </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   {badge && (
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.cls}`}>

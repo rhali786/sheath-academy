@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { TodayState } from '../components/TodayState'
 import { TodayStatusSummary } from '../components/TodayStatusSummary'
 import { SchoolYearProgressCard } from '../components/SchoolYearProgressCard'
-import { IslamicDateDisplay } from '../components/IslamicDateDisplay'
 import { DoToday } from '../components/DoToday'
 import { NeedsAttention } from '../components/NeedsAttention'
 import { WeeklyActivity } from '../components/WeeklyActivity'
@@ -137,9 +136,12 @@ export default function Dashboard() {
       {selectedTab === 'Today' && (
         <>
           <NextSetupStrip />
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <IslamicDateDisplay />
-            <ChildSelector />
+
+          {/* Sticky child selector — stays visible while scrolling */}
+          <div className="sticky top-[4.5rem] md:top-[6.875rem] z-40 bg-white border-b border-slate-100 shadow-sm">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex justify-end">
+              <ChildSelector />
+            </div>
           </div>
 
           <TodayStatusSummary metrics={metrics} />
@@ -151,12 +153,26 @@ export default function Dashboard() {
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-              <div className="lg:col-span-2">
+              {/* Left column: Do Today + Subject Activity */}
+              <div className="lg:col-span-2 space-y-6">
                 <DoToday />
+                <SubjectActivity
+                  lessons={weeklyLessons}
+                  subjects={subjects}
+                  children={studentProfiles}
+                  selectedChildId={selectedChildId}
+                />
               </div>
+              {/* Right column: Schedule → School Year → Quran Streak → Islamic countdowns */}
               <div className="space-y-6">
                 <ScheduleNowNextCard schedule={todaySchedule} currentTime={getCurrentTime()} />
                 <SchoolYearProgressCard />
+                <QuranStreak
+                  quranSessions={quranSessions}
+                  children={studentProfiles}
+                  selectedChildId={selectedChildId}
+                  onAddSession={addQuranSession}
+                />
                 {topCountdowns.filter(c => reminderEnabled[c.name]).map(c => (
                   <IslamicCalendarCard
                     key={c.id}
@@ -176,20 +192,6 @@ export default function Dashboard() {
               children={studentProfiles}
               selectedChildId={selectedChildId}
             />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <SubjectActivity
-                lessons={weeklyLessons}
-                subjects={subjects}
-                children={studentProfiles}
-                selectedChildId={selectedChildId}
-              />
-              <QuranStreak
-                quranSessions={quranSessions}
-                children={studentProfiles}
-                selectedChildId={selectedChildId}
-                onAddSession={addQuranSession}
-              />
-            </div>
           </div>
 
           <RecordsProof records={records} selectedChildId={selectedChildId} />

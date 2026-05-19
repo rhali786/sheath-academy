@@ -27,6 +27,7 @@ export function PortfolioPage() {
   const [filterEndDate, setFilterEndDate] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showForm, setShowForm] = useState(true)
 
   // Fetch children when household is ready
   useEffect(() => {
@@ -126,17 +127,32 @@ export function PortfolioPage() {
   const lessonOptions = lessons.map(l => ({ id: l.id, title: l.title, dueDate: l.dueDate, childId: l.childId, subjectId: l.subjectId }))
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-4">
-      <h2 className="text-xl font-bold text-gray-900">Portfolio</h2>
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-4">
+      <div className="flex items-center justify-between">
+        <h1 className="page-title mb-0">Growth</h1>
+        <button
+          type="button"
+          onClick={() => setShowForm(v => !v)}
+          className="px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800"
+        >
+          {showForm ? 'Cancel' : 'Add evidence'}
+        </button>
+      </div>
 
-      {/* Top form — always "Add evidence" for new items only */}
-      <EvidenceForm
-        children={children}
-        subjects={subjectOptions}
-        lessons={lessonOptions}
-        onSave={handleCreate}
-        initialChildId={filterChildId}
-      />
+      {showForm && (
+        <div>
+          <h2 className="form-section-heading">Add evidence</h2>
+          <div className="add-form-card">
+            <EvidenceForm
+              children={children}
+              subjects={subjectOptions}
+              lessons={lessonOptions}
+              onSave={handleCreate}
+              initialChildId={filterChildId}
+            />
+          </div>
+        </div>
+      )}
 
       <EvidenceFilters
         children={children}

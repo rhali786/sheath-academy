@@ -27,6 +27,21 @@ button {
   @apply transition-colors duration-200;
 }
 
+/* ── Page titles — consistent h1 across all content pages ── */
+.page-title {
+  @apply text-2xl font-bold text-slate-900 mb-2;
+}
+
+/* ── Add-form section heading (above card box) ── */
+.form-section-heading {
+  @apply text-lg font-bold text-slate-900 mb-4;
+}
+
+/* ── Add-form card box (matches "Add lesson" reference style) ── */
+.add-form-card {
+  @apply bg-white rounded-xl border border-slate-200 p-6 shadow-sm;
+}
+
 /* ── Cards — borderless Notion-style ── */
 .card {
   @apply rounded-xl bg-white p-4 shadow-sm;

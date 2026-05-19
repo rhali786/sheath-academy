@@ -44,6 +44,7 @@ export function AttendancePage() {
   const [dateSort, setDateSort] = useState<DateSort>('desc')
   const [mode, setMode] = useState<Mode>('individual')
   const [batchLoading, setBatchLoading] = useState(false)
+  const [showForm, setShowForm] = useState(true)
 
   useEffect(() => {
     childrenApi.getAllChildren()
@@ -146,9 +147,9 @@ export function AttendancePage() {
   }, [records, filterStatus, filterChildId, dateSort])
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-8">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">Attendance</h1>
+        <h1 className="page-title mb-0">Attendance</h1>
         <div className="flex gap-2">
           <button
             type="button"
@@ -160,15 +161,23 @@ export function AttendancePage() {
           <button
             type="button"
             onClick={() => setMode(m => m === 'individual' ? 'batch' : 'individual')}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-forest-900 text-white hover:bg-forest-800 transition-colors"
+            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
           >
             {mode === 'individual' ? 'Batch mode' : 'Individual mode'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowForm(v => !v)}
+            className="px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800"
+          >
+            {showForm ? 'Cancel' : 'Mark attendance'}
           </button>
         </div>
       </div>
 
       {/* Quick mark / batch form */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
+      {showForm && <h2 className="form-section-heading">Mark attendance</h2>}
+      {showForm && <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
         <div className="flex flex-wrap gap-4">
           <div className="flex-1 min-w-40">
             <label htmlFor="attendance-date" className="block text-sm font-medium text-slate-700 mb-1">Date</label>
@@ -258,7 +267,7 @@ export function AttendancePage() {
             </div>
           </>
         )}
-      </div>
+      </div>}
 
       <div>
         <h2 className="text-lg font-bold text-slate-900 mb-3">Summary</h2>

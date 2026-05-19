@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import type { SubjectCourse } from '@/features/subjects/types'
+import { formatCategory } from '@/features/subjects/front/lib/categories'
 import { subjectsApi } from '@/features/subjects/front/services/api'
 import { SubjectEditDialog, type SubjectChildOption } from './SubjectEditDialog'
 
@@ -19,10 +20,14 @@ export function SubjectsAllTable({ childrenList, refreshKey = 0, onMutate }: Sub
   const [editing, setEditing] = useState<SubjectCourse | null>(null)
   const [listVersion, setListVersion] = useState(0)
 
-  const childName = useMemo(() => {
-    const m = new Map(childrenList.map((c) => [c.id, c.name]))
-    return (id: string) => m.get(id) ?? id
+  const childMap = useMemo(() => {
+    return new Map(childrenList.map((c) => [c.id, c.name]))
   }, [childrenList])
+
+  function getLearnerNames(s: SubjectCourse): string[] {
+    const ids = s.learnerIds ?? [s.childId]
+    return ids.map(id => childMap.get(id) ?? id)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -34,7 +39,7 @@ export function SubjectsAllTable({ childrenList, refreshKey = 0, onMutate }: Sub
         if (cancelled) return
         const active = (res.data ?? []).filter((s) => s.isActive !== false)
         const sorted = [...active].sort((a, b) => {
-          const an = childName(a.childId).localeCompare(childName(b.childId))
+          const an = getLearnerNames(a)[0]?.localeCompare(getLearnerNames(b)[0] ?? '') ?? 0
           if (an !== 0) return an
           return a.name.localeCompare(b.name)
         })
@@ -49,7 +54,8 @@ export function SubjectsAllTable({ childrenList, refreshKey = 0, onMutate }: Sub
     return () => {
       cancelled = true
     }
-  }, [refreshKey, listVersion, childName])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey, listVersion, childrenList])
 
   async function handleArchive(id: string) {
     setArchivingId(id)
@@ -84,37 +90,55 @@ export function SubjectsAllTable({ childrenList, refreshKey = 0, onMutate }: Sub
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-600 uppercase tracking-wide">
-              <th className="px-4 py-3">Child</th>
-              <th className="px-4 py-3">Subject</th>
+              <th className="px-4 py-3">Learner(s)</th>
+              <th className="px-4 py-3">Course / Subject</th>
               <th className="px-4 py-3">Category</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((s) => (
-              <tr key={s.id} className="border-b border-slate-100 last:border-0">
-                <td className="px-4 py-3 text-slate-800">{childName(s.childId)}</td>
-                <td className="px-4 py-3 font-medium text-slate-900">{s.name}</td>
-                <td className="px-4 py-3 text-slate-600">{s.category}</td>
-                <td className="px-4 py-3 text-right whitespace-nowrap">
-                  <button
-                    type="button"
-                    className="text-xs font-medium text-forest-900 hover:text-forest-700 mr-3"
-                    onClick={() => setEditing(s)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    className="text-xs text-slate-500 hover:text-red-600"
-                    disabled={archivingId === s.id}
-                    onClick={() => handleArchive(s.id)}
-                  >
-                    {archivingId === s.id ? '…' : 'Archive'}
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {rows.map((s) => {
+              const learnerNames = getLearnerNames(s)
+              return (
+                <tr key={s.id} className="border-b border-slate-100 last:border-0">
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {learnerNames.map((name) => (
+                        <span
+                          key={name}
+                          className="inline-block px-2 py-0.5 rounded-full bg-forest-50 text-forest-900 text-xs font-medium"
+                        >
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 font-medium text-slate-900">{s.name}</td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {s.category === 'OtherCustom' && s.customCategory
+                      ? s.customCategory
+                      : formatCategory(s.category)}
+                  </td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <button
+                      type="button"
+                      className="text-xs font-medium text-forest-900 hover:text-forest-700 mr-3"
+                      onClick={() => setEditing(s)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="text-xs text-slate-500 hover:text-red-600"
+                      disabled={archivingId === s.id}
+                      onClick={() => handleArchive(s.id)}
+                    >
+                      {archivingId === s.id ? '…' : 'Archive'}
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

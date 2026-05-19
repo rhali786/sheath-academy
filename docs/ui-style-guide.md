@@ -94,7 +94,90 @@ Any intentional deviation must be stated in the audit or plan before implementat
 
 ---
 
-## 5. Page shell and width
+## 5. Page titles and shared layout classes
+
+Feature pages use shared CSS utility classes defined in `app/globals.css` for visual consistency.
+
+### Page title
+
+```tsx
+<h1 className="page-title">Attendance</h1>
+```
+
+Applied to every feature page heading. Produces `text-2xl font-bold text-slate-900 mb-2`.
+
+When the heading row also contains action buttons, suppress the bottom margin and use a flex row:
+
+```tsx
+<div className="flex items-center justify-between">
+  <h1 className="page-title mb-0">Attendance</h1>
+  <button ...>Add record</button>
+</div>
+```
+
+### Form section heading
+
+```tsx
+<h2 className="form-section-heading">Mark attendance</h2>
+```
+
+Produces `text-lg font-bold text-slate-900 mb-4`. Used above add-form cards.
+
+### Add-form card
+
+```tsx
+<div className="add-form-card">
+  <FormComponent ... />
+</div>
+```
+
+Produces `bg-white rounded-xl border border-slate-200 p-6 shadow-sm`. All add forms on feature pages use this wrapper.
+
+---
+
+## 6. Collapsible add-form pattern
+
+All feature pages that have an add-form use a collapsible toggle button in the page header. The pattern is established in `ResourcesPage` and applied to Attendance, Lessons, Growth, and Quran.
+
+Approved behavior:
+
+1. The page header is a `flex items-center justify-between` row containing the `<h1>` and the toggle button.
+2. The toggle button is styled `px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800`.
+3. Button label: `"Cancel"` when the form is visible, `"Add X"` (or equivalent) when the form is hidden.
+4. Default state is `showForm = true` so the form is visible on arrival. Users collapse it when they want to focus on the list.
+5. When visible, the form section renders: `<h2 className="form-section-heading">` followed by `<div className="add-form-card">`.
+6. Conditionally rendering both the heading and the card together prevents orphaned headings.
+
+```tsx
+// State
+const [showForm, setShowForm] = useState(true)
+
+// Header row
+<div className="flex items-center justify-between">
+  <h1 className="page-title mb-0">Lessons</h1>
+  <button
+    type="button"
+    onClick={() => setShowForm(v => !v)}
+    className="px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800"
+  >
+    {showForm ? 'Cancel' : 'Add lesson'}
+  </button>
+</div>
+
+// Collapsible form section
+{showForm && (
+  <div>
+    <h2 className="form-section-heading">Add lesson</h2>
+    <div className="add-form-card">
+      <LessonTaskForm ... />
+    </div>
+  </div>
+)}
+```
+
+---
+
+## 7. Page shell and width
 
 Feature pages should use the app shell and approved page-width pattern unless the page is intentionally a focused/auth/onboarding flow.
 
@@ -108,7 +191,7 @@ Approved behavior:
 
 ---
 
-## 6. Dashboard charts and visualizations
+## 8. Dashboard charts and visualizations
 
 Dashboard charts and similar visualizations should use Nivo consistently unless the plan documents an approved exception.
 
@@ -124,7 +207,7 @@ Do not introduce a second charting library without an explicit architecture deci
 
 ---
 
-## 7. UI audit requirement
+## 9. UI audit requirement
 
 Before modifying user-facing UI, the audit or implementation plan must report:
 
@@ -138,7 +221,7 @@ If the implementation needs a new card, modal, confirmation, chart, icon, page-w
 
 ---
 
-## 8. Testing expectations for UI consistency
+## 10. Testing expectations for UI consistency
 
 UI changes must include integration tests under the owning feature’s `__tests__` tree.
 

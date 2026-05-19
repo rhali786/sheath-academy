@@ -31,11 +31,28 @@ function toEditState(s: QuranSession): EditState {
   }
 }
 
+interface AddState {
+  childId: string
+  type: string
+  surah: string
+  fromAyah: string
+  toAyah: string
+  notes: string
+}
+
+function emptyAdd(defaultChildId = ''): AddState {
+  return { childId: defaultChildId, type: SESSION_TYPES[0], surah: '', fromAyah: '', toAyah: '', notes: '' }
+}
+
 export default function QuranPage() {
   const searchParams = useSearchParams()
   const [sessions, setSessions] = useState<QuranSession[]>([])
   const [children, setChildren] = useState<StudentProfile[]>([])
   const [loading, setLoading] = useState(true)
+  const [showAddForm, setShowAddForm] = useState(true)
+  const [addForm, setAddForm] = useState<AddState>(emptyAdd())
+  const [addSaving, setAddSaving] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<EditState | null>(null)
   const [saving, setSaving] = useState(false)
@@ -47,9 +64,40 @@ export default function QuranPage() {
 
   useEffect(() => {
     childrenApi.getAllChildren()
-      .then(res => setChildren(res.data))
+      .then(res => {
+        setChildren(res.data)
+        if (res.data.length > 0) {
+          setAddForm(prev => ({ ...prev, childId: prev.childId || res.data[0].id }))
+        }
+      })
       .catch(() => {})
   }, [])
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault()
+    if (!addForm.childId || !addForm.surah.trim()) {
+      setAddError('Child and Surah are required.')
+      return
+    }
+    setAddSaving(true)
+    setAddError(null)
+    try {
+      const res = await quranApi.addSession({
+        childId: addForm.childId,
+        type: addForm.type,
+        surah: addForm.surah.trim(),
+        fromAyah: Number(addForm.fromAyah) || 1,
+        toAyah: Number(addForm.toAyah) || 1,
+        notes: addForm.notes.trim(),
+      })
+      setSessions(prev => [res.data, ...prev])
+      setAddForm(emptyAdd(addForm.childId))
+    } catch {
+      setAddError('Failed to save session. Please try again.')
+    } finally {
+      setAddSaving(false)
+    }
+  }
 
   useEffect(() => {
     quranApi.getSessions()
@@ -133,9 +181,99 @@ export default function QuranPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
-      <h1 className="text-2xl font-bold text-slate-900 mb-2">Quran Studies</h1>
+    <div className="max-w-5xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="page-title mb-0">Quran Studies</h1>
+        <button
+          type="button"
+          onClick={() => setShowAddForm(v => !v)}
+          className="px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800"
+        >
+          {showAddForm ? 'Cancel' : 'Log session'}
+        </button>
+      </div>
       <p className="text-sm text-slate-500 mb-8">Track Quran memorisation and recitation sessions.</p>
+
+      {/* Add session form */}
+      {showAddForm && <div className="mb-8">
+        <h2 className="form-section-heading">Log session</h2>
+        <div className="add-form-card">
+          <form onSubmit={handleAdd} className="space-y-4">
+            <div className="flex flex-wrap gap-4">
+              {children.length > 1 && (
+                <div className="flex-1 min-w-36">
+                  <label className="block text-xs font-medium text-slate-600 mb-1.5">Child</label>
+                  <select
+                    value={addForm.childId}
+                    onChange={e => setAddForm(f => ({ ...f, childId: e.target.value }))}
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-900"
+                  >
+                    {children.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              )}
+              <div className="flex-1 min-w-36">
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">Type</label>
+                <select
+                  value={addForm.type}
+                  onChange={e => setAddForm(f => ({ ...f, type: e.target.value }))}
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-900"
+                >
+                  {SESSION_TYPES.map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="flex-1 min-w-36">
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">Surah</label>
+                <input
+                  type="text"
+                  value={addForm.surah}
+                  onChange={e => setAddForm(f => ({ ...f, surah: e.target.value }))}
+                  placeholder="e.g. Al-Fatiha"
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-900"
+                />
+              </div>
+              <div className="w-24">
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">From ayah</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={addForm.fromAyah}
+                  onChange={e => setAddForm(f => ({ ...f, fromAyah: e.target.value }))}
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-900"
+                />
+              </div>
+              <div className="w-24">
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">To ayah</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={addForm.toAyah}
+                  onChange={e => setAddForm(f => ({ ...f, toAyah: e.target.value }))}
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-900"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">Notes (optional)</label>
+              <input
+                type="text"
+                value={addForm.notes}
+                onChange={e => setAddForm(f => ({ ...f, notes: e.target.value }))}
+                placeholder="Any notes about this session…"
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-900"
+              />
+            </div>
+            {addError && <p className="text-xs text-red-600">{addError}</p>}
+            <button
+              type="submit"
+              disabled={addSaving}
+              className="px-5 py-2.5 bg-forest-900 text-white rounded-lg text-sm font-medium hover:bg-forest-800 disabled:opacity-50 transition-colors"
+            >
+              {addSaving ? 'Saving…' : 'Log session'}
+            </button>
+          </form>
+        </div>
+      </div>}
 
       {/* Filters */}
       {!loading && sessions.length > 0 && (

@@ -45,7 +45,7 @@ describe('NextSetupStrip', () => {
     expect(screen.getByText(/Add a subject/i)).toBeInTheDocument()
   })
 
-  it('renders stub step as disabled when nextStep is firstLesson', async () => {
+  it('renders a link to /lessons when nextStep is firstLesson', async () => {
     ;(global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -60,7 +60,10 @@ describe('NextSetupStrip', () => {
     })
     render(<NextSetupStrip />)
     await waitFor(() => {
-      expect(screen.getAllByText(/Coming soon/i).length).toBeGreaterThan(0)
+      expect(screen.getByTestId('next-setup-strip')).toBeInTheDocument()
     })
+    expect(screen.getByText(/Plan your first lesson/i)).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: /go/i })
+    expect(link).toHaveAttribute('href', '/lessons')
   })
 })

@@ -5,9 +5,9 @@ import { SEED_IDS } from '@/features/lib/seedIds'
 const SUBJECTS: { name: string; category: SubjectCourseCategory; order: number }[] = [
   { name: 'Islamic Studies', category: 'IslamicStudies', order: 1 },
   { name: 'Mathematics',     category: 'Math',           order: 2 },
-  { name: 'English',         category: 'English',        order: 3 },
+  { name: 'English/ELA',     category: 'EnglishELA',     order: 3 },
   { name: 'Science',         category: 'Science',        order: 4 },
-  { name: 'Language Arts',   category: 'LanguageArts',   order: 5 },
+  { name: 'Reading',         category: 'Reading',        order: 5 },
   { name: 'Technology',      category: 'Technology',     order: 6 },
 ]
 
@@ -15,6 +15,7 @@ function makeSubjects(childId: string, idOffset: number): SubjectCourse[] {
   return SUBJECTS.map((s, i) => ({
     id: `subject_seed_${String(idOffset + i + 1).padStart(3, '0')}`,
     childId,
+    learnerIds: [childId],
     name: s.name,
     category: s.category,
     isActive: true,

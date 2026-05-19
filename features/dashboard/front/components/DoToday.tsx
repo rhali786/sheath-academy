@@ -12,19 +12,17 @@ function todayLocal(): string {
 }
 
 export function DoToday() {
-  const { selectedChildId } = useContext_Dashboard()
+  const { selectedChildId, children } = useContext_Dashboard()
   const today = todayLocal()
+
+  const activeChildren = selectedChildId
+    ? children.filter(c => c.id === selectedChildId)
+    : children
 
   return (
     <section>
       <h2 className="text-xl font-bold text-slate-900 mb-5">Do Today</h2>
-      {selectedChildId ? (
-        <TodayLessonCard childId={selectedChildId} today={today} />
-      ) : (
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <p className="text-sm text-slate-400">Select a child to see today&apos;s lessons.</p>
-        </div>
-      )}
+      <TodayLessonCard children={activeChildren} today={today} />
     </section>
   )
 }

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import type { HouseholdProfile, DayOfWeek, DayLoadPreference, DateDisplayPreference } from '@/features/lib/types'
 import { householdApi } from '../services/api'
 import { useHousehold } from '../context'
+import { IslamicRemindersSection } from '@/features/settings/front/components/IslamicRemindersSection'
 
 const DAYS_OF_WEEK: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const DAY_LOADS: DayLoadPreference[] = ['Off', 'Light', 'Normal', 'Heavy']
@@ -130,6 +131,9 @@ export function HouseholdSettings() {
           />
         </div>
       </section>
+
+      {/* Islamic Calendar Reminders */}
+      <IslamicRemindersSection />
 
       {/* Weekly Rhythm */}
       <section>

@@ -36,7 +36,7 @@ export function ResourcesPage() {
       data-testid="resources-page"
     >
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Resources</h1>
+        <h1 className="page-title mb-0">Resources</h1>
         <button
           type="button"
           onClick={() => setShowForm(v => !v)}
@@ -48,13 +48,15 @@ export function ResourcesPage() {
       </div>
 
       {showForm && workspace && (
-        <div className="mb-8 p-5 bg-white rounded-xl border border-slate-200">
-          <h2 className="text-base font-semibold text-slate-800 mb-4">New resource</h2>
-          <ResourceForm
-            workspaceId={workspace.id}
-            onSubmit={handleCreate}
-            onCancel={() => setShowForm(false)}
-          />
+        <div className="mb-8">
+          <h2 className="form-section-heading">Add resource</h2>
+          <div className="add-form-card">
+            <ResourceForm
+              workspaceId={workspace.id}
+              onSubmit={handleCreate}
+              onCancel={() => setShowForm(false)}
+            />
+          </div>
         </div>
       )}
 

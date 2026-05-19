@@ -14,15 +14,21 @@ import { SubjectsAllTable } from '@/features/subjects/front/components/SubjectsA
 import { SchoolYearForm } from '@/features/school-year/front/components/SchoolYearForm'
 import { schoolYearApi } from '@/features/school-year/front/services/api'
 import { childrenApi } from '@/features/children/front/services/api'
+import { PlanningDefaultsTab } from '@/features/settings/front/components/PlanningDefaultsTab'
+import { RecordsComplianceTab } from '@/features/settings/front/components/RecordsComplianceTab'
+import { AccessPrivacyTab } from '@/features/settings/front/components/AccessPrivacyTab'
 
-const TAB_IDS = ['household', 'school-year', 'children', 'subjects'] as const
+const TAB_IDS = ['household', 'school-year', 'children', 'subjects', 'planning-defaults', 'records-compliance', 'access-privacy'] as const
 export type SettingsTabId = (typeof TAB_IDS)[number]
 
 const TABS: { id: SettingsTabId; label: string }[] = [
   { id: 'household', label: 'Household' },
   { id: 'school-year', label: 'School year' },
-  { id: 'children', label: 'Children' },
-  { id: 'subjects', label: 'Subjects' },
+  { id: 'children', label: 'Learners' },
+  { id: 'subjects', label: 'Courses' },
+  { id: 'planning-defaults', label: 'Planning Defaults' },
+  { id: 'records-compliance', label: 'Records & Compliance' },
+  { id: 'access-privacy', label: 'Access & Privacy' },
 ]
 
 export function parseSettingsTab(raw: string | null): SettingsTabId {
@@ -133,8 +139,8 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-10" data-testid="settings-page">
-      <h1 className="text-xl font-semibold text-slate-900 mb-6">Settings</h1>
+    <div className="max-w-6xl mx-auto px-4 py-10" data-testid="settings-page">
+      <h1 className="page-title">Settings</h1>
 
       <div
         className="flex flex-wrap gap-1 mb-8 border-b border-slate-200"
@@ -167,14 +173,14 @@ export function SettingsPage() {
             Configure household settings including name and week start day.
           </p>
 
-          <div className="space-y-6">
-            {/* Household name */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            {/* Left column: Display name (shown in header) */}
             <div>
               <h3 className="text-sm font-semibold text-slate-800 mb-3">Household name</h3>
               <p className="text-xs text-slate-500 mb-3">
                 This name appears in the header throughout the app.
               </p>
-              <form onSubmit={handleRename} className="bg-white rounded-xl border border-slate-200 p-6 max-w-md">
+              <form onSubmit={handleRename} className="bg-white rounded-xl border border-slate-200 p-6">
                 <label htmlFor="rename-household" className="block text-xs font-medium text-slate-600 mb-1.5">
                   Name
                 </label>
@@ -201,12 +207,8 @@ export function SettingsPage() {
               </form>
             </div>
 
-            {/* Week start day */}
+            {/* Right column: Household Identity → Islamic Calendar → Weekly Rhythm + more */}
             <div>
-              <h3 className="text-sm font-semibold text-slate-800 mb-3">Week start day</h3>
-              <p className="text-xs text-slate-500 mb-3">
-                Choose which day your week starts on in the planner.
-              </p>
               <HouseholdSettings />
             </div>
           </div>
@@ -249,9 +251,9 @@ export function SettingsPage() {
 
       {activeTab === 'children' && (
         <section data-testid="settings-panel-children">
-          <h2 className="text-lg font-semibold text-slate-900 mb-1">Children</h2>
+          <h2 className="text-lg font-semibold text-slate-900 mb-1">Learners</h2>
           <p className="text-sm text-slate-500 mb-4">
-            Add and manage profiles for each child in your household.
+            Add and manage profiles for each learner in your household.
           </p>
 
           <ChildrenProvider householdId={householdId}>
@@ -262,10 +264,9 @@ export function SettingsPage() {
 
       {activeTab === 'subjects' && (
         <section data-testid="settings-panel-subjects">
-          <h2 className="text-lg font-semibold text-slate-900 mb-1">Subjects</h2>
+          <h2 className="text-lg font-semibold text-slate-900 mb-1">Courses</h2>
           <p className="text-sm text-slate-500 mb-4">
-            Use the child tabs to choose who receives new subjects, then add a course. The table lists
-            every subject in your household — edit to change name, child, or category.
+            Add and manage courses for your household. Courses can be shared between multiple learners.
           </p>
 
           {subjectChildrenLoading ? (
@@ -315,6 +316,9 @@ export function SettingsPage() {
           )}
         </section>
       )}
+      {activeTab === 'planning-defaults' && <PlanningDefaultsTab />}
+      {activeTab === 'records-compliance' && <RecordsComplianceTab />}
+      {activeTab === 'access-privacy' && <AccessPrivacyTab />}
     </div>
   )
 }

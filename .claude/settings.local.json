@@ -5,7 +5,13 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(npm test *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git:*)",
+      "Bash(npx jest:*)",
+      "Bash(\"/c/PROJECTS/sheath-academy/features/plan/__tests__/integration/LessonCard.test.tsx\":*)",
+      "Bash(node:*)",
+      "Bash(npm test:*)",
+      "Bash(grep:*)"
     ]
   }
 }

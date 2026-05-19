@@ -34,7 +34,7 @@ export function Header() {
 
         {/* Brand row */}
         <div className="flex items-center justify-between py-4">
-          <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <div className="w-9 h-9 rounded-xl bg-forest-900 flex items-center justify-center flex-shrink-0 shadow-sm">
               <span className="text-white text-base font-bold leading-none" aria-hidden="true">ش</span>
             </div>
@@ -47,7 +47,7 @@ export function Header() {
               </h1>
               <p className="text-xs text-slate-400">{familyName || 'Home Education'}</p>
             </div>
-          </div>
+          </Link>
 
           <div className="flex items-center gap-3">
             {/* Hijri date — hidden on small screens */}

@@ -36,7 +36,10 @@ export function RecordsProof({ records, selectedChildId }: RecordsProofProps) {
 
   return (
     <section className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8 pb-16">
-      <h2 className="text-xl font-bold text-slate-900 mb-6">Records & Proof</h2>
+      <h2 className="text-xl font-bold text-slate-900 mb-2">Records Readiness</h2>
+      <p className="text-xs text-slate-400 mb-6" data-testid="records-readiness-indicator">
+        Proof of learning across all subjects and activities.
+      </p>
 
       {/* Record cards */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -83,16 +86,24 @@ export function RecordsProof({ records, selectedChildId }: RecordsProofProps) {
       {selectedExport && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl">
-            <h3 className="text-base font-bold text-slate-900 mb-2">Export Initiated</h3>
+            <h3 className="text-base font-bold text-slate-900 mb-2">Print Report</h3>
             <p className="text-sm text-slate-500 mb-6">
-              Your {selectedExport} report is being prepared. Check your downloads folder.
+              Ready to print your {selectedExport} report. Use your browser&apos;s print dialog to save as PDF or send to a printer.
             </p>
-            <button
-              onClick={() => setSelectedExport(null)}
-              className="w-full px-4 py-2.5 bg-forest-900 text-white rounded-lg text-sm font-medium hover:bg-forest-800 transition-colors"
-            >
-              Done
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { window.print(); setSelectedExport(null) }}
+                className="flex-1 px-4 py-2.5 bg-forest-900 text-white rounded-lg text-sm font-medium hover:bg-forest-800 transition-colors"
+              >
+                Print report
+              </button>
+              <button
+                onClick={() => setSelectedExport(null)}
+                className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

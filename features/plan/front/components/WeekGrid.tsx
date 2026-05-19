@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { usePlanner } from '../context/PlannerContext'
 import { plannerApi } from '../services/api'
-import type { LessonTask, LessonTaskStatus } from '../../types'
+import type { LessonTask, LessonTaskStatus, LessonDuration } from '../../types'
 
 const STATUS_BADGE: Record<LessonTaskStatus, string | null> = {
   not_started: null,
@@ -25,6 +25,30 @@ function getDayOfWeekLabel(dayIndex: number): string {
 
 function isWeekend(dayIndex: number): boolean {
   return dayIndex === 0 || dayIndex === 6
+}
+
+const DURATION_MINUTES: Record<LessonDuration, number> = {
+  '15min': 15,
+  '30min': 30,
+  '45min': 45,
+  '1hr': 60,
+  'custom': 0,
+}
+
+const DURATION_LABEL: Record<LessonDuration, string> = {
+  '15min': '15 min',
+  '30min': '30 min',
+  '45min': '45 min',
+  '1hr': '1 hr',
+  'custom': 'custom',
+}
+
+function formatTotalMinutes(mins: number): string {
+  if (mins === 0) return ''
+  if (mins < 60) return `${mins}m`
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return m === 0 ? `${h}h` : `${h}h ${m}m`
 }
 
 function formatLocalDate(d: Date): string {
@@ -67,6 +91,9 @@ function DraggableLesson({ lesson, onEdit }: DraggableLessonProps) {
         )}
       </div>
       {lesson.description && <div className="text-xs text-forest-700 mt-1 pointer-events-none">{lesson.description}</div>}
+      {lesson.estimatedDuration && (
+        <div className="text-xs text-slate-400 mt-1 pointer-events-none">{DURATION_LABEL[lesson.estimatedDuration]}</div>
+      )}
     </div>
   )
 }
@@ -103,6 +130,8 @@ export function WeekGrid() {
   const router = useRouter()
   const [activeLesson, setActiveLesson] = useState<LessonTask | null>(null)
 
+  const todayStr = formatLocalDate(new Date())
+
   const d = new Date(selectedWeek)
   const dayOfWeek = d.getDay()
   const daysFromStart = weekStartDay === 'Monday' ? (dayOfWeek === 0 ? 6 : dayOfWeek - 1) : dayOfWeek
@@ -114,13 +143,20 @@ export function WeekGrid() {
     return date
   })
 
+  // BUG-009 fix: filter subjects to only those belonging to each child
   const rows = children
     .filter(child => selectedChildIds.includes(child.id))
     .flatMap(child =>
       subjects
-        .filter(subject => selectedSubjectIds.includes(subject.id))
+        .filter(subject => selectedSubjectIds.includes(subject.id) && subject.childId === child.id)
         .map(subject => ({ childId: child.id, childName: child.name, subjectId: subject.id, subjectName: subject.name }))
     )
+
+  function getDayTotalMinutes(dateStr: string): number {
+    return lessons
+      .filter(l => l.dueDate === dateStr && l.estimatedDuration)
+      .reduce((sum, l) => sum + (DURATION_MINUTES[l.estimatedDuration!] ?? 0), 0)
+  }
 
   function getLessonForCell(dateStr: string, childId: string, subjectId: string) {
     return lessons.find(l => l.dueDate === dateStr && l.childId === childId && l.subjectId === subjectId)
@@ -160,18 +196,25 @@ export function WeekGrid() {
               {orderedDays.map((date) => {
                 const dow = date.getDay()
                 const isWeekendDay = isWeekend(dow)
+                const dateStr = formatLocalDate(date)
+                const isToday = dateStr === todayStr
                 const displayStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                 const dayLabel = getDayOfWeekLabel(dow)
 
                 return (
                   <th
-                    key={formatLocalDate(date)}
+                    key={dateStr}
                     className={`px-3 py-3 text-sm font-semibold text-center min-w-32 border-l border-slate-200 ${
-                      isWeekendDay ? 'bg-slate-50 text-slate-400 opacity-60' : 'bg-forest-50'
+                      isWeekendDay
+                        ? 'bg-slate-50 text-slate-400 opacity-60'
+                        : isToday
+                        ? 'bg-forest-100 ring-2 ring-inset ring-forest-500'
+                        : 'bg-forest-50'
                     }`}
                   >
-                    <div className={isWeekendDay ? 'text-slate-500' : 'text-forest-900'}>{dayLabel}</div>
-                    <div className={`text-xs ${isWeekendDay ? 'text-slate-400' : 'text-forest-700'}`}>{displayStr}</div>
+                    <div className={isWeekendDay ? 'text-slate-500' : isToday ? 'text-forest-800 font-bold' : 'text-forest-900'}>{dayLabel}</div>
+                    <div className={`text-xs ${isWeekendDay ? 'text-slate-400' : isToday ? 'text-forest-600 font-semibold' : 'text-forest-700'}`}>{displayStr}</div>
+                    {isToday && <div className="text-xs text-forest-600 font-medium">Today</div>}
                   </th>
                 )
               })}
@@ -205,6 +248,21 @@ export function WeekGrid() {
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr className="border-t border-slate-200 bg-slate-50">
+              <td className="px-4 py-2 text-xs text-slate-400 font-medium">Daily total</td>
+              {orderedDays.map(date => {
+                const dateStr = formatLocalDate(date)
+                const total = getDayTotalMinutes(dateStr)
+                const totalStr = formatTotalMinutes(total)
+                return (
+                  <td key={dateStr} className="px-3 py-2 text-center border-l border-slate-200">
+                    {totalStr && <span className="text-xs text-slate-500 font-medium">{totalStr}</span>}
+                  </td>
+                )
+              })}
+            </tr>
+          </tfoot>
         </table>
       </div>
 

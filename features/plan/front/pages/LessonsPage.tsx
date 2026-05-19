@@ -36,6 +36,7 @@ export function LessonsPage() {
   const [filterChildId, setFilterChildId] = useState<string>('')
   const [filterStatus, setFilterStatus] = useState<LessonTaskStatus | ''>('')
   const [dateSort, setDateSort] = useState<DateSort>('desc')
+  const [showForm, setShowForm] = useState(true)
 
   useEffect(() => {
     const init = async () => {
@@ -106,22 +107,34 @@ export function LessonsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-8">
-      <div>
-        <h2 className="text-lg font-bold text-slate-900 mb-4">Add lesson</h2>
-        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-          <LessonTaskForm
-            children={children}
-            subjects={subjects}
-            onSubmit={handleSubmit}
-          />
-        </div>
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-8">
+      <div className="flex items-center justify-between">
+        <h1 className="page-title mb-0">Lessons</h1>
+        <button
+          type="button"
+          onClick={() => setShowForm(v => !v)}
+          className="px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800"
+        >
+          {showForm ? 'Cancel' : 'Add lesson'}
+        </button>
       </div>
+      {showForm && (
+        <div>
+          <h2 className="form-section-heading">Add lesson</h2>
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+            <LessonTaskForm
+              children={children}
+              subjects={subjects}
+              onSubmit={handleSubmit}
+            />
+          </div>
+        </div>
+      )}
 
       {children.length > 0 && (
         <div>
           <h2 className="text-lg font-bold text-slate-900 mb-4">Today</h2>
-          <TodayLessonCard childId={children[0].id} today={todayLocal()} externalLessons={lessons} />
+          <TodayLessonCard children={children} today={todayLocal()} externalLessons={lessons} />
         </div>
       )}
 

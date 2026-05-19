@@ -71,7 +71,7 @@ export function ReportsPage() {
   if (studentProfiles.length === 0) {
     return (
       <main className="max-w-5xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
-        <h1 className="text-2xl font-bold text-slate-900">Records summary</h1>
+        <h1 className="page-title">Records summary</h1>
         <p className="mt-3 text-sm text-slate-500">Add a child before generating reports.</p>
       </main>
     )
@@ -82,7 +82,7 @@ export function ReportsPage() {
       <div className="max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="reports-toolbar flex flex-col gap-4 border-b border-slate-200 pb-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Records summary</h1>
+            <h1 className="page-title mb-0">Records summary</h1>
             <p className="mt-1 text-sm text-slate-500">Review and print a single-child homeschool records summary.</p>
           </div>
 

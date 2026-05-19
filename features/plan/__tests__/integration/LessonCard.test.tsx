@@ -181,3 +181,38 @@ describe('LessonCard display', () => {
     expect(() => fireEvent.click(screen.getByText('Algebra Basics'))).not.toThrow()
   })
 })
+
+describe('LessonCard — FB-011 overdue badge', () => {
+  it('shows Overdue badge for not_started lesson with past due date', () => {
+    render(
+      <LessonCard
+        lesson={makeLesson({ status: 'not_started', dueDate: '2026-01-01' })}
+        childName="Adam"
+        subjectName="Math"
+      />
+    )
+    expect(screen.getByText('Overdue')).toBeInTheDocument()
+  })
+
+  it('does not show Overdue badge for completed lesson with past due date', () => {
+    render(
+      <LessonCard
+        lesson={makeLesson({ status: 'completed', dueDate: '2026-01-01' })}
+        childName="Adam"
+        subjectName="Math"
+      />
+    )
+    expect(screen.queryByText('Overdue')).not.toBeInTheDocument()
+  })
+
+  it('does not show Overdue badge for not_started lesson with future due date', () => {
+    render(
+      <LessonCard
+        lesson={makeLesson({ status: 'not_started', dueDate: '2099-12-31' })}
+        childName="Adam"
+        subjectName="Math"
+      />
+    )
+    expect(screen.queryByText('Overdue')).not.toBeInTheDocument()
+  })
+})

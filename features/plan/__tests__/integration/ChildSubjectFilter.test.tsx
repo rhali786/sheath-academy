@@ -106,6 +106,18 @@ describe('ChildSubjectFilter', () => {
     expect(setSelectedSubjectIds).toHaveBeenCalledWith(['subj_001', 'subj_002'])
   })
 
+  it('shows active filter summary when filters are narrowed', () => {
+    renderFilter(['child_001'], ['subj_001'])
+
+    expect(screen.getByText(/1 of 2 children/i)).toBeInTheDocument()
+  })
+
+  it('does not show filter summary when all children and subjects are selected', () => {
+    renderFilter(['child_001', 'child_002'], ['subj_001', 'subj_002'])
+
+    expect(screen.queryByText(/of \d+ children/i)).not.toBeInTheDocument()
+  })
+
   it('deselecting all children also clears subjects', () => {
     const { setSelectedChildIds, setSelectedSubjectIds } = renderFilter(['child_001'], ['subj_001', 'subj_002'])
 

@@ -25,6 +25,28 @@ beforeEach(() => {
   jest.clearAllMocks()
 })
 
+describe('Wave 10 — SchoolYearForm new fields', () => {
+  it('renders tracking method selector with correct options', () => {
+    render(<SchoolYearForm />)
+    const select = screen.getByLabelText(/tracking method/i) as HTMLSelectElement
+    const options = Array.from(select.options).map(o => o.text)
+    expect(options).toContain('Days only')
+    expect(options).toContain('Hours only')
+    expect(options).toContain('Days + hours')
+    expect(options).toContain('Flexible')
+  })
+
+  it('renders required school days input', () => {
+    render(<SchoolYearForm />)
+    expect(screen.getByLabelText(/required school days/i)).toBeInTheDocument()
+  })
+
+  it('shows live preview of planned school days', () => {
+    render(<SchoolYearForm />)
+    expect(screen.getByTestId('school-year-live-preview')).toBeInTheDocument()
+  })
+})
+
 describe('SchoolYearForm component', () => {
   it('renders the form with name, startDate, endDate fields', () => {
     render(<SchoolYearForm />)

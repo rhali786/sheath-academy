@@ -13,12 +13,15 @@ export interface StudentProfile {
   id: string
   householdId: string
   name: string
+  firstName?: string
+  lastName?: string
   gradeLabel: string
   dob?: string
   teacherName?: string
   username: string
   password: string
   isActive: boolean
+  learnerLoginEnabled?: boolean
   avatarInitials?: string
   createdAt: string
 }

@@ -28,14 +28,15 @@ export async function GET(
 export async function POST(request: Request): Promise<NextResponse> {
   const body = await request.json()
 
-  const { childId, name, category, order } = body
+  const { childId, learnerIds, name, category, customCategory, instructorName, level, schoolYearId, order } = body
 
-  if (!childId || !name?.trim() || !category) {
+  const hasLearner = (learnerIds && learnerIds.length > 0) || childId
+  if (!hasLearner || !name?.trim() || !category) {
     return NextResponse.json(
       {
         status: 'error',
         data: null,
-        message: 'childId, name, and category are required',
+        message: 'learnerIds (or childId), name, and category are required',
         timestamp: new Date().toISOString(),
       },
       { status: 400 }
@@ -43,9 +44,13 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const subject = createSubject({
-    childId,
+    ...(learnerIds && learnerIds.length > 0 ? { learnerIds } : { childId }),
     name: name.trim(),
     category: category as SubjectCourseCategory,
+    ...(customCategory && { customCategory }),
+    ...(instructorName && { instructorName }),
+    ...(level && { level }),
+    ...(schoolYearId && { schoolYearId }),
     order: order !== undefined ? Number(order) : undefined,
   })
 

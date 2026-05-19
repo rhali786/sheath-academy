@@ -99,8 +99,10 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<L
     title: title.trim(),
     description: description?.trim() || undefined,
     dueDate,
-    status: 'not_started',
+    status: body.status ?? 'not_started',
     order: body.order || 0,
+    estimatedDuration: body.estimatedDuration,
+    lessonType: body.lessonType,
   })
 
   if (!lesson) {

@@ -64,15 +64,15 @@ describe('PortfolioPage — standalone (no DashboardProvider)', () => {
     expect(() => render(<PortfolioPage />)).not.toThrow()
   })
 
-  test('shows Portfolio heading', async () => {
+  test('shows Growth heading', async () => {
     render(<PortfolioPage />)
-    await waitFor(() => expect(screen.getByRole('heading', { name: /portfolio/i })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { name: /growth/i, level: 1 })).toBeInTheDocument())
   })
 
   test('shows empty evidence state when no items exist', async () => {
     render(<PortfolioPage />)
     await waitFor(() => expect(screen.queryByText(/loading/i)).not.toBeInTheDocument(), { timeout: 2000 })
-    expect(screen.getByRole('heading', { name: /portfolio/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /growth/i, level: 1 })).toBeInTheDocument()
   })
 })
 

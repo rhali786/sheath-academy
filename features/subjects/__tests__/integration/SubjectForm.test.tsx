@@ -45,6 +45,52 @@ const twoChildren: StudentProfile[] = [
   { ...oneChild[0], id: 'k2', name: 'Ben', username: 'ben1' },
 ]
 
+describe('SubjectForm — Wave 8 FB-003', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    childrenApi.getChildren.mockResolvedValue({ data: twoChildren })
+    subjectsApi.createSubject.mockResolvedValue({ data: {}, status: 'success' })
+  })
+
+  it('renders "Course / Subject name" label', async () => {
+    render(<SubjectForm householdId={householdId} />)
+    await waitFor(() => expect(screen.getByTestId('subject-form')).toBeInTheDocument())
+    expect(screen.getByLabelText(/course \/ subject name/i)).toBeInTheDocument()
+  })
+
+  it('renders Learner(s) multi-select checkboxes', async () => {
+    render(<SubjectForm householdId={householdId} />)
+    await waitFor(() => expect(screen.getByTestId('subject-form')).toBeInTheDocument())
+    // Both learners should appear as selectable options
+    expect(screen.getByText('Ada')).toBeInTheDocument()
+    expect(screen.getByText('Ben')).toBeInTheDocument()
+  })
+
+  it('category dropdown contains "Quran" as first option', async () => {
+    render(<SubjectForm householdId={householdId} />)
+    await waitFor(() => expect(screen.getByTestId('subject-form')).toBeInTheDocument())
+    const select = screen.getByLabelText(/category/i) as HTMLSelectElement
+    expect(select.options[0].text).toBe('Quran')
+  })
+
+  it('category dropdown contains "Arabic" and "Islamic Studies"', async () => {
+    render(<SubjectForm householdId={householdId} />)
+    await waitFor(() => expect(screen.getByTestId('subject-form')).toBeInTheDocument())
+    const select = screen.getByLabelText(/category/i) as HTMLSelectElement
+    const options = Array.from(select.options).map(o => o.text)
+    expect(options).toContain('Arabic')
+    expect(options).toContain('Islamic Studies')
+  })
+
+  it('shows custom input when "Other/Custom" is selected', async () => {
+    render(<SubjectForm householdId={householdId} />)
+    await waitFor(() => expect(screen.getByTestId('subject-form')).toBeInTheDocument())
+    const select = screen.getByLabelText(/category/i)
+    await userEvent.selectOptions(select, 'OtherCustom')
+    expect(screen.getByLabelText(/custom category/i)).toBeInTheDocument()
+  })
+})
+
 describe('SubjectForm', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -71,23 +117,26 @@ describe('SubjectForm', () => {
     })
   })
 
-  it('shows child selector when one child exists', async () => {
+  it('shows learner checkbox when one child exists', async () => {
     childrenApi.getChildren.mockResolvedValue({ data: oneChild })
     render(<SubjectForm householdId={householdId} />)
     await waitFor(() => {
       expect(screen.getByTestId('subject-form')).toBeInTheDocument()
     })
-    expect(screen.getByLabelText(/subject for \(child\)/i)).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: /subject for \(child\)/i })).toHaveValue('kid1')
+    // Should show child name as a checkbox label
+    expect(screen.getByText('Test Child')).toBeInTheDocument()
+    // Checkbox should be pre-checked when there is only one child
+    const checkbox = screen.getByRole('checkbox')
+    expect(checkbox).toBeChecked()
   })
 
-  it('with hideChildSelect and multiple children, omits child combobox and shows tab hint', async () => {
+  it('with hideChildSelect and multiple children, omits learner checkboxes and shows tab hint', async () => {
     childrenApi.getChildren.mockResolvedValue({ data: twoChildren })
     render(<SubjectForm householdId={householdId} hideChildSelect defaultChildId="k1" />)
     await waitFor(() => {
       expect(screen.getByTestId('subject-form')).toBeInTheDocument()
     })
-    expect(screen.queryByLabelText(/subject for \(child\)/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
     expect(screen.getByTestId('subject-form-tabs-hint')).toBeInTheDocument()
   })
 
@@ -100,7 +149,7 @@ describe('SubjectForm', () => {
       expect(screen.getByTestId('subject-form')).toBeInTheDocument()
     })
     await userEvent.type(screen.getByPlaceholderText(/Algebra/i), 'Algebra I')
-    await userEvent.click(screen.getByRole('button', { name: /Add subject/i }))
+    await userEvent.click(screen.getByRole('button', { name: /Add course/i }))
     await waitFor(() => {
       expect(subjectsApi.createSubject).toHaveBeenCalled()
     })

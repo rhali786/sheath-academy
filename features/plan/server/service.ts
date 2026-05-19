@@ -54,6 +54,8 @@ export function updateLessonTask(id: string, patch: Partial<LessonTask>): Lesson
   if (patch.dueDate !== undefined) allowedPatch.dueDate = patch.dueDate
   if (patch.status !== undefined) allowedPatch.status = patch.status
   if (patch.order !== undefined) allowedPatch.order = patch.order
+  if (patch.estimatedDuration !== undefined) allowedPatch.estimatedDuration = patch.estimatedDuration
+  if (patch.lessonType !== undefined) allowedPatch.lessonType = patch.lessonType
   allowedPatch.updatedAt = new Date().toISOString()
 
   return lessonsStore.update(id, allowedPatch)
@@ -76,7 +78,7 @@ export function deleteLessonTask(id: string): boolean {
 export function archiveByChildId(_childId: string): void {}
 export function archiveBySubjectId(_subjectId: string): void {}
 
-export function resetStore(): void {
-  lessonsStore.reset(SEED_LESSONS)
+export function resetStore(seed?: LessonTask[]): void {
+  lessonsStore.reset(seed ?? SEED_LESSONS)
   resetIdCounter()
 }

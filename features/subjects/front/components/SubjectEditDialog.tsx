@@ -2,7 +2,7 @@
 
 import { useEffect, useState, FormEvent } from 'react'
 import type { SubjectCourse, SubjectCourseCategory } from '@/features/subjects/types'
-import { SUBJECT_COURSE_CATEGORIES } from '@/features/subjects/front/lib/categories'
+import { SUBJECT_COURSE_CATEGORIES, formatCategory } from '@/features/subjects/front/lib/categories'
 import { subjectsApi } from '@/features/subjects/front/services/api'
 
 export interface SubjectChildOption {
@@ -126,7 +126,7 @@ export function SubjectEditDialog({
             >
               {SUBJECT_COURSE_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
-                  {c}
+                  {formatCategory(c)}
                 </option>
               ))}
             </select>

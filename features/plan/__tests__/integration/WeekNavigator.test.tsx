@@ -82,3 +82,33 @@ describe('WeekNavigator', () => {
     expect(weekRange).toBeInTheDocument()
   })
 })
+
+describe('WeekNavigator — BUG-010 week navigation date correctness', () => {
+  it('previous week button calls setSelectedWeek with date exactly 7 days earlier', () => {
+    const startDate = new Date('2026-05-12T00:00:00')
+    const { setSelectedWeek } = renderNavigator(startDate)
+
+    fireEvent.click(screen.getByRole('button', { name: /previous week/i }))
+
+    expect(setSelectedWeek).toHaveBeenCalledTimes(1)
+    const calledDate = setSelectedWeek.mock.calls[0][0] as Date
+    // May 12 - 7 = May 5
+    expect(calledDate.getFullYear()).toBe(2026)
+    expect(calledDate.getMonth()).toBe(4) // May (0-indexed)
+    expect(calledDate.getDate()).toBe(5)
+  })
+
+  it('next week button calls setSelectedWeek with date exactly 7 days later', () => {
+    const startDate = new Date('2026-05-12T00:00:00')
+    const { setSelectedWeek } = renderNavigator(startDate)
+
+    fireEvent.click(screen.getByRole('button', { name: /next week/i }))
+
+    expect(setSelectedWeek).toHaveBeenCalledTimes(1)
+    const calledDate = setSelectedWeek.mock.calls[0][0] as Date
+    // May 12 + 7 = May 19
+    expect(calledDate.getFullYear()).toBe(2026)
+    expect(calledDate.getMonth()).toBe(4) // May (0-indexed)
+    expect(calledDate.getDate()).toBe(19)
+  })
+})

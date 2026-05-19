@@ -75,3 +75,65 @@ describe('SubjectsAllTable', () => {
     expect(screen.getByTestId('subject-edit-form')).toBeInTheDocument()
   })
 })
+
+describe('SubjectsAllTable — Wave 8 FB-003', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    subjectsApi.archiveSubject.mockResolvedValue({ data: {}, status: 'success', message: '', timestamp: '' })
+  })
+
+  it('shows ONE row for a shared course with two learners', async () => {
+    const sharedCourse: SubjectCourse = {
+      id: 'shared_1',
+      childId: 'c1',
+      learnerIds: ['c1', 'c2'],
+      name: 'Family Arabic',
+      category: 'Arabic',
+      isActive: true,
+      order: 0,
+      createdAt: '2026-01-01',
+    }
+    subjectsApi.getSubjects.mockResolvedValue({ data: [sharedCourse], status: 'success', message: '', timestamp: '' })
+    render(<SubjectsAllTable childrenList={childrenList} refreshKey={0} />)
+    await waitFor(() => expect(screen.getByTestId('subjects-all-table')).toBeInTheDocument())
+    // Only one row for "Family Arabic", not two
+    const rows = screen.getAllByText('Family Arabic')
+    expect(rows).toHaveLength(1)
+  })
+
+  it('shows learner chips for shared course', async () => {
+    const sharedCourse: SubjectCourse = {
+      id: 'shared_2',
+      childId: 'c1',
+      learnerIds: ['c1', 'c2'],
+      name: 'Joint Quran',
+      category: 'Quran',
+      isActive: true,
+      order: 0,
+      createdAt: '2026-01-01',
+    }
+    subjectsApi.getSubjects.mockResolvedValue({ data: [sharedCourse], status: 'success', message: '', timestamp: '' })
+    render(<SubjectsAllTable childrenList={childrenList} refreshKey={0} />)
+    await waitFor(() => expect(screen.getByTestId('subjects-all-table')).toBeInTheDocument())
+    expect(screen.getByText('Ada')).toBeInTheDocument()
+    expect(screen.getByText('Ben')).toBeInTheDocument()
+  })
+
+  it('displays "Islamic Studies" not "IslamicStudies" in category column', async () => {
+    const islamicRow: SubjectCourse = {
+      id: 'isk_1',
+      childId: 'c1',
+      learnerIds: ['c1'],
+      name: 'Fiqh',
+      category: 'IslamicStudies',
+      isActive: true,
+      order: 0,
+      createdAt: '2026-01-01',
+    }
+    subjectsApi.getSubjects.mockResolvedValue({ data: [islamicRow], status: 'success', message: '', timestamp: '' })
+    render(<SubjectsAllTable childrenList={childrenList} refreshKey={0} />)
+    await waitFor(() => expect(screen.getByTestId('subjects-all-table')).toBeInTheDocument())
+    expect(screen.getByText('Islamic Studies')).toBeInTheDocument()
+    expect(screen.queryByText('IslamicStudies')).not.toBeInTheDocument()
+  })
+})

@@ -88,7 +88,7 @@ describe('AttendancePage', () => {
   it('renders the page heading', async () => {
     render(<AttendancePage />)
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /attendance/i })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /^attendance$/i, level: 1 })).toBeInTheDocument()
     })
   })
 

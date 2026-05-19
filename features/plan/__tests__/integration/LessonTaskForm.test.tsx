@@ -55,7 +55,7 @@ describe('LessonTaskForm — create mode', () => {
     const y = today.getFullYear()
     const m = String(today.getMonth() + 1).padStart(2, '0')
     const d = String(today.getDate()).padStart(2, '0')
-    const dateInput = screen.getByLabelText(/due date/i) as HTMLInputElement
+    const dateInput = screen.getByLabelText(/planned date/i) as HTMLInputElement
     expect(dateInput.value).toBe(`${y}-${m}-${d}`)
   })
 
@@ -102,14 +102,16 @@ describe('LessonTaskForm — create mode', () => {
       />
     )
     // Select Adam (first child)
-    const childSelect = screen.getByLabelText(/child/i)
+    const childSelect = screen.getByLabelText(/learner/i)
     fireEvent.change(childSelect, { target: { value: 'child_001' } })
 
-    // Adam's subjects should appear
-    expect(screen.getByRole('option', { name: 'Mathematics' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Quran' })).toBeInTheDocument()
-    // Khadijah's subject should not appear
-    expect(screen.queryByRole('option', { name: 'Reading' })).not.toBeInTheDocument()
+    // Adam's subjects should appear in the subject select
+    const subjectSelect = screen.getByLabelText(/course\/subject/i) as HTMLSelectElement
+    const subjectOptions = Array.from(subjectSelect.options).map(o => o.text)
+    expect(subjectOptions).toContain('Mathematics')
+    expect(subjectOptions).toContain('Quran')
+    // Khadijah's subject should not appear in the subject select
+    expect(subjectOptions).not.toContain('Reading')
   })
 
   it('subject dropdown resets on child change', () => {
@@ -121,15 +123,15 @@ describe('LessonTaskForm — create mode', () => {
       />
     )
     // Select Adam and choose a subject
-    const childSelect = screen.getByLabelText(/child/i)
+    const childSelect = screen.getByLabelText(/learner/i)
     fireEvent.change(childSelect, { target: { value: 'child_001' } })
-    const subjectSelect = screen.getByLabelText(/subject/i) as HTMLSelectElement
+    const subjectSelect = screen.getByLabelText(/course\/subject/i) as HTMLSelectElement
     fireEvent.change(subjectSelect, { target: { value: 'subj_adam_math' } })
     expect(subjectSelect.value).toBe('subj_adam_math')
 
     // Change to Khadijah — subject should reset
     fireEvent.change(childSelect, { target: { value: 'child_002' } })
-    expect((screen.getByLabelText(/subject/i) as HTMLSelectElement).value).toBe('')
+    expect((screen.getByLabelText(/course\/subject/i) as HTMLSelectElement).value).toBe('')
   })
 
   it('shows validation error when title is empty on submit', async () => {
@@ -157,8 +159,8 @@ describe('LessonTaskForm — create mode', () => {
         onSubmit={onSubmit}
       />
     )
-    fireEvent.change(screen.getByLabelText(/child/i), { target: { value: 'child_001' } })
-    fireEvent.change(screen.getByLabelText(/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/learner/i), { target: { value: 'child_001' } })
+    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'New Lesson' } })
 
     fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
@@ -219,5 +221,67 @@ describe('LessonTaskForm — edit mode', () => {
     expect(cancelBtn).toBeInTheDocument()
     fireEvent.click(cancelBtn)
     expect(onCancel).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('LessonTaskForm — FB-011 label renames', () => {
+  it('uses "Learner(s)" label not "Child"', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    expect(screen.getByLabelText(/learner/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/^child$/i)).not.toBeInTheDocument()
+  })
+
+  it('uses "Course/Subject" label not "Subject"', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    expect(screen.getByLabelText(/course\/subject/i)).toBeInTheDocument()
+  })
+
+  it('uses "Planned date" label not "Due date"', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    expect(screen.getByLabelText(/planned date/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/due date/i)).not.toBeInTheDocument()
+  })
+
+  it('shows Estimated duration dropdown', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    expect(screen.getByLabelText(/estimated duration/i)).toBeInTheDocument()
+    expect(screen.getByText('30 minutes')).toBeInTheDocument()
+  })
+
+  it('shows Lesson type dropdown with general types by default', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    expect(screen.getByLabelText(/lesson type/i)).toBeInTheDocument()
+    expect(screen.getByText('Assignment')).toBeInTheDocument()
+  })
+
+  it('shows Quran lesson types when a Quran category subject is selected', async () => {
+    const quranSubjects: import('@/features/subjects/types').SubjectCourse[] = [
+      { id: 'subj_quran', childId: 'child_001', name: 'Quran', category: 'Quran', isActive: true, order: 1, createdAt: '' },
+    ]
+    render(
+      <LessonTaskForm children={mockChildren} subjects={quranSubjects} onSubmit={jest.fn()} />
+    )
+    fireEvent.change(screen.getByLabelText(/learner/i), { target: { value: 'child_001' } })
+    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_quran' } })
+    expect(screen.getByText('Memorisation')).toBeInTheDocument()
+    expect(screen.getByText('Tajweed')).toBeInTheDocument()
+    expect(screen.queryByText('Assignment')).not.toBeInTheDocument()
+  })
+
+  it('shows helper text in subject dropdown when no learner selected', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    expect(screen.getByText(/choose a learner first/i)).toBeInTheDocument()
   })
 })

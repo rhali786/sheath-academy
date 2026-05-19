@@ -175,7 +175,7 @@ export function getAttendanceSummary(
 
 export function archiveByChildId(_childId: string): void {}
 
-export function resetStore(): void {
-  attendanceStore.reset(SEED_ATTENDANCE)
+export function resetStore(seed?: AttendanceRecord[]): void {
+  attendanceStore.reset(seed ?? SEED_ATTENDANCE)
   resetIdCounter()
 }

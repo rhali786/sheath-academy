@@ -24,8 +24,28 @@ function resetAll() {
   resetQuranStore()
 }
 
+function yesterdayLocal(): string {
+  const d = new Date()
+  d.setDate(d.getDate() - 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 describe('Archive filtering — alerts must exclude archived students', () => {
-  beforeEach(resetAll)
+  beforeEach(() => {
+    resetAll()
+    // Clear all attendance so the household-wide attendance_missing alert fires.
+    // The default seed generates attendance for the current week including today,
+    // which would suppress the alert.
+    resetAttendanceStore([])
+    // Seed explicit overdue not_started lessons for Layth and Talut so that
+    // pending_lessons alerts fire regardless of what day of the week it is.
+    // The default planner seed marks all lessons on or before Thursday as completed.
+    const due = yesterdayLocal()
+    resetPlannerStore([
+      { id: 'test_lesson_layth', childId: SEED_IDS.layth, subjectId: 'subj_seed_001', householdId: SEED_IDS.household, title: 'Overdue Math', dueDate: due, status: 'not_started', order: 0, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+      { id: 'test_lesson_talut', childId: SEED_IDS.talut, subjectId: 'subj_seed_013', householdId: SEED_IDS.household, title: 'Overdue Science', dueDate: due, status: 'not_started', order: 0, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+    ])
+  })
 
   test('alerts for active Layth are included', () => {
     const archivedIds = new Set(
@@ -146,19 +166,19 @@ describe('Archive filtering — quran chart data uses active studentProfiles', (
 
   test('active students include Layth, Hawa, Talut, Samurai by default', () => {
     const activeProfiles = getStudentProfiles().filter(p => p.isActive)
-    const names = activeProfiles.map(p => p.name)
-    expect(names).toContain('Layth')
-    expect(names).toContain('Hawa')
-    expect(names).toContain('Talut')
-    expect(names).toContain('Samurai')
+    const ids = activeProfiles.map(p => p.id)
+    expect(ids).toContain(SEED_IDS.layth)
+    expect(ids).toContain(SEED_IDS.hawa)
+    expect(ids).toContain(SEED_IDS.talut)
+    expect(ids).toContain(SEED_IDS.samurai)
   })
 
   test('after archiving Layth, active students do not include Layth', () => {
     archiveStudentProfile(SEED_IDS.layth)
     const activeProfiles = getStudentProfiles().filter(p => p.isActive)
-    const names = activeProfiles.map(p => p.name)
-    expect(names).not.toContain('Layth')
-    expect(names).toContain('Hawa')
-    expect(names).toContain('Talut')
+    const ids = activeProfiles.map(p => p.id)
+    expect(ids).not.toContain(SEED_IDS.layth)
+    expect(ids).toContain(SEED_IDS.hawa)
+    expect(ids).toContain(SEED_IDS.talut)
   })
 })
