@@ -6,12 +6,55 @@ import {
   getWorkspace,
   updateHouseholdProfile,
 } from '@/features/household/server/service'
+import { updateHouseholdName, updateHouseholdTimezone } from '@/features/household/server/repository'
+import { isPostgresMode } from '@/features/lib/server/db'
+import { getHouseholdContext } from '@/features/lib/server/tenant'
+import {
+  getHouseholdSetting,
+  getAllHouseholdSettings,
+  setHouseholdSetting,
+} from '@/features/settings/server/repository'
 
 const DAYS_OF_WEEK: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const DAY_LOADS: DayLoadPreference[] = ['Off', 'Light', 'Normal', 'Heavy']
 const DATE_DISPLAYS: DateDisplayPreference[] = ['gregorian', 'gregorian-hijri-en', 'bilingual']
 
 export async function GET(): Promise<NextResponse<ApiResponse<HouseholdProfile | null>>> {
+  if (isPostgresMode()) {
+    try {
+      const { householdId } = await getHouseholdContext()
+      const { getHouseholdForUser } = await import('@/features/household/server/repository')
+      const { getDb } = await import('@/features/lib/server/db')
+      const { households } = await import('@/db/schema')
+      const { eq } = await import('drizzle-orm')
+      const db = getDb()
+      const rows = await db.select().from(households).where(eq(households.id, householdId)).limit(1)
+      if (!rows[0]) {
+        return NextResponse.json({ status: 'success', data: null, message: 'No household profile', timestamp: new Date().toISOString() })
+      }
+      const row = rows[0]
+      const settings = await getAllHouseholdSettings(householdId)
+      const profile: HouseholdProfile = {
+        id: row.id,
+        workspaceId: row.id,
+        familyName: row.name,
+        timezone: row.timezone ?? undefined,
+        weekStartDay: (settings['weekStartDay'] as DayOfWeek) ?? undefined,
+        schoolDays: (settings['schoolDays'] as DayOfWeek[]) ?? undefined,
+        dayLoad: (settings['dayLoad'] as Partial<Record<DayOfWeek, DayLoadPreference>>) ?? undefined,
+        reportingName: (settings['reportingName'] as string) ?? undefined,
+        dateDisplay: (settings['dateDisplay'] as DateDisplayPreference) ?? undefined,
+        jumuahLeaveWindow: (settings['jumuahLeaveWindow'] as string) ?? undefined,
+        jumuahReturnWindow: (settings['jumuahReturnWindow'] as string) ?? undefined,
+        createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
+      }
+      return NextResponse.json({ status: 'success', data: profile, message: 'Household profile retrieved', timestamp: new Date().toISOString() })
+    } catch {
+      return NextResponse.json({ status: 'success', data: null, message: 'No household profile', timestamp: new Date().toISOString() })
+    }
+  }
+
+  // Memory path
   const profile = getHouseholdProfile()
   return NextResponse.json({
     status: 'success',
@@ -85,6 +128,29 @@ export async function PUT(request: Request): Promise<NextResponse> {
     )
   }
 
+  if (isPostgresMode()) {
+    try {
+      const { householdId } = await getHouseholdContext()
+      if (patch.familyName) await updateHouseholdName(householdId, patch.familyName)
+      if (patch.timezone) await updateHouseholdTimezone(householdId, patch.timezone)
+      const settingsKeys = ['weekStartDay', 'schoolDays', 'dayLoad', 'reportingName', 'dateDisplay', 'jumuahLeaveWindow', 'jumuahReturnWindow'] as const
+      for (const key of settingsKeys) {
+        if (patch[key] !== undefined) {
+          await setHouseholdSetting(householdId, key, patch[key] as unknown)
+        }
+      }
+      // Re-read and return the updated profile
+      const updated = await GET()
+      return updated
+    } catch (e) {
+      return NextResponse.json(
+        { status: 'error', data: null, message: 'Failed to update household profile', timestamp: new Date().toISOString() },
+        { status: 500 }
+      )
+    }
+  }
+
+  // Memory path
   let profile = getHouseholdProfile()
   if (!profile) {
     const workspace = getWorkspace()

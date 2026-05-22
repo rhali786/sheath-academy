@@ -44,6 +44,7 @@
     "node_modules",
     "e2e",
     "playwright.config.ts",
+    "drizzle.config.ts",
     "features/dashboard/frontend",
     "features/dashboard/back"
   ]
