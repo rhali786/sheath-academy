@@ -8,6 +8,7 @@ jest.mock('next/navigation', () => ({
 
 jest.mock('next-auth/react', () => ({
   signIn: jest.fn(),
+  getProviders: jest.fn().mockResolvedValue({ resend: { id: 'resend', name: 'Resend' } }),
 }))
 
 import { signIn } from 'next-auth/react'
@@ -33,16 +34,10 @@ describe('Login page — layout', () => {
     expect(screen.getByRole('button', { name: /send magic link/i })).toBeInTheDocument()
   })
 
-  test('renders disabled Google button with coming-soon label', () => {
+  test('does not show OAuth buttons when providers are not configured', () => {
     render(<Login />)
-    const googleButton = screen.getByRole('button', { name: /google/i })
-    expect(googleButton).toBeDisabled()
-  })
-
-  test('renders disabled Facebook button with coming-soon label', () => {
-    render(<Login />)
-    const facebookButton = screen.getByRole('button', { name: /facebook/i })
-    expect(facebookButton).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /continue with google/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /continue with facebook/i })).not.toBeInTheDocument()
   })
 })
 
@@ -91,6 +86,21 @@ describe('Login page — magic link flow', () => {
     await waitFor(() => {
       expect(screen.getByRole('alert')).toBeInTheDocument()
     })
+  })
+
+  test('shows error when signIn returns ok:true with Configuration error (Resend failure)', async () => {
+    mockSignIn.mockResolvedValue({ ok: true, error: 'Configuration', status: 200 })
+    render(<Login />)
+
+    fireEvent.change(screen.getByRole('textbox', { name: /email/i }), {
+      target: { value: 'parent@example.com' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/resend testing/i)
+    })
+    expect(screen.queryByText(/check your email/i)).not.toBeInTheDocument()
   })
 
   test('does not call signIn when email is empty', async () => {

@@ -13,6 +13,35 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   // Render (and most cloud hosts) terminate SSL at the load balancer;
   // trustHost lets NextAuth read X-Forwarded-Host correctly.
   trustHost: true,
+  callbacks: {
+    async signIn({ user, account }) {
+      if (
+        account?.provider &&
+        account.provider !== 'resend' &&
+        account.provider !== 'bypass' &&
+        user.email &&
+        process.env.DATABASE_URL
+      ) {
+        try {
+          const { upsertUserByEmail } = await import('@/features/household/server/repository')
+          await upsertUserByEmail(user.email, user.name ?? undefined)
+        } catch {
+          // Postgres optional during migration; JWT sign-in still succeeds.
+        }
+      }
+      return true
+    },
+    jwt({ token, user }) {
+      if (user?.email) token.email = user.email
+      return token
+    },
+    session({ session, token }) {
+      if (session.user && typeof token.email === 'string') {
+        session.user.email = token.email
+      }
+      return session
+    },
+  },
   providers: [
     Resend({
       apiKey: process.env.RESEND_API_KEY,
@@ -41,7 +70,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }),
         })
         if (!res.ok) {
-          const body = await res.json().catch(() => ({}))
+          const body = (await res.json().catch(() => ({}))) as {
+            message?: string
+            statusCode?: number
+          }
+          const detail = body.message ?? JSON.stringify(body)
+          if (
+            res.status === 403 &&
+            typeof detail === 'string' &&
+            detail.includes('only send testing emails')
+          ) {
+            throw new Error(
+              'Resend testing mode: magic links can only be sent to the email on your Resend account. ' +
+                'Use that address locally, or verify a domain at resend.com/domains.',
+            )
+          }
           throw new Error('Resend error: ' + JSON.stringify(body))
         }
       },
@@ -76,10 +119,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         ]
       : []),
 
-    // OAuth providers — activate by setting their env vars in Render / .env.local.
-    // AUTH_GOOGLE_ID + AUTH_GOOGLE_SECRET  → Google sign-in goes live.
-    Google,
-    // AUTH_FACEBOOK_ID + AUTH_FACEBOOK_SECRET → Facebook sign-in goes live.
-    Facebook,
+    // OAuth — only registered when client id + secret are set (Auth.js reads AUTH_* env vars).
+    ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET ? [Google] : []),
+    ...(process.env.AUTH_FACEBOOK_ID && process.env.AUTH_FACEBOOK_SECRET ? [Facebook] : []),
   ],
 })

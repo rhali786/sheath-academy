@@ -15,6 +15,9 @@ export interface HouseholdSnapshot {
   userEmail?: string
   userName?: string
   learnerCount: number
+  learnerNames: string[]
+  lessonTasksInPeriod: number
+  lessonsCompletedInPeriod: number
 }
 
 const SESSION_START_TYPES: UsageEventType[] = ['session_started']
@@ -135,6 +138,9 @@ export function buildUserRow(
       snapshot.learnerCount,
       periodEvents.filter(e => e.eventType === 'learner_created').length,
     ),
+    learnerNames: snapshot.learnerNames,
+    lessonTasksInPeriod: snapshot.lessonTasksInPeriod,
+    lessonsCompletedInPeriod: snapshot.lessonsCompletedInPeriod,
     sessionsLogged,
     completionEvents,
     startedNotCompletedCount,
@@ -221,6 +227,15 @@ export function filterAndSortUserRows(
   }
   if (query.dropOff) {
     filtered = filtered.filter(r => r.dropOffSignals.includes(query.dropOff!))
+  }
+  if (query.search) {
+    const q = query.search.toLowerCase()
+    filtered = filtered.filter(
+      r =>
+        r.workspaceName.toLowerCase().includes(q) ||
+        (r.userEmail?.toLowerCase().includes(q) ?? false) ||
+        r.learnerNames.some(name => name.toLowerCase().includes(q)),
+    )
   }
 
   filtered.sort((a, b) => {

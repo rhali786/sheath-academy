@@ -46,6 +46,35 @@ export async function getSubjectRow(
   return result[0] ?? null
 }
 
+export async function upsertSubjectRow(
+  householdId: string,
+  subjectId: string,
+  input: CreateSubjectInput,
+): Promise<SubjectRow> {
+  const existing = await getSubjectRow(subjectId, householdId)
+  if (existing) return existing
+
+  const db = getDb()
+  const now = new Date()
+  const inserted = await db
+    .insert(subjects)
+    .values({
+      id: subjectId,
+      householdId,
+      learnerId: input.learnerId ?? null,
+      name: input.name,
+      category: input.category,
+      description: input.description ?? null,
+      color: input.color ?? null,
+      sortOrder: input.sortOrder ?? 0,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning()
+  return inserted[0]
+}
+
 export async function createSubjectRow(
   householdId: string,
   input: CreateSubjectInput,

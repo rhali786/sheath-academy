@@ -48,6 +48,36 @@ export async function getQuranSessionRow(
   return result[0] ?? null
 }
 
+/** Finds session by id or creates with that id. Idempotent for seeds. */
+export async function upsertQuranSessionRow(
+  householdId: string,
+  sessionId: string,
+  input: CreateQuranSessionInput,
+): Promise<QuranSessionRow> {
+  const existing = await getQuranSessionRow(sessionId, householdId)
+  if (existing) return existing
+  const db = getDb()
+  const now = new Date()
+  const inserted = await db
+    .insert(quranSessions)
+    .values({
+      id: sessionId,
+      householdId,
+      learnerId: input.learnerId,
+      sessionDate: input.sessionDate,
+      sessionType: input.sessionType,
+      surah: input.surah ?? null,
+      fromAyah: input.fromAyah ?? null,
+      toAyah: input.toAyah ?? null,
+      durationMinutes: input.durationMinutes ?? null,
+      notes: input.notes ?? null,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning()
+  return inserted[0]
+}
+
 export async function createQuranSessionRow(
   householdId: string,
   input: CreateQuranSessionInput,

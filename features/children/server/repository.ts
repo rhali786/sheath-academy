@@ -67,6 +67,34 @@ export async function createLearner(
   return inserted[0]
 }
 
+/** Finds learner by id or creates with that id. Idempotent for seeds. */
+export async function upsertLearner(
+  householdId: string,
+  learnerId: string,
+  input: CreateLearnerInput,
+): Promise<LearnerRow> {
+  const existing = await getLearner(learnerId, householdId)
+  if (existing) return existing
+
+  const db = getDb()
+  const now = new Date()
+  const inserted = await db
+    .insert(learners)
+    .values({
+      id: learnerId,
+      householdId,
+      name: input.name,
+      gradeLevel: input.gradeLevel ?? null,
+      displayColor: input.displayColor ?? null,
+      isActive: true,
+      sortOrder: input.sortOrder ?? 0,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning()
+  return inserted[0]
+}
+
 export async function updateLearner(
   id: string,
   householdId: string,

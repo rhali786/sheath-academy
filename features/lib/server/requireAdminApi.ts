@@ -25,7 +25,8 @@ export async function requireAdminApi(request: Request): Promise<
   const { auth } = await import('@/features/auth/auth')
   const session = await auth()
   const email = session?.user?.email
-  if (!isAppAdmin(email)) return { ok: false, response: forbiddenResponse() }
+  const isAdmin = isAppAdmin(email)
+  if (!isAdmin) return { ok: false, response: forbiddenResponse() }
 
   return { ok: true, email: email! }
 }

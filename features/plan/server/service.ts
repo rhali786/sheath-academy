@@ -2,8 +2,19 @@ import { LessonTask } from '../types'
 import { lessonsStore } from './store'
 import { SEED_LESSONS } from './seed'
 import { generateLessonTaskId, resetIdCounter } from './ids'
-import { getStudentProfile } from '@/features/children/server/service'
+import { getStudentProfile, getStudentProfiles } from '@/features/children/server/service'
 import { getSubject } from '@/features/subjects/server/service'
+import { isPostgresMode } from '@/features/lib/server/db'
+import { listLessonTaskRows } from './repository'
+
+export type LessonTaskPeriodCounts = {
+  lessonTasksInPeriod: number
+  lessonsCompletedInPeriod: number
+}
+
+function dueDateInPeriod(dueDate: string, periodStart: string, periodEnd: string): boolean {
+  return dueDate >= periodStart && dueDate <= periodEnd
+}
 
 export function getLessons(childId?: string, subjectId?: string): LessonTask[] {
   let lessons = lessonsStore.getAll()
@@ -81,4 +92,30 @@ export function archiveBySubjectId(_subjectId: string): void {}
 export function resetStore(seed?: LessonTask[]): void {
   lessonsStore.reset(seed ?? SEED_LESSONS)
   resetIdCounter()
+}
+
+export async function getLessonTaskPeriodCounts(
+  householdId: string,
+  periodStart: string,
+  periodEnd: string,
+): Promise<LessonTaskPeriodCounts> {
+  if (isPostgresMode()) {
+    const rows = await listLessonTaskRows(householdId, {
+      startDate: periodStart,
+      endDate: periodEnd,
+    })
+    return {
+      lessonTasksInPeriod: rows.length,
+      lessonsCompletedInPeriod: rows.filter(r => r.status === 'completed').length,
+    }
+  }
+
+  const childIds = new Set(getStudentProfiles(householdId).map(p => p.id))
+  const inPeriod = getLessons().filter(
+    l => childIds.has(l.childId) && dueDateInPeriod(l.dueDate, periodStart, periodEnd),
+  )
+  return {
+    lessonTasksInPeriod: inPeriod.length,
+    lessonsCompletedInPeriod: inPeriod.filter(l => l.status === 'completed').length,
+  }
 }

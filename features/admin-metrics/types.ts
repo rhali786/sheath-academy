@@ -85,6 +85,9 @@ export interface AdminMetricsUserRow {
   isActiveInPeriod: boolean
   lastActiveAt?: string
   learnerCount: number
+  learnerNames: string[]
+  lessonTasksInPeriod: number
+  lessonsCompletedInPeriod: number
   sessionsLogged: number
   completionEvents: number
   startedNotCompletedCount: number
@@ -112,6 +115,7 @@ export interface AdminMetricsQuery {
   featureArea?: FeatureArea
   dropOff?: DropOffSignal
   workspaceId?: string
+  search?: string
   page?: number
   pageSize?: number
 }

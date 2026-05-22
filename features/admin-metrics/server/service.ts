@@ -19,8 +19,9 @@ import { getMemoryUsageEvents } from './store'
 async function listAllHouseholdSnapshots(): Promise<HouseholdSnapshot[]> {
   if (isPostgresMode()) {
     const { getDb } = await import('@/features/lib/server/db')
-    const { households, users, learners } = await import('@/db/schema')
+    const { households, users } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
+    const { listLearners } = await import('@/features/children/server/repository')
     const db = getDb()
     const joined = await db
       .select({
@@ -35,10 +36,7 @@ async function listAllHouseholdSnapshots(): Promise<HouseholdSnapshot[]> {
 
     const snapshots: HouseholdSnapshot[] = []
     for (const row of joined) {
-      const learnerRows = await db
-        .select({ id: learners.id })
-        .from(learners)
-        .where(eq(learners.householdId, row.householdId))
+      const learnerRows = await listLearners(row.householdId)
       snapshots.push({
         householdId: row.householdId,
         householdName: row.householdName,
@@ -46,6 +44,9 @@ async function listAllHouseholdSnapshots(): Promise<HouseholdSnapshot[]> {
         userEmail: row.userEmail ?? undefined,
         userName: row.userName ?? undefined,
         learnerCount: learnerRows.length,
+        learnerNames: learnerRows.map(r => r.name),
+        lessonTasksInPeriod: 0,
+        lessonsCompletedInPeriod: 0,
       })
     }
     return snapshots
@@ -63,6 +64,9 @@ async function listAllHouseholdSnapshots(): Promise<HouseholdSnapshot[]> {
       userId: 'memory-user',
       userEmail: 'memory@test.local',
       learnerCount: learners.length,
+      learnerNames: learners.map(l => l.name),
+      lessonTasksInPeriod: 0,
+      lessonsCompletedInPeriod: 0,
     },
   ]
 }
@@ -104,9 +108,20 @@ export async function getAdminMetricsUsers(query: AdminMetricsQuery): Promise<Ad
   const page = query.page ?? 1
   const pageSize = query.pageSize ?? 50
   const snapshots = await listAllHouseholdSnapshots()
-  const [periodEvents, allEvents] = await Promise.all([
+  const { getLessonTaskPeriodCounts } = await import('@/features/plan/server/service')
+  const [periodEvents, allEvents, snapshotsWithStats] = await Promise.all([
     fetchEvents(query.periodStart, query.periodEnd),
     fetchEvents('2000-01-01', '2099-12-31'),
+    Promise.all(
+      snapshots.map(async s => {
+        const counts = await getLessonTaskPeriodCounts(
+          s.householdId,
+          query.periodStart,
+          query.periodEnd,
+        )
+        return { ...s, ...counts }
+      }),
+    ),
   ])
 
   const byHousehold = new Map<string, UsageEvent[]>()
@@ -122,7 +137,7 @@ export async function getAdminMetricsUsers(query: AdminMetricsQuery): Promise<Ad
     allByHousehold.set(e.householdId, list)
   }
 
-  const rows = snapshots.map(s =>
+  const rows = snapshotsWithStats.map(s =>
     buildUserRow(
       s,
       byHousehold.get(s.householdId) ?? [],

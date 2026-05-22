@@ -6,7 +6,11 @@ export type UserRow = typeof users.$inferSelect
 export type HouseholdRow = typeof households.$inferSelect
 
 /** Finds user by email or creates a new row. Idempotent. */
-export async function upsertUserByEmail(email: string, name?: string): Promise<UserRow> {
+export async function upsertUserByEmail(
+  email: string,
+  name?: string,
+  fixedId?: string,
+): Promise<UserRow> {
   const db = getDb()
   const existing = await db.select().from(users).where(eq(users.email, email)).limit(1)
   if (existing.length > 0) return existing[0]
@@ -15,7 +19,7 @@ export async function upsertUserByEmail(email: string, name?: string): Promise<U
   const inserted = await db
     .insert(users)
     .values({
-      id: `user_${Date.now()}`,
+      id: fixedId ?? `user_${Date.now()}`,
       email,
       name: name ?? null,
       role: 'user',
@@ -30,6 +34,7 @@ export async function upsertUserByEmail(email: string, name?: string): Promise<U
 export async function upsertHouseholdForUser(
   userId: string,
   defaultName: string = 'My Household',
+  fixedHouseholdId?: string,
 ): Promise<HouseholdRow> {
   const db = getDb()
   const existing = await db
@@ -43,7 +48,7 @@ export async function upsertHouseholdForUser(
   const inserted = await db
     .insert(households)
     .values({
-      id: `household_${Date.now()}`,
+      id: fixedHouseholdId ?? `household_${Date.now()}`,
       userId,
       name: defaultName,
       timezone: 'America/New_York',

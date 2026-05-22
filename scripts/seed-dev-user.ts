@@ -2,23 +2,18 @@
  * Seeds demo data for the dev/preview user only.
  * Run with: npm run db:seed:dev
  *
- * Rules:
- *  - Uses DEV_SEED_USER_EMAIL from the environment, or dev@sheathacademy.ai by default.
- *  - Creates or updates that user's one household (idempotent).
- *  - Inserts demo learners, subjects, lesson tasks, attendance events,
- *    Qur'an sessions, and portfolio evidence under that household only.
- *  - Uses timestamp-prefixed IDs to remain runnable multiple times without collision.
- *  - Does NOT run automatically for normal users.
- *  - Demo data is quarantined to this one household.
+ * Idempotent: stable user/household/learner IDs (see DEV_PG_SEED).
+ * Re-run safe; does not create duplicate learners per run.
  */
 
 import { getDevSeedUserEmail } from '../features/lib/server/devUserEmail'
+import { DEV_PG_SEED } from '../features/lib/seedIds'
 import { upsertUserByEmail, upsertHouseholdForUser } from '../features/household/server/repository'
-import { createLearner } from '../features/children/server/repository'
-import { createSubjectRow } from '../features/subjects/server/repository'
+import { upsertLearner } from '../features/children/server/repository'
+import { upsertSubjectRow } from '../features/subjects/server/repository'
 import { createLessonTaskRow } from '../features/plan/server/repository'
 import { createAttendanceEvent } from '../features/attendance/server/repository'
-import { createQuranSessionRow } from '../features/quran/server/repository'
+import { upsertQuranSessionRow } from '../features/quran/server/repository'
 import { createEvidenceRow } from '../features/portfolio/server/repository'
 
 async function main() {
@@ -26,45 +21,91 @@ async function main() {
 
   console.log(`db:seed:dev — seeding demo data for: ${email}`)
 
-  const user = await upsertUserByEmail(email, 'Dev User')
-  const household = await upsertHouseholdForUser(user.id, 'Demo Household')
+  const user = await upsertUserByEmail(email, 'Dev User', DEV_PG_SEED.userId)
+  const household = await upsertHouseholdForUser(
+    user.id,
+    'Demo Household',
+    DEV_PG_SEED.householdId,
+  )
   console.log(`  household: ${household.id}`)
 
-  // Learners
-  const layth = await createLearner(household.id, { name: 'Layth', gradeLevel: 'Grade 4' })
-  const hawa = await createLearner(household.id, { name: 'Hawa', gradeLevel: 'Grade 1' })
+  const layth = await upsertLearner(household.id, DEV_PG_SEED.layth, {
+    name: 'Layth',
+    gradeLevel: 'Grade 4',
+  })
+  const hawa = await upsertLearner(household.id, DEV_PG_SEED.hawa, {
+    name: 'Hawa',
+    gradeLevel: 'Grade 1',
+  })
   console.log(`  learners: ${layth.id}, ${hawa.id}`)
 
-  // Subjects
-  const mathSubject = await createSubjectRow(household.id, { name: 'Mathematics', category: 'core', learnerId: layth.id })
-  const quranSubject = await createSubjectRow(household.id, { name: 'Quran', category: 'quran', learnerId: layth.id })
+  const mathSubject = await upsertSubjectRow(household.id, DEV_PG_SEED.mathSubject, {
+    name: 'Mathematics',
+    category: 'core',
+    learnerId: layth.id,
+  })
+  const quranSubject = await upsertSubjectRow(household.id, DEV_PG_SEED.quranSubject, {
+    name: 'Quran',
+    category: 'quran',
+    learnerId: layth.id,
+  })
   console.log(`  subjects: ${mathSubject.id}, ${quranSubject.id}`)
 
-  // Lesson tasks
   const today = new Date().toISOString().split('T')[0]
-  await createLessonTaskRow(household.id, { learnerId: layth.id, subjectId: mathSubject.id, title: 'Complete worksheet 1–5', dueDate: today })
-  await createLessonTaskRow(household.id, { learnerId: layth.id, subjectId: quranSubject.id, title: 'Review Al-Fatiha', dueDate: today, status: 'completed' })
+  await createLessonTaskRow(household.id, {
+    learnerId: layth.id,
+    subjectId: mathSubject.id,
+    title: 'Complete worksheet 1–5',
+    dueDate: today,
+  })
+  await createLessonTaskRow(household.id, {
+    learnerId: layth.id,
+    subjectId: quranSubject.id,
+    title: 'Review Al-Fatiha',
+    dueDate: today,
+    status: 'completed',
+  })
   console.log('  lesson tasks created')
 
-  // Attendance events
-  await createAttendanceEvent(household.id, { learnerId: layth.id, attendanceDate: today, status: 'present', minutes: 360 })
-  await createAttendanceEvent(household.id, { learnerId: hawa.id, attendanceDate: today, status: 'present', minutes: 240 })
+  await createAttendanceEvent(household.id, {
+    learnerId: layth.id,
+    attendanceDate: today,
+    status: 'present',
+    minutes: 360,
+  })
+  await createAttendanceEvent(household.id, {
+    learnerId: hawa.id,
+    attendanceDate: today,
+    status: 'present',
+    minutes: 240,
+  })
   console.log('  attendance events created')
 
-  // Qur'an sessions
-  await createQuranSessionRow(household.id, { learnerId: layth.id, sessionDate: today, sessionType: 'memorization', surah: 'Al-Fatiha', fromAyah: 1, toAyah: 7 })
+  await upsertQuranSessionRow(household.id, DEV_PG_SEED.quranSessionToday, {
+    learnerId: layth.id,
+    sessionDate: today,
+    sessionType: 'memorization',
+    surah: 'Al-Fatiha',
+    fromAyah: 1,
+    toAyah: 7,
+  })
   console.log('  quran session created')
 
-  // Portfolio evidence
-  await createEvidenceRow(household.id, { learnerId: layth.id, title: 'Math worksheet photo', evidenceType: 'work_sample', evidenceDate: today, subjectId: mathSubject.id })
+  await createEvidenceRow(household.id, {
+    learnerId: layth.id,
+    title: 'Math worksheet photo',
+    evidenceType: 'work_sample',
+    evidenceDate: today,
+    subjectId: mathSubject.id,
+  })
   console.log('  portfolio evidence created')
 
   console.log('db:seed:dev — done')
-  console.log(`\nNote: Demo data belongs only to household ${household.id} (user: ${email}).`)
-  console.log('Other users will see an empty app.')
+  console.log(`\nDemo data: household ${household.id} (user: ${email}).`)
+  console.log('Run npm run db:reset:dev to wipe dev + isolation test rows and re-seed.')
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error(err)
   process.exit(1)
 })

@@ -13,6 +13,9 @@ const snapshot: HouseholdSnapshot = {
   userId: 'user_1',
   userEmail: 'parent@test.com',
   learnerCount: 2,
+  learnerNames: ['Ada', 'Bob'],
+  lessonTasksInPeriod: 3,
+  lessonsCompletedInPeriod: 1,
 }
 
 function ev(
@@ -58,6 +61,13 @@ describe('buildUserRow', () => {
     expect(row.dropOffSignals).toContain('started_not_completed')
   })
 
+  test('passes through learner names and lesson stats', () => {
+    const row = buildUserRow(snapshot, [], [], '2026-05-01', '2026-05-31')
+    expect(row.learnerNames).toEqual(['Ada', 'Bob'])
+    expect(row.lessonTasksInPeriod).toBe(3)
+    expect(row.lessonsCompletedInPeriod).toBe(1)
+  })
+
   test('detects learners no activity', () => {
     const row = buildUserRow(snapshot, [], [], '2026-05-01', '2026-05-31')
     expect(row.dropOffSignals).toContain('learners_no_activity')
@@ -93,5 +103,47 @@ describe('filterAndSortUserRows', () => {
     })
     expect(filtered).toHaveLength(1)
     expect(filtered[0].workspaceId).toBe('hh_1')
+  })
+
+  test('filters by search on workspace name and email', () => {
+    const rows = [
+      buildUserRow(snapshot, [], [], '2026-05-01', '2026-05-31'),
+      buildUserRow(
+        {
+          ...snapshot,
+          householdId: 'hh_2',
+          householdName: 'Other Family',
+          userEmail: 'other@test.com',
+          learnerNames: ['Zara'],
+        },
+        [],
+        [],
+        '2026-05-01',
+        '2026-05-31',
+      ),
+    ]
+    const byName = filterAndSortUserRows(rows, {
+      periodStart: '2026-05-01',
+      periodEnd: '2026-05-31',
+      search: 'test family',
+    })
+    expect(byName).toHaveLength(1)
+    expect(byName[0].workspaceName).toBe('Test Family')
+
+    const byEmail = filterAndSortUserRows(rows, {
+      periodStart: '2026-05-01',
+      periodEnd: '2026-05-31',
+      search: 'OTHER@TEST',
+    })
+    expect(byEmail).toHaveLength(1)
+    expect(byEmail[0].userEmail).toBe('other@test.com')
+
+    const byLearner = filterAndSortUserRows(rows, {
+      periodStart: '2026-05-01',
+      periodEnd: '2026-05-31',
+      search: 'ada',
+    })
+    expect(byLearner).toHaveLength(1)
+    expect(byLearner[0].learnerNames).toContain('Ada')
   })
 })

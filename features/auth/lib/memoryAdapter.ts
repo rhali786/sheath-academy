@@ -1,13 +1,19 @@
 import { randomUUID } from 'crypto'
-import type { Adapter, AdapterUser, VerificationToken } from '@auth/core/adapters'
+import type { Adapter, AdapterAccount, AdapterUser, VerificationToken } from '@auth/core/adapters'
 
 const users = new Map<string, AdapterUser>()
 const tokens = new Map<string, VerificationToken>()
+const accounts = new Map<string, AdapterAccount>()
+
+function accountKey(provider: string, providerAccountId: string): string {
+  return `${provider}:${providerAccountId}`
+}
 
 /** Wipe all state — used in tests between cases. */
 export function clearAdapterState() {
   users.clear()
   tokens.clear()
+  accounts.clear()
 }
 
 export const memoryAdapter: Adapter = {
@@ -37,12 +43,15 @@ export const memoryAdapter: Adapter = {
     return updated
   },
 
-  async getUserByAccount() {
-    return null
+  async getUserByAccount({ provider, providerAccountId }) {
+    const linked = accounts.get(accountKey(provider, providerAccountId))
+    if (!linked) return null
+    return users.get(linked.userId) ?? null
   },
 
-  async linkAccount() {
-    return undefined
+  async linkAccount(account) {
+    accounts.set(accountKey(account.provider, account.providerAccountId), account)
+    return account
   },
 
   async createVerificationToken(verificationToken) {

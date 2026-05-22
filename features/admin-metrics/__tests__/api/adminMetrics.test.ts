@@ -69,7 +69,7 @@ describe('Admin metrics API', () => {
     expect(res.status).toBe(401)
   })
 
-  test('users endpoint returns rows', async () => {
+  test('users endpoint returns rows with learner names and lesson stats', async () => {
     const res = await GETUsers(
       new Request('http://localhost/api/admin/metrics/users?periodStart=2026-05-01&periodEnd=2026-05-31'),
     )
@@ -77,5 +77,24 @@ describe('Admin metrics API', () => {
     const body = await res.json()
     expect(body.data.rows).toBeDefined()
     expect(Array.isArray(body.data.rows)).toBe(true)
+    if (body.data.rows.length > 0) {
+      const first = body.data.rows[0]
+      expect(Array.isArray(first.learnerNames)).toBe(true)
+      expect(first.learnerNames.length).toBeGreaterThan(0)
+      expect(typeof first.lessonTasksInPeriod).toBe('number')
+      expect(typeof first.lessonsCompletedInPeriod).toBe('number')
+    }
+  })
+
+  test('users endpoint filters by search param', async () => {
+    const res = await GETUsers(
+      new Request(
+        'http://localhost/api/admin/metrics/users?periodStart=2026-05-01&periodEnd=2026-05-31&search=nonexistent-workspace-xyz',
+      ),
+    )
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.data.rows).toHaveLength(0)
+    expect(body.data.total).toBe(0)
   })
 })

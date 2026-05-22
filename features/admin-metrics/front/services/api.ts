@@ -31,6 +31,7 @@ export const adminMetricsApi = {
     activeOnly?: boolean
     featureArea?: string
     dropOff?: string
+    search?: string
   }): Promise<AdminMetricsUsersResult> {
     const url = new URL('/api/admin/metrics/users', window.location.origin)
     if (params.periodStart) url.searchParams.set('periodStart', params.periodStart)
@@ -39,6 +40,7 @@ export const adminMetricsApi = {
     if (params.activeOnly) url.searchParams.set('activeOnly', 'true')
     if (params.featureArea) url.searchParams.set('featureArea', params.featureArea)
     if (params.dropOff) url.searchParams.set('dropOff', params.dropOff)
+    if (params.search?.trim()) url.searchParams.set('search', params.search.trim())
     const res = await fetch(url.toString(), { credentials: 'include' })
     return parseJson<AdminMetricsUsersResult>(res)
   },

@@ -21,6 +21,7 @@ export async function GET(request: Request): Promise<Response> {
     featureArea: (searchParams.get('featureArea') as FeatureArea | null) ?? undefined,
     dropOff: (searchParams.get('dropOff') as DropOffSignal | null) ?? undefined,
     workspaceId: searchParams.get('workspaceId') ?? undefined,
+    search: searchParams.get('search')?.trim() || undefined,
     page,
     pageSize,
   })
