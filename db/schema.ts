@@ -77,7 +77,9 @@ export const subjects = pgTable(
   {
     id: text('id').primaryKey(),
     householdId: text('household_id').notNull().references(() => households.id),
+    learnerId: text('learner_id').references(() => learners.id),
     name: text('name').notNull(),
+    category: text('category').notNull().default('core'),
     description: text('description'),
     color: text('color'),
     sortOrder: integer('sort_order').notNull().default(0),

@@ -1,4 +1,8 @@
 import '@testing-library/jest-dom'
+import { configure } from '@testing-library/react'
+
+// Increase async timeout to prevent flakiness when Jest runs many tests in parallel.
+configure({ asyncUtilTimeout: 8000 })
 
 if (typeof window !== 'undefined') {
   // Mock window.matchMedia

@@ -8,6 +8,13 @@
       "when": 1779453828566,
       "tag": "0000_curved_silver_sable",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779455476583,
+      "tag": "0001_third_maginty",
+      "breakpoints": true
     }
   ]
 }

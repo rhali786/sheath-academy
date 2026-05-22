@@ -2,28 +2,40 @@ import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { LessonTask } from '@/features/plan/types'
 import { getLessons, createLessonTask } from '@/features/plan/server/service'
+import { listLessonTaskRows, createLessonTaskRow } from '@/features/plan/server/repository'
+import type { LessonTaskRow } from '@/features/plan/server/repository'
+import { isPostgresMode } from '@/features/lib/server/db'
+import { getHouseholdContext } from '@/features/lib/server/tenant'
+
+function rowToLesson(r: LessonTaskRow): LessonTask {
+  return {
+    id: r.id,
+    childId: r.learnerId,
+    subjectId: r.subjectId ?? '',
+    householdId: r.householdId,
+    title: r.title,
+    description: r.description ?? undefined,
+    dueDate: r.dueDate ?? '',
+    status: (r.status as LessonTask['status']) ?? 'not_started',
+    order: r.sortOrder,
+    createdAt: r.createdAt?.toISOString() ?? new Date().toISOString(),
+    updatedAt: r.updatedAt?.toISOString() ?? new Date().toISOString(),
+  }
+}
 
 function formatLocalDate(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${dd}`
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function getWeekRange(weekStr: string): { start: string; end: string } | null {
-  // Use T00:00:00 (no Z) so the date is parsed in local time, not UTC
   const d = new Date(`${weekStr}T00:00:00`)
   if (isNaN(d.getTime())) return null
-
-  // Snap to Monday of the given week
   const dayOfWeek = d.getDay()
   const offsetToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
   const monday = new Date(d)
   monday.setDate(d.getDate() + offsetToMonday)
-
   const sunday = new Date(monday)
   sunday.setDate(monday.getDate() + 6)
-
   return { start: formatLocalDate(monday), end: formatLocalDate(sunday) }
 }
 
@@ -33,97 +45,58 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Le
   const childIds = url.searchParams.get('childIds')
   const subjectIds = url.searchParams.get('subjectIds')
 
-  // Validate and parse week param
   let weekRange: { start: string; end: string } | null = null
   if (week) {
     weekRange = getWeekRange(week)
-    if (!weekRange) {
-      return NextResponse.json(
-        {
-          status: 'error',
-          data: null,
-          message: 'Invalid week parameter — expected YYYY-MM-DD',
-          timestamp: new Date().toISOString(),
-        },
-        { status: 400 }
-      )
-    }
+    if (!weekRange) return NextResponse.json({ status: 'error', data: null, message: 'Invalid week parameter — expected YYYY-MM-DD', timestamp: new Date().toISOString() }, { status: 400 })
   }
 
   const childIdArray = childIds ? childIds.split(',').filter(Boolean) : undefined
   const subjectIdArray = subjectIds ? subjectIds.split(',').filter(Boolean) : undefined
 
+  if (isPostgresMode()) {
+    try {
+      const { householdId } = await getHouseholdContext()
+      const filters: Parameters<typeof listLessonTaskRows>[1] = {}
+      if (childIdArray?.length === 1) filters.learnerId = childIdArray[0]
+      if (subjectIdArray?.length === 1) filters.subjectId = subjectIdArray[0]
+      if (weekRange) { filters.startDate = weekRange.start; filters.endDate = weekRange.end }
+      let rows = await listLessonTaskRows(householdId, filters)
+      if (childIdArray && childIdArray.length > 1) rows = rows.filter(r => childIdArray.includes(r.learnerId))
+      if (subjectIdArray && subjectIdArray.length > 1) rows = rows.filter(r => r.subjectId && subjectIdArray.includes(r.subjectId))
+      return NextResponse.json({ status: 'success', data: rows.map(rowToLesson), message: 'Lessons retrieved', timestamp: new Date().toISOString() })
+    } catch {
+      return NextResponse.json({ status: 'success', data: [], message: 'Lessons retrieved', timestamp: new Date().toISOString() })
+    }
+  }
+
   let lessons = getLessons()
-
-  if (weekRange) {
-    lessons = lessons.filter(l => l.dueDate >= weekRange!.start && l.dueDate <= weekRange!.end)
-  }
-
-  if (childIdArray && childIdArray.length > 0) {
-    lessons = lessons.filter(l => childIdArray.includes(l.childId))
-  }
-
-  if (subjectIdArray && subjectIdArray.length > 0) {
-    lessons = lessons.filter(l => subjectIdArray.includes(l.subjectId))
-  }
-
-  return NextResponse.json({
-    status: 'success',
-    data: lessons,
-    message: 'Lessons retrieved',
-    timestamp: new Date().toISOString(),
-  })
+  if (weekRange) lessons = lessons.filter(l => l.dueDate >= weekRange!.start && l.dueDate <= weekRange!.end)
+  if (childIdArray && childIdArray.length > 0) lessons = lessons.filter(l => childIdArray.includes(l.childId))
+  if (subjectIdArray && subjectIdArray.length > 0) lessons = lessons.filter(l => subjectIdArray.includes(l.subjectId))
+  return NextResponse.json({ status: 'success', data: lessons, message: 'Lessons retrieved', timestamp: new Date().toISOString() })
 }
 
 export async function POST(request: Request): Promise<NextResponse<ApiResponse<LessonTask | null>>> {
   const body = await request.json()
-
   const { childId, subjectId, title, dueDate, description } = body
 
-  if (!childId || !subjectId || !title?.trim() || !dueDate) {
-    return NextResponse.json(
-      {
-        status: 'error',
-        data: null,
-        message: 'childId, subjectId, title, and dueDate are required',
-        timestamp: new Date().toISOString(),
-      },
-      { status: 400 }
-    )
+  if (!childId || !title?.trim() || !dueDate) {
+    return NextResponse.json({ status: 'error', data: null, message: 'childId, title, and dueDate are required', timestamp: new Date().toISOString() }, { status: 400 })
   }
 
-  const lesson = createLessonTask({
-    childId,
-    subjectId,
-    householdId: body.householdId || '',
-    title: title.trim(),
-    description: description?.trim() || undefined,
-    dueDate,
-    status: body.status ?? 'not_started',
-    order: body.order || 0,
-    estimatedDuration: body.estimatedDuration,
-    lessonType: body.lessonType,
-  })
-
-  if (!lesson) {
-    return NextResponse.json(
-      {
-        status: 'error',
-        data: null,
-        message: 'Invalid childId or subjectId',
-        timestamp: new Date().toISOString(),
-      },
-      { status: 404 }
-    )
+  if (isPostgresMode()) {
+    try {
+      const { householdId } = await getHouseholdContext()
+      const row = await createLessonTaskRow(householdId, { learnerId: childId, subjectId, title: title.trim(), description: description?.trim(), dueDate, status: body.status ?? 'not_started', sortOrder: body.order || 0 })
+      return NextResponse.json({ status: 'success', data: rowToLesson(row), message: 'Lesson created', timestamp: new Date().toISOString() }, { status: 201 })
+    } catch (e) {
+      return NextResponse.json({ status: 'error', data: null, message: 'Failed to create lesson', timestamp: new Date().toISOString() }, { status: 500 })
+    }
   }
 
-  return NextResponse.json(
-    {
-      status: 'success',
-      data: lesson,
-      message: 'Lesson created',
-      timestamp: new Date().toISOString(),
-    },
-    { status: 201 }
-  )
+  if (!subjectId) return NextResponse.json({ status: 'error', data: null, message: 'childId, subjectId, title, and dueDate are required', timestamp: new Date().toISOString() }, { status: 400 })
+  const lesson = createLessonTask({ childId, subjectId, householdId: body.householdId || '', title: title.trim(), description: description?.trim() || undefined, dueDate, status: body.status ?? 'not_started', order: body.order || 0, estimatedDuration: body.estimatedDuration, lessonType: body.lessonType })
+  if (!lesson) return NextResponse.json({ status: 'error', data: null, message: 'Invalid childId or subjectId', timestamp: new Date().toISOString() }, { status: 404 })
+  return NextResponse.json({ status: 'success', data: lesson, message: 'Lesson created', timestamp: new Date().toISOString() }, { status: 201 })
 }

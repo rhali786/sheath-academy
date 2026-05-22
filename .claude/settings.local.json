@@ -11,7 +11,14 @@
       "Bash(\"/c/PROJECTS/sheath-academy/features/plan/__tests__/integration/LessonCard.test.tsx\":*)",
       "Bash(node:*)",
       "Bash(npm test:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npm install *)",
+      "Bash(Get-Content C:\\\\Users\\\\rashe\\\\AppData\\\\Local\\\\Temp\\\\test_output.txt)",
+      "Bash(Select-String \"FAIL\")",
+      "Bash(npx drizzle-kit *)",
+      "Bash(npx dotenv *)",
+      "Bash(npx next *)",
+      "Bash(npx tsc *)"
     ]
   }
 }
