@@ -832,3 +832,267 @@ Copy/paste the template below and fill it in. Keep each entry short and scannabl
 - **Attachments**:
 
 ---
+ID: FB-015
+Status: New
+Date/time: 2026-05-19 18:40 (America/Detroit)
+Area/URL: Portfolio / Evidence records / https://sheathacademy.onrender.com/portfolio
+Feedback summary: Refine Portfolio into a robust homeschool evidence and educational-records system with stronger UX, filtering, accessibility, and transcript/export readiness.
+Details / suggested change:
+Treat this feedback as covering the full Portfolio workflow, including Add Evidence form, filters, evidence list/cards, future exports, and evidence architecture.
+
+Improve overall page hierarchy and visual structure.
+Separate “Add Evidence” and “Portfolio Entries” into distinct visual cards/sections.
+Use a responsive two-column layout on desktop:
+Left = Add Evidence form
+Right = Evidence list + filters
+Stack vertically on mobile.
+
+Increase whitespace, spacing, and typography hierarchy.
+Current layout feels dense and visually flat.
+Headers such as “Add Evidence” and “Portfolio Entries” should be more visually distinct.
+
+Replace evidence row/list presentation with evidence cards or expandable rows.
+Each evidence item should clearly display:
+Title
+Learner
+Subject/course
+Evidence type
+Date
+Optional score/grade
+Tags
+Notes preview
+Parent reflection preview
+Actions
+
+Allow notes and parent reflections to expand/collapse instead of truncating abruptly.
+Current truncation (“Clear understanding sh…”) reduces readability and context.
+
+Add inline actions directly on evidence items:
+Edit
+Archive/Delete
+Export
+Duplicate
+Add related evidence
+
+Improve filtering/search workflows.
+Current filters are functional but limited.
+Add:
+Keyword search across title/notes/reflections
+Multi-select learner filters
+Multi-select subject/course filters
+Type filters
+Date-range filters
+Tag filters later
+Saved filter presets later
+
+Add sorting controls:
+Newest first
+Oldest first
+Learner
+Subject/course
+Evidence type
+Score/grade
+Recently updated
+
+Make filters sticky or visually persistent while scrolling large evidence lists.
+
+Improve Add Evidence form UX:
+Date defaults to today.
+Add inline validation and error handling.
+Add success toast/confirmation after save.
+Warn on likely duplicate entries.
+Add helper text/examples where helpful.
+
+Improve accessibility:
+Proper labels and ARIA attributes
+Keyboard-friendly navigation
+Higher contrast
+Clear focus states
+Screen-reader-friendly expandable content
+
+Improve mobile responsiveness:
+Touch-friendly controls
+Responsive evidence cards
+Mobile-first filtering behavior
+Optimized upload behavior for camera/photo evidence
+
+Add safer record-management behavior.
+Avoid destructive delete as primary action.
+Prefer:
+Archive
+Restore archived
+Soft delete with confirmation
+Undo deletion
+
+Support future export/report workflows:
+Export learner portfolio PDF
+Export subject/course evidence
+Export school-year evidence packet
+Export CSV
+Generate transcript-support evidence bundles
+
+Add future evidence readiness indicators:
+Missing evidence
+Recently updated evidence
+Export-ready evidence
+Compliance-ready evidence later
+
+Reasoning (why):
+Portfolio/evidence records are one of the strongest differentiators for homeschool platforms because they support documentation, reflection, growth tracking, transcript support, compliance evidence, and long-term educational memory. The current page already contains the foundational structure, but it should mature from a simple notes form into a true evidence-management workflow that remains usable as records scale over multiple learners, courses, and school years.
+
+Priority: P1
+Notes:
+The existing MVP is already directionally strong because it separates evidence capture from lesson planning. Main improvements are around scalability, usability, transcript/export readiness, filtering depth, safer record handling, and stronger visual hierarchy.
+Attachments:
+
+ID: FB-016
+Status: New
+Date/time: 2026-05-19 18:52 (America/Detroit)
+Area/URL: Portfolio form schema / Evidence architecture / https://sheathacademy.onrender.com/portfolio
+Feedback summary: Expand Portfolio evidence schema to support broader homeschool evidence types, richer metadata, multimedia evidence, transcript support, and long-term records flexibility.
+Details / suggested change:
+Treat this feedback as covering the underlying evidence model/schema in addition to the visible Add Evidence form.
+
+Current evidence fields:
+Title
+Child
+Subject
+Date
+Type
+Notes
+Parent reflection
+URL
+
+These fields are a strong MVP foundation but may not fully support long-term homeschool evidence workflows.
+
+Add optional Score / Grade / Rating field.
+Examples:
+18/20
+90%
+Mastered
+Needs review
+Rubric score
+Pass/fail
+
+Add file-upload support in addition to URL support.
+Allow:
+Images
+PDFs
+Audio
+Video
+Documents
+
+Examples:
+Writing sample scans
+Project photos
+Recitation audio
+Science experiment video
+Certificate PDFs
+
+Expand evidence types beyond current options.
+Suggested evidence types:
+Note
+Writing sample
+Project
+Assessment/Test
+Quiz
+Recitation
+Memorization
+Revision/review
+Presentation
+Discussion
+Field trip
+Lab/experiment
+Reading log
+Portfolio artifact
+Certificate/award
+Observation
+Behavior/life-skill milestone
+Attendance-linked evidence
+Other/custom
+
+Add optional Tags system.
+Examples:
+Ramadan
+Independent work
+Nature study
+Co-op
+STEM
+Hifz
+Tajweed
+Hands-on
+Group work
+
+Support optional multi-subject/course association later.
+One evidence item may relate to multiple courses or learners.
+Examples:
+Shared science project
+Family Islamic Studies discussion
+Combined art lesson
+Group Quran review
+
+Add optional achievement/status metadata:
+Completed
+Mastered
+Needs review
+Outstanding work
+Archived
+
+Add optional evidence visibility/privacy controls later:
+Private
+Parent-only
+Learner-visible
+Export-visible
+Shared-with-co-op
+Shared-with-tutor
+
+Add optional evidence source linkage:
+Linked lesson
+Linked resource
+Linked attendance record
+Linked schedule block
+Linked assessment later
+
+Add optional structured reflection support later:
+Parent reflection
+Learner reflection
+Instructor feedback
+Rubric feedback
+
+Add optional Quran-specific evidence metadata later when category/course is Quran:
+Surah
+Ayah range
+Juz
+Memorization/revision mode
+Confidence/mastery level
+Last reviewed
+Needs revision flag
+
+Add optional timestamps:
+Created at
+Updated at
+Evidence date
+Completion date
+
+Add optional school-year association to support archival and transcript workflows.
+
+Add future transcript/report relevance flags:
+Counts toward transcript
+Counts toward portfolio export
+Counts toward compliance packet
+Highlighted evidence
+
+Add future AI/search indexing support carefully:
+Search by notes
+Search by reflection
+Search by tags
+Search by Quran metadata
+Search by standards/objectives later
+
+Reasoning (why):
+Portfolio systems tend to become significantly more complex over time because families use them not only for notes, but also for transcript evidence, assessments, projects, multimedia artifacts, Quran memorization tracking, field trips, reflections, awards, and compliance documentation. A stronger schema now prevents painful migrations later and helps ensure the system can scale from lightweight homeschool journaling into a true educational-records platform.
+
+Priority: P1
+Notes:
+MVP does not need every field exposed immediately in the UI. The important architectural recommendation is to avoid designing the evidence model too narrowly. A flexible schema with optional metadata, tags, attachments, and future linking capability will age much better than a minimal note-only structure.
+Attachments:
