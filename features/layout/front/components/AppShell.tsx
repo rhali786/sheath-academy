@@ -1,9 +1,11 @@
 import { NavigationProvider } from '@/features/layout/front/context/NavigationContext'
 import { HouseholdProvider } from '@/features/household/front/context'
+import { ShellAuthGuard } from './ShellAuthGuard'
 import { Header } from './Header'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
+    <ShellAuthGuard>
     <NavigationProvider>
     <HouseholdProvider>
       <a
@@ -18,5 +20,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </main>
     </HouseholdProvider>
     </NavigationProvider>
+    </ShellAuthGuard>
   )
 }

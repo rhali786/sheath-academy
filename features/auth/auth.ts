@@ -3,6 +3,7 @@ import Resend from 'next-auth/providers/resend'
 import Google from 'next-auth/providers/google'
 import Facebook from 'next-auth/providers/facebook'
 import Credentials from 'next-auth/providers/credentials'
+import { getDevSeedUserEmail } from '@/features/lib/server/devUserEmail'
 import { memoryAdapter } from './lib/memoryAdapter'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -53,10 +54,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           Credentials({
             id: 'bypass',
             name: 'Dev bypass',
-            credentials: { secret: { label: 'Secret', type: 'password' } },
+            credentials: {
+              secret: { label: 'Secret', type: 'password' },
+              email: { label: 'Email', type: 'email' },
+            },
             async authorize(credentials) {
               if (credentials?.secret === process.env.DEV_BYPASS_SECRET) {
-                return { id: 'dev-user', name: 'Dev Preview', email: 'dev@sheath.local' }
+                const email =
+                  typeof credentials.email === 'string' && credentials.email.trim()
+                    ? credentials.email.trim()
+                    : getDevSeedUserEmail()
+                return {
+                  id: email,
+                  name: 'Dev Preview',
+                  email,
+                }
               }
               return null
             },

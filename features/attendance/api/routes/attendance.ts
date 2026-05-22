@@ -5,7 +5,9 @@ import { getRecords, createOrUpdateRecord, isValidStatus } from '@/features/atte
 import { listAttendanceEvents, createAttendanceEvent } from '@/features/attendance/server/repository'
 import type { AttendanceEventRow } from '@/features/attendance/server/repository'
 import { isPostgresMode } from '@/features/lib/server/db'
+import { guardOwnership, assertSessionOwnership, sessionAuthCtx } from '@/features/auth/server/routeOwnership'
 import { getHouseholdContext } from '@/features/lib/server/tenant'
+import { notFoundResponse } from '@/features/auth/server/context'
 
 function rowToRecord(r: AttendanceEventRow): AttendanceRecord {
   return {
@@ -55,18 +57,45 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<A
   }
 
   if (isPostgresMode()) {
-    try {
-      const ctx = await getHouseholdContext()
-      const row = await createAttendanceEvent(ctx.householdId, { learnerId: childId, attendanceDate: date, status, minutes: minutes ?? undefined, notes: notes ?? undefined })
-      return NextResponse.json({ status: 'success', data: rowToRecord(row), message: 'Attendance record saved', timestamp: new Date().toISOString() }, { status: 201 })
-    } catch (e) {
-      return NextResponse.json({ status: 'error', data: null, message: 'Failed to save attendance record', timestamp: new Date().toISOString() }, { status: 500 })
-    }
+    return guardOwnership(async () => {
+      await assertSessionOwnership('learner', childId)
+      const ctx = await sessionAuthCtx()
+      const row = await createAttendanceEvent(ctx.householdId, {
+        learnerId: childId,
+        attendanceDate: date,
+        status,
+        minutes: minutes ?? undefined,
+        notes: notes ?? undefined,
+      })
+      const { trackAttendanceLogged } = await import('@/features/admin-metrics/server/instrument')
+      void trackAttendanceLogged(ctx.userId, ctx.householdId, childId, row.id)
+      return NextResponse.json(
+        { status: 'success', data: rowToRecord(row), message: 'Attendance record saved', timestamp: new Date().toISOString() },
+        { status: 201 },
+      )
+    }) as Promise<NextResponse<ApiResponse<AttendanceRecord | null>>>
   }
 
-  const record = createOrUpdateRecord({ childId, householdId: householdId ?? '', date, status, attendanceType: attendanceType ?? undefined, reason: reason ?? undefined, notes: notes ?? undefined, hours: hours ?? undefined, minutes: minutes ?? undefined })
-  if (!record) return NextResponse.json({ status: 'error', data: null, message: 'Child not found', timestamp: new Date().toISOString() }, { status: 404 })
-  return NextResponse.json({ status: 'success', data: record, message: 'Attendance record saved', timestamp: new Date().toISOString() }, { status: 201 })
+  return guardOwnership(async () => {
+    await assertSessionOwnership('learner', childId)
+    const { householdId: sessionHouseholdId } = await sessionAuthCtx()
+    const record = createOrUpdateRecord({
+      childId,
+      householdId: sessionHouseholdId,
+      date,
+      status,
+      attendanceType: attendanceType ?? undefined,
+      reason: reason ?? undefined,
+      notes: notes ?? undefined,
+      hours: hours ?? undefined,
+      minutes: minutes ?? undefined,
+    })
+    if (!record) return notFoundResponse('Child not found')
+    return NextResponse.json(
+      { status: 'success', data: record, message: 'Attendance record saved', timestamp: new Date().toISOString() },
+      { status: 201 },
+    )
+  }) as Promise<NextResponse<ApiResponse<AttendanceRecord | null>>>
 }
 
 export async function BATCH(request: Request): Promise<NextResponse<ApiResponse<AttendanceRecord[]>>> {
@@ -78,25 +107,47 @@ export async function BATCH(request: Request): Promise<NextResponse<ApiResponse<
   }
 
   if (isPostgresMode()) {
-    try {
-      const ctx = await getHouseholdContext()
+    return guardOwnership(async () => {
+      const ctx = await sessionAuthCtx()
       const results: AttendanceRecord[] = []
       for (const entry of entries) {
         if (!entry.childId || !isValidStatus(entry.status)) continue
-        const row = await createAttendanceEvent(ctx.householdId, { learnerId: entry.childId, attendanceDate: date, status: entry.status })
+        await assertSessionOwnership('learner', entry.childId)
+        const row = await createAttendanceEvent(ctx.householdId, {
+          learnerId: entry.childId,
+          attendanceDate: date,
+          status: entry.status,
+        })
         results.push(rowToRecord(row))
       }
-      return NextResponse.json({ status: 'success', data: results, message: 'Batch attendance saved', timestamp: new Date().toISOString() }, { status: 201 })
-    } catch (e) {
-      return NextResponse.json({ status: 'error', data: [], message: 'Failed to save batch attendance', timestamp: new Date().toISOString() }, { status: 500 })
-    }
+      return NextResponse.json(
+        { status: 'success', data: results, message: 'Batch attendance saved', timestamp: new Date().toISOString() },
+        { status: 201 },
+      )
+    }) as Promise<NextResponse<ApiResponse<AttendanceRecord[]>>>
   }
 
-  const results: AttendanceRecord[] = []
-  for (const entry of entries) {
-    if (!entry.childId || !isValidStatus(entry.status)) continue
-    const record = createOrUpdateRecord({ childId: entry.childId, householdId: householdId ?? '', date, status: entry.status })
-    if (record) results.push(record)
-  }
-  return NextResponse.json({ status: 'success', data: results, message: 'Batch attendance saved', timestamp: new Date().toISOString() }, { status: 201 })
+  return guardOwnership(async () => {
+    const { householdId: sessionHouseholdId } = await sessionAuthCtx()
+    const results: AttendanceRecord[] = []
+    for (const entry of entries) {
+      if (!entry.childId || !isValidStatus(entry.status)) continue
+      try {
+        await assertSessionOwnership('learner', entry.childId)
+      } catch {
+        continue
+      }
+      const record = createOrUpdateRecord({
+        childId: entry.childId,
+        householdId: sessionHouseholdId,
+        date,
+        status: entry.status,
+      })
+      if (record) results.push(record)
+    }
+    return NextResponse.json(
+      { status: 'success', data: results, message: 'Batch attendance saved', timestamp: new Date().toISOString() },
+      { status: 201 },
+    )
+  }) as Promise<NextResponse<ApiResponse<AttendanceRecord[]>>>
 }

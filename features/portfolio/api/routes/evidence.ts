@@ -5,6 +5,7 @@ import { listEvidenceItems, createEvidenceItem } from '@/features/portfolio/serv
 import { listEvidenceRows, createEvidenceRow } from '@/features/portfolio/server/repository'
 import type { EvidenceRow } from '@/features/portfolio/server/repository'
 import { isPostgresMode } from '@/features/lib/server/db'
+import { guardOwnership, assertSessionOwnership, sessionAuthCtx } from '@/features/auth/server/routeOwnership'
 import { getHouseholdContext } from '@/features/lib/server/tenant'
 
 function rowToEvidence(r: EvidenceRow): EvidenceItem {
@@ -53,17 +54,34 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
   const body = await request.json()
 
   if (isPostgresMode()) {
-    try {
-      const { householdId } = await getHouseholdContext()
+    return guardOwnership(async () => {
       const { childId, title, type, date, subjectId, lessonTaskId, notes, url } = body
       if (!childId || !title?.trim() || !type || !date) {
-        return NextResponse.json({ status: 'error', data: null, message: 'childId, title, type, and date are required', timestamp: new Date().toISOString() }, { status: 400 })
+        return NextResponse.json(
+          { status: 'error', data: null, message: 'childId, title, type, and date are required', timestamp: new Date().toISOString() },
+          { status: 400 },
+        )
       }
-      const row = await createEvidenceRow(householdId, { learnerId: childId, title: title.trim(), evidenceType: type, evidenceDate: date, subjectId, lessonTaskId, description: notes, url })
-      return NextResponse.json({ status: 'success', data: rowToEvidence(row), message: 'Evidence item created', timestamp: new Date().toISOString() }, { status: 201 })
-    } catch (e) {
-      return NextResponse.json({ status: 'error', data: null, message: 'Failed to create evidence item', timestamp: new Date().toISOString() }, { status: 500 })
-    }
+      await assertSessionOwnership('learner', childId)
+      const { householdId } = await sessionAuthCtx()
+      const row = await createEvidenceRow(householdId, {
+        learnerId: childId,
+        title: title.trim(),
+        evidenceType: type,
+        evidenceDate: date,
+        subjectId,
+        lessonTaskId,
+        description: notes,
+        url,
+      })
+      const ctx = await sessionAuthCtx()
+      const { trackEvidenceCreated } = await import('@/features/admin-metrics/server/instrument')
+      void trackEvidenceCreated(ctx.userId, householdId, childId, row.id)
+      return NextResponse.json(
+        { status: 'success', data: rowToEvidence(row), message: 'Evidence item created', timestamp: new Date().toISOString() },
+        { status: 201 },
+      )
+    }) as Promise<NextResponse<ApiResponse<EvidenceItem | null>>>
   }
 
   const { item, errors } = createEvidenceItem(body)

@@ -2,7 +2,24 @@
 
 Branch: `claude/feedback-yIxhs`
 
-Status: Planned
+Status: In progress — choke-point + surgical ownership (see §0)
+
+## 0. Implemented pattern (preferred)
+
+Do **not** thread `authCtx` through every feature router. Use three layers:
+
+| Layer | File | Behavior |
+|-------|------|----------|
+| **Pages** | `middleware.ts` | Unauthenticated page requests → redirect `/login` (not 401 HTML) |
+| **Shell** | `AppShell` → `ShellAuthGuard` | Client session expiry → `router.replace('/login')` |
+| **API** | `app/api/[...slug]/route.ts` | `requireAuthCtx()` once; unsigned → **401 JSON** |
+| **Handlers** | Per-route (only where needed) | `getHouseholdContext()` + `assertSessionOwnership()` from `features/auth/server/routeOwnership.ts` |
+
+`middleware` excludes `/api/*` so feature APIs return JSON errors, not login redirects.
+
+Feature routers keep `(slug, request)` signatures. Postgres list routes already filter via
+`getHouseholdContext()`. Writes that accept `childId` / entity IDs call `assertSessionOwnership`
+before create/update.
 
 ## 1. Summary
 
@@ -40,9 +57,9 @@ This plan depends on the Drizzle/Postgres persistence migration
 
 - **Phase 1 complete:** `features/lib/server/db.ts` (Drizzle client), schema with `users` and
   `households` tables.
-- **Phase 2 complete:** `features/lib/server/tenant.ts` resolver (`getTenantCtx`) that returns
-  `{ userId, householdId, timezone }`. Household row is created automatically on first API call for
-  a new user (auto-provision pattern from DB Phase 2).
+- **Phase 2 complete:** `features/lib/server/tenant.ts` resolver (`getHouseholdContext` /
+  `resolveTenant`) that returns `{ userId, householdId, timezone }`. Household row is created
+  automatically on first API call for a new user (auto-provision pattern from DB Phase 2).
 
 Auth plan implementation should not begin until these DB foundations are in place. If DB Phase 2 is
 still in progress, auth plan work should be sequenced after it.
@@ -70,16 +87,13 @@ still in progress, auth plan work should be sequenced after it.
 
 - **File:** `app/api/[...slug]/route.ts` dispatches to feature routers by `slug[0]`.
 - **Gap:** currently passes no auth context into feature routers.
-- **Required change:** at the top of each HTTP handler, call `requireAuthCtx(request)`. If it
-  returns a `Response` (401), return immediately. Otherwise pass `AuthCtx` into the feature router.
-
-This is one function call and one parameter thread — not per-route boilerplate.
+- **Implemented:** `requireAuthCtx(request)` in `dispatch()`; feature routers unchanged.
 
 ### Feature route handlers
 
-- Each feature router calls its own route handlers with `(request, slug)` today.
-- **Required change:** add `authCtx: AuthCtx` as a third parameter to each router and handler
-  function. Handlers use `authCtx.householdId` to scope DB queries and validate request body IDs.
+- Routers keep `(request, slug)`.
+- **Required change:** handlers scope with `getHouseholdContext()` (lists) and
+  `assertSessionOwnership()` (writes / GET-by-id) — not router signature changes.
 - Client-supplied `householdId`, `workspaceId` in the body are **ignored** — server session value
   only.
 - Client-supplied entity IDs (`childId`, `lessonId`, `evidenceId`, etc.) are **validated**: look up

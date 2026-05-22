@@ -20,10 +20,10 @@ describe('devTenantContext', () => {
     expect(ctx.userId).toBe('test@example.com')
   })
 
-  it('falls back to dev@sheath.local when DEV_SEED_USER_EMAIL is not set', () => {
+  it('falls back to dev@sheathacademy.ai when DEV_SEED_USER_EMAIL is not set', () => {
     process.env = { ...originalEnv, DEV_SEED_USER_EMAIL: undefined }
     const ctx = devTenantContext()
-    expect(ctx.userId).toBe('dev@sheath.local')
+    expect(ctx.userId).toBe('dev@sheathacademy.ai')
   })
 
   it('returns a non-empty householdId', () => {

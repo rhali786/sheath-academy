@@ -2,6 +2,10 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import Login, { DevBypassSection } from '@/features/auth/front/pages/Login'
 
+jest.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+}))
+
 jest.mock('next-auth/react', () => ({
   signIn: jest.fn(),
 }))
@@ -56,6 +60,7 @@ describe('Login page — magic link flow', () => {
       expect(mockSignIn).toHaveBeenCalledWith('resend', {
         email: 'parent@example.com',
         redirect: false,
+        callbackUrl: '/',
       })
     })
   })
@@ -144,7 +149,11 @@ describe('DevBypassSection', () => {
     fireEvent.click(screen.getByRole('button', { name: /^go$/i }))
 
     await waitFor(() => {
-      expect(mockSignIn).toHaveBeenCalledWith('bypass', { secret: 'my-secret', redirect: false })
+      expect(mockSignIn).toHaveBeenCalledWith('bypass', {
+        secret: 'my-secret',
+        redirect: false,
+        callbackUrl: '/',
+      })
     })
 
     Object.defineProperty(window, 'location', { writable: true, value: location })

@@ -3,6 +3,7 @@ import type { ApiResponse, StudentProfile } from '@/features/lib/types'
 import { getStudentProfiles, createStudentProfile } from '@/features/children/server/service'
 import { listLearners, createLearner } from '@/features/children/server/repository'
 import { isPostgresMode } from '@/features/lib/server/db'
+import { sessionAuthCtx } from '@/features/auth/server/routeOwnership'
 import { getHouseholdContext } from '@/features/lib/server/tenant'
 import type { LearnerRow } from '@/features/children/server/repository'
 
@@ -38,8 +39,8 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<St
     }
   }
 
-  // Memory path
-  const householdId = url.searchParams.get('householdId') as string | undefined
+  // Memory path — scope to session household; ignore query householdId
+  const { householdId } = await sessionAuthCtx()
   let profiles = getStudentProfiles(householdId)
   if (!includeArchived) profiles = profiles.filter(p => p.isActive)
   return NextResponse.json({
@@ -64,6 +65,9 @@ export async function POST(request: Request): Promise<NextResponse> {
         )
       }
       const row = await createLearner(householdId, { name: name.trim(), gradeLevel: gradeLabel?.trim() })
+      const { userId } = await getHouseholdContext()
+      const { trackLearnerCreated } = await import('@/features/admin-metrics/server/instrument')
+      void trackLearnerCreated(userId, householdId, row.id)
       return NextResponse.json(
         { status: 'success', data: learnerRowToStudentProfile(row), message: 'Student profile created', timestamp: new Date().toISOString() },
         { status: 201 }
@@ -76,11 +80,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
   }
 
-  // Memory path
-  const { householdId, name, gradeLabel, username, password } = body
-  if (!householdId || !name?.trim() || !gradeLabel?.trim() || !username?.trim() || !password) {
+  // Memory path — server-derived householdId only
+  const { householdId } = await sessionAuthCtx()
+  const { name, gradeLabel, username, password } = body
+  if (!name?.trim() || !gradeLabel?.trim() || !username?.trim() || !password) {
     return NextResponse.json(
-      { status: 'error', data: null, message: 'householdId, name, gradeLabel, username, and password are required', timestamp: new Date().toISOString() },
+      { status: 'error', data: null, message: 'name, gradeLabel, username, and password are required', timestamp: new Date().toISOString() },
       { status: 400 }
     )
   }

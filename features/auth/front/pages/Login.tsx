@@ -1,11 +1,19 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { Suspense, useState, FormEvent } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === 'true'
 
-export default function Login() {
+function safeCallbackUrl(raw: string | null): string {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/'
+  return raw
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams()
+  const callbackUrl = safeCallbackUrl(searchParams.get('callbackUrl'))
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
 
@@ -14,7 +22,11 @@ export default function Login() {
     if (!email.trim()) return
 
     setStatus('loading')
-    const result = await signIn('resend', { email: email.trim(), redirect: false })
+    const result = await signIn('resend', {
+      email: email.trim(),
+      redirect: false,
+      callbackUrl,
+    })
 
     if (result?.ok) {
       setStatus('success')
@@ -27,7 +39,6 @@ export default function Login() {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
 
-        {/* Brand */}
         <div className="flex items-center justify-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-xl bg-forest-900 flex items-center justify-center shadow-sm">
             <span className="text-white text-lg font-bold leading-none" aria-hidden="true">ش</span>
@@ -81,14 +92,12 @@ export default function Login() {
                 </button>
               </form>
 
-              {/* OAuth divider */}
               <div className="flex items-center gap-3 my-5">
                 <div className="flex-1 h-px bg-slate-100" />
                 <span className="text-xs text-slate-400">or continue with</span>
                 <div className="flex-1 h-px bg-slate-100" />
               </div>
 
-              {/* OAuth placeholders */}
               <div className="flex flex-col gap-2.5">
                 <button
                   type="button"
@@ -120,8 +129,7 @@ export default function Login() {
                 </button>
               </div>
 
-              {/* Dev bypass — only visible when NEXT_PUBLIC_DEV_MODE=true at build time */}
-              {DEV_MODE && <DevBypassSection />}
+              {DEV_MODE && <DevBypassSection callbackUrl={callbackUrl} />}
             </>
           )}
         </div>
@@ -130,7 +138,7 @@ export default function Login() {
   )
 }
 
-export function DevBypassSection() {
+export function DevBypassSection({ callbackUrl = '/' }: { callbackUrl?: string }) {
   const [token, setToken] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
@@ -140,9 +148,13 @@ export function DevBypassSection() {
     if (!token.trim()) return
     setLoading(true)
     setError(false)
-    const result = await signIn('bypass', { secret: token.trim(), redirect: false })
+    const result = await signIn('bypass', {
+      secret: token.trim(),
+      redirect: false,
+      callbackUrl: safeCallbackUrl(callbackUrl),
+    })
     if (result?.ok) {
-      window.location.href = '/'
+      window.location.href = safeCallbackUrl(callbackUrl)
     } else {
       setError(true)
       setLoading(false)
@@ -173,5 +185,19 @@ export function DevBypassSection() {
         </button>
       </form>
     </div>
+  )
+}
+
+export default function Login() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+          <p className="text-sm text-slate-500">Loading…</p>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   )
 }

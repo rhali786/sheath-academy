@@ -5,6 +5,7 @@ import { getStudentProfiles } from '@/features/children/server/service'
 import { listQuranSessionRows, createQuranSessionRow, updateQuranSessionRow, deleteQuranSessionRow } from '@/features/quran/server/repository'
 import type { QuranSessionRow } from '@/features/quran/server/repository'
 import { isPostgresMode } from '@/features/lib/server/db'
+import { guardOwnership, assertSessionOwnership, sessionAuthCtx } from '@/features/auth/server/routeOwnership'
 import { getHouseholdContext } from '@/features/lib/server/tenant'
 
 const CHILD_COLORS: Record<string, string> = { student_seed_adam_001: '#3b82f6', student_seed_khadijah_001: '#ec4899', student_seed_zayd_001: '#8b5cf6' }
@@ -54,17 +55,27 @@ export async function POST(request: Request): Promise<NextResponse> {
   const sessionData = (await request.json()) as QuranSessionRequest
 
   if (isPostgresMode()) {
-    try {
-      const { householdId } = await getHouseholdContext()
+    return guardOwnership(async () => {
+      await assertSessionOwnership('learner', sessionData.childId)
+      const { householdId } = await sessionAuthCtx()
       const today = new Date().toISOString().split('T')[0]
       const row = await createQuranSessionRow(householdId, {
-        learnerId: sessionData.childId, sessionDate: today, sessionType: sessionData.type,
-        surah: sessionData.surah, fromAyah: sessionData.fromAyah, toAyah: sessionData.toAyah, notes: sessionData.notes,
+        learnerId: sessionData.childId,
+        sessionDate: today,
+        sessionType: sessionData.type,
+        surah: sessionData.surah,
+        fromAyah: sessionData.fromAyah,
+        toAyah: sessionData.toAyah,
+        notes: sessionData.notes,
       })
-      return NextResponse.json({ status: 'success', data: rowToSession(row), message: 'Quran session added', timestamp: new Date().toISOString() }, { status: 201 })
-    } catch (e) {
-      return NextResponse.json({ status: 'error', data: null, message: 'Failed to add session', timestamp: new Date().toISOString() }, { status: 500 })
-    }
+      const ctx = await sessionAuthCtx()
+      const { trackQuranRecord } = await import('@/features/admin-metrics/server/instrument')
+      void trackQuranRecord(ctx.userId, householdId, sessionData.childId, row.id)
+      return NextResponse.json(
+        { status: 'success', data: rowToSession(row), message: 'Quran session added', timestamp: new Date().toISOString() },
+        { status: 201 },
+      )
+    })
   }
 
   const newSession = addQuranSession(sessionData)

@@ -3,7 +3,7 @@
  * Run with: npm run db:seed:dev
  *
  * Rules:
- *  - Reads DEV_SEED_USER_EMAIL from the environment.
+ *  - Uses DEV_SEED_USER_EMAIL from the environment, or dev@sheathacademy.ai by default.
  *  - Creates or updates that user's one household (idempotent).
  *  - Inserts demo learners, subjects, lesson tasks, attendance events,
  *    Qur'an sessions, and portfolio evidence under that household only.
@@ -12,6 +12,7 @@
  *  - Demo data is quarantined to this one household.
  */
 
+import { getDevSeedUserEmail } from '../features/lib/server/devUserEmail'
 import { upsertUserByEmail, upsertHouseholdForUser } from '../features/household/server/repository'
 import { createLearner } from '../features/children/server/repository'
 import { createSubjectRow } from '../features/subjects/server/repository'
@@ -21,14 +22,7 @@ import { createQuranSessionRow } from '../features/quran/server/repository'
 import { createEvidenceRow } from '../features/portfolio/server/repository'
 
 async function main() {
-  const email = process.env.DEV_SEED_USER_EMAIL
-  if (!email) {
-    console.error(
-      'Error: DEV_SEED_USER_EMAIL is not set.\n' +
-        'Add it to .env.local before running db:seed:dev.',
-    )
-    process.exit(1)
-  }
+  const email = getDevSeedUserEmail()
 
   console.log(`db:seed:dev — seeding demo data for: ${email}`)
 

@@ -146,6 +146,18 @@ export function AboutPage() {
             carries that weight so the parent does not have to. The measure of success is not feature
             count. It is whether a parent ends the school week calmer and more confident than they started it.
           </p>
+          <div className="mt-6">
+            <Link
+              href="/feedback"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-forest-900 text-sm font-medium text-white hover:bg-forest-800 transition-colors"
+              data-testid="about-feedback-cta"
+            >
+              Share product feedback
+            </Link>
+            <p className="text-xs text-slate-500 mt-2">
+              Structured feedback for homeschool families and tutor-led programs. Sign-in required to submit.
+            </p>
+          </div>
         </section>
 
         {/* The moat */}
@@ -240,6 +252,7 @@ export function AboutPage() {
           <div className="flex gap-4 text-xs">
             <Link href="/login" className="text-slate-400 hover:text-forest-900 transition-colors">Sign in</Link>
             <a href="https://sheathacademy.onrender.com" className="text-slate-400 hover:text-forest-900 transition-colors">Live site</a>
+            <Link href="/feedback" className="text-slate-400 hover:text-forest-900 transition-colors">Feedback</Link>
             <Link href="/worklog" className="text-slate-400 hover:text-forest-900 transition-colors">Worklog</Link>
           </div>
         </div>

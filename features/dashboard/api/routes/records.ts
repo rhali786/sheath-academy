@@ -54,6 +54,12 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Da
       const weekEvidence = await listEvidenceRows(householdId, { learnerId: childId, startDate: start, endDate: end })
       const weekQuran = await listQuranSessionRows(householdId, { learnerId: childId, startDate: start, endDate: end })
 
+      const { trackReportGenerated } = await import('@/features/admin-metrics/server/instrument')
+      void trackReportGenerated(
+        (await getHouseholdContext()).userId,
+        householdId,
+      )
+
       return NextResponse.json({
         status: 'success',
         data: [

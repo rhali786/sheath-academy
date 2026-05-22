@@ -238,6 +238,29 @@ export const householdSettings = pgTable(
   ],
 )
 
+// ─── Usage Events (admin metrics / Fork Test) ───────────────────────────────
+
+export const usageEvents = pgTable(
+  'usage_events',
+  {
+    id: text('id').primaryKey(),
+    eventType: text('event_type').notNull(),
+    userId: text('user_id').notNull().references(() => users.id),
+    householdId: text('household_id').notNull().references(() => households.id),
+    learnerId: text('learner_id').references(() => learners.id),
+    featureArea: text('feature_area').notNull(),
+    entityType: text('entity_type'),
+    entityId: text('entity_id'),
+    metadata: jsonb('metadata'),
+    occurredAt: timestamp('occurred_at').notNull(),
+  },
+  (t) => [
+    index('usage_events_household_occurred_idx').on(t.householdId, t.occurredAt),
+    index('usage_events_user_occurred_idx').on(t.userId, t.occurredAt),
+    index('usage_events_type_occurred_idx').on(t.eventType, t.occurredAt),
+  ],
+)
+
 // ─── Product Validation Responses ────────────────────────────────────────────
 
 export const productValidationResponses = pgTable('product_validation_responses', {

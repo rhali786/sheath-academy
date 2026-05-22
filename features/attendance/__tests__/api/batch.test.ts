@@ -1,11 +1,35 @@
 /** @jest-environment node */
 
+jest.mock('@/features/auth/auth', () => ({
+  auth: jest.fn(),
+}))
+
+jest.mock('@/features/lib/server/db', () => ({
+  isPostgresMode: jest.fn(() => false),
+}))
+
+jest.mock('@/features/household/server/service', () => {
+  const actual = jest.requireActual('@/features/household/server/service')
+  return {
+    ...actual,
+    getHouseholdProfile: jest.fn(),
+  }
+})
+
+import { auth } from '@/features/auth/auth'
+import { getHouseholdProfile } from '@/features/household/server/service'
 import { BATCH } from '@/features/attendance/api/routes/attendance'
 import { resetStore } from '@/features/attendance/server/service'
 import { SEED_IDS } from '@/features/lib/seedIds'
+import { bindMemorySessionAuth, memorySessionHousehold } from '@/features/auth/__tests__/memorySessionMocks'
+
+const mockAuth = auth as jest.Mock
+const mockGetHouseholdProfile = getHouseholdProfile as jest.Mock
 
 beforeEach(() => {
   resetStore()
+  bindMemorySessionAuth(mockAuth)
+  mockGetHouseholdProfile.mockReturnValue(memorySessionHousehold)
 })
 
 function makeBatchRequest(body: Record<string, unknown>): Request {

@@ -5,7 +5,9 @@ import { getLessonTask, updateLessonTask, completeLessonTask, deleteLessonTask }
 import { getLessonTaskRow, updateLessonTaskRow, completeLessonTaskRow, deleteLessonTaskRow } from '@/features/plan/server/repository'
 import type { LessonTaskRow } from '@/features/plan/server/repository'
 import { isPostgresMode } from '@/features/lib/server/db'
+import { guardOwnership, assertSessionOwnership } from '@/features/auth/server/routeOwnership'
 import { getHouseholdContext } from '@/features/lib/server/tenant'
+import { notFoundResponse } from '@/features/auth/server/context'
 
 function rowToLesson(r: LessonTaskRow): LessonTask {
   return {
@@ -26,9 +28,12 @@ export async function GET(id: string): Promise<NextResponse<ApiResponse<LessonTa
       return NextResponse.json({ status: 'success', data: rowToLesson(row), message: 'Lesson retrieved', timestamp: new Date().toISOString() })
     } catch { return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 }) }
   }
-  const lesson = getLessonTask(id)
-  if (!lesson) return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 })
-  return NextResponse.json({ status: 'success', data: lesson, message: 'Lesson retrieved', timestamp: new Date().toISOString() })
+  return guardOwnership(async () => {
+    await assertSessionOwnership('lesson', id)
+    const lesson = getLessonTask(id)
+    if (!lesson) return notFoundResponse('Lesson not found')
+    return NextResponse.json({ status: 'success', data: lesson, message: 'Lesson retrieved', timestamp: new Date().toISOString() })
+  }) as Promise<NextResponse<ApiResponse<LessonTask | null>>>
 }
 
 export async function PUT(id: string, request: Request): Promise<NextResponse<ApiResponse<LessonTask | null>>> {
@@ -41,10 +46,13 @@ export async function PUT(id: string, request: Request): Promise<NextResponse<Ap
       return NextResponse.json({ status: 'success', data: rowToLesson(updated), message: 'Lesson updated', timestamp: new Date().toISOString() })
     } catch { return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 }) }
   }
-  const lesson = getLessonTask(id)
-  if (!lesson) return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 })
-  const updated = updateLessonTask(id, { title: body.title !== undefined ? body.title.trim() : undefined, description: body.description !== undefined ? body.description.trim() : undefined, resourceLink: body.resourceLink !== undefined ? (body.resourceLink as string).trim() : undefined, dueDate: body.dueDate, order: body.order, status: body.status, estimatedDuration: body.estimatedDuration, lessonType: body.lessonType })
-  return NextResponse.json({ status: 'success', data: updated, message: 'Lesson updated', timestamp: new Date().toISOString() })
+  return guardOwnership(async () => {
+    await assertSessionOwnership('lesson', id)
+    const lesson = getLessonTask(id)
+    if (!lesson) return notFoundResponse('Lesson not found')
+    const updated = updateLessonTask(id, { title: body.title !== undefined ? body.title.trim() : undefined, description: body.description !== undefined ? body.description.trim() : undefined, resourceLink: body.resourceLink !== undefined ? (body.resourceLink as string).trim() : undefined, dueDate: body.dueDate, order: body.order, status: body.status, estimatedDuration: body.estimatedDuration, lessonType: body.lessonType })
+    return NextResponse.json({ status: 'success', data: updated, message: 'Lesson updated', timestamp: new Date().toISOString() })
+  }) as Promise<NextResponse<ApiResponse<LessonTask | null>>>
 }
 
 export async function COMPLETE(id: string, request?: Request): Promise<NextResponse<ApiResponse<LessonTask | null>>> {
@@ -57,13 +65,26 @@ export async function COMPLETE(id: string, request?: Request): Promise<NextRespo
       const { householdId } = await getHouseholdContext()
       const done = await completeLessonTaskRow(id, householdId, status)
       if (!done) return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 })
+      if (status === 'completed') {
+        const ctx = await getHouseholdContext()
+        const { trackLessonCompleted } = await import('@/features/admin-metrics/server/instrument')
+        void trackLessonCompleted(ctx.userId, householdId, done.learnerId, done.id)
+      }
       return NextResponse.json({ status: 'success', data: rowToLesson(done), message: status === 'skipped' ? 'Lesson marked as skipped' : 'Lesson marked as complete', timestamp: new Date().toISOString() })
     } catch { return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 }) }
   }
-  const lesson = getLessonTask(id)
-  if (!lesson) return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 })
-  const updated = completeLessonTask(id, status)
-  return NextResponse.json({ status: 'success', data: updated, message: status === 'skipped' ? 'Lesson marked as skipped' : 'Lesson marked as complete', timestamp: new Date().toISOString() })
+  return guardOwnership(async () => {
+    await assertSessionOwnership('lesson', id)
+    const lesson = getLessonTask(id)
+    if (!lesson) return notFoundResponse('Lesson not found')
+    const updated = completeLessonTask(id, status)
+    return NextResponse.json({
+      status: 'success',
+      data: updated,
+      message: status === 'skipped' ? 'Lesson marked as skipped' : 'Lesson marked as complete',
+      timestamp: new Date().toISOString(),
+    })
+  }) as Promise<NextResponse<ApiResponse<LessonTask | null>>>
 }
 
 export async function DELETE(id: string): Promise<NextResponse<ApiResponse<null>>> {
@@ -75,7 +96,10 @@ export async function DELETE(id: string): Promise<NextResponse<ApiResponse<null>
       return NextResponse.json({ status: 'success', data: null, message: 'Lesson deleted', timestamp: new Date().toISOString() })
     } catch { return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 }) }
   }
-  const deleted = deleteLessonTask(id)
-  if (!deleted) return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 })
-  return NextResponse.json({ status: 'success', data: null, message: 'Lesson deleted', timestamp: new Date().toISOString() })
+  return guardOwnership(async () => {
+    await assertSessionOwnership('lesson', id)
+    const deleted = deleteLessonTask(id)
+    if (!deleted) return notFoundResponse('Lesson not found')
+    return NextResponse.json({ status: 'success', data: null, message: 'Lesson deleted', timestamp: new Date().toISOString() })
+  }) as Promise<NextResponse<ApiResponse<null>>>
 }
