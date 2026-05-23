@@ -27,6 +27,8 @@ function renderFilter(selectedChildIds = ['child_001', 'child_002'], selectedSub
     setSelectedChildIds,
     selectedSubjectIds,
     setSelectedSubjectIds,
+    isInitializing: false,
+    isLessonsLoading: false,
     isLoading: false,
     error: null,
     weekStartDay: 'Monday' as const,

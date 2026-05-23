@@ -6,6 +6,7 @@ import { plannerApi } from '../services/api'
 import type { StudentProfile, ApiResponse } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { getWeekStartDate } from '../utils/weekDate'
+import { useHousehold } from '@/features/household/front/context'
 
 export { getWeekStartDate }
 
@@ -17,6 +18,8 @@ interface PlannerContextType {
   setSelectedChildIds: (ids: string[]) => void
   selectedSubjectIds: string[]
   setSelectedSubjectIds: (ids: string[]) => void
+  isInitializing: boolean
+  isLessonsLoading: boolean
   isLoading: boolean
   error: string | null
   weekStartDay: 'Monday' | 'Sunday'
@@ -50,84 +53,74 @@ async function get<T>(path: string): Promise<ApiResponse<T>> {
 }
 
 export function PlannerProvider({ children }: { children: React.ReactNode }) {
+  const { householdProfile, loading: householdLoading } = useHousehold()
+  const weekStartDay: 'Monday' | 'Sunday' =
+    householdProfile?.weekStartDay === 'Sunday' ? 'Sunday' : 'Monday'
+
   const [lessons, setLessons] = useState<LessonTask[]>([])
   const [selectedWeek, setSelectedWeek] = useState<Date>(new Date())
   const [selectedChildIds, setSelectedChildIds] = useState<string[]>([])
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isInitializing, setIsInitializing] = useState(true)
+  const [isLessonsLoading, setIsLessonsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [weekStartDay, setWeekStartDay] = useState<'Monday' | 'Sunday'>('Monday')
   const [childrenList, setChildrenList] = useState<StudentProfile[]>([])
   const [subjectsList, setSubjectsList] = useState<SubjectCourse[]>([])
-  const [allChildrenIds, setAllChildrenIds] = useState<string[]>([])
-  const [allSubjectIds, setAllSubjectIds] = useState<string[]>([])
   const [lessonsFetchKey, setLessonsFetchKey] = useState(0)
 
-  // Initial load: fetch household profile, children, and subjects
+  // Init: children + subjects only — profile comes from HouseholdProvider
   useEffect(() => {
-    const initialize = async () => {
+    if (householdLoading) return
+    let cancelled = false
+    ;(async () => {
+      setIsInitializing(true)
+      setError(null)
       try {
-        setIsLoading(true)
-        setError(null)
-
-        const [profileResponse, childrenResponse, subjectsResponse] = await Promise.all([
-          get<unknown>('/api/household/profile'),
+        const [childrenResponse, subjectsResponse] = await Promise.all([
           get<StudentProfile[]>('/api/children/children'),
           get<SubjectCourse[]>('/api/subjects'),
         ])
-
-        const profile = profileResponse.data as any
-        const dayStart = profile?.weekStartDay === 'Sunday' ? 'Sunday' : 'Monday'
-        setWeekStartDay(dayStart)
-
+        if (cancelled) return
         setChildrenList(childrenResponse.data)
-        const childIds = childrenResponse.data.map(c => c.id)
-        setAllChildrenIds(childIds)
-        setSelectedChildIds(childIds)
-
+        setSelectedChildIds(childrenResponse.data.map(c => c.id))
         setSubjectsList(subjectsResponse.data)
-        const subjectIds = subjectsResponse.data.map(s => s.id)
-        setAllSubjectIds(subjectIds)
-        setSelectedSubjectIds(subjectIds)
-
-        setIsLoading(false)
+        setSelectedSubjectIds(subjectsResponse.data.map(s => s.id))
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load planner')
-        setIsLoading(false)
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load planner')
+      } finally {
+        if (!cancelled) setIsInitializing(false)
       }
-    }
+    })()
+    return () => { cancelled = true }
+  }, [householdLoading])
 
-    initialize()
-  }, [])
-
-  // Fetch lessons when week or filters change
+  // Lessons: separate loading flag, fires after init completes
   useEffect(() => {
+    if (householdLoading || isInitializing) return
     if (selectedChildIds.length === 0 || selectedSubjectIds.length === 0) {
       setLessons([])
       return
     }
-
-    const fetchLessons = async () => {
+    let cancelled = false
+    ;(async () => {
+      setIsLessonsLoading(true)
+      setError(null)
       try {
-        setIsLoading(true)
-        setError(null)
-
         const weekStart = getWeekStartDate(selectedWeek, weekStartDay)
         const lessonsList = await plannerApi.getLessons(
           weekStart,
           selectedChildIds,
-          selectedSubjectIds
+          selectedSubjectIds,
         )
-        setLessons(lessonsList)
-        setIsLoading(false)
+        if (!cancelled) setLessons(lessonsList)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load lessons')
-        setIsLoading(false)
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load lessons')
+      } finally {
+        if (!cancelled) setIsLessonsLoading(false)
       }
-    }
-
-    fetchLessons()
-  }, [selectedWeek, selectedChildIds, selectedSubjectIds, weekStartDay, lessonsFetchKey])
+    })()
+    return () => { cancelled = true }
+  }, [householdLoading, isInitializing, selectedWeek, selectedChildIds, selectedSubjectIds, weekStartDay, lessonsFetchKey])
 
   const refreshLessons = useCallback(() => {
     setLessonsFetchKey(k => k + 1)
@@ -141,7 +134,9 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     setSelectedChildIds,
     selectedSubjectIds,
     setSelectedSubjectIds,
-    isLoading,
+    isInitializing,
+    isLessonsLoading,
+    isLoading: isInitializing || isLessonsLoading,
     error,
     weekStartDay,
     children: childrenList,

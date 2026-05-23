@@ -19,6 +19,8 @@ function renderNavigator(selectedWeek = new Date('2026-05-12'), weekStartDay: 'M
     setSelectedChildIds: jest.fn(),
     selectedSubjectIds: [],
     setSelectedSubjectIds: jest.fn(),
+    isInitializing: false,
+    isLessonsLoading: false,
     isLoading: false,
     error: null,
     weekStartDay,

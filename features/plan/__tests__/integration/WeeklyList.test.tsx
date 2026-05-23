@@ -45,6 +45,8 @@ function renderList(lessons: LessonTask[] = [], weekStartDay: 'Monday' | 'Sunday
     setSelectedChildIds: jest.fn(),
     selectedSubjectIds: ['subj_001'],
     setSelectedSubjectIds: jest.fn(),
+    isInitializing: false,
+    isLessonsLoading: false,
     isLoading: false,
     error: null,
     weekStartDay,

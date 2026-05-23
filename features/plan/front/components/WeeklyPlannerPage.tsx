@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { usePlanner } from '../context/PlannerContext'
+import { useHousehold } from '@/features/household/front/context'
 import { WeekNavigator } from './WeekNavigator'
 import { ChildSubjectFilter } from './ChildSubjectFilter'
 import { WeekGrid } from './WeekGrid'
@@ -9,10 +10,10 @@ import { WeeklyList } from './WeeklyList'
 import { EmptyWeekState } from './EmptyWeekState'
 
 export function WeeklyPlannerPage() {
-  const { lessons, isLoading, error } = usePlanner()
+  const { lessons, isInitializing, isLessonsLoading, error } = usePlanner()
+  const { loading: householdLoading } = useHousehold()
   const [isMobile, setIsMobile] = useState(false)
 
-  // Detect mobile viewport
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768)
@@ -23,7 +24,7 @@ export function WeeklyPlannerPage() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  if (isLoading) {
+  if (householdLoading || isInitializing) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-white">
         <div className="text-center">
@@ -50,7 +51,11 @@ export function WeeklyPlannerPage() {
       <WeekNavigator />
       <ChildSubjectFilter />
 
-      {lessons.length === 0 ? (
+      {isLessonsLoading ? (
+        <div className="flex-1 overflow-auto flex items-center justify-center" aria-busy="true">
+          <p className="text-gray-500 text-sm">Loading lessons...</p>
+        </div>
+      ) : lessons.length === 0 ? (
         <div className="flex-1 overflow-auto">
           <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
             <EmptyWeekState lessons={lessons} />

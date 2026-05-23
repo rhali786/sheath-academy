@@ -101,6 +101,8 @@ function renderGrid(
     setSelectedChildIds: jest.fn(),
     selectedSubjectIds,
     setSelectedSubjectIds: jest.fn(),
+    isInitializing: false,
+    isLessonsLoading: false,
     isLoading: false,
     error: null,
     weekStartDay,

@@ -4,6 +4,17 @@ import { WeeklyPlannerPage } from '@/features/plan/front/components/WeeklyPlanne
 import type { StudentProfile, ApiResponse } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 
+jest.mock('@/features/household/front/context', () => ({
+  useHousehold: jest.fn(() => ({
+    householdProfile: { id: 'hh_001', weekStartDay: 'Monday', familyName: 'Test' },
+    loading: false,
+    familyName: 'Test',
+    needsSetup: false,
+    error: null,
+    refetch: jest.fn(),
+  })),
+}))
+
 jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: {
     getLessons: jest.fn(() => Promise.resolve([])),
@@ -22,6 +33,27 @@ const mockSubjects: SubjectCourse[] = [
   { id: 'subj_001', childId: 'child_001', name: 'Math', category: 'Math', isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
 ]
 
+function mockChildrenAndSubjects() {
+  ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
+    if (url.includes('/api/children/children')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ status: 'success', data: mockChildren } as ApiResponse<StudentProfile[]>),
+      })
+    }
+    if (url.includes('/api/subjects')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ status: 'success', data: mockSubjects } as ApiResponse<SubjectCourse[]>),
+      })
+    }
+    return Promise.resolve({
+      ok: true,
+      json: async () => ({ status: 'success', data: [] }),
+    })
+  })
+}
+
 function renderWithPlanner() {
   return render(
     <PlannerProvider>
@@ -39,7 +71,7 @@ afterEach(() => {
 })
 
 describe('WeeklyPlannerPage', () => {
-  it('shows loading spinner while fetching household profile and lessons', async () => {
+  it('shows loading spinner while initializing', async () => {
     ;(global.fetch as jest.Mock).mockImplementation(
       () =>
         new Promise(resolve =>
@@ -52,8 +84,8 @@ describe('WeeklyPlannerPage', () => {
     expect(screen.getByText(/loading planner/i)).toBeInTheDocument()
   })
 
-  it('shows error state when GET /api/household/profile fails', async () => {
-    ;(global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Profile fetch failed'))
+  it('shows error state when init fetch fails', async () => {
+    ;(global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Children fetch failed'))
 
     renderWithPlanner()
 
@@ -62,43 +94,11 @@ describe('WeeklyPlannerPage', () => {
     })
   })
 
-  it('shows error state when GET /api/planner/lessons fails', async () => {
+  it('shows error state when lessons fetch fails', async () => {
     const { plannerApi } = require('@/features/plan/front/services/api')
     plannerApi.getLessons.mockRejectedValueOnce(new Error('Lessons fetch failed'))
 
-    ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
-      if (url.includes('/api/household/profile')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            status: 'success',
-            data: { id: 'hh_001', weekStartDay: 'Monday' },
-          } as ApiResponse<{ weekStartDay?: string }>),
-        })
-      }
-      if (url.includes('/api/children/children')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            status: 'success',
-            data: mockChildren,
-          } as ApiResponse<StudentProfile[]>),
-        })
-      }
-      if (url.includes('/api/subjects')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            status: 'success',
-            data: mockSubjects,
-          } as ApiResponse<SubjectCourse[]>),
-        })
-      }
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({ status: 'success', data: [] }),
-      })
-    })
+    mockChildrenAndSubjects()
 
     renderWithPlanner()
 
@@ -108,78 +108,23 @@ describe('WeeklyPlannerPage', () => {
   })
 
   it('loads and displays lessons for the current week on mount', async () => {
-    ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
-      if (url.includes('/api/household/profile')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            status: 'success',
-            data: { id: 'hh_001', weekStartDay: 'Monday' },
-          }),
-        })
-      }
-      if (url.includes('/api/children/children')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ status: 'success', data: mockChildren }),
-        })
-      }
-      if (url.includes('/api/subjects')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ status: 'success', data: mockSubjects }),
-        })
-      }
-      if (url.includes('/api/planner/lessons')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ status: 'success', data: [] }),
-        })
-      }
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({ status: 'success', data: [] }),
-      })
-    })
+    mockChildrenAndSubjects()
 
     renderWithPlanner()
 
     await waitFor(() => {
       expect(screen.queryByText(/loading planner/i)).not.toBeInTheDocument()
     })
+
+    // PlannerContext must not fetch profile — HouseholdProvider owns it
+    const profileCalls = (global.fetch as jest.Mock).mock.calls.filter(
+      ([url]: [string]) => typeof url === 'string' && url.includes('/api/household/profile')
+    )
+    expect(profileCalls).toHaveLength(0)
   })
 
   it('shows empty state when no lessons exist for the week', async () => {
-    ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
-      if (url.includes('/api/household/profile')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ status: 'success', data: { id: 'hh_001', weekStartDay: 'Monday' } }),
-        })
-      }
-      if (url.includes('/api/children/children')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ status: 'success', data: mockChildren }),
-        })
-      }
-      if (url.includes('/api/subjects')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ status: 'success', data: mockSubjects }),
-        })
-      }
-      if (url.includes('/api/planner/lessons')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ status: 'success', data: [] }),
-        })
-      }
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({ status: 'success', data: [] }),
-      })
-    })
+    mockChildrenAndSubjects()
 
     renderWithPlanner()
 
@@ -188,4 +133,20 @@ describe('WeeklyPlannerPage', () => {
     })
   })
 
+  it('shows planner chrome while lessons are still loading', async () => {
+    const { plannerApi } = require('@/features/plan/front/services/api')
+    plannerApi.getLessons.mockImplementation(() => new Promise(() => {}))
+
+    mockChildrenAndSubjects()
+
+    renderWithPlanner()
+
+    // Wait for init spinner to clear
+    await waitFor(() => {
+      expect(screen.queryByText(/loading planner/i)).not.toBeInTheDocument()
+    })
+
+    // Chrome (WeekNavigator) is visible before lessons resolve
+    expect(screen.getByRole('button', { name: /previous week/i })).toBeInTheDocument()
+  })
 })
