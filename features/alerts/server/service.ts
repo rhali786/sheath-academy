@@ -1,27 +1,30 @@
 import type { Alert } from '@/features/alerts/types'
-import { getLessons } from '@/features/plan/server/service'
-import { getRecords as getAttendanceRecords } from '@/features/attendance/server/service'
-import { getStudentProfiles } from '@/features/children/server/service'
+import { listAttendanceEvents } from '@/features/attendance/server/repository'
+import { listAllLearners } from '@/features/children/server/repository'
+import { listLessonTaskRows } from '@/features/plan/server/repository'
 
 function todayLocal(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export function getAlerts(childId?: string): Alert[] {
+export async function getAlerts(householdId: string, childId?: string): Promise<Alert[]> {
   const today = todayLocal()
-  const allProfiles = getStudentProfiles()
+  const allProfiles = await listAllLearners(householdId)
   const activeChildren = allProfiles.filter(p => p.isActive)
   const targetChildren = childId ? activeChildren.filter(c => c.id === childId) : activeChildren
   const alerts: Alert[] = []
   const now = new Date().toISOString()
+  const todayAttendance = await listAttendanceEvents(householdId, { date: today })
 
   for (const child of targetChildren) {
-    const pendingLessons = getLessons(child.id).filter(
-      l => l.dueDate <= today && l.status !== 'completed'
-    )
+    const lessons = await listLessonTaskRows(householdId, { learnerId: child.id })
+    const pendingLessons = lessons.filter((lesson) => {
+      const dueDate = lesson.dueDate
+      return dueDate !== null && dueDate <= today && lesson.status !== 'completed'
+    })
     if (pendingLessons.length > 0) {
-      const overdue = pendingLessons.filter(l => l.dueDate < today)
+      const overdue = pendingLessons.filter(l => l.dueDate && l.dueDate < today)
       const message = overdue.length > 0
         ? `${overdue.length} overdue: ${overdue.map(l => l.title).slice(0, 2).join(', ')}`
         : `Due today: ${pendingLessons.map(l => l.title).slice(0, 2).join(', ')}`
@@ -45,8 +48,7 @@ export function getAlerts(childId?: string): Alert[] {
 
   // Household-wide: flag missing attendance for today (only when not filtering by child)
   if (!childId) {
-    const todayAttendance = getAttendanceRecords({ date: today })
-    const childIdsWithAttendance = new Set(todayAttendance.map(r => r.childId))
+    const childIdsWithAttendance = new Set(todayAttendance.map(r => r.learnerId))
     const missingAttendance = activeChildren.filter(c => !childIdsWithAttendance.has(c.id))
     if (missingAttendance.length > 0) {
       alerts.push({
@@ -64,8 +66,8 @@ export function getAlerts(childId?: string): Alert[] {
       })
     }
   } else {
-    const todayAttendance = getAttendanceRecords({ childId, date: today })
-    if (todayAttendance.length === 0) {
+    const todayChildAttendance = todayAttendance.filter(r => r.learnerId === childId)
+    if (todayChildAttendance.length === 0) {
       const child = activeChildren.find(c => c.id === childId)
       if (child) {
         alerts.push({

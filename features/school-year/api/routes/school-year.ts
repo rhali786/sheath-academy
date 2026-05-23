@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { SchoolYear } from '@/features/school-year/types'
 import { getSchoolYear, updateSchoolYear, activateSchoolYear } from '@/features/school-year/server/service'
+import { getHouseholdContext } from '@/features/lib/server/tenant'
 
 export async function GET(id: string): Promise<NextResponse<ApiResponse<SchoolYear | null>>> {
-  const year = getSchoolYear(id)
+  const { householdId } = await getHouseholdContext()
+  const year = await getSchoolYear(householdId, id)
 
   if (!year) {
     return NextResponse.json(
@@ -29,7 +31,8 @@ export async function GET(id: string): Promise<NextResponse<ApiResponse<SchoolYe
 export async function PUT(id: string, request: Request): Promise<NextResponse> {
   const body = await request.json()
 
-  const existing = getSchoolYear(id)
+  const { householdId } = await getHouseholdContext()
+  const existing = await getSchoolYear(householdId, id)
   if (!existing) {
     return NextResponse.json(
       {
@@ -58,11 +61,17 @@ export async function PUT(id: string, request: Request): Promise<NextResponse> {
   }
 
   try {
-    const updated = updateSchoolYear(id, {
+    const updated = await updateSchoolYear(householdId, id, {
       name: body.name,
       startDate: body.startDate,
       endDate: body.endDate,
       isActive: body.isActive,
+      requiredDays: body.requiredDays,
+      requiredHours: body.requiredHours,
+      trackingMethod: body.trackingMethod,
+      schoolDays: body.schoolDays,
+      breaks: body.breaks,
+      termStructure: body.termStructure,
     })
 
     return NextResponse.json({
@@ -86,7 +95,8 @@ export async function PUT(id: string, request: Request): Promise<NextResponse> {
 }
 
 export async function ACTIVATE(id: string): Promise<NextResponse> {
-  const existing = getSchoolYear(id)
+  const { householdId } = await getHouseholdContext()
+  const existing = await getSchoolYear(householdId, id)
   if (!existing) {
     return NextResponse.json(
       {
@@ -99,7 +109,7 @@ export async function ACTIVATE(id: string): Promise<NextResponse> {
     )
   }
 
-  const activated = activateSchoolYear(id)
+  const activated = await activateSchoolYear(householdId, id)
 
   return NextResponse.json({
     status: 'success',

@@ -27,7 +27,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Da
     const todayQuran = await listQuranSessionRows(householdId, { learnerId: childId, startDate: today, endDate: today })
     const portfolioRows = await listEvidenceRows(householdId, { learnerId: childId })
 
-    const alerts = getAlerts(childId).filter(a => a.status === 'open')
+    const alerts = (await getAlerts(householdId, childId)).filter(a => a.status === 'open')
 
     const metrics: DashboardMetrics = {
       attendanceReady: totalChildren > 0 ? `${readyCount}/${totalChildren}` : '0/0',

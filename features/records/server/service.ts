@@ -1,15 +1,23 @@
-import { getAttendanceSummary, getRecords as getAttendanceRecords } from '@/features/attendance/server/service'
-import { getStudentProfile } from '@/features/children/server/service'
-import { listEvidenceItems } from '@/features/portfolio/server/service'
-import { getLessons } from '@/features/plan/server/service'
+import { listAttendanceEvents, type AttendanceEventRow } from '@/features/attendance/server/repository'
+import type { AttendanceRecord, AttendanceStatus, AttendanceSummary } from '@/features/attendance/types'
+import { getLearner, type LearnerRow } from '@/features/children/server/repository'
+import type { StudentProfile } from '@/features/lib/types'
+import { listEvidenceRows, type EvidenceRow } from '@/features/portfolio/server/repository'
+import type { EvidenceItem, EvidenceType } from '@/features/portfolio/types'
+import { listLessonTaskRows, type LessonTaskRow } from '@/features/plan/server/repository'
+import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
 import { getCompletedLessonHistory } from '@/features/plan/utils/completedLessonHistory'
 import { computeProgressBySubject } from '@/features/plan/utils/progressBySubject'
 import { getActiveSchoolYear } from '@/features/school-year/server/service'
-import { getSubjects } from '@/features/subjects/server/service'
+import { listSubjectRows, type SubjectRow } from '@/features/subjects/server/repository'
+import type { SubjectCourse, SubjectCourseCategory } from '@/features/subjects/types'
 import type { RecordsChecklistItem, RecordsReport, RecordsReportOptions, ReportDateRange } from '../types'
 
-function defaultDateRange(options: RecordsReportOptions): ReportDateRange {
-  const activeYear = getActiveSchoolYear()
+async function defaultDateRange(
+  householdId: string,
+  options: RecordsReportOptions,
+): Promise<ReportDateRange> {
+  const activeYear = await getActiveSchoolYear(householdId)
   return {
     start: options.startDate ?? activeYear?.startDate ?? new Date().toISOString().slice(0, 10),
     end: options.endDate ?? activeYear?.endDate ?? new Date().toISOString().slice(0, 10),
@@ -29,6 +37,96 @@ function countWeekdays(startDate: string, endDate: string): number {
     current.setUTCDate(current.getUTCDate() + 1)
   }
   return count
+}
+
+function toIso(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : value
+}
+
+function mapLearner(row: LearnerRow): StudentProfile {
+  return {
+    id: row.id,
+    householdId: row.householdId,
+    name: row.name,
+    gradeLabel: row.gradeLevel ?? '',
+    username: '',
+    password: '',
+    isActive: row.isActive,
+    createdAt: toIso(row.createdAt),
+  }
+}
+
+function mapSubject(row: SubjectRow): SubjectCourse {
+  const childId = row.learnerId ?? ''
+  return {
+    id: row.id,
+    childId,
+    learnerIds: childId ? [childId] : [],
+    name: row.name,
+    category: row.category as SubjectCourseCategory,
+    isActive: row.isActive,
+    order: row.sortOrder,
+    createdAt: toIso(row.createdAt),
+  }
+}
+
+function mapLesson(row: LessonTaskRow): LessonTask {
+  return {
+    id: row.id,
+    childId: row.learnerId,
+    subjectId: row.subjectId ?? '',
+    householdId: row.householdId,
+    title: row.title,
+    description: row.description ?? undefined,
+    dueDate: row.dueDate ?? '',
+    status: row.status as LessonTaskStatus,
+    order: row.sortOrder,
+    createdAt: toIso(row.createdAt),
+    updatedAt: toIso(row.updatedAt),
+  }
+}
+
+function mapAttendance(row: AttendanceEventRow): AttendanceRecord {
+  return {
+    id: row.id,
+    childId: row.learnerId,
+    householdId: row.householdId,
+    date: row.attendanceDate,
+    status: row.status as AttendanceStatus,
+    notes: row.notes ?? undefined,
+    minutes: row.minutes ?? undefined,
+    hours: row.minutes === null ? undefined : row.minutes / 60,
+    isArchived: row.voidedAt !== null,
+    createdAt: toIso(row.createdAt),
+    updatedAt: toIso(row.updatedAt),
+  }
+}
+
+function mapEvidence(row: EvidenceRow): EvidenceItem {
+  return {
+    id: row.id,
+    title: row.title,
+    childId: row.learnerId,
+    subjectId: row.subjectId ?? '',
+    date: row.evidenceDate,
+    type: row.evidenceType as EvidenceType,
+    notes: row.description ?? undefined,
+    url: row.url ?? undefined,
+    lessonTaskId: row.lessonTaskId ?? undefined,
+    createdBy: row.householdId,
+    createdAt: toIso(row.createdAt),
+    updatedAt: toIso(row.updatedAt),
+  }
+}
+
+function summarizeAttendance(childId: string, records: AttendanceRecord[]): AttendanceSummary {
+  return {
+    childId,
+    totalPresent: records.filter(record => record.status === 'present').length,
+    totalAbsent: records.filter(record => record.status === 'absent').length,
+    totalPartial: records.filter(record => record.status === 'partial').length,
+    totalRecorded: records.length,
+  }
 }
 
 function buildChecklist(params: {
@@ -73,9 +171,12 @@ function buildChecklist(params: {
   return items
 }
 
-export function getRecordsReport(options: RecordsReportOptions): RecordsReport {
-  const child = getStudentProfile(options.childId)
-  if (!child) {
+export async function getRecordsReport(
+  householdId: string,
+  options: RecordsReportOptions,
+): Promise<RecordsReport> {
+  const childRow = await getLearner(options.childId, householdId)
+  if (!childRow) {
     throw new Error('Child not found')
   }
 
@@ -90,25 +191,36 @@ export function getRecordsReport(options: RecordsReportOptions): RecordsReport {
     throw new Error('Start date must be on or before end date')
   }
 
-  const dateRange = defaultDateRange(options)
-  const subjects = getSubjects(options.childId).filter(subject => subject.isActive)
-  const lessons = getLessons(options.childId)
+  const dateRange = await defaultDateRange(householdId, options)
+  const child = mapLearner(childRow)
+  const subjectRows = await listSubjectRows(householdId, options.childId)
+  const subjects = subjectRows.map(mapSubject).filter(subject => subject.isActive)
+  const lessonRows = await listLessonTaskRows(householdId, {
+    learnerId: options.childId,
+    startDate: dateRange.start,
+    endDate: dateRange.end,
+  })
+  const lessons = lessonRows.map(mapLesson)
   const completedLessons = getCompletedLessonHistory(lessons, {
     childId: options.childId,
     startDate: dateRange.start,
     endDate: dateRange.end,
   })
-  const attendanceRecords = getAttendanceRecords({
-    childId: options.childId,
-    startDate: dateRange.start,
-    endDate: dateRange.end,
-  })
-  const attendance = getAttendanceSummary(options.childId, dateRange.start, dateRange.end)
-  const evidence = listEvidenceItems({
-    childId: options.childId,
-    startDate: dateRange.start,
-    endDate: dateRange.end,
-  })
+  const attendanceRecords = (
+    await listAttendanceEvents(householdId, {
+      learnerId: options.childId,
+      startDate: dateRange.start,
+      endDate: dateRange.end,
+    })
+  ).map(mapAttendance)
+  const attendance = summarizeAttendance(options.childId, attendanceRecords)
+  const evidence = (
+    await listEvidenceRows(householdId, {
+      learnerId: options.childId,
+      startDate: dateRange.start,
+      endDate: dateRange.end,
+    })
+  ).map(mapEvidence)
 
   const childNames = { [child.id]: child.name }
   const subjectNames = Object.fromEntries(subjects.map(subject => [subject.id, subject.name]))
@@ -118,7 +230,7 @@ export function getRecordsReport(options: RecordsReportOptions): RecordsReport {
     [options.childId],
     childNames,
     subjectNames,
-    'year'
+    'year',
   )
 
   const subjectsWithoutCompletedWork = subjects

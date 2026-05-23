@@ -165,7 +165,7 @@ UI component
 
 API route handlers should be thin: parse/validate the request, call the feature service, return the standard API response shape. Feature services own business rules. Feature repository/store adapters own persistence details.
 
-Persistence is Postgres via Drizzle ORM. `features/lib/server/memoryStore.ts` still exists for the `resources` feature (pending migration); do not use it for new features.
+Persistence is Postgres via Drizzle ORM. `features/lib/server/memoryStore.ts` still exists for `resources` (catalog) and `school-year` — both pending Task 3 migration. Do not use it for new features.
 
 When adding new server-side data access:
 - First look for an existing service function in the feature.
@@ -444,4 +444,4 @@ Jest maps `next-auth/react` to `__mocks__/next-auth/react.ts` (default unauthent
 
 ## Known product gaps (not bugs)
 
-Limited validation and error boundaries; no e2e suite. Features still on memory stubs pending Postgres migration: `resources`, `alerts`, `school-year`, `records/service`, `setup/service`. Backlog: Playwright e2e, accessibility pass, richer filtering, email allow-list, user-to-household binding, reports persistence table.
+Limited validation and error boundaries; no e2e suite. Features still on memory stubs pending Postgres migration: `resources` (catalog only — feedback/notes migrated), `school-year`, `records/service`, `setup/service`. Backlog: Playwright e2e, accessibility pass, richer filtering, email allow-list, user-to-household binding, reports persistence table.

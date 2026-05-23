@@ -1,34 +1,27 @@
-import { getWorkspace, getHouseholdProfile } from '@/features/household/server/service'
-import { getStudentProfiles } from '@/features/children/server/service'
-import { getSubjects } from '@/features/subjects/server/service'
-import { getLessons } from '@/features/plan/server/service'
-import { getRecords as getAttendanceRecords } from '@/features/attendance/server/service'
-import { listEvidenceItems } from '@/features/portfolio/server/service'
+import { listAttendanceEvents } from '@/features/attendance/server/repository'
+import { listAllLearners } from '@/features/children/server/repository'
+import { getHouseholdById } from '@/features/household/server/repository'
+import { listEvidenceRows } from '@/features/portfolio/server/repository'
+import { listLessonTaskRows } from '@/features/plan/server/repository'
+import { listSubjectRows } from '@/features/subjects/server/repository'
 import type { SetupStatus } from '../types'
 import { getNextSetupStep, getCompletedSteps, type SetupState } from './rules'
 
-export function getSetupStatus(): SetupStatus {
-  const workspace = getWorkspace()
-  const profile = getHouseholdProfile()
-  const hasHousehold = Boolean(workspace && profile)
-
-  const profiles = getStudentProfiles()
-  const activeChildCount = profiles.filter((p) => p.isActive !== false).length
-
-  const subjects = getSubjects()
-  const activeSubjectCount = subjects.filter((s) => s.isActive !== false).length
-
-  const hasLessons = getLessons().length > 0
-  const hasAttendance = getAttendanceRecords({}).length > 0
-  const hasPortfolio = listEvidenceItems({}).length > 0
+export async function getSetupStatus(householdId: string): Promise<SetupStatus> {
+  const household = await getHouseholdById(householdId)
+  const profiles = await listAllLearners(householdId)
+  const subjects = await listSubjectRows(householdId)
+  const lessons = await listLessonTaskRows(householdId)
+  const attendance = await listAttendanceEvents(householdId)
+  const evidence = await listEvidenceRows(householdId)
 
   const state: SetupState = {
-    hasHousehold,
-    activeChildCount,
-    activeSubjectCount,
-    hasLessons,
-    hasAttendance,
-    hasPortfolio,
+    hasHousehold: Boolean(household),
+    activeChildCount: profiles.filter((p) => p.isActive !== false).length,
+    activeSubjectCount: subjects.filter((s) => s.isActive !== false).length,
+    hasLessons: lessons.length > 0,
+    hasAttendance: attendance.length > 0,
+    hasPortfolio: evidence.length > 0,
   }
 
   return {

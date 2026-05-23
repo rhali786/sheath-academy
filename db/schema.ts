@@ -64,6 +64,12 @@ export const schoolYears = pgTable(
     startDate: date('start_date').notNull(),
     endDate: date('end_date').notNull(),
     isActive: boolean('is_active').notNull().default(false),
+    requiredDays: integer('required_days'),
+    requiredHours: integer('required_hours'),
+    trackingMethod: text('tracking_method'),
+    schoolDays: jsonb('school_days'),
+    breaks: jsonb('breaks'),
+    termStructure: text('term_structure'),
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),
   },
@@ -283,6 +289,36 @@ export const productValidationResponses = pgTable('product_validation_responses'
   mayQuoteAnonymized: boolean('may_quote_anonymized').notNull().default(false),
   mayQuoteWithName: boolean('may_quote_with_name').notNull().default(false),
   forkTestFitScore: numeric('fork_test_fit_score', { precision: 4, scale: 2 }).notNull(),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull(),
+})
+
+// ─── Resource Feedback & Community Notes ──────────────────────────────────
+
+export const resourceFeedback = pgTable('resource_feedback', {
+  id: text('id').primaryKey(),
+  resourceId: text('resource_id').notNull(),
+  parentId: text('parent_id').notNull(),
+  displayParentId: text('display_parent_id'),
+  compatibility: text('compatibility').notNull(),
+  rating: integer('rating'),
+  difficulty: text('difficulty'),
+  actualTimeMinutes: integer('actual_time_minutes'),
+  islamicNote: text('islamic_note'),
+  worksIndependently: boolean('works_independently'),
+  worksTeacherLed: boolean('works_teacher_led'),
+  privacyLevel: text('privacy_level').notNull().default('anonymous'),
+  status: text('status').notNull().default('pending_review'),
+  createdAt: timestamp('created_at').notNull(),
+})
+
+export const resourceCommunityNotes = pgTable('resource_community_notes', {
+  id: text('id').primaryKey(),
+  resourceId: text('resource_id').notNull(),
+  feedbackId: text('feedback_id').notNull(),
+  difficulty: text('difficulty'),
+  islamicNote: text('islamic_note'),
+  status: text('status').notNull().default('pending_review'),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
 })

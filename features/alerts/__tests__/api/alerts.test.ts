@@ -6,9 +6,16 @@ jest.mock('@/features/alerts/server/service', () => ({
   getAlerts: jest.fn(),
 }))
 
-import { getAlerts } from '@/features/alerts/server/service'
-const mockGetAlerts = getAlerts as jest.Mock
+jest.mock('@/features/lib/server/tenant', () => ({
+  getHouseholdContext: jest.fn(),
+}))
 
+import { getAlerts } from '@/features/alerts/server/service'
+import { getHouseholdContext } from '@/features/lib/server/tenant'
+const mockGetAlerts = getAlerts as jest.Mock
+const mockGetHouseholdContext = getHouseholdContext as jest.Mock
+
+const HOUSEHOLD_ID = 'hh_01'
 const TODAY = '2026-05-17'
 const YESTERDAY = '2026-05-16'
 
@@ -54,7 +61,12 @@ function createRequest(url: string): Request {
 }
 
 beforeEach(() => {
-  mockGetAlerts.mockReturnValue([alert1, alert2, alert3])
+  mockGetHouseholdContext.mockResolvedValue({ householdId: HOUSEHOLD_ID, userId: 'user_01', timezone: 'America/New_York' })
+  mockGetAlerts.mockResolvedValue([alert1, alert2, alert3])
+})
+
+afterEach(() => {
+  jest.clearAllMocks()
 })
 
 describe('GET /api/alerts', () => {
@@ -63,10 +75,11 @@ describe('GET /api/alerts', () => {
     const body = await res.json()
     expect(body.status).toBe('success')
     expect(body.data).toHaveLength(3)
+    expect(mockGetAlerts).toHaveBeenCalledWith(HOUSEHOLD_ID, undefined)
   })
 
   test('filters alerts by childId', async () => {
-    mockGetAlerts.mockImplementation((childId?: string) =>
+    mockGetAlerts.mockImplementation(async (_householdId: string, childId?: string) =>
       childId === 'adam_01'
         ? [alert1]
         : [alert1, alert2, alert3]
@@ -75,10 +88,11 @@ describe('GET /api/alerts', () => {
     const body = await res.json()
     expect(body.status).toBe('success')
     expect(body.data.every((a: { childId: string | null }) => a.childId === 'adam_01' || a.childId === null)).toBe(true)
+    expect(mockGetAlerts).toHaveBeenCalledWith(HOUSEHOLD_ID, 'adam_01')
   })
 
   test('returns empty array when no alerts', async () => {
-    mockGetAlerts.mockReturnValue([])
+    mockGetAlerts.mockResolvedValue([])
     const res = await GET(createRequest('/api/alerts'))
     const body = await res.json()
     expect(body.status).toBe('success')

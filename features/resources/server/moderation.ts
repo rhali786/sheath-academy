@@ -1,28 +1,13 @@
-import type {
-  ResourceFeedback,
-  CommunityNote,
-  CompatibilitySignal,
-  FeedbackPrivacyLevel,
-  FeedbackStatus,
-} from '@/features/resources/types'
-import { createMemoryStore } from '@/features/lib/server/memoryStore'
-
-// ── Stores ────────────────────────────────────────────────────────────────────
-
-let fbCounter = 0
-function generateFeedbackId(): string {
-  fbCounter++
-  return `fb_${Date.now()}_${fbCounter}`
-}
-
-let noteCounter = 0
-function generateNoteId(): string {
-  noteCounter++
-  return `note_${Date.now()}_${noteCounter}`
-}
-
-const feedbackStore = createMemoryStore<ResourceFeedback>([])
-const noteStore = createMemoryStore<CommunityNote>([])
+import type { CompatibilitySignal, FeedbackPrivacyLevel } from '@/features/resources/types'
+import type { ResourceFeedback, CommunityNote } from '@/features/resources/types'
+import {
+  createFeedback as repoCreateFeedback,
+  createCommunityNote,
+  listFeedback as repoListFeedback,
+  getVerifiedCommunityNote as repoGetVerifiedCommunityNote,
+  listNotes as repoListNotes,
+  moderateNote as repoModerateNote,
+} from './repository'
 
 // ── Feedback ──────────────────────────────────────────────────────────────────
 
@@ -45,19 +30,16 @@ export interface CreateFeedbackInput {
  * Throws if the submission is flagged as containing copyrighted content.
  * Parent name is hidden when privacyLevel is 'anonymous'.
  */
-export function createFeedback(input: CreateFeedbackInput): ResourceFeedback {
+export async function createFeedback(input: CreateFeedbackInput): Promise<ResourceFeedback> {
   if (input.containsCopyrightedContent) {
     throw new Error('Submissions containing copyrighted content are not permitted.')
   }
 
   const privacyLevel = input.privacyLevel ?? 'anonymous'
-  const now = new Date().toISOString()
 
-  const feedback: ResourceFeedback = {
-    id: generateFeedbackId(),
+  const feedback = await repoCreateFeedback({
     resourceId: input.resourceId,
     parentId: input.parentId,
-    displayParentId: privacyLevel === 'anonymous' ? undefined : input.parentId,
     compatibility: input.compatibility,
     rating: input.rating,
     difficulty: input.difficulty,
@@ -67,29 +49,21 @@ export function createFeedback(input: CreateFeedbackInput): ResourceFeedback {
     worksTeacherLed: input.worksTeacherLed,
     privacyLevel,
     status: 'pending_review',
-    createdAt: now,
-  }
+  })
 
-  feedbackStore.insert(feedback)
-
-  // Also create a pending community note from this feedback
-  const note: CommunityNote = {
-    id: generateNoteId(),
+  await createCommunityNote({
     resourceId: input.resourceId,
     feedbackId: feedback.id,
     difficulty: input.difficulty,
     islamicNote: input.islamicNote,
     status: 'pending_review',
-    createdAt: now,
-    updatedAt: now,
-  }
-  noteStore.insert(note)
+  })
 
   return feedback
 }
 
-export function listFeedback(resourceId: string): ResourceFeedback[] {
-  return feedbackStore.getAll().filter(f => f.resourceId === resourceId)
+export async function listFeedback(resourceId: string): Promise<ResourceFeedback[]> {
+  return repoListFeedback(resourceId)
 }
 
 // ── Community notes ───────────────────────────────────────────────────────────
@@ -97,15 +71,12 @@ export function listFeedback(resourceId: string): ResourceFeedback[] {
 /**
  * Returns the first verified community note for a resource, or null if none exists.
  */
-export function getVerifiedCommunityNote(resourceId: string): CommunityNote | null {
-  const note = noteStore.getAll().find(
-    n => n.resourceId === resourceId && n.status === 'verified'
-  )
-  return note ?? null
+export async function getVerifiedCommunityNote(resourceId: string): Promise<CommunityNote | null> {
+  return repoGetVerifiedCommunityNote(resourceId)
 }
 
-export function listNotes(resourceId: string): CommunityNote[] {
-  return noteStore.getAll().filter(n => n.resourceId === resourceId)
+export async function listNotes(resourceId: string): Promise<CommunityNote[]> {
+  return repoListNotes(resourceId)
 }
 
 // ── Moderation ────────────────────────────────────────────────────────────────
@@ -114,13 +85,9 @@ export function listNotes(resourceId: string): CommunityNote[] {
  * Moderates a community note by feedback ID.
  * 'approve' → status becomes 'verified'; 'reject' → status becomes 'rejected'.
  */
-export function moderateNote(
+export async function moderateNote(
   feedbackId: string,
   action: 'approve' | 'reject',
-): CommunityNote | null {
-  const note = noteStore.getAll().find(n => n.feedbackId === feedbackId)
-  if (!note) return null
-
-  const newStatus: FeedbackStatus = action === 'approve' ? 'verified' : 'rejected'
-  return noteStore.update(note.id, { status: newStatus, updatedAt: new Date().toISOString() })
+): Promise<CommunityNote | null> {
+  return repoModerateNote(feedbackId, action)
 }

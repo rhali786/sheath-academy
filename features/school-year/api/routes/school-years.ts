@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { SchoolYear } from '@/features/school-year/types'
 import { getSchoolYears, getActiveSchoolYear, createSchoolYear } from '@/features/school-year/server/service'
+import { getHouseholdContext } from '@/features/lib/server/tenant'
 
 export async function GET(): Promise<NextResponse<ApiResponse<SchoolYear[]>>> {
-  const years = getSchoolYears()
+  const { householdId } = await getHouseholdContext()
+  const years = await getSchoolYears(householdId)
   return NextResponse.json({
     status: 'success',
     data: years,
@@ -14,7 +16,8 @@ export async function GET(): Promise<NextResponse<ApiResponse<SchoolYear[]>>> {
 }
 
 export async function GET_ACTIVE(): Promise<NextResponse<ApiResponse<SchoolYear | null>>> {
-  const year = getActiveSchoolYear()
+  const { householdId } = await getHouseholdContext()
+  const year = await getActiveSchoolYear(householdId)
   return NextResponse.json({
     status: 'success',
     data: year,
@@ -65,11 +68,18 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const effectiveActive = typeof isActive === 'boolean' ? isActive : true
 
-  const year = createSchoolYear({
+  const { householdId } = await getHouseholdContext()
+  const year = await createSchoolYear(householdId, {
     name: name.trim(),
     startDate,
     endDate,
     isActive: effectiveActive,
+    requiredDays: body.requiredDays,
+    requiredHours: body.requiredHours,
+    trackingMethod: body.trackingMethod,
+    schoolDays: body.schoolDays,
+    breaks: body.breaks,
+    termStructure: body.termStructure,
   })
 
   return NextResponse.json(

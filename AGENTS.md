@@ -1,6 +1,6 @@
 # Sheath Academy — development guide
 
-Homeschool dashboard (Next.js 15 App Router, React, TypeScript). Business logic and UI live under `features/`; `app/` is a thin routing layer. Data is in-memory (mock seed + `features/lib/server/dataStore`), session-only on Render.
+Homeschool dashboard (Next.js 15 App Router, React, TypeScript). Business logic and UI live under `features/`; `app/` is a thin routing layer. **Persistence is Postgres-only** via Drizzle ORM — `DATABASE_URL` is required at runtime. See `db/schema.ts` for table definitions and constraints.
 
 ---
 
@@ -10,8 +10,9 @@ Homeschool dashboard (Next.js 15 App Router, React, TypeScript). Business logic 
 
 - **`npm run setup-hooks`** — run once after cloning. Installs `scripts/hooks/pre-commit` into `.git/hooks/`. Without it the patch version in `package.json` (shown in the app header) will not increment on commit.
 - **`npm install`** — required before dev, build, or test.
-- **Check `.env.example`** before running locally. At minimum `AUTH_SECRET` and `RESEND_API_KEY` must be set in `.env.local` (or Render → Environment) or auth is silently broken.
-- **Test-driven development (TDD):** For new behavior, write a **failing automated test first**, then implement until it passes, then refactor. Use **unit tests** (red–green) for API route handlers, `dataStore` helpers, and other pure or isolated logic. Do not merge implementation-only changes that should have been test-driven.
+- **Check `.env.example`** before running locally. At minimum `AUTH_SECRET`, `DATABASE_URL`, and `RESEND_API_KEY` must be set in `.env.local` (or Render → Environment). Without `DATABASE_URL` the app throws on startup. Without `AUTH_SECRET` auth is silently broken.
+- **Seed demo data:** run `psql $DATABASE_URL < db/wipe_app_data.sql` once, then `npm run db:seed:demo`. This creates two households (Barakah Academy + Crescent Cove Learning) with 150 days of history.
+- **Test-driven development (TDD):** For new behavior, write a **failing automated test first**, then implement until it passes, then refactor. Use **unit tests** (red–green) for API route handlers, repository functions, and other pure or isolated logic. Mock at the repository boundary — never mock `getDb()` directly. Do not merge implementation-only changes that should have been test-driven.
 - **Integration tests:** New or materially changed **UI** must ship with **integration tests** under `features/<feature>/__tests__/` (e.g. `integration/`), covering the interactions and states called out in the feature plan (loading, empty, error, populated as applicable). Same for user-visible flows that are not adequately covered by lower-level tests.
 - **`npm run build` and `npm test` must pass before merging.** CI enforces this; don't skip it locally.
 - **Never commit secrets.** `.env.local`, deploy hook URLs, API keys. Rotate immediately if any were ever exposed.
@@ -22,6 +23,10 @@ Homeschool dashboard (Next.js 15 App Router, React, TypeScript). Business logic 
 ## Planning requirements (obligatory for every feature plan)
 
 Every implementation plan must include these two checks before writing any code. Skipping them produces bugs that only surface during manual testing or in production. Merged code must also satisfy **TDD** and **integration-test** rules in **Obligatory** above.
+
+Also apply `docs/planning-quality-rule.md` to every feature, bug, enhancement, refactor, migration, and cross-feature repair plan. Plans must be grounded in the current code path, not memory or desired architecture. Pick the lightest valid planning mode, audit the affected UI/data/API/service/repository path, name the source-of-truth owner, write observable acceptance criteria, list failing tests first, and include click-by-click manual QA. Dashboard, records, reports, child selector, all-children aggregation, archived child behavior, and cross-feature counts default to Mode 3 unless proven smaller.
+
+Bug-fix plans must include reproduction steps, expected behavior, actual behavior, affected code-path audit, source-of-truth owner, smallest safe fix, failing regression test first, Playwright coverage for user-visible or cross-feature bugs, and manual QA. Do not fix bugs by adding seed data, hardcoded fallbacks, or duplicate dashboard-owned data.
 
 **1. Integration test coverage for all UI components**
 
@@ -39,8 +44,8 @@ Before writing any code, trace the full lifecycle of each entity:
 
 | Question | Must be answered in the plan |
 |---|---|
-| Where are IDs generated? | `features/lib/server/dataStore.ts` function name + format |
-| Do IDs from the store match what the API returns and what the UI passes back? | Confirm at each layer boundary |
+| Where are IDs generated? | Owning feature repository/service function + ID format; confirm against `db/schema.ts` primary key and constraints |
+| Do IDs from the repository match what the API returns and what the UI passes back? | Confirm at each layer boundary |
 | Is the new page reachable from the navigation? | Name the Header link, tab, or route that reaches it |
 | Does the form appear without extra clicks on arrival? | State what the user sees on first load |
 | Are seed/fixture IDs (`householdId`, `workspaceId`, etc.) consistent from the store through to the UI? | `householdId` on students is **`HouseholdProfile.id`**, not `Workspace.id`. Confirm fixture values match what the runtime produces. |
@@ -158,13 +163,13 @@ UI component
   → front service/client
   → API route
   → feature service
-  → feature repository/store adapter
-  → memory store for now, Postgres later
+  → feature repository
+  → Drizzle/Postgres
 ```
 
 API route handlers should be thin: parse/validate the request, call the feature service, return the standard API response shape. Feature services own business rules. Feature repository/store adapters own persistence details.
 
-The current app uses `features/lib/server/memoryStore.ts` as the shared in-memory CRUD helper. Treat it as a temporary persistence adapter, not as the long-term domain boundary.
+Persistence is Postgres via Drizzle ORM. `features/lib/server/memoryStore.ts` still exists for the `resources` feature (pending migration); do not use it for new features.
 
 When adding new server-side data access:
 - First look for an existing service function in the feature.
@@ -265,6 +270,11 @@ When applying this section during feature work, include a short **"Architecture 
 | `npm run start` | Production server after build |
 | `npm test` | Jest (API + integration; `jsdom` for UI) |
 | `npm run smoke` | After build: brief `next start`, checks `/api/health` and that `/login`’s linked `/_next/static` CSS/JS return 200. Uses a **random free port** by default so a stale process on 3010 cannot fake success; set **`SMOKE_PORT=3010`** only if that port is free |
+| `npm run db:generate` | Generate Drizzle migration from schema diff |
+| `npm run db:migrate` | Apply pending migrations to the database |
+| `npm run db:studio` | Open Drizzle Studio (DB browser) |
+| `npm run db:seed:demo` | Seed two demo households (run after wipe) |
+| `psql $DATABASE_URL < db/wipe_app_data.sql` | **One-time** wipe of all app data before re-seeding |
 
 **Dev vs production server:** Use **`npm run dev`** for day-to-day work. Use **`npm run build`** then **`npm run start`** only for production-style checks. Mixing dev and prod on the same `.next` folder causes `/_next/static` 404s and broken CSS/JS — see Troubleshooting.
 
@@ -323,7 +333,7 @@ Start Wave 2: Modify only these files:
 
 ```
 features/
-  lib/                    # types; `server/` — mockData, dataStore (shared)
+  lib/                    # shared types and server infrastructure helpers
   auth/                   # sign-in feature (NextAuth, magic link, dev bypass)
   layout/                 # AppShell, Header — product shell components
     front/components/AppShell.tsx   # owns HouseholdProvider + Header; used by (shell) layout
@@ -428,8 +438,9 @@ Jest maps `next-auth/react` to `__mocks__/next-auth/react.ts` (default unauthent
 | All routes redirect to `/login` unexpectedly | `AUTH_SECRET` not set | Add `AUTH_SECRET` to `.env.local` or Render environment (see `.env.example`). |
 | `[auth][error] MissingSecret` / middleware auth errors | No Auth.js secret | Set **`AUTH_SECRET`** in `.env.local` (or Render). Restart the dev server after adding env vars. |
 | Dev bypass UI missing on `/login` | `NEXT_PUBLIC_DEV_MODE` not `true` when the client bundle was built | Set **`NEXT_PUBLIC_DEV_MODE=true`** and **`DEV_BYPASS_SECRET`** in `.env.local`. Restart **`npm run dev`** so `NEXT_PUBLIC_*` is inlined. |
-| Child picker empty / wrong children / subjects for wrong kid | **`householdId` for children APIs is `HouseholdProfile.id`, not `Workspace.id`**. Seeded students use `householdId: SEED_IDS.household`. | Use **`householdProfile?.id ?? workspace?.id`** when calling `childrenApi.getChildren` / `ChildForm` / subject flows. Keep household seed (`features/household/server/seed.ts`) aligned with `SEED_IDS` used by `features/children/server/seed.ts`. |
-| `PUT /api/household/profile` HTTP 404 | No household profile row in the store | Route returns 404 when there is nothing to update; setup flow creates profile with workspace. `resetStore()` in tests clears both stores to `[]`. |
+| Child picker empty / no children | `DATABASE_URL` not set or seed not run | Ensure `DATABASE_URL` is set and `npm run db:seed:demo` has been run after the wipe. |
+| App throws `DATABASE_URL is not configured` on startup | Missing env var | Add `DATABASE_URL` to `.env.local` (see `.env.example`). Restart the dev server. |
+| `PUT /api/household/profile` HTTP 500 | No household row in DB for current user | Run seed or ensure the setup flow completed (upserts household on first sign-in). |
 | Magic link email never arrives | `RESEND_API_KEY` not set or domain unverified | Check `.env.example`; verify sending domain in Resend dashboard. |
 | Version in header stuck / not incrementing | Pre-commit hook not installed | Run `npm run setup-hooks`. |
 
@@ -437,4 +448,4 @@ Jest maps `next-auth/react` to `__mocks__/next-auth/react.ts` (default unauthent
 
 ## Known product gaps (not bugs)
 
-In-memory data only; limited validation and error boundaries; no e2e suite. Backlog examples: persistence, Playwright, accessibility pass, richer filtering, email allow-list, user-to-household binding.
+Limited validation and error boundaries; no e2e suite. Features still on memory stubs pending Postgres migration: `resources`, `alerts`, `school-year`, `records/service`, `setup/service`. Backlog: Playwright e2e, accessibility pass, richer filtering, email allow-list, user-to-household binding, reports persistence table.
