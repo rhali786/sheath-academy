@@ -27,6 +27,17 @@ export function isAttendanceStatus(value: string): value is AttendanceStatus {
   return (ATTENDANCE_STATUSES as string[]).includes(value)
 }
 
+/** Maps pre-schema seed values to current AttendanceStatus. */
+const LEGACY_ATTENDANCE_STATUS_MAP: Record<string, AttendanceStatus> = {
+  excused_absence: 'excused',
+  late: 'partial',
+}
+
+export function normalizeAttendanceStatus(value: string): AttendanceStatus | null {
+  if (isAttendanceStatus(value)) return value
+  return LEGACY_ATTENDANCE_STATUS_MAP[value] ?? null
+}
+
 export function emptyAttendanceStatusCounts(): Record<AttendanceStatus, number> {
   return Object.fromEntries(ATTENDANCE_STATUSES.map(status => [status, 0])) as Record<
     AttendanceStatus,

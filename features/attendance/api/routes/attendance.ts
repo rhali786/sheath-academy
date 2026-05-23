@@ -1,11 +1,12 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { AttendanceRecord } from '@/features/attendance/types'
+import { normalizeAttendanceStatus } from '@/features/attendance/types'
 import { isValidStatus } from '@/features/attendance/server/service'
 import { listAttendanceEvents, createAttendanceEvent } from '@/features/attendance/server/repository'
 import type { AttendanceEventRow } from '@/features/attendance/server/repository'
-import { guardOwnership, assertSessionOwnership, sessionAuthCtx } from '@/features/auth/server/routeOwnership'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
+import { guardOwnership, assertSessionOwnership } from '@/features/auth/server/routeOwnership'
 
 function rowToRecord(r: AttendanceEventRow): AttendanceRecord {
   return {
@@ -13,7 +14,7 @@ function rowToRecord(r: AttendanceEventRow): AttendanceRecord {
     childId: r.learnerId,
     householdId: r.householdId,
     date: r.attendanceDate,
-    status: r.status as AttendanceRecord['status'],
+    status: normalizeAttendanceStatus(r.status) ?? 'present',
     minutes: r.minutes ?? undefined,
     notes: r.notes ?? undefined,
     isArchived: r.voidedAt !== null,
@@ -30,7 +31,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<At
   const endDate = url.searchParams.get('endDate') ?? undefined
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const rows = await listAttendanceEvents(householdId, { learnerId: childId, date, startDate, endDate })
     return NextResponse.json({ status: 'success', data: rows.map(rowToRecord), message: 'Attendance records retrieved', timestamp: new Date().toISOString() })
   } catch {
@@ -51,7 +52,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<A
 
   return guardOwnership(async () => {
     await assertSessionOwnership('learner', childId)
-    const ctx = await sessionAuthCtx()
+    const ctx = getRequestAuthCtx()
     const row = await createAttendanceEvent(ctx.householdId, {
       learnerId: childId,
       attendanceDate: date,
@@ -77,7 +78,7 @@ export async function BATCH(request: Request): Promise<NextResponse<ApiResponse<
   }
 
   return guardOwnership(async () => {
-    const ctx = await sessionAuthCtx()
+    const ctx = getRequestAuthCtx()
     const results: AttendanceRecord[] = []
     for (const entry of entries) {
       if (!entry.childId || !isValidStatus(entry.status)) continue

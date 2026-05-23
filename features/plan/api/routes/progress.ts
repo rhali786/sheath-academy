@@ -1,21 +1,15 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { LessonTask } from '@/features/plan/types'
 import { listLessonTaskRows } from '@/features/plan/server/repository'
-import type { LessonTaskRow } from '@/features/plan/server/repository'
+import { mapLessonTaskRow } from '@/features/plan/api/mapLessonTaskRow'
 import { listLearners } from '@/features/children/server/repository'
 import { listSubjectRows } from '@/features/subjects/server/repository'
 import { computeProgressBySubject, type SubjectProgressSummary } from '@/features/plan/utils/progressBySubject'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
 
-function rowToLesson(r: LessonTaskRow): LessonTask {
-  return {
-    id: r.id, childId: r.learnerId, subjectId: r.subjectId ?? '', householdId: r.householdId,
-    title: r.title, description: r.description ?? undefined, dueDate: r.dueDate ?? '',
-    status: (r.status as LessonTask['status']) ?? 'not_started', order: r.sortOrder,
-    createdAt: r.createdAt?.toISOString() ?? new Date().toISOString(),
-    updatedAt: r.updatedAt?.toISOString() ?? new Date().toISOString(),
-  }
+function rowToLesson(r: Parameters<typeof mapLessonTaskRow>[0]): LessonTask {
+  return mapLessonTaskRow(r)
 }
 
 export async function GET(request: Request): Promise<NextResponse<ApiResponse<SubjectProgressSummary[]>>> {
@@ -33,7 +27,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Su
   }
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const [rows, learners, subjectRows] = await Promise.all([
       listLessonTaskRows(householdId, { learnerId: childId ?? undefined, startDate: start, endDate: end }),
       listLearners(householdId),

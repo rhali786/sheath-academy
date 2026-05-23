@@ -1,5 +1,5 @@
 import type { AttendanceSummary } from '../types'
-import { emptyAttendanceStatusCounts, isAttendanceStatus } from '../types'
+import { emptyAttendanceStatusCounts, normalizeAttendanceStatus } from '../types'
 
 export function summarizeAttendanceByStatus(
   childId: string,
@@ -10,8 +10,9 @@ export function summarizeAttendanceByStatus(
 
   for (const raw of statuses) {
     totalRecorded++
-    if (isAttendanceStatus(raw)) {
-      byStatus[raw]++
+    const status = normalizeAttendanceStatus(raw)
+    if (status) {
+      byStatus[status]++
     }
   }
 

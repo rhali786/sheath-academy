@@ -3,6 +3,8 @@
  *
  *   npm run db:wipe
  *
+ * Always run before `npm run db:seed:demo`. See docs/database-seeding.md.
+ *
  * Requires DATABASE_URL in .env.local. Does not drop tables.
  */
 

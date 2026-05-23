@@ -1,26 +1,10 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { LessonTask } from '@/features/plan/types'
 import { listLessonTaskRows, createLessonTaskRow } from '@/features/plan/server/repository'
-import type { LessonTaskRow } from '@/features/plan/server/repository'
-import { guardOwnership, assertSessionOwnership, sessionAuthCtx } from '@/features/auth/server/routeOwnership'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
-
-function rowToLesson(r: LessonTaskRow): LessonTask {
-  return {
-    id: r.id,
-    childId: r.learnerId,
-    subjectId: r.subjectId ?? '',
-    householdId: r.householdId,
-    title: r.title,
-    description: r.description ?? undefined,
-    dueDate: r.dueDate ?? '',
-    status: (r.status as LessonTask['status']) ?? 'not_started',
-    order: r.sortOrder,
-    createdAt: r.createdAt?.toISOString() ?? new Date().toISOString(),
-    updatedAt: r.updatedAt?.toISOString() ?? new Date().toISOString(),
-  }
-}
+import { mapLessonTaskRow } from '@/features/plan/api/mapLessonTaskRow'
+import { guardOwnership, assertSessionOwnership } from '@/features/auth/server/routeOwnership'
 
 function formatLocalDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -54,7 +38,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Le
   const subjectIdArray = subjectIds ? subjectIds.split(',').filter(Boolean) : undefined
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const filters: Parameters<typeof listLessonTaskRows>[1] = {}
     if (childIdArray?.length === 1) filters.learnerId = childIdArray[0]
     if (subjectIdArray?.length === 1) filters.subjectId = subjectIdArray[0]
@@ -62,7 +46,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Le
     let rows = await listLessonTaskRows(householdId, filters)
     if (childIdArray && childIdArray.length > 1) rows = rows.filter(r => childIdArray.includes(r.learnerId))
     if (subjectIdArray && subjectIdArray.length > 1) rows = rows.filter(r => r.subjectId && subjectIdArray.includes(r.subjectId))
-    return NextResponse.json({ status: 'success', data: rows.map(rowToLesson), message: 'Lessons retrieved', timestamp: new Date().toISOString() })
+    return NextResponse.json({ status: 'success', data: rows.map(mapLessonTaskRow), message: 'Lessons retrieved', timestamp: new Date().toISOString() })
   } catch {
     return NextResponse.json({ status: 'success', data: [], message: 'Lessons retrieved', timestamp: new Date().toISOString() })
   }
@@ -78,7 +62,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<L
 
   return guardOwnership(async () => {
     await assertSessionOwnership('learner', childId)
-    const { householdId, userId } = await sessionAuthCtx()
+    const { householdId, userId } = getRequestAuthCtx()
     const row = await createLessonTaskRow(householdId, {
       learnerId: childId,
       subjectId,
@@ -91,7 +75,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<L
     const { trackSessionStarted } = await import('@/features/admin-metrics/server/instrument')
     void trackSessionStarted(userId, householdId, childId, row.id, 'planner')
     return NextResponse.json(
-      { status: 'success', data: rowToLesson(row), message: 'Lesson created', timestamp: new Date().toISOString() },
+      { status: 'success', data: mapLessonTaskRow(row), message: 'Lesson created', timestamp: new Date().toISOString() },
       { status: 201 },
     )
   }) as Promise<NextResponse<ApiResponse<LessonTask | null>>>

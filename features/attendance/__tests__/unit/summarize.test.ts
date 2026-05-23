@@ -25,10 +25,11 @@ describe('summarizeAttendanceByStatus', () => {
     expect(summary.byStatus.sick).toBe(0)
   })
 
-  it('includes invalid legacy statuses in totalRecorded only', () => {
+  it('maps legacy seed statuses into current buckets', () => {
     const summary = summarizeAttendanceByStatus('child_1', ['present', 'late', 'excused_absence'])
     expect(summary.totalRecorded).toBe(3)
     expect(summary.byStatus.present).toBe(1)
-    expect(summary.byStatus.partial).toBe(0)
+    expect(summary.byStatus.partial).toBe(1)
+    expect(summary.byStatus.excused).toBe(1)
   })
 })

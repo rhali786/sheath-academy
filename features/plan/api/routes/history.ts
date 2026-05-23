@@ -1,19 +1,13 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { LessonTask } from '@/features/plan/types'
 import { listLessonTaskRows } from '@/features/plan/server/repository'
-import type { LessonTaskRow } from '@/features/plan/server/repository'
+import { mapLessonTaskRow } from '@/features/plan/api/mapLessonTaskRow'
 import { getCompletedLessonHistory } from '@/features/plan/utils/completedLessonHistory'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
 
-function rowToLesson(r: LessonTaskRow): LessonTask {
-  return {
-    id: r.id, childId: r.learnerId, subjectId: r.subjectId ?? '', householdId: r.householdId,
-    title: r.title, description: r.description ?? undefined, dueDate: r.dueDate ?? '',
-    status: (r.status as LessonTask['status']) ?? 'not_started', order: r.sortOrder,
-    createdAt: r.createdAt?.toISOString() ?? new Date().toISOString(),
-    updatedAt: r.updatedAt?.toISOString() ?? new Date().toISOString(),
-  }
+function rowToLesson(r: Parameters<typeof mapLessonTaskRow>[0]): LessonTask {
+  return mapLessonTaskRow(r)
 }
 
 export async function GET(request: Request): Promise<NextResponse<ApiResponse<LessonTask[]>>> {
@@ -35,7 +29,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Le
   }
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const rows = await listLessonTaskRows(householdId, { learnerId: childId, subjectId, startDate, endDate })
     const lessons = rows.map(rowToLesson)
     const result = getCompletedLessonHistory(lessons, { childId, subjectId, startDate, endDate, showPending, showAll, limit })

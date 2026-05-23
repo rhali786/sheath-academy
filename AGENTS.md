@@ -11,7 +11,10 @@ Homeschool dashboard (Next.js 15 App Router, React, TypeScript). Business logic 
 - **`npm run setup-hooks`** — run once after cloning. Installs `scripts/hooks/pre-commit` into `.git/hooks/`. Without it the patch version in `package.json` (shown in the app header) will not increment on commit.
 - **`npm install`** — required before dev, build, or test.
 - **Check `.env.example`** before running locally. At minimum `AUTH_SECRET`, `DATABASE_URL`, and `RESEND_API_KEY` must be set in `.env.local` (or Render → Environment). Without `DATABASE_URL` the app throws on startup. Without `AUTH_SECRET` auth is silently broken.
-- **Seed demo data:** run `psql $DATABASE_URL < db/wipe_app_data.sql` once, then `npm run db:seed:demo`. This creates two households (Barakah Academy + Crescent Cove Learning) with 150 days of history.
+- **Seed demo data:** wipe first, then bulk seed. See [docs/database-seeding.md](docs/database-seeding.md).
+  - `npm run db:wipe` then `npm run db:seed:demo` — or `npm run db:reset:demo` for both.
+  - Creates two households (Barakah Academy + Crescent Cove Learning) with 150 days of history.
+  - **Never seed row-by-row** — demo data loads via chunked multi-row INSERTs only.
 - **Test-driven development (TDD):** For new behavior, write a **failing automated test first**, then implement until it passes, then refactor. Use **unit tests** (red–green) for API route handlers, repository functions, and other pure or isolated logic. Mock at the repository boundary — never mock `getDb()` directly. Do not merge implementation-only changes that should have been test-driven.
 - **Integration tests:** New or materially changed **UI** must ship with **integration tests** under `features/<feature>/__tests__/` (e.g. `integration/`), covering the interactions and states called out in the feature plan (loading, empty, error, populated as applicable). Same for user-visible flows that are not adequately covered by lower-level tests.
 - **`npm run build` and `npm test` must pass before merging.** CI enforces this; don't skip it locally.
@@ -169,7 +172,9 @@ UI component
 
 API route handlers should be thin: parse/validate the request, call the feature service, return the standard API response shape. Feature services own business rules. Feature repository/store adapters own persistence details.
 
-Persistence is Postgres via Drizzle ORM. `features/lib/server/memoryStore.ts` still exists for the `resources` feature (pending migration); do not use it for new features.
+**Auth / tenant context:** All `/api/*` requests pass through `app/api/[...slug]/route.ts`, which calls `requireAuthCtx()` once and runs handlers inside `runWithAuthCtx()`. Route handlers must read tenant context via `getRequestAuthCtx()` from `@/features/auth/server/requestAuth` — do **not** call `getHouseholdContext()` (removed) or `resolveTenant()` from handlers. Server components outside the API dispatcher use `getAuthCtx()` (JWT session claims). Admin routes use `requireAdminApi()` / `assertAppAdmin()` on the same `AuthCtx`.
+
+Persistence is Postgres via Drizzle ORM.
 
 When adding new server-side data access:
 - First look for an existing service function in the feature.
@@ -273,8 +278,10 @@ When applying this section during feature work, include a short **"Architecture 
 | `npm run db:generate` | Generate Drizzle migration from schema diff |
 | `npm run db:migrate` | Apply pending migrations to the database |
 | `npm run db:studio` | Open Drizzle Studio (DB browser) |
-| `npm run db:seed:demo` | Seed two demo households (run after wipe) |
-| `psql $DATABASE_URL < db/wipe_app_data.sql` | **One-time** wipe of all app data before re-seeding |
+| `npm run db:seed:demo` | Bulk-seed two demo households (**after wipe** — see docs/database-seeding.md) |
+| `npm run db:wipe` | Truncate all application tables (keeps schema) |
+| `npm run db:reset:demo` | Wipe + bulk seed in one command |
+| `psql $DATABASE_URL < db/wipe_app_data.sql` | SQL equivalent of `db:wipe` |
 
 **Dev vs production server:** Use **`npm run dev`** for day-to-day work. Use **`npm run build`** then **`npm run start`** only for production-style checks. Mixing dev and prod on the same `.next` folder causes `/_next/static` 404s and broken CSS/JS — see Troubleshooting.
 

@@ -72,7 +72,7 @@ export async function createAttendanceEvent(
   return inserted[0]
 }
 
-/** Inserts an attendance event with a caller-supplied id. No-ops on conflict. For seed scripts only. */
+/** Inserts an attendance event with a caller-supplied id. Updates status on conflict. For seed scripts only. */
 export async function upsertAttendanceEvent(
   householdId: string,
   id: string,
@@ -95,7 +95,14 @@ export async function upsertAttendanceEvent(
       createdAt: now,
       updatedAt: now,
     })
-    .onConflictDoNothing()
+    .onConflictDoUpdate({
+      target: attendanceEvents.id,
+      set: {
+        status: input.status,
+        minutes: input.minutes ?? null,
+        updatedAt: now,
+      },
+    })
 }
 
 export async function updateAttendanceEvent(

@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { childColors } from '../theme'
 import type { LessonTask } from '@/features/plan/types'
+import { getLessonActivityDate } from '@/features/plan/utils/lessonActivityDate'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 
@@ -36,9 +37,11 @@ export function SubjectActivity({ lessons, subjects, children, selectedChildId }
   }
 
   // Completed lessons this week
-  const weekCompleted = lessons.filter(
-    l => l.status === 'completed' && l.updatedAt.slice(0, 10) >= start && l.updatedAt.slice(0, 10) <= end
-  )
+  const weekCompleted = lessons.filter(l => {
+    if (l.status !== 'completed') return false
+    const activityDate = getLessonActivityDate(l)
+    return activityDate >= start && activityDate <= end
+  })
 
   const activeChildren = selectedChildId
     ? children.filter(c => c.id === selectedChildId)

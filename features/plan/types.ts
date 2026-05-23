@@ -15,6 +15,7 @@ export interface LessonTask {
   order: number
   estimatedDuration?: LessonDuration
   lessonType?: string
+  completedAt?: string
   createdAt: string
   updatedAt: string
 }
