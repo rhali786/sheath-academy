@@ -4,10 +4,6 @@ jest.mock('@/features/auth/auth', () => ({
   auth: jest.fn(),
 }))
 
-jest.mock('@/features/lib/server/tenant', () => ({
-  resolveTenant: jest.fn(),
-}))
-
 jest.mock('@/features/children/server/repository', () => ({
   getLearner: jest.fn(),
 }))
@@ -29,7 +25,6 @@ jest.mock('@/features/portfolio/server/repository', () => ({
 }))
 
 import { auth } from '@/features/auth/auth'
-import { resolveTenant } from '@/features/lib/server/tenant'
 import { getLearner } from '@/features/children/server/repository'
 import {
   getAuthCtx,
@@ -38,16 +33,28 @@ import {
   unauthorizedResponse,
   setupRequiredResponse,
 } from '@/features/auth/server/context'
+import {
+  getRequestAuthCtx,
+  runWithAuthCtx,
+  tryGetRequestAuthCtx,
+} from '@/features/auth/server/requestAuth'
 import { NotFoundError } from '@/features/auth/server/errors'
 import { SEED_AUTH_CTX } from '@/features/auth/__tests__/helpers'
 
 const mockAuth = auth as jest.Mock
-const mockResolveTenant = resolveTenant as jest.Mock
 const mockGetLearner = getLearner as jest.Mock
+
+const JWT_SESSION = {
+  user: {
+    email: 'a@example.com',
+    userId: 'u1',
+    householdId: 'hh1',
+    timezone: 'UTC',
+  },
+}
 
 beforeEach(() => {
   mockAuth.mockReset()
-  mockResolveTenant.mockReset()
   mockGetLearner.mockReset()
 })
 
@@ -57,17 +64,53 @@ describe('getAuthCtx', () => {
     await expect(getAuthCtx()).resolves.toBeNull()
   })
 
-  test('returns userId and householdId when session and tenant resolve', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', email: 'a@example.com' } })
-    mockResolveTenant.mockResolvedValue({ userId: 'u1', householdId: 'hh1', timezone: 'UTC' })
+  test('returns JWT tenant claims when session has userId and householdId', async () => {
+    mockAuth.mockResolvedValue(JWT_SESSION)
     const result = await getAuthCtx()
-    expect(result).toEqual({ userId: 'u1', householdId: 'hh1', timezone: 'UTC' })
+    expect(result).toEqual({
+      userId: 'u1',
+      householdId: 'hh1',
+      email: 'a@example.com',
+      timezone: 'UTC',
+    })
+    expect(mockAuth).toHaveBeenCalledTimes(1)
   })
 
-  test('returns null when resolveTenant throws', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', email: 'a@example.com' } })
-    mockResolveTenant.mockRejectedValue(new Error('DB error'))
+  test('returns request-scoped ctx without calling auth when inside API dispatch', async () => {
+    const scoped = {
+      userId: 'scoped-user',
+      householdId: 'scoped-hh',
+      email: 'scoped@example.com',
+      timezone: 'America/New_York',
+    }
+    await runWithAuthCtx(scoped, async () => {
+      await expect(getAuthCtx()).resolves.toEqual(scoped)
+      expect(mockAuth).not.toHaveBeenCalled()
+    })
+  })
+
+  test('returns null when session email exists but tenant claims are missing', async () => {
+    mockAuth.mockResolvedValue({ user: { email: 'a@example.com' } })
     await expect(getAuthCtx()).resolves.toBeNull()
+  })
+})
+
+describe('requestAuth', () => {
+  test('getRequestAuthCtx throws outside API dispatch', () => {
+    expect(() => getRequestAuthCtx()).toThrow(/outside API dispatch/)
+  })
+
+  test('tryGetRequestAuthCtx returns undefined outside dispatch', () => {
+    expect(tryGetRequestAuthCtx()).toBeUndefined()
+  })
+
+  test('runWithAuthCtx exposes ctx to nested async calls', async () => {
+    const ctx = { userId: 'u1', householdId: 'hh1', email: 'a@example.com' }
+    await runWithAuthCtx(ctx, async () => {
+      expect(getRequestAuthCtx()).toEqual(ctx)
+      await Promise.resolve()
+      expect(tryGetRequestAuthCtx()).toEqual(ctx)
+    })
   })
 })
 
@@ -79,13 +122,23 @@ describe('requireAuthCtx', () => {
     expect((result as Response).status).toBe(401)
   })
 
-  test('returns 403 setup_required when householdId is empty', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u2', email: 'b@example.com' } })
-    mockResolveTenant.mockResolvedValue({ userId: 'u2', householdId: '', timezone: 'UTC' })
+  test('returns 403 setup_required when householdId is missing from JWT', async () => {
+    mockAuth.mockResolvedValue({ user: { email: 'b@example.com', userId: 'u2' } })
     const result = await requireAuthCtx({} as import('next/server').NextRequest)
     expect((result as Response).status).toBe(403)
     const body = await (result as Response).json()
     expect(body.code).toBe('setup_required')
+  })
+
+  test('returns AuthCtx when JWT has tenant claims', async () => {
+    mockAuth.mockResolvedValue(JWT_SESSION)
+    const result = await requireAuthCtx({} as import('next/server').NextRequest)
+    expect(result).toEqual({
+      userId: 'u1',
+      householdId: 'hh1',
+      email: 'a@example.com',
+      timezone: 'UTC',
+    })
   })
 })
 

@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { resolveTenant } from '@/features/lib/server/tenant'
 import { NotFoundError, isNotFoundError } from './errors'
 
 export interface AuthCtx {
   userId: string
   householdId: string
-  /** Present when resolved from Postgres tenant context. */
+  email?: string
   timezone?: string
 }
 
@@ -68,21 +67,28 @@ export async function withOwnershipGuard(
 }
 
 /**
- * Resolves auth context from the current session.
- * Returns null when there is no authenticated session.
+ * Resolves auth context from JWT session claims (no DB round-trip).
+ * Returns null when there is no authenticated session or tenant claims are missing.
  */
 export async function getAuthCtx(_request?: NextRequest): Promise<AuthCtx | null> {
+  const { tryGetRequestAuthCtx } = await import('@/features/auth/server/requestAuth')
+  const requestCtx = tryGetRequestAuthCtx()
+  if (requestCtx) return requestCtx
+
   const { auth } = await import('@/features/auth/auth')
   const session = await auth()
-  if (!session?.user?.email && !session?.user?.id) {
-    return null
-  }
+  const user = session?.user
+  if (!user?.email) return null
 
-  try {
-    const tenant = await resolveTenant(session)
-    return { userId: tenant.userId, householdId: tenant.householdId, timezone: tenant.timezone }
-  } catch {
-    return null
+  const userId = user.userId
+  const householdId = user.householdId
+  if (!userId || !householdId) return null
+
+  return {
+    userId,
+    householdId,
+    email: user.email,
+    timezone: user.timezone,
   }
 }
 
@@ -90,10 +96,27 @@ export async function getAuthCtx(_request?: NextRequest): Promise<AuthCtx | null
  * Returns AuthCtx or a 401/403 Response for route handlers.
  */
 export async function requireAuthCtx(request: NextRequest): Promise<AuthCtx | Response> {
-  const ctx = await getAuthCtx(request)
-  if (!ctx) return unauthorizedResponse()
-  if (!ctx.householdId) return setupRequiredResponse()
-  return ctx
+  const { tryGetRequestAuthCtx } = await import('@/features/auth/server/requestAuth')
+  const requestCtx = tryGetRequestAuthCtx()
+  if (requestCtx) {
+    if (!requestCtx.householdId) return setupRequiredResponse()
+    return requestCtx
+  }
+
+  const { auth } = await import('@/features/auth/auth')
+  const session = await auth()
+  if (!session?.user?.email) return unauthorizedResponse()
+
+  const userId = session.user.userId
+  const householdId = session.user.householdId
+  if (!userId || !householdId) return setupRequiredResponse()
+
+  return {
+    userId,
+    householdId,
+    email: session.user.email,
+    timezone: session.user.timezone,
+  }
 }
 
 /**

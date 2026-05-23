@@ -31,13 +31,45 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return true
     },
-    jwt({ token, user }) {
-      if (user?.email) token.email = user.email
+    async jwt({ token, user, trigger, session }) {
+      if (user?.email) {
+        token.email = user.email
+      }
+
+      if (trigger === 'update' && session) {
+        const patch = session as {
+          userId?: string
+          householdId?: string
+          timezone?: string
+        }
+        if (patch.userId) token.userId = patch.userId
+        if (patch.householdId) token.householdId = patch.householdId
+        if (patch.timezone) token.timezone = patch.timezone
+      }
+
+      const email = user?.email ?? (typeof token.email === 'string' ? token.email : undefined)
+      if (email && !token.householdId && process.env.DATABASE_URL) {
+        try {
+          const { resolveTenant } = await import('@/features/lib/server/tenant')
+          const tenant = await resolveTenant({
+            user: { email, name: user?.name ?? undefined },
+          })
+          token.userId = tenant.userId
+          token.householdId = tenant.householdId
+          token.timezone = tenant.timezone
+        } catch {
+          // Postgres optional during migration; session may lack tenant claims until DB is reachable.
+        }
+      }
+
       return token
     },
     session({ session, token }) {
-      if (session.user && typeof token.email === 'string') {
-        session.user.email = token.email
+      if (session.user) {
+        if (typeof token.email === 'string') session.user.email = token.email
+        if (typeof token.userId === 'string') session.user.userId = token.userId
+        if (typeof token.householdId === 'string') session.user.householdId = token.householdId
+        if (typeof token.timezone === 'string') session.user.timezone = token.timezone
       }
       return session
     },

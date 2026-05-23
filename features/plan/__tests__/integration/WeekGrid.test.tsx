@@ -269,6 +269,15 @@ describe('WeekGrid — BUG-009 subject ownership', () => {
 })
 
 describe('WeekGrid — FB-006 today column highlight', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date('2026-05-13T12:00:00'))
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
   it("today's column header has a ring highlight class", () => {
     const today = new Date()
     const { container } = renderGrid([], 'Monday', { selectedWeek: today })

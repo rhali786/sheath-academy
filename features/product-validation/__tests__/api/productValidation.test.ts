@@ -106,6 +106,7 @@ describe('POST /api/product-validation/responses', () => {
 describe('GET /api/product-validation/responses', () => {
   test('returns list (empty from stub) when admin', async () => {
     process.env.ADMIN_EMAIL = 'admin@test.com'
+    mockGetAuthCtx.mockResolvedValue(seedAuthCtx({ email: 'admin@test.com' }))
     mockAuth.mockResolvedValue({ user: { id: 'admin', email: 'admin@test.com' } })
     const res = await GET(new Request('http://localhost/api/product-validation/responses'))
     expect(res.status).toBe(200)
@@ -118,6 +119,7 @@ describe('GET /api/product-validation/responses', () => {
 describe('GET /api/product-validation/summary', () => {
   test('returns summary shape', async () => {
     process.env.ADMIN_EMAIL = 'admin@test.com'
+    mockGetAuthCtx.mockResolvedValue(seedAuthCtx({ email: 'admin@test.com' }))
     mockAuth.mockResolvedValue({ user: { id: 'admin', email: 'admin@test.com' } })
     const res = await GETSummary(new Request('http://localhost/api/product-validation/summary'))
     expect(res.status).toBe(200)

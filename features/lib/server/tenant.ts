@@ -39,15 +39,29 @@ export async function resolveTenant(
 }
 
 /**
- * Convenience helper for API route handlers.
- * Calls NextAuth's `auth()` and resolves the TenantContext.
- * Throws for unauthenticated requests.
+ * Returns tenant context for the current request.
+ * Inside `[...slug]` API dispatch, reads request-scoped AuthCtx (no DB).
+ * Outside API routes (e.g. RSC), falls back to JWT session claims via getAuthCtx.
  */
 export async function getHouseholdContext(): Promise<TenantContext> {
-  const { auth } = await import('@/features/auth/auth')
-  const session = await auth()
-  if (!session?.user?.email) {
+  const { tryGetRequestAuthCtx } = await import('@/features/auth/server/requestAuth')
+  const requestCtx = tryGetRequestAuthCtx()
+  if (requestCtx) {
+    return {
+      userId: requestCtx.userId,
+      householdId: requestCtx.householdId,
+      timezone: requestCtx.timezone ?? 'America/New_York',
+    }
+  }
+
+  const { getAuthCtx } = await import('@/features/auth/server/context')
+  const ctx = await getAuthCtx()
+  if (!ctx) {
     throw new Error('Unauthenticated — no session email')
   }
-  return resolveTenant(session)
+  return {
+    userId: ctx.userId,
+    householdId: ctx.householdId,
+    timezone: ctx.timezone ?? 'America/New_York',
+  }
 }

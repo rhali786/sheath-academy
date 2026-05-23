@@ -5,6 +5,7 @@ import type { AuthCtx } from '@/features/auth/server/context'
 export const SEED_AUTH_CTX: AuthCtx = {
   userId: 'test-user',
   householdId: SEED_IDS.household,
+  email: 'parent@example.com',
 }
 
 export function seedAuthCtx(overrides?: Partial<AuthCtx>): AuthCtx {

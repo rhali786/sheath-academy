@@ -22,11 +22,8 @@ export async function requireAdminApi(request: Request): Promise<
   const authCtx = await getAuthCtx(request as NextRequest)
   if (!authCtx) return { ok: false, response: unauthorizedResponse() }
 
-  const { auth } = await import('@/features/auth/auth')
-  const session = await auth()
-  const email = session?.user?.email
-  const isAdmin = isAppAdmin(email)
-  if (!isAdmin) return { ok: false, response: forbiddenResponse() }
+  const email = authCtx.email
+  if (!email || !isAppAdmin(email)) return { ok: false, response: forbiddenResponse() }
 
-  return { ok: true, email: email! }
+  return { ok: true, email }
 }

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { requireAuthCtx } from '@/features/auth/server/context'
+import { runWithAuthCtx } from '@/features/auth/server/requestAuth'
 import { handleDashboardRoute } from '@/features/dashboard/api/router'
 import { handleHouseholdRoute } from '@/features/household/api/router'
 import { handleChildrenRoute } from '@/features/children/api/router'
@@ -93,7 +94,7 @@ async function dispatch(
   if (authResult instanceof Response) return authResult
 
   const { slug } = await params
-  const response = await handleRoute(slug, request)
+  const response = await runWithAuthCtx(authResult, () => handleRoute(slug, request))
   if (response) return response
 
   return NextResponse.json(

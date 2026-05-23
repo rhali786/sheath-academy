@@ -33,7 +33,7 @@ describe('Admin metrics API', () => {
   const originalAdmin = process.env.ADMIN_EMAIL
 
   beforeEach(() => {
-    mockGetAuthCtx.mockResolvedValue(seedAuthCtx())
+    mockGetAuthCtx.mockResolvedValue(seedAuthCtx({ email: 'admin@test.com' }))
     process.env.ADMIN_EMAIL = 'admin@test.com'
     mockAuth.mockResolvedValue({ user: { id: 'admin', email: 'admin@test.com' } })
   })
@@ -51,6 +51,7 @@ describe('Admin metrics API', () => {
   })
 
   test('non-admin receives 403', async () => {
+    mockGetAuthCtx.mockResolvedValue(seedAuthCtx({ email: 'parent@test.com' }))
     mockAuth.mockResolvedValue({ user: { id: 'x', email: 'parent@test.com' } })
     const res = await GETSummary(new Request('http://localhost/api/admin/metrics/summary'))
     expect(res.status).toBe(403)
