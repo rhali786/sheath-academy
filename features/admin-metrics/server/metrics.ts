@@ -152,6 +152,7 @@ export function buildUserRow(
     deenRecordsCreated: countByType(periodEvents, DEEN_TYPES),
     evidenceItemsCreated: periodEvents.filter(e => e.eventType === 'evidence_created').length,
     reportsGenerated: periodEvents.filter(e => e.eventType === 'report_generated').length,
+    attendanceEventsInPeriod: 0,
     featureUsageByArea: featureCounts(periodEvents),
     dropOffSignals: computeDropOffSignals(periodEvents, allEvents, snapshot, periodEnd),
   }
@@ -200,6 +201,7 @@ export function computeSummaryFromEvents(
     deenRecordsCreated: countByType(events, DEEN_TYPES),
     evidenceItemsCreated: events.filter(e => e.eventType === 'evidence_created').length,
     reportsGenerated: events.filter(e => e.eventType === 'report_generated').length,
+    attendanceEventsLogged: 0,
     periodStart,
     periodEnd,
     previousPeriodComparison: {

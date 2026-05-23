@@ -7,7 +7,26 @@ import postgres from 'postgres'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { eq } from 'drizzle-orm'
 import { pgTable, text, jsonb, timestamp } from 'drizzle-orm/pg-core'
-import { createMemoryStore } from '@/features/lib/server/memoryStore'
+function createMemoryStore<T extends { id: string }>(seed: T[]) {
+  let items: T[] = JSON.parse(JSON.stringify(seed))
+  return {
+    getAll: () => items,
+    getById: (id: string) => items.find(i => i.id === id),
+    insert: (item: T) => { items.push(item); return item },
+    update: (id: string, patch: Partial<T>) => {
+      const i = items.findIndex(x => x.id === id)
+      if (i === -1) return null
+      items[i] = { ...items[i], ...patch }
+      return items[i]
+    },
+    remove: (id: string) => {
+      const before = items.length
+      items = items.filter(x => x.id !== id)
+      return items.length < before
+    },
+    reset: (newSeed: T[]) => { items = JSON.parse(JSON.stringify(newSeed)) },
+  }
+}
 
 const ITERATIONS = 200
 const WARMUP = 20

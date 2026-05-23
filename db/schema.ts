@@ -293,6 +293,34 @@ export const productValidationResponses = pgTable('product_validation_responses'
   updatedAt: timestamp('updated_at').notNull(),
 })
 
+// ─── Resources Catalog ────────────────────────────────────────────────────
+
+export const resources = pgTable(
+  'resources',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    title: text('title').notNull(),
+    publisher: text('publisher'),
+    author: text('author'),
+    edition: text('edition'),
+    gradeLevel: text('grade_level'),
+    subjectCategory: text('subject_category'),
+    isbn: text('isbn'),
+    resourceType: text('resource_type').notNull(),
+    totalPages: integer('total_pages'),
+    totalLessons: integer('total_lessons'),
+    totalChapters: integer('total_chapters'),
+    verificationStatus: text('verification_status').notNull().default('user-submitted'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('resources_household_idx').on(t.householdId),
+    index('resources_household_type_idx').on(t.householdId, t.resourceType),
+  ],
+)
+
 // ─── Resource Feedback & Community Notes ──────────────────────────────────
 
 export const resourceFeedback = pgTable('resource_feedback', {

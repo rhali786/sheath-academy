@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import {
   createResource,
   listResources,
@@ -9,26 +10,26 @@ import {
 } from '@/features/resources/server/service'
 import type { PaceInput, GenerateLessonsInput } from '@/features/resources/types'
 
-export async function handleListResources(request: Request): Promise<NextResponse> {
-  const url = new URL(request.url)
-  const workspaceId = url.searchParams.get('workspaceId') ?? undefined
+export async function handleListResources(): Promise<NextResponse> {
+  const { householdId } = getRequestAuthCtx()
   return NextResponse.json({
     status: 'success',
-    data: listResources(workspaceId),
+    data: await listResources(householdId),
     message: 'OK',
     timestamp: new Date().toISOString(),
   })
 }
 
 export async function handleCreateResource(request: Request): Promise<NextResponse> {
+  const { householdId } = getRequestAuthCtx()
   const body = await request.json()
-  if (!body.workspaceId || !body.title || !body.resourceType) {
+  if (!body.title || !body.resourceType) {
     return NextResponse.json(
-      { status: 'error', data: null, message: 'workspaceId, title, resourceType are required', timestamp: new Date().toISOString() },
+      { status: 'error', data: null, message: 'title and resourceType are required', timestamp: new Date().toISOString() },
       { status: 400 }
     )
   }
-  const resource = createResource(body)
+  const resource = await createResource(householdId, body)
   return NextResponse.json({
     status: 'success',
     data: resource,
@@ -38,7 +39,8 @@ export async function handleCreateResource(request: Request): Promise<NextRespon
 }
 
 export async function handleGetResource(id: string): Promise<NextResponse> {
-  const resource = getResource(id)
+  const { householdId } = getRequestAuthCtx()
+  const resource = await getResource(id, householdId)
   if (!resource) {
     return NextResponse.json(
       { status: 'error', data: null, message: 'Not found', timestamp: new Date().toISOString() },
@@ -54,8 +56,9 @@ export async function handleGetResource(id: string): Promise<NextResponse> {
 }
 
 export async function handleUpdateVerification(id: string, request: Request): Promise<NextResponse> {
+  const { householdId } = getRequestAuthCtx()
   const body = await request.json()
-  const updated = updateVerificationStatus(id, body.verificationStatus)
+  const updated = await updateVerificationStatus(id, householdId, body.verificationStatus)
   if (!updated) {
     return NextResponse.json(
       { status: 'error', data: null, message: 'Not found', timestamp: new Date().toISOString() },

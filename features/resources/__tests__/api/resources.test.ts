@@ -1,15 +1,55 @@
 /**
- * Unit tests for resources service — Wave 13
- * TDD: written before implementation
+ * Unit tests for resources service — Wave 13 / Wave 3 Postgres migration
  */
+
+jest.mock('@/features/resources/server/repository', () => ({
+  createResourceRow: jest.fn(),
+  getResourceRow: jest.fn(),
+  listResourceRows: jest.fn(),
+  updateResourceVerificationRow: jest.fn(),
+  mapResourceRow: jest.requireActual('@/features/resources/server/repository').mapResourceRow,
+}))
 
 import {
   calculatePace,
   generateLessons,
   createResource,
+  getResource,
   updateVerificationStatus,
 } from '@/features/resources/server/service'
+import {
+  createResourceRow,
+  getResourceRow,
+  updateResourceVerificationRow,
+  type ResourceRow,
+} from '@/features/resources/server/repository'
 import type { Resource } from '@/features/resources/types'
+
+const mockCreateResourceRow = createResourceRow as jest.MockedFunction<typeof createResourceRow>
+const mockGetResourceRow = getResourceRow as jest.MockedFunction<typeof getResourceRow>
+const mockUpdateResourceVerificationRow = updateResourceVerificationRow as jest.MockedFunction<typeof updateResourceVerificationRow>
+
+function makeResourceRow(overrides: Partial<ResourceRow> = {}): ResourceRow {
+  return {
+    id: 'res_001',
+    householdId: 'hh_001',
+    title: 'Test Book',
+    resourceType: 'textbook',
+    publisher: null,
+    author: null,
+    edition: null,
+    gradeLevel: null,
+    subjectCategory: null,
+    isbn: null,
+    totalPages: null,
+    totalLessons: null,
+    totalChapters: null,
+    verificationStatus: 'user-submitted',
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    ...overrides,
+  }
+}
 
 const BASE_RESOURCE: Resource = {
   id: 'res_001',
@@ -113,42 +153,43 @@ describe('generateLessons', () => {
 })
 
 describe('createResource', () => {
-  it('creates a resource with generated id and timestamps', () => {
-    const resource = createResource({
-      workspaceId: 'ws_001',
-      title: 'Test Book',
-      resourceType: 'textbook',
-    })
-    expect(resource.id).toMatch(/^res_/)
-    expect(resource.verificationStatus).toBe('user-submitted')
-    expect(resource.createdAt).toBeTruthy()
+  it('calls createResourceRow and maps the result', async () => {
+    const row = makeResourceRow({ id: 'res_new', title: 'Test Book' })
+    mockCreateResourceRow.mockResolvedValue(row)
+    const result = await createResource('hh_001', { title: 'Test Book', resourceType: 'textbook' })
+    expect(mockCreateResourceRow).toHaveBeenCalledWith('hh_001', { title: 'Test Book', resourceType: 'textbook' })
+    expect(result.id).toBe('res_new')
+    expect(result.workspaceId).toBe('hh_001')
+    expect(result.verificationStatus).toBe('user-submitted')
+  })
+})
+
+describe('getResource', () => {
+  it('returns mapped resource when row exists', async () => {
+    const row = makeResourceRow({ id: 'res_001', title: 'Stored Book' })
+    mockGetResourceRow.mockResolvedValue(row)
+    const result = await getResource('res_001', 'hh_001')
+    expect(result?.title).toBe('Stored Book')
   })
 
-  it('stores the resource so it can be retrieved', () => {
-    const resource = createResource({
-      workspaceId: 'ws_001',
-      title: 'Stored Book',
-      resourceType: 'workbook',
-    })
-    const { getResource } = require('@/features/resources/server/service')
-    const found = getResource(resource.id)
-    expect(found?.title).toBe('Stored Book')
+  it('returns undefined when row not found', async () => {
+    mockGetResourceRow.mockResolvedValue(null)
+    const result = await getResource('does-not-exist', 'hh_001')
+    expect(result).toBeUndefined()
   })
 })
 
 describe('updateVerificationStatus', () => {
-  it('changes verificationStatus on a resource', () => {
-    const resource = createResource({
-      workspaceId: 'ws_001',
-      title: 'Verify Me',
-      resourceType: 'textbook',
-    })
-    const updated = updateVerificationStatus(resource.id, 'verified')
-    expect(updated?.verificationStatus).toBe('verified')
+  it('calls updateResourceVerificationRow and maps result', async () => {
+    const row = makeResourceRow({ verificationStatus: 'verified' })
+    mockUpdateResourceVerificationRow.mockResolvedValue(row)
+    const result = await updateVerificationStatus('res_001', 'hh_001', 'verified')
+    expect(result?.verificationStatus).toBe('verified')
   })
 
-  it('returns null for unknown resource id', () => {
-    const result = updateVerificationStatus('does-not-exist', 'verified')
+  it('returns null when row not found', async () => {
+    mockUpdateResourceVerificationRow.mockResolvedValue(null)
+    const result = await updateVerificationStatus('does-not-exist', 'hh_001', 'verified')
     expect(result).toBeNull()
   })
 })

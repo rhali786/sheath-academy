@@ -7,8 +7,14 @@ import type {
   GenerateLessonsInput,
   GeneratedLesson,
 } from '@/features/resources/types'
-import { resourcesStore } from './store'
-import { generateResourceId } from './ids'
+import {
+  createResourceRow,
+  getResourceRow,
+  listResourceRows,
+  mapResourceRow,
+  updateResourceVerificationRow,
+  type CreateResourceInput,
+} from './repository'
 
 // ── Pacing ────────────────────────────────────────────────────────────────────
 
@@ -109,44 +115,29 @@ function strategyLabel(strategy: GenerateLessonsInput['strategy']): string {
 
 // ── CRUD ──────────────────────────────────────────────────────────────────────
 
-export function createResource(data: {
-  workspaceId: string
-  title: string
-  resourceType: ResourceType
-  publisher?: string
-  author?: string
-  edition?: string
-  gradeLevel?: string
-  subjectCategory?: string
-  isbn?: string
-  totalPages?: number
-  totalLessons?: number
-  totalChapters?: number
-}): Resource {
-  const now = new Date().toISOString()
-  const resource: Resource = {
-    id: generateResourceId(),
-    verificationStatus: 'user-submitted',
-    createdAt: now,
-    updatedAt: now,
-    ...data,
-  }
-  return resourcesStore.insert(resource)
+export async function createResource(
+  householdId: string,
+  data: CreateResourceInput,
+): Promise<Resource> {
+  const row = await createResourceRow(householdId, data)
+  return mapResourceRow(row)
 }
 
-export function getResource(id: string): Resource | undefined {
-  return resourcesStore.getById(id)
+export async function getResource(id: string, householdId: string): Promise<Resource | undefined> {
+  const row = await getResourceRow(id, householdId)
+  return row ? mapResourceRow(row) : undefined
 }
 
-export function listResources(workspaceId?: string): Resource[] {
-  const all = resourcesStore.getAll()
-  if (!workspaceId) return all
-  return all.filter(r => r.workspaceId === workspaceId)
+export async function listResources(householdId: string): Promise<Resource[]> {
+  const rows = await listResourceRows(householdId)
+  return rows.map(mapResourceRow)
 }
 
-export function updateVerificationStatus(
+export async function updateVerificationStatus(
   id: string,
+  householdId: string,
   status: VerificationStatus,
-): Resource | null {
-  return resourcesStore.update(id, { verificationStatus: status, updatedAt: new Date().toISOString() })
+): Promise<Resource | null> {
+  const row = await updateResourceVerificationRow(id, householdId, status)
+  return row ? mapResourceRow(row) : null
 }

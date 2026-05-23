@@ -14,7 +14,7 @@ export async function handleResourcesRoute(
 ): Promise<NextResponse | null> {
   // GET /api/resources
   if (slug.length === 0 && request.method === 'GET') {
-    return handleListResources(request)
+    return handleListResources()
   }
   // POST /api/resources
   if (slug.length === 0 && request.method === 'POST') {

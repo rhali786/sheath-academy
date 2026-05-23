@@ -11,6 +11,7 @@ import {
   householdSettings,
   userSettings,
   productValidationResponses,
+  resources,
 } from '../../db/schema'
 import type { HouseholdSeedConfig, LearnerConfig } from './demoConfig'
 import { getHouseholdProfile, type HouseholdActivityProfile, type LearnerActivityProfile } from './householdProfiles'
@@ -44,6 +45,7 @@ export type DemoSeedPayload = {
   householdSettings: (typeof householdSettings.$inferInsert)[]
   userSettings: (typeof userSettings.$inferInsert)[]
   productValidationResponses: (typeof productValidationResponses.$inferInsert)[]
+  resources: (typeof resources.$inferInsert)[]
 }
 
 /** UTC calendar date for today — history ends here (offset 0). */
@@ -414,8 +416,43 @@ function buildHouseholdRows(
     householdSettings: householdSettingsRows,
     userSettings: userSettingsRows,
     productValidationResponses: productValidationRows,
+    resources: [],
     ...history,
   }
+}
+
+function buildSeedResources(
+  householdId: string,
+  seedNow: Date,
+): (typeof resources.$inferInsert)[] {
+  type R = typeof resources.$inferInsert
+  const base = (id: string, title: string, resourceType: string, subjectCategory: string, extra: Partial<R> = {}): R => ({
+    id: `res_${householdId}_${id}`,
+    householdId,
+    title,
+    resourceType,
+    subjectCategory,
+    publisher: null,
+    author: null,
+    edition: null,
+    gradeLevel: null,
+    isbn: null,
+    totalPages: null,
+    totalLessons: null,
+    totalChapters: null,
+    verificationStatus: 'user-submitted',
+    createdAt: seedNow,
+    updatedAt: seedNow,
+    ...extra,
+  })
+
+  return [
+    base('001', 'Math Mammoth Light Blue Grade 4', 'textbook', 'Mathematics', { publisher: 'Math Mammoth', author: 'Maria Miller', gradeLevel: '4', totalPages: 320, totalChapters: 8 }),
+    base('002', 'All About Reading Level 2', 'reader', 'Language Arts', { publisher: 'All About Learning Press', gradeLevel: '2', totalPages: 180, totalLessons: 24, verificationStatus: 'verified' }),
+    base('003', 'Khan Academy — Elementary Math', 'online-course', 'Mathematics', { publisher: 'Khan Academy', totalLessons: 60 }),
+    base('004', "Quran with Tajweed — Hafs 'an 'Asim", 'quran-text', 'Islamic Studies', { totalPages: 604, verificationStatus: 'verified' }),
+    base('005', 'Story of the World Vol. 2: The Middle Ages', 'textbook', 'History', { publisher: 'Peace Hill Press', author: 'Susan Wise Bauer', gradeLevel: '5-8', totalPages: 360, totalChapters: 42 }),
+  ]
 }
 
 /** Builds the full demo payload in memory — zero database calls. */
@@ -446,6 +483,7 @@ export function buildDemoSeedPayload(
     householdSettings: [],
     userSettings: [],
     productValidationResponses: [],
+    resources: [],
   }
 
   for (const cfg of configs) {
@@ -461,6 +499,7 @@ export function buildDemoSeedPayload(
     payload.lessonTasks.push(...householdRows.lessonTasks)
     payload.quranSessions.push(...householdRows.quranSessions)
     payload.portfolioEvidence.push(...householdRows.portfolioEvidence)
+    payload.resources.push(...buildSeedResources(cfg.householdId, seedNow))
   }
 
   return payload
@@ -480,6 +519,7 @@ export function summarizePayload(payload: DemoSeedPayload): Record<string, numbe
     householdSettings: payload.householdSettings.length,
     userSettings: payload.userSettings.length,
     productValidationResponses: payload.productValidationResponses.length,
+    resources: payload.resources.length,
   }
 }
 

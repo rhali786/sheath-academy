@@ -1,4 +1,3 @@
-import type { LessonTask } from '../types'
 import { and, gte, lte, sql } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
 import { lessonTasks } from '@/db/schema'
@@ -30,16 +29,6 @@ export async function getAdminLessonCounts(
   return rows
 }
 
-// Stub — callers (alerts, records, schedule, setup) are pending Postgres migration.
-export function getLessons(_childId?: string, _subjectId?: string): LessonTask[] { return [] }
-export function getLessonTask(_id: string): LessonTask | undefined { return undefined }
-export function createLessonTask(_data: unknown): LessonTask | null { return null }
-export function updateLessonTask(_id: string, _patch: unknown): LessonTask | null { return null }
-export function completeLessonTask(_id: string, _status?: string): LessonTask | null { return null }
-export function deleteLessonTask(_id: string): boolean { return false }
-export function archiveByChildId(_childId: string): void {}
-export function archiveBySubjectId(_subjectId: string): void {}
-export function resetStore(): void {}
 
 export type LessonTaskPeriodCounts = {
   lessonTasksInPeriod: number

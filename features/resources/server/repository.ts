@@ -1,10 +1,109 @@
 import { and, eq } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
-import { resourceFeedback, resourceCommunityNotes } from '@/db/schema'
-import type { ResourceFeedback, CommunityNote } from '@/features/resources/types'
+import { resources, resourceFeedback, resourceCommunityNotes } from '@/db/schema'
+import type { Resource, ResourceType, VerificationStatus, ResourceFeedback, CommunityNote } from '@/features/resources/types'
 
+export type ResourceRow = typeof resources.$inferSelect
 export type ResourceFeedbackRow = typeof resourceFeedback.$inferSelect
 export type CommunityNoteRow = typeof resourceCommunityNotes.$inferSelect
+
+export interface CreateResourceInput {
+  title: string
+  resourceType: ResourceType
+  publisher?: string
+  author?: string
+  edition?: string
+  gradeLevel?: string
+  subjectCategory?: string
+  isbn?: string
+  totalPages?: number
+  totalLessons?: number
+  totalChapters?: number
+}
+
+function toIso(v: Date | string): string {
+  return v instanceof Date ? v.toISOString() : v
+}
+
+export function mapResourceRow(row: ResourceRow): Resource {
+  return {
+    id: row.id,
+    workspaceId: row.householdId,
+    title: row.title,
+    publisher: row.publisher ?? undefined,
+    author: row.author ?? undefined,
+    edition: row.edition ?? undefined,
+    gradeLevel: row.gradeLevel ?? undefined,
+    subjectCategory: row.subjectCategory ?? undefined,
+    isbn: row.isbn ?? undefined,
+    resourceType: row.resourceType as ResourceType,
+    totalPages: row.totalPages ?? undefined,
+    totalLessons: row.totalLessons ?? undefined,
+    totalChapters: row.totalChapters ?? undefined,
+    verificationStatus: row.verificationStatus as VerificationStatus,
+    createdAt: toIso(row.createdAt),
+    updatedAt: toIso(row.updatedAt),
+  }
+}
+
+export async function listResourceRows(householdId: string): Promise<ResourceRow[]> {
+  const db = getDb()
+  return db.select().from(resources).where(eq(resources.householdId, householdId))
+}
+
+export async function getResourceRow(id: string, householdId: string): Promise<ResourceRow | null> {
+  const db = getDb()
+  const rows = await db
+    .select()
+    .from(resources)
+    .where(and(eq(resources.id, id), eq(resources.householdId, householdId)))
+    .limit(1)
+  return rows[0] ?? null
+}
+
+export async function createResourceRow(
+  householdId: string,
+  input: CreateResourceInput,
+): Promise<ResourceRow> {
+  const db = getDb()
+  const now = new Date()
+  const rows = await db
+    .insert(resources)
+    .values({
+      id: `res_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      householdId,
+      title: input.title,
+      resourceType: input.resourceType,
+      publisher: input.publisher ?? null,
+      author: input.author ?? null,
+      edition: input.edition ?? null,
+      gradeLevel: input.gradeLevel ?? null,
+      subjectCategory: input.subjectCategory ?? null,
+      isbn: input.isbn ?? null,
+      totalPages: input.totalPages ?? null,
+      totalLessons: input.totalLessons ?? null,
+      totalChapters: input.totalChapters ?? null,
+      verificationStatus: 'user-submitted',
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning()
+  return rows[0]
+}
+
+export async function updateResourceVerificationRow(
+  id: string,
+  householdId: string,
+  status: VerificationStatus,
+): Promise<ResourceRow | null> {
+  const db = getDb()
+  const rows = await db
+    .update(resources)
+    .set({ verificationStatus: status, updatedAt: new Date() })
+    .where(and(eq(resources.id, id), eq(resources.householdId, householdId)))
+    .returning()
+  return rows[0] ?? null
+}
 
 function toResourceFeedback(row: ResourceFeedbackRow): ResourceFeedback {
   return {

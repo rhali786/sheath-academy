@@ -11,6 +11,7 @@ import {
   householdSettings,
   userSettings,
   productValidationResponses,
+  resources,
 } from '../../db/schema'
 import { getDb } from '../../features/lib/server/db'
 import { bulkInsertRows } from './bulkInsert'
@@ -39,6 +40,7 @@ export async function loadDemoSeedPayload(payload: DemoSeedPayload): Promise<voi
     await bulkInsertRows(tx, householdSettings, payload.householdSettings, 'household_settings')
     await bulkInsertRows(tx, userSettings, payload.userSettings, 'user_settings')
     await bulkInsertRows(tx, productValidationResponses, payload.productValidationResponses, 'product_validation_responses')
+    await bulkInsertRows(tx, resources, payload.resources, 'resources')
   })
 
   const elapsed = ((Date.now() - started) / 1000).toFixed(1)

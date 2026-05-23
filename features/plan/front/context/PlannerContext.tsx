@@ -70,18 +70,21 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(true)
         setError(null)
 
-        const profileResponse = await get<unknown>('/api/household/profile')
+        const [profileResponse, childrenResponse, subjectsResponse] = await Promise.all([
+          get<unknown>('/api/household/profile'),
+          get<StudentProfile[]>('/api/children/children'),
+          get<SubjectCourse[]>('/api/subjects'),
+        ])
+
         const profile = profileResponse.data as any
         const dayStart = profile?.weekStartDay === 'Sunday' ? 'Sunday' : 'Monday'
         setWeekStartDay(dayStart)
 
-        const childrenResponse = await get<StudentProfile[]>('/api/children/children')
         setChildrenList(childrenResponse.data)
         const childIds = childrenResponse.data.map(c => c.id)
         setAllChildrenIds(childIds)
         setSelectedChildIds(childIds)
 
-        const subjectsResponse = await get<SubjectCourse[]>('/api/subjects')
         setSubjectsList(subjectsResponse.data)
         const subjectIds = subjectsResponse.data.map(s => s.id)
         setAllSubjectIds(subjectIds)
