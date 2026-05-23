@@ -145,7 +145,7 @@ describe('getRecordsReport', () => {
     expect(report.child.name).toBe('Adam')
     expect(report.subjects[0].learnerIds).toEqual([LEARNER_ID])
     expect(report.completedLessons).toHaveLength(1)
-    expect(report.attendance.totalPresent).toBe(1)
+    expect(report.attendance.byStatus.present).toBe(1)
     expect(report.portfolio.count).toBe(1)
   })
 })

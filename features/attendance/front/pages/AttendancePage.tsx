@@ -7,6 +7,7 @@ import { AttendanceList } from '@/features/attendance/front/components/Attendanc
 import { AttendanceSummary } from '@/features/attendance/front/components/AttendanceSummary'
 import { BatchAttendanceForm } from '@/features/attendance/front/components/BatchAttendanceForm'
 import type { AttendanceRecord, AttendanceStatus, AttendanceSummary as SummaryType } from '@/features/attendance/types'
+import { emptyAttendanceSummary } from '@/features/attendance/types'
 import { STATUS_LABELS } from '@/features/attendance/types'
 import type { StudentProfile } from '@/features/lib/types'
 import { childrenApi } from '@/features/children/front/services/api'
@@ -24,7 +25,7 @@ function todayLocal(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-const DEFAULT_SUMMARY: SummaryType = { childId: '', totalPresent: 0, totalAbsent: 0, totalPartial: 0, totalRecorded: 0 }
+const DEFAULT_SUMMARY: SummaryType = emptyAttendanceSummary('')
 
 export function AttendancePage() {
   const { householdProfile } = useHousehold()

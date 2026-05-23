@@ -94,12 +94,12 @@ async function seedHistory(hhKey: string, householdId: string, learners: Learner
       // ── Attendance (weekdays) ────────────────────────────────────────────
       if (weekday) {
         const attStatus =
-          offset % 11 === 0 ? 'excused_absence' :
-          offset % 7 === 0  ? 'late' :
+          offset % 11 === 0 ? 'excused' :
+          offset % 7 === 0  ? 'partial' :
           'present'
         const minutes =
-          attStatus === 'present'          ? 360 :
-          attStatus === 'late'             ? 300 :
+          attStatus === 'present' ? 360 :
+          attStatus === 'partial' ? 300 :
           undefined
 
         await upsertAttendanceEvent(

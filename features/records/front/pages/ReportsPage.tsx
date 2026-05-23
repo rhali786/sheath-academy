@@ -6,6 +6,7 @@ import { childrenApi } from '@/features/children/front/services/api'
 import type { StudentProfile } from '@/features/lib/types'
 import type { RecordsReport } from '@/features/records/types'
 import { reportsApi } from '../services/api'
+import { formatAttendanceSummaryLine } from '@/features/attendance/front/lib/summaryDisplay'
 
 function percent(value: number): string {
   return `${Math.round(value * 100)}%`
@@ -184,7 +185,7 @@ export function ReportsPage() {
                 <h3 className="text-sm font-bold text-slate-900">Attendance</h3>
                 <p className="mt-2 text-3xl font-bold text-slate-900">{report.attendance.totalRecorded}</p>
                 <p className="text-sm text-slate-600">
-                  {report.attendance.totalPresent} present, {report.attendance.totalPartial} partial, {report.attendance.totalAbsent} absent
+                  {formatAttendanceSummaryLine(report.attendance)}
                 </p>
               </div>
               <div>

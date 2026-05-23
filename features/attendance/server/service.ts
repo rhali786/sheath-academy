@@ -1,6 +1,7 @@
-// Memory store removed. Functions below are stubs kept for compilation.
-// Callers (alerts, records, setup features) are pending Postgres migration.
 import type { AttendanceRecord, AttendanceSummary, AttendanceStatus } from '../types'
+import { ATTENDANCE_STATUSES, isAttendanceStatus } from '../types'
+import { listAttendanceEvents } from './repository'
+import { summarizeAttendanceByStatus } from './summarize'
 import { and, gte, isNull, lte, sql } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
 import { attendanceEvents } from '@/db/schema'
@@ -35,14 +36,30 @@ export async function getAdminAttendanceCounts(
   return rows
 }
 
-export const ALL_STATUSES: AttendanceStatus[] = [
-  'present', 'absent', 'partial', 'excused', 'sick', 'holiday', 'field_trip', 'coop', 'makeup', 'not_school',
-]
+export const ALL_STATUSES: AttendanceStatus[] = ATTENDANCE_STATUSES
 
 export function isValidStatus(s: unknown): s is AttendanceStatus {
-  return ALL_STATUSES.includes(s as AttendanceStatus)
+  return typeof s === 'string' && isAttendanceStatus(s)
 }
 
+export async function getAttendanceSummary(
+  householdId: string,
+  childId: string,
+  start?: string,
+  end?: string,
+): Promise<AttendanceSummary> {
+  const rows = await listAttendanceEvents(householdId, {
+    learnerId: childId,
+    startDate: start,
+    endDate: end,
+  })
+  return summarizeAttendanceByStatus(
+    childId,
+    rows.map(row => row.status),
+  )
+}
+
+// Legacy stubs — callers (alerts, setup) pending Postgres migration.
 export function getRecords(_filters?: Record<string, unknown>): AttendanceRecord[] { return [] }
 export function getRecord(_id: string): AttendanceRecord | undefined { return undefined }
 export function createRecord(_data: unknown): AttendanceRecord | null { return null }
@@ -50,8 +67,5 @@ export function createOrUpdateRecord(_data: unknown): AttendanceRecord | null { 
 export function updateRecord(_id: string, _patch: unknown): AttendanceRecord | null { return null }
 export function archiveRecord(_id: string): boolean { return false }
 export function deleteRecord(_id: string): boolean { return false }
-export function getAttendanceSummary(_childId: string, _start?: string, _end?: string): AttendanceSummary {
-  return { childId: _childId, totalPresent: 0, totalAbsent: 0, totalPartial: 0, totalRecorded: 0 }
-}
 export function archiveByChildId(_childId: string): void {}
 export function resetStore(_seed?: AttendanceRecord[]): void {}

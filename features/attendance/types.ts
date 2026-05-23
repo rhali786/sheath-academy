@@ -10,6 +10,38 @@ export type AttendanceStatus =
   | 'makeup'
   | 'not_school'
 
+export const ATTENDANCE_STATUSES: AttendanceStatus[] = [
+  'present',
+  'absent',
+  'partial',
+  'excused',
+  'sick',
+  'holiday',
+  'field_trip',
+  'coop',
+  'makeup',
+  'not_school',
+]
+
+export function isAttendanceStatus(value: string): value is AttendanceStatus {
+  return (ATTENDANCE_STATUSES as string[]).includes(value)
+}
+
+export function emptyAttendanceStatusCounts(): Record<AttendanceStatus, number> {
+  return Object.fromEntries(ATTENDANCE_STATUSES.map(status => [status, 0])) as Record<
+    AttendanceStatus,
+    number
+  >
+}
+
+export function emptyAttendanceSummary(childId: string): AttendanceSummary {
+  return {
+    childId,
+    totalRecorded: 0,
+    byStatus: emptyAttendanceStatusCounts(),
+  }
+}
+
 export type AttendanceType =
   | 'regular'
   | 'field_trip'
@@ -37,11 +69,8 @@ export interface AttendanceRecord {
 
 export interface AttendanceSummary {
   childId: string
-  totalPresent: number
-  totalAbsent: number
-  totalPartial: number
   totalRecorded: number
-  missingDays?: number
+  byStatus: Record<AttendanceStatus, number>
 }
 
 export const STATUS_LABELS: Record<AttendanceStatus, string> = {

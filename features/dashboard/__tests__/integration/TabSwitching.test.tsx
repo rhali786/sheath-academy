@@ -88,7 +88,7 @@ jest.mock('@/features/quran/front/services/api', () => ({
 jest.mock('@/features/attendance/front/services/api', () => ({
   attendanceApi: {
     getSummary: jest.fn(() => Promise.resolve({
-      data: { childId: 'c1', totalPresent: 0, totalAbsent: 0, totalPartial: 0, totalRecorded: 0 },
+      data: { childId: 'c1', totalRecorded: 0, byStatus: { present: 0, absent: 0, partial: 0, excused: 0, sick: 0, holiday: 0, field_trip: 0, coop: 0, makeup: 0, not_school: 0 } },
     })),
   },
 }))

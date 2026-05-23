@@ -76,10 +76,19 @@ const report: RecordsReport = {
   ],
   attendance: {
     childId: 'child_a',
-    totalPresent: 4,
-    totalAbsent: 1,
-    totalPartial: 0,
     totalRecorded: 5,
+    byStatus: {
+      present: 4,
+      absent: 1,
+      partial: 0,
+      excused: 0,
+      sick: 0,
+      holiday: 0,
+      field_trip: 0,
+      coop: 0,
+      makeup: 0,
+      not_school: 0,
+    },
   },
   completedLessons: [],
   progressBySubject: [

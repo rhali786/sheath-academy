@@ -2,6 +2,7 @@ import React from 'react'
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { AttendancePage } from '@/features/attendance/front/pages/AttendancePage'
 import type { AttendanceRecord } from '@/features/attendance/types'
+import { emptyAttendanceStatusCounts } from '@/features/attendance/types'
 import type { StudentProfile, ApiResponse } from '@/features/lib/types'
 
 let mockSearchParams = new URLSearchParams()
@@ -77,7 +78,11 @@ beforeEach(() => {
   mockUpdateRecord.mockResolvedValue(ok(makeRecord()))
   mockArchiveRecord.mockResolvedValue(ok(null))
   mockBatchRecord.mockResolvedValue(ok([]))
-  mockGetSummary.mockResolvedValue(ok({ childId: 'child_001', totalPresent: 0, totalAbsent: 0, totalPartial: 0, totalRecorded: 0 }))
+  mockGetSummary.mockResolvedValue(ok({
+    childId: 'child_001',
+    totalRecorded: 0,
+    byStatus: emptyAttendanceStatusCounts(),
+  }))
 })
 
 afterEach(() => {
@@ -118,10 +123,15 @@ describe('AttendancePage', () => {
   })
 
   it('shows summary counts', async () => {
-    mockGetSummary.mockResolvedValue(ok({ childId: 'child_001', totalPresent: 3, totalAbsent: 1, totalPartial: 0, totalRecorded: 4 }))
+    const byStatus = emptyAttendanceStatusCounts()
+    byStatus.present = 3
+    byStatus.absent = 1
+    mockGetSummary.mockResolvedValue(ok({ childId: 'child_001', totalRecorded: 4, byStatus }))
     render(<AttendancePage />)
     await waitFor(() => {
       expect(screen.getByText('3')).toBeInTheDocument()
+      expect(screen.getByTestId('attendance-summary-present')).toBeInTheDocument()
+      expect(screen.getByTestId('attendance-summary-absent')).toBeInTheDocument()
     })
   })
 
@@ -280,7 +290,7 @@ describe('AttendancePage', () => {
 
   it('selects the child from ?childId query param after children load', async () => {
     mockSearchParams = new URLSearchParams('childId=child_002')
-    mockGetSummary.mockResolvedValue(ok({ childId: 'child_002', totalPresent: 0, totalAbsent: 0, totalPartial: 0, totalRecorded: 0 }))
+    mockGetSummary.mockResolvedValue(ok({ childId: 'child_002', totalRecorded: 0, byStatus: emptyAttendanceStatusCounts() }))
     render(<AttendancePage />)
     await waitFor(() => {
       const selector = screen.getAllByRole('combobox')[0]

@@ -1,5 +1,6 @@
 import { listAttendanceEvents, type AttendanceEventRow } from '@/features/attendance/server/repository'
-import type { AttendanceRecord, AttendanceStatus, AttendanceSummary } from '@/features/attendance/types'
+import { summarizeAttendanceByStatus } from '@/features/attendance/server/summarize'
+import type { AttendanceRecord, AttendanceStatus } from '@/features/attendance/types'
 import { getLearner, type LearnerRow } from '@/features/children/server/repository'
 import type { StudentProfile } from '@/features/lib/types'
 import { listEvidenceRows, type EvidenceRow } from '@/features/portfolio/server/repository'
@@ -119,14 +120,11 @@ function mapEvidence(row: EvidenceRow): EvidenceItem {
   }
 }
 
-function summarizeAttendance(childId: string, records: AttendanceRecord[]): AttendanceSummary {
-  return {
+function summarizeAttendance(childId: string, records: AttendanceRecord[]) {
+  return summarizeAttendanceByStatus(
     childId,
-    totalPresent: records.filter(record => record.status === 'present').length,
-    totalAbsent: records.filter(record => record.status === 'absent').length,
-    totalPartial: records.filter(record => record.status === 'partial').length,
-    totalRecorded: records.length,
-  }
+    records.map(record => record.status),
+  )
 }
 
 function buildChecklist(params: {

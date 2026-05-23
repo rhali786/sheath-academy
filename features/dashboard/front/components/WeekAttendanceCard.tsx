@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { attendanceApi } from '@/features/attendance/front/services/api'
 import type { AttendanceSummary } from '@/features/attendance/types'
+import { STATUS_LABELS } from '@/features/attendance/types'
+import { statusesWithCounts } from '@/features/attendance/front/lib/summaryDisplay'
 
 function getCurrentWeekRange(): { start: string; end: string } {
   const today = new Date()
@@ -41,45 +43,41 @@ export function WeekAttendanceCard({ childId }: Props) {
 
   if (loading) {
     return (
-      <div className="rounded-xl border bg-white p-4 text-sm text-gray-400">
+      <section className="rounded-xl border bg-white p-4 text-sm text-gray-400">
         Loading attendance...
-      </div>
+      </section>
     )
   }
 
   if (error) {
     return (
-      <div className="rounded-xl border bg-white p-4 text-sm text-gray-400">
+      <section className="rounded-xl border bg-white p-4 text-sm text-gray-400">
         Attendance data unavailable.
-      </div>
+      </section>
     )
   }
 
   if (!summary || summary.totalRecorded === 0) {
     return (
-      <div className="rounded-xl border bg-white p-4 text-sm text-gray-400">
+      <section className="rounded-xl border bg-white p-4 text-sm text-gray-400">
         No attendance recorded this week.
-      </div>
+      </section>
     )
   }
 
+  const activeStatuses = statusesWithCounts(summary)
+
   return (
-    <div className="rounded-xl border bg-white divide-y">
-      <div className="px-4 py-3 font-semibold text-slate-800 text-sm">This Week — Attendance</div>
-      <div className="px-4 py-3 grid grid-cols-3 gap-2 text-center">
-        <div>
-          <div className="text-2xl font-bold text-green-700">{summary.totalPresent}</div>
-          <div className="text-xs text-slate-500 mt-0.5">Present</div>
-        </div>
-        <div>
-          <div className="text-2xl font-bold text-yellow-600">{summary.totalPartial}</div>
-          <div className="text-xs text-slate-500 mt-0.5">Partial</div>
-        </div>
-        <div>
-          <div className="text-2xl font-bold text-red-600">{summary.totalAbsent}</div>
-          <div className="text-xs text-slate-500 mt-0.5">Absent</div>
-        </div>
-      </div>
-    </div>
+    <section className="rounded-xl border bg-white divide-y">
+      <header className="px-4 py-3 font-semibold text-slate-800 text-sm">This Week — Attendance</header>
+      <section className="px-4 py-3 grid grid-cols-2 sm:grid-cols-3 gap-3 text-center">
+        {activeStatuses.map(status => (
+          <article key={status}>
+            <p className="text-2xl font-bold text-slate-800">{summary.byStatus[status]}</p>
+            <p className="text-xs text-slate-500 mt-0.5">{STATUS_LABELS[status]}</p>
+          </article>
+        ))}
+      </section>
+    </section>
   )
 }
