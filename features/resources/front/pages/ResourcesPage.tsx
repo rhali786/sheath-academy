@@ -10,19 +10,24 @@ import { VerificationBadge } from '../components/VerificationBadge'
 import type { Resource } from '@/features/resources/types'
 
 export function ResourcesPage() {
-  const { workspace } = useHousehold()
+  const { householdProfile, loading: householdLoading } = useHousehold()
   const [resources, setResources] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [selected, setSelected] = useState<Resource | null>(null)
 
   useEffect(() => {
-    if (!workspace?.id) return
-    resourcesApi.listResources(workspace.id)
+    if (householdLoading) return
+    const householdId = householdProfile?.id
+    if (!householdId) {
+      setLoading(false)
+      return
+    }
+    resourcesApi.listResources(householdId)
       .then(res => setResources(res.data))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [workspace?.id])
+  }, [householdProfile?.id, householdLoading])
 
   async function handleCreate(data: Parameters<typeof resourcesApi.createResource>[0]) {
     const res = await resourcesApi.createResource(data)
@@ -47,12 +52,12 @@ export function ResourcesPage() {
         </button>
       </div>
 
-      {showForm && workspace && (
+      {showForm && householdProfile && (
         <div className="mb-8">
           <h2 className="form-section-heading">Add resource</h2>
           <div className="add-form-card">
             <ResourceForm
-              workspaceId={workspace.id}
+              workspaceId={householdProfile.id}
               onSubmit={handleCreate}
               onCancel={() => setShowForm(false)}
             />

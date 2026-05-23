@@ -69,6 +69,16 @@ export async function getHouseholdForUser(userId: string): Promise<HouseholdRow 
   return result[0] ?? null
 }
 
+export async function getHouseholdById(householdId: string): Promise<HouseholdRow | null> {
+  const db = getDb()
+  const result = await db
+    .select()
+    .from(households)
+    .where(eq(households.id, householdId))
+    .limit(1)
+  return result[0] ?? null
+}
+
 export async function updateHouseholdName(
   householdId: string,
   name: string,

@@ -39,8 +39,8 @@ export function parseSettingsTab(raw: string | null): SettingsTabId {
 }
 
 export function SettingsPage() {
-  const { workspace, householdProfile, familyName, refetch } = useHousehold()
-  const householdId = householdProfile?.id ?? workspace?.id ?? ''
+  const { householdProfile, familyName, refetch, loading: householdLoading } = useHousehold()
+  const householdId = householdProfile?.id ?? ''
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -84,9 +84,9 @@ export function SettingsPage() {
   }, [])
 
   useEffect(() => {
-    if (activeTab !== 'school-year' || !workspace) return
+    if (activeTab !== 'school-year' || !householdProfile) return
     loadActiveYear()
-  }, [activeTab, workspace, loadActiveYear])
+  }, [activeTab, householdProfile, loadActiveYear])
 
   useEffect(() => {
     if (activeTab !== 'subjects' || !householdId) return
@@ -134,7 +134,7 @@ export function SettingsPage() {
     }
   }
 
-  if (!workspace) {
+  if (householdLoading || !householdProfile) {
     return <div className="p-6 text-center text-slate-500">Loading...</div>
   }
 

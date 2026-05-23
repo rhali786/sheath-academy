@@ -1,4 +1,4 @@
-import type { ApiResponse, Workspace, HouseholdProfile, DayOfWeek, DayLoadPreference, DateDisplayPreference } from '@/features/lib/types'
+import type { ApiResponse, HouseholdProfile, DayOfWeek, DayLoadPreference, DateDisplayPreference } from '@/features/lib/types'
 
 function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
@@ -35,14 +35,11 @@ async function put<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
 }
 
 export const householdApi = {
-  getWorkspace: (): Promise<ApiResponse<Workspace | null>> =>
-    get('/api/household/workspace'),
-
   getProfile: (): Promise<ApiResponse<HouseholdProfile | null>> =>
     get('/api/household/profile'),
 
-  setup: (familyName: string): Promise<ApiResponse<{ workspace: Workspace; profile: HouseholdProfile }>> =>
-    post('/api/household/workspace', { familyName }),
+  setup: (familyName: string): Promise<ApiResponse<HouseholdProfile>> =>
+    post('/api/household/profile', { familyName }),
 
   updateProfile: (
     patch: {
