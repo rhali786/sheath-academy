@@ -114,6 +114,8 @@ export const lessonTasks = pgTable(
     index('lesson_tasks_household_learner_due_idx').on(t.householdId, t.learnerId, t.dueDate),
     index('lesson_tasks_household_subject_idx').on(t.householdId, t.subjectId),
     index('lesson_tasks_household_status_idx').on(t.householdId, t.status),
+    // Admin aggregate: scan by date across all households, group by household_id
+    index('lesson_tasks_due_household_idx').on(t.dueDate, t.householdId),
   ],
 )
 
@@ -141,6 +143,8 @@ export const attendanceEvents = pgTable(
       t.attendanceDate,
     ),
     index('attendance_events_household_date_idx').on(t.householdId, t.attendanceDate),
+    // Admin aggregate: scan by date across all households, group by household_id
+    index('attendance_events_date_household_idx').on(t.attendanceDate, t.householdId),
   ],
 )
 
@@ -169,6 +173,8 @@ export const quranSessions = pgTable(
       t.sessionDate,
     ),
     index('quran_sessions_household_date_idx').on(t.householdId, t.sessionDate),
+    // Admin aggregate: scan by date across all households, group by household_id
+    index('quran_sessions_date_household_idx').on(t.sessionDate, t.householdId),
   ],
 )
 
@@ -199,6 +205,8 @@ export const portfolioEvidence = pgTable(
       t.evidenceDate,
     ),
     index('portfolio_evidence_household_subject_idx').on(t.householdId, t.subjectId),
+    // Admin aggregate: scan by date across all households, group by household_id
+    index('portfolio_evidence_date_household_idx').on(t.evidenceDate, t.householdId),
   ],
 )
 
@@ -238,34 +246,14 @@ export const householdSettings = pgTable(
   ],
 )
 
-// ─── Usage Events (admin metrics / Fork Test) ───────────────────────────────
-
-export const usageEvents = pgTable(
-  'usage_events',
-  {
-    id: text('id').primaryKey(),
-    eventType: text('event_type').notNull(),
-    userId: text('user_id').notNull().references(() => users.id),
-    householdId: text('household_id').notNull().references(() => households.id),
-    learnerId: text('learner_id').references(() => learners.id),
-    featureArea: text('feature_area').notNull(),
-    entityType: text('entity_type'),
-    entityId: text('entity_id'),
-    metadata: jsonb('metadata'),
-    occurredAt: timestamp('occurred_at').notNull(),
-  },
-  (t) => [
-    index('usage_events_household_occurred_idx').on(t.householdId, t.occurredAt),
-    index('usage_events_user_occurred_idx').on(t.userId, t.occurredAt),
-    index('usage_events_type_occurred_idx').on(t.eventType, t.occurredAt),
-  ],
-)
+// usage_events table removed — admin metrics now read from domain tables directly.
 
 // ─── Product Validation Responses ────────────────────────────────────────────
 
 export const productValidationResponses = pgTable('product_validation_responses', {
   id: text('id').primaryKey(),
   userId: text('user_id').references(() => users.id),
+  householdId: text('household_id').references(() => households.id),
   tenantId: text('tenant_id'),
   respondentName: text('respondent_name'),
   respondentEmail: text('respondent_email').notNull(),

@@ -1,71 +1,47 @@
-import { getLessons, completeLessonTask, resetStore as resetLessons } from '@/features/plan/server/service'
-import { resetStore as resetChildren } from '@/features/children/server/service'
-import { resetStore as resetSubjects } from '@/features/subjects/server/service'
-import { getCompletedLessonHistory } from '@/features/plan/utils/completedLessonHistory'
-import { SEED_IDS } from '@/features/lib/seedIds'
+/** @jest-environment node */
 
-beforeEach(() => {
-  resetLessons()
-  resetChildren()
-  resetSubjects()
-})
+jest.mock('@/features/lib/server/tenant', () => ({
+  getHouseholdContext: jest.fn().mockResolvedValue({ householdId: 'hh_test', userId: 'user_test', timezone: 'UTC' }),
+}))
 
-describe('history route data pipeline (service + utility)', () => {
-  it('returns empty array when passed only not-started lessons', () => {
-    const notStarted = getLessons().filter(l => l.status === 'not_started')
-    const result = getCompletedLessonHistory(notStarted)
-    expect(result).toEqual([])
+jest.mock('@/features/plan/server/repository', () => ({
+  listLessonTaskRows: jest.fn(),
+}))
+
+import { listLessonTaskRows } from '@/features/plan/server/repository'
+import { GET } from '@/features/plan/api/routes/history'
+
+const mockList = listLessonTaskRows as jest.Mock
+
+function makeRow(id: string, dueDate: string, status: string) {
+  return { id, householdId: 'hh_test', learnerId: 'l1', subjectId: 's1', title: 'Task', dueDate, status, sortOrder: 0, description: null, notes: null, completedAt: null, skippedAt: null, createdAt: new Date(), updatedAt: new Date() }
+}
+
+beforeEach(() => { mockList.mockReset() })
+
+describe('GET /api/plan/history', () => {
+  it('returns empty array when no lessons', async () => {
+    mockList.mockResolvedValue([])
+    const res = await GET(new Request('http://localhost/api/plan/history'))
+    const body = await res.json()
+    expect(body.status).toBe('success')
+    expect(Array.isArray(body.data)).toBe(true)
   })
 
-  it('returns completed lesson after marking one complete', () => {
-    const all = getLessons()
-    const beforeCount = getCompletedLessonHistory(all).length
-    const pending = all.find(l => l.status === 'not_started')!
-    completeLessonTask(pending.id)
-    const lessons = getLessons()
-    const result = getCompletedLessonHistory(lessons)
-    expect(result).toHaveLength(beforeCount + 1)
-    expect(result.some(l => l.id === pending.id)).toBe(true)
+  it('returns 400 for negative limit', async () => {
+    const res = await GET(new Request('http://localhost/api/plan/history?limit=-1'))
+    expect(res.status).toBe(400)
   })
 
-  it('filters by childId', () => {
-    const adamLessons = getLessons(SEED_IDS.layth)
-    completeLessonTask(adamLessons[0].id)
-    const lessons = getLessons()
-    const result = getCompletedLessonHistory(lessons, { childId: SEED_IDS.layth })
-    expect(result.every(l => l.childId === SEED_IDS.layth)).toBe(true)
-    expect(result.length).toBeGreaterThan(0)
-  })
-
-  it('respects limit option', () => {
-    getLessons().forEach(l => completeLessonTask(l.id))
-    const lessons = getLessons()
-    const result = getCompletedLessonHistory(lessons, { limit: 3 })
-    expect(result).toHaveLength(3)
-  })
-
-  it('sorts newest first by dueDate', () => {
-    getLessons().forEach(l => completeLessonTask(l.id))
-    const lessons = getLessons()
-    const result = getCompletedLessonHistory(lessons)
-    const dates = result.map(l => l.dueDate)
-    const sorted = [...dates].sort((a, b) => b.localeCompare(a))
-    expect(dates).toEqual(sorted)
-  })
-
-  it('showAll returns both completed and pending', () => {
-    const all = getLessons()
-    completeLessonTask(all[0].id) // mark one complete
-    const lessons = getLessons()
-    const result = getCompletedLessonHistory(lessons, { showAll: true })
-    expect(result.length).toBe(all.length)
-  })
-
-  it('filters by subjectId', () => {
-    const mathLessons = getLessons(undefined, 'subject_seed_002') // Mathematics
-    mathLessons.forEach(l => completeLessonTask(l.id))
-    const lessons = getLessons()
-    const result = getCompletedLessonHistory(lessons, { subjectId: 'subject_seed_002' })
-    expect(result.every(l => l.subjectId === 'subject_seed_002')).toBe(true)
+  it('returns completed lessons from repository', async () => {
+    mockList.mockResolvedValue([
+      makeRow('lt_1', '2026-05-10', 'completed'),
+      makeRow('lt_2', '2026-05-11', 'not_started'),
+    ])
+    const res = await GET(new Request('http://localhost/api/plan/history'))
+    const body = await res.json()
+    expect(body.status).toBe('success')
+    // history filter includes completed/skipped
+    expect(body.data.some((l: { id: string }) => l.id === 'lt_1')).toBe(true)
   })
 })

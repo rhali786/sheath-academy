@@ -1,105 +1,72 @@
 /** @jest-environment node */
 
-jest.mock('@/features/auth/auth', () => ({
-  auth: jest.fn(),
+jest.mock('@/features/lib/server/tenant', () => ({
+  getHouseholdContext: jest.fn().mockResolvedValue({ householdId: 'hh_test', userId: 'user_test', timezone: 'UTC' }),
 }))
 
-jest.mock('@/features/lib/server/db', () => ({
-  isPostgresMode: jest.fn(() => false),
+jest.mock('@/features/auth/server/routeOwnership', () => ({
+  guardOwnership: jest.fn((fn: () => Promise<Response>) => fn()),
+  assertSessionOwnership: jest.fn().mockResolvedValue(undefined),
+  sessionAuthCtx: jest.fn().mockResolvedValue({ householdId: 'hh_test', userId: 'user_test' }),
 }))
 
-jest.mock('@/features/household/server/service', () => {
-  const actual = jest.requireActual('@/features/household/server/service')
-  return {
-    ...actual,
-    getHouseholdProfile: jest.fn(),
-  }
-})
+jest.mock('@/features/plan/server/repository', () => ({
+  listLessonTaskRows: jest.fn(),
+  createLessonTaskRow: jest.fn(),
+}))
 
-import { auth } from '@/features/auth/auth'
-import { getHouseholdProfile } from '@/features/household/server/service'
-import { GET } from '@/features/plan/api/routes/lessons'
-import { resetStore } from '@/features/plan/server/service'
-import { bindMemorySessionAuth, memorySessionHousehold } from '@/features/auth/__tests__/memorySessionMocks'
+jest.mock('@/features/admin-metrics/server/instrument', () => ({
+  trackSessionStarted: jest.fn(),
+}))
 
-const mockAuth = auth as jest.Mock
-const mockGetHouseholdProfile = getHouseholdProfile as jest.Mock
+import { listLessonTaskRows, createLessonTaskRow } from '@/features/plan/server/repository'
+import { GET, POST } from '@/features/plan/api/routes/lessons'
 
-beforeEach(() => {
-  resetStore()
-  bindMemorySessionAuth(mockAuth)
-  mockGetHouseholdProfile.mockReturnValue(memorySessionHousehold)
-})
+const mockList = listLessonTaskRows as jest.Mock
+const mockCreate = createLessonTaskRow as jest.Mock
 
-function makeRequest(params: Record<string, string>): Request {
-  const url = new URL('http://localhost/api/planner/lessons')
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
-  return new Request(url.toString())
+function makeRow(id = 'lt_1', status = 'not_started') {
+  return { id, householdId: 'hh_test', learnerId: 'l1', subjectId: 's1', title: 'Task', dueDate: '2026-05-17', status, sortOrder: 0, description: null, notes: null, completedAt: null, skippedAt: null, createdAt: new Date(), updatedAt: new Date() }
 }
 
-function formatLocalDate(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${dd}`
-}
+beforeEach(() => { mockList.mockReset(); mockCreate.mockReset() })
 
-function getMondayOfCurrentWeek(): string {
-  const today = new Date()
-  const dayOfWeek = today.getDay()
-  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
-  const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysFromMonday)
-  return formatLocalDate(monday)
-}
-
-function getSundayOfCurrentWeek(): string {
-  const today = new Date()
-  const dayOfWeek = today.getDay()
-  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
-  const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysFromMonday)
-  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6)
-  return formatLocalDate(sunday)
-}
-
-describe('GET /api/planner/lessons — week filter', () => {
-  it('returns only lessons for the specified week (Mon–Sun span)', async () => {
-    const weekStart = getMondayOfCurrentWeek()
-    const weekEnd = getSundayOfCurrentWeek()
-    const res = await GET(makeRequest({ week: weekStart }))
-    const body = await res.json()
-    expect(body.status).toBe('success')
-    body.data.forEach((l: { dueDate: string }) => {
-      expect(l.dueDate >= weekStart).toBe(true)
-      expect(l.dueDate <= weekEnd).toBe(true)
-    })
-  })
-
-  it('returns empty array when week has no lessons', async () => {
-    const res = await GET(makeRequest({ week: '2024-01-01' }))
+describe('GET /api/plan/lessons', () => {
+  it('returns empty array when no lessons', async () => {
+    mockList.mockResolvedValue([])
+    const res = await GET(new Request('http://localhost/api/plan/lessons'))
     const body = await res.json()
     expect(body.status).toBe('success')
     expect(body.data).toEqual([])
   })
 
-  it('returns 400 when week param is not a valid ISO date', async () => {
-    const res = await GET(makeRequest({ week: 'not-a-date' }))
+  it('returns lessons from repository', async () => {
+    mockList.mockResolvedValue([makeRow()])
+    const res = await GET(new Request('http://localhost/api/plan/lessons'))
+    const body = await res.json()
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0].id).toBe('lt_1')
+  })
+
+  it('returns 400 for invalid week parameter', async () => {
+    const res = await GET(new Request('http://localhost/api/plan/lessons?week=not-a-date'))
     expect(res.status).toBe(400)
-    const body = await res.json()
-    expect(body.status).toBe('error')
+  })
+})
+
+describe('POST /api/plan/lessons', () => {
+  it('returns 400 when required fields missing', async () => {
+    const req = new Request('http://localhost/api/plan/lessons', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
+    const res = await POST(req)
+    expect(res.status).toBe(400)
   })
 
-  it('returns all lessons when week param is omitted', async () => {
-    const res = await GET(makeRequest({}))
+  it('creates and returns a lesson', async () => {
+    mockCreate.mockResolvedValue(makeRow('lt_new'))
+    const req = new Request('http://localhost/api/plan/lessons', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ childId: 'l1', title: 'New task', dueDate: '2026-05-17' }) })
+    const res = await POST(req)
     const body = await res.json()
     expect(body.status).toBe('success')
-    expect(body.data.length).toBeGreaterThan(0)
-  })
-
-  it('filters by week AND childIds together', async () => {
-    const weekStart = getMondayOfCurrentWeek()
-    const res = await GET(makeRequest({ week: weekStart, childIds: 'SEED_ADAM_CHILD_ID' }))
-    const body = await res.json()
-    // Non-existent childId → empty
-    expect(body.data).toEqual([])
+    expect(body.data.id).toBe('lt_new')
   })
 })

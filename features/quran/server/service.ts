@@ -1,10 +1,31 @@
-import type { QuranSession, QuranSessionRequest } from '@/features/lib/types'
-import { quranSessionsStore } from './store'
-import { SEED_QURAN_SESSIONS } from './seed'
+import type { QuranSession } from '@/features/lib/types'
+import { and, gte, lte, sql } from 'drizzle-orm'
+import { getDb } from '@/features/lib/server/db'
+import { quranSessions } from '@/db/schema'
+import { listQuranSessionRows } from './repository'
 
-export function getQuranSessions(childId?: string): QuranSession[] {
-  const all = quranSessionsStore.getAll()
-  return childId ? all.filter(s => s.childId === childId) : all
+export interface AdminQuranCount {
+  householdId: string
+  count: number
+  lastDate: string | null
+}
+
+/** Cross-household aggregate for admin metrics. Uses quran_sessions_date_household_idx. */
+export async function getAdminQuranCounts(
+  periodStart: string,
+  periodEnd: string,
+): Promise<AdminQuranCount[]> {
+  const db = getDb()
+  const rows = await db
+    .select({
+      householdId: quranSessions.householdId,
+      count: sql<number>`count(*)::int`,
+      lastDate: sql<string | null>`max(${quranSessions.sessionDate})`,
+    })
+    .from(quranSessions)
+    .where(and(gte(quranSessions.sessionDate, periodStart), lte(quranSessions.sessionDate, periodEnd)))
+    .groupBy(quranSessions.householdId)
+  return rows
 }
 
 export interface QuranSummary {
@@ -16,13 +37,20 @@ export interface QuranSummary {
   streakDays: number
 }
 
+function rowToSession(r: Awaited<ReturnType<typeof listQuranSessionRows>>[number]): QuranSession {
+  return {
+    id: r.id, childId: r.learnerId, type: r.sessionType,
+    surah: r.surah ?? '', fromAyah: r.fromAyah ?? 0, toAyah: r.toAyah ?? 0,
+    notes: r.notes ?? '', date: r.sessionDate, lastLogged: r.sessionDate,
+  }
+}
+
 function calcStreak(sessions: QuranSession[]): number {
   const sessionDates = new Set(sessions.map(s => s.date))
-  const today = new Date()
   const fmt = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   let streak = 0
-  const cursor = new Date(today)
+  const cursor = new Date()
   while (sessionDates.has(fmt(cursor))) {
     streak++
     cursor.setDate(cursor.getDate() - 1)
@@ -30,64 +58,24 @@ function calcStreak(sessions: QuranSession[]): number {
   return streak
 }
 
-export function getQuranSummary({
-  childId,
-  startDate,
-  endDate,
-}: {
-  childId?: string
-  startDate?: string
-  endDate?: string
-} = {}): QuranSummary {
-  let sessions = getQuranSessions(childId)
-  if (startDate) sessions = sessions.filter(s => s.date >= startDate)
-  if (endDate) sessions = sessions.filter(s => s.date <= endDate)
+export async function getQuranSummary(
+  householdId: string,
+  { childId, startDate, endDate }: { childId?: string; startDate?: string; endDate?: string } = {},
+): Promise<QuranSummary> {
+  const rows = await listQuranSessionRows(householdId, { learnerId: childId, startDate, endDate })
+  const sessions = rows.map(rowToSession)
 
   const byType: Record<string, number> = {}
-  for (const s of sessions) {
-    byType[s.type] = (byType[s.type] || 0) + 1
+  for (const r of rows) {
+    byType[r.sessionType] = (byType[r.sessionType] || 0) + 1
   }
 
   return {
     childId,
-    sessionsLogged: sessions.length,
+    sessionsLogged: rows.length,
     sessionsByType: Object.entries(byType).map(([type, count]) => ({ type, count })),
     recentSessions: sessions.slice(0, 5),
     dateRange: { startDate, endDate },
-    streakDays: calcStreak(getQuranSessions(childId)),
+    streakDays: calcStreak(sessions),
   }
-}
-
-export function addQuranSession(sessionData: QuranSessionRequest): QuranSession {
-  const all = quranSessionsStore.getAll()
-  const newId = `quran_${String(all.length + 1).padStart(3, '0')}_${Date.now()}`
-
-  const newSession: QuranSession = {
-    id: newId,
-    childId: sessionData.childId,
-    type: sessionData.type,
-    surah: sessionData.surah,
-    fromAyah: sessionData.fromAyah,
-    toAyah: sessionData.toAyah,
-    notes: sessionData.notes || '',
-    date: new Date().toISOString().split('T')[0],
-    lastLogged: 'Today',
-  }
-
-  return quranSessionsStore.insert(newSession)
-}
-
-export function updateQuranSession(
-  id: string,
-  patch: Partial<Pick<QuranSession, 'type' | 'surah' | 'fromAyah' | 'toAyah' | 'notes' | 'date'>>
-): QuranSession | null {
-  return quranSessionsStore.update(id, patch)
-}
-
-export function deleteQuranSession(id: string): boolean {
-  return quranSessionsStore.remove(id)
-}
-
-export function resetStore(): void {
-  quranSessionsStore.reset(SEED_QURAN_SESSIONS)
 }

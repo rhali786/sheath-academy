@@ -11,7 +11,7 @@ export async function GET(
   const gate = await requireAdminApi(request)
   if (!gate.ok) return gate.response
 
-  const record = getProductValidationResponseById(id)
+  const record = await getProductValidationResponseById(id)
   if (!record) {
     return NextResponse.json(
       {

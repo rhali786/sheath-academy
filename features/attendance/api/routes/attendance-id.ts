@@ -1,53 +1,49 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { AttendanceRecord } from '@/features/attendance/types'
-import { getRecord, updateRecord, archiveRecord } from '@/features/attendance/server/service'
+import { getAttendanceEvent, updateAttendanceEvent, voidAttendanceEvent } from '@/features/attendance/server/repository'
+import type { AttendanceEventRow } from '@/features/attendance/server/repository'
+import { getHouseholdContext } from '@/features/lib/server/tenant'
 
-export function GET(id: string): NextResponse<ApiResponse<AttendanceRecord | null>> {
-  const record = getRecord(id)
-  if (!record) {
-    return NextResponse.json(
-      { status: 'error', data: null, message: 'Record not found', timestamp: new Date().toISOString() },
-      { status: 404 }
-    )
+function rowToRecord(r: AttendanceEventRow): AttendanceRecord {
+  return {
+    id: r.id,
+    childId: r.learnerId,
+    householdId: r.householdId,
+    date: r.attendanceDate,
+    status: r.status as AttendanceRecord['status'],
+    minutes: r.minutes ?? undefined,
+    notes: r.notes ?? undefined,
+    isArchived: r.voidedAt !== null,
+    createdAt: r.createdAt?.toISOString() ?? new Date().toISOString(),
+    updatedAt: r.updatedAt?.toISOString() ?? new Date().toISOString(),
   }
-  return NextResponse.json({
-    status: 'success',
-    data: record,
-    message: 'Attendance record retrieved',
-    timestamp: new Date().toISOString(),
-  })
+}
+
+export async function GET(id: string): Promise<NextResponse<ApiResponse<AttendanceRecord | null>>> {
+  try {
+    const { householdId } = await getHouseholdContext()
+    const row = await getAttendanceEvent(id, householdId)
+    if (!row) return NextResponse.json({ status: 'error', data: null, message: 'Record not found', timestamp: new Date().toISOString() }, { status: 404 })
+    return NextResponse.json({ status: 'success', data: rowToRecord(row), message: 'Attendance record retrieved', timestamp: new Date().toISOString() })
+  } catch { return NextResponse.json({ status: 'error', data: null, message: 'Record not found', timestamp: new Date().toISOString() }, { status: 404 }) }
 }
 
 export async function PATCH(id: string, request: Request): Promise<NextResponse<ApiResponse<AttendanceRecord | null>>> {
   const body = await request.json()
-  const updated = updateRecord(id, body)
-  if (!updated) {
-    return NextResponse.json(
-      { status: 'error', data: null, message: 'Record not found', timestamp: new Date().toISOString() },
-      { status: 404 }
-    )
-  }
-  return NextResponse.json({
-    status: 'success',
-    data: updated,
-    message: 'Attendance record updated',
-    timestamp: new Date().toISOString(),
-  })
+  try {
+    const { householdId } = await getHouseholdContext()
+    const updated = await updateAttendanceEvent(id, householdId, { status: body.status, minutes: body.minutes, notes: body.notes })
+    if (!updated) return NextResponse.json({ status: 'error', data: null, message: 'Record not found', timestamp: new Date().toISOString() }, { status: 404 })
+    return NextResponse.json({ status: 'success', data: rowToRecord(updated), message: 'Attendance record updated', timestamp: new Date().toISOString() })
+  } catch { return NextResponse.json({ status: 'error', data: null, message: 'Record not found', timestamp: new Date().toISOString() }, { status: 404 }) }
 }
 
-export function DELETE(id: string): NextResponse<ApiResponse<null>> {
-  const archived = archiveRecord(id)
-  if (!archived) {
-    return NextResponse.json(
-      { status: 'error', data: null, message: 'Record not found', timestamp: new Date().toISOString() },
-      { status: 404 }
-    )
-  }
-  return NextResponse.json({
-    status: 'success',
-    data: null,
-    message: 'Attendance record archived',
-    timestamp: new Date().toISOString(),
-  })
+export async function DELETE(id: string): Promise<NextResponse<ApiResponse<null>>> {
+  try {
+    const { householdId } = await getHouseholdContext()
+    const voided = await voidAttendanceEvent(id, householdId)
+    if (!voided) return NextResponse.json({ status: 'error', data: null, message: 'Record not found', timestamp: new Date().toISOString() }, { status: 404 })
+    return NextResponse.json({ status: 'success', data: null, message: 'Attendance record voided', timestamp: new Date().toISOString() })
+  } catch { return NextResponse.json({ status: 'error', data: null, message: 'Record not found', timestamp: new Date().toISOString() }, { status: 404 }) }
 }

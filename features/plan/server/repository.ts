@@ -85,6 +85,35 @@ export async function createLessonTaskRow(
   return inserted[0]
 }
 
+/** Inserts a lesson task with a caller-supplied id. No-ops on conflict. For seed scripts only. */
+export async function upsertLessonTaskRow(
+  householdId: string,
+  id: string,
+  input: CreateLessonTaskInput & { completedAt?: Date },
+): Promise<void> {
+  const db = getDb()
+  const now = new Date()
+  await db
+    .insert(lessonTasks)
+    .values({
+      id,
+      householdId,
+      learnerId: input.learnerId,
+      subjectId: input.subjectId ?? null,
+      title: input.title,
+      description: input.description ?? null,
+      notes: input.notes ?? null,
+      dueDate: input.dueDate ?? null,
+      status: input.status ?? 'not_started',
+      sortOrder: input.sortOrder ?? 0,
+      completedAt: input.completedAt ?? null,
+      skippedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoNothing()
+}
+
 export async function updateLessonTaskRow(
   id: string,
   householdId: string,

@@ -20,8 +20,14 @@ const mockGetLessons = getLessons as jest.Mock
 const mockGetRecords = getRecords as jest.Mock
 const mockGetProfiles = getStudentProfiles as jest.Mock
 
-const TODAY = new Date().toISOString().slice(0, 10)
-const YESTERDAY = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+// Use local date to match the service's todayLocal() — avoids UTC/local timezone mismatch
+function localDateStr(offsetDays = 0): string {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetDays)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+const TODAY = localDateStr(0)
+const YESTERDAY = localDateStr(-1)
 
 const activeAdam = { id: 'adam_01', name: 'Adam', isActive: true, householdId: 'hh_01', gradeLabel: 'Grade 5', username: 'adam', password: '', createdAt: '' }
 const activeKhadijah = { id: 'khadijah_01', name: 'Khadijah', isActive: true, householdId: 'hh_01', gradeLabel: 'Grade 3', username: 'khadijah', password: '', createdAt: '' }

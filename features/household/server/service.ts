@@ -1,58 +1,13 @@
+// Memory store removed. Stubs kept for compilation.
+// Callers (workspace route, school-year, setup) are pending Postgres migration.
+// Use household/server/repository for new code.
 import type { Workspace, HouseholdProfile } from '@/features/lib/types'
-import { workspacesStore, householdProfilesStore } from './store'
-import { SEED_WORKSPACES, SEED_HOUSEHOLD_PROFILES } from './seed'
-import { generateWorkspaceId, generateHouseholdId } from './ids'
 
-export function getWorkspace(): Workspace | null {
-  return workspacesStore.getAll()[0] ?? null
-}
-
-export function getHouseholdProfile(): HouseholdProfile | null {
-  return householdProfilesStore.getAll()[0] ?? null
-}
-
-export function createWorkspace(name: string, ownerId: string = 'user_current'): Workspace {
-  const workspace: Workspace = {
-    id: generateWorkspaceId(),
-    name,
-    ownerId,
-    createdAt: new Date().toISOString(),
-  }
-  workspacesStore.reset([workspace])
-  return workspace
-}
-
-export function createHouseholdProfile(workspaceId: string, familyName: string): HouseholdProfile {
-  const profile: HouseholdProfile = {
-    id: generateHouseholdId(),
-    workspaceId,
-    familyName,
-    createdAt: new Date().toISOString(),
-  }
-  householdProfilesStore.reset([profile])
-  return profile
-}
-
-export function updateHouseholdProfile(
-  patch: Partial<Omit<HouseholdProfile, 'id' | 'workspaceId' | 'createdAt'>>
-): HouseholdProfile | null {
-  const profile = householdProfilesStore.getAll()[0]
-  if (!profile) return null
-  return householdProfilesStore.update(profile.id, patch)
-}
-
-/** Clears workspace + household profile (tests); dev uses initial module seed until reset. */
-export function resetStore(): void {
-  workspacesStore.reset([])
-  householdProfilesStore.reset([])
-}
-
-/** Seeds a workspace for tests that need to pre-populate store state. */
-export function seedWorkspace(workspace: Workspace): void {
-  workspacesStore.reset([workspace])
-}
-
-/** Seeds a household profile for tests that need to pre-populate store state. */
-export function seedHouseholdProfile(profile: HouseholdProfile): void {
-  householdProfilesStore.reset([profile])
-}
+export function getWorkspace(): Workspace | null { return null }
+export function getHouseholdProfile(): HouseholdProfile | null { return null }
+export function createWorkspace(_name: string, _ownerId?: string): Workspace { throw new Error('Use household/server/repository') }
+export function createHouseholdProfile(_workspaceId: string, _familyName: string): HouseholdProfile { throw new Error('Use household/server/repository') }
+export function updateHouseholdProfile(_patch: Partial<Omit<HouseholdProfile, 'id' | 'workspaceId' | 'createdAt'>>): HouseholdProfile | null { return null }
+export function resetStore(): void {}
+export function seedWorkspace(_workspace: Workspace): void {}
+export function seedHouseholdProfile(_profile: HouseholdProfile): void {}

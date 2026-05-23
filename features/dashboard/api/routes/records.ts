@@ -1,11 +1,5 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, DashboardRecord } from '@/features/lib/types'
-import { getRecords as getAttendanceRecords } from '@/features/attendance/server/service'
-import { getLessons } from '@/features/plan/server/service'
-import { listEvidenceItems } from '@/features/portfolio/server/service'
-import { getQuranSessions } from '@/features/quran/server/service'
-import { getStudentProfiles } from '@/features/children/server/service'
-import { isPostgresMode } from '@/features/lib/server/db'
 import { getHouseholdContext } from '@/features/lib/server/tenant'
 import { listAttendanceEvents } from '@/features/attendance/server/repository'
 import { listLessonTaskRows } from '@/features/plan/server/repository'
@@ -42,62 +36,29 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Da
   const childId = searchParams.get('childId') || undefined
   const { start, end } = getCurrentWeekRange()
 
-  if (isPostgresMode()) {
-    try {
-      const { householdId } = await getHouseholdContext()
-      const activeLearners = await listLearners(householdId)
-      const maxAttendance = childId ? weekdayCount(start, end) : activeLearners.length * weekdayCount(start, end)
+  try {
+    const { householdId } = await getHouseholdContext()
+    const activeLearners = await listLearners(householdId)
+    const maxAttendance = childId ? weekdayCount(start, end) : activeLearners.length * weekdayCount(start, end)
 
-      const weekAttendance = await listAttendanceEvents(householdId, { learnerId: childId, startDate: start, endDate: end })
-      const weekLessons = await listLessonTaskRows(householdId, { learnerId: childId, startDate: start, endDate: end })
-      const completedLessons = weekLessons.filter(l => l.status === 'completed')
-      const weekEvidence = await listEvidenceRows(householdId, { learnerId: childId, startDate: start, endDate: end })
-      const weekQuran = await listQuranSessionRows(householdId, { learnerId: childId, startDate: start, endDate: end })
+    const weekAttendance = await listAttendanceEvents(householdId, { learnerId: childId, startDate: start, endDate: end })
+    const weekLessons = await listLessonTaskRows(householdId, { learnerId: childId, startDate: start, endDate: end })
+    const completedLessons = weekLessons.filter(l => l.status === 'completed')
+    const weekEvidence = await listEvidenceRows(householdId, { learnerId: childId, startDate: start, endDate: end })
+    const weekQuran = await listQuranSessionRows(householdId, { learnerId: childId, startDate: start, endDate: end })
 
-      const { trackReportGenerated } = await import('@/features/admin-metrics/server/instrument')
-      void trackReportGenerated(
-        (await getHouseholdContext()).userId,
-        householdId,
-      )
-
-      return NextResponse.json({
-        status: 'success',
-        data: [
-          { id: 'record_attendance', title: 'Attendance', count: weekAttendance.length, maxCount: maxAttendance > 0 ? maxAttendance : undefined, icon: 'CheckCircle', viewButton: 'View' },
-          { id: 'record_progress', title: 'Progress updates', count: completedLessons.length, maxCount: weekLessons.length > 0 ? weekLessons.length : undefined, icon: 'TrendingUp', viewButton: 'View' },
-          { id: 'record_portfolio', title: 'Portfolio evidence', count: weekEvidence.length, icon: 'Folder', viewButton: 'View' },
-          { id: 'record_quran', title: 'Quran sessions', count: weekQuran.length, icon: 'BookOpen', viewButton: 'View' },
-        ],
-        message: 'Records retrieved',
-        timestamp: new Date().toISOString(),
-      })
-    } catch {
-      // Fall through to memory path
-    }
+    return NextResponse.json({
+      status: 'success',
+      data: [
+        { id: 'record_attendance', title: 'Attendance', count: weekAttendance.length, maxCount: maxAttendance > 0 ? maxAttendance : undefined, icon: 'CheckCircle', viewButton: 'View' },
+        { id: 'record_progress', title: 'Progress updates', count: completedLessons.length, maxCount: weekLessons.length > 0 ? weekLessons.length : undefined, icon: 'TrendingUp', viewButton: 'View' },
+        { id: 'record_portfolio', title: 'Portfolio evidence', count: weekEvidence.length, icon: 'Folder', viewButton: 'View' },
+        { id: 'record_quran', title: 'Quran sessions', count: weekQuran.length, icon: 'BookOpen', viewButton: 'View' },
+      ],
+      message: 'Records retrieved',
+      timestamp: new Date().toISOString(),
+    })
+  } catch {
+    return NextResponse.json({ status: 'error', data: [], message: 'Failed to load records', timestamp: new Date().toISOString() }, { status: 500 })
   }
-
-  // Memory path
-  const allProfiles = getStudentProfiles()
-  const archivedIds = new Set(allProfiles.filter(p => !p.isActive).map(p => p.id))
-  const activeChildren = allProfiles.filter(p => p.isActive)
-  const maxAttendance = childId ? weekdayCount(start, end) : activeChildren.length * weekdayCount(start, end)
-
-  const weekAttendance = getAttendanceRecords({ childId, startDate: start, endDate: end })
-  const weekLessons = getLessons(childId).filter(l => l.dueDate >= start && l.dueDate <= end)
-  const completedLessons = weekLessons.filter(l => l.status === 'completed')
-  const weekEvidence = listEvidenceItems({ childId, startDate: start, endDate: end })
-  const allWeekQuran = getQuranSessions().filter(s => s.date >= start && s.date <= end)
-  const weekQuran = childId ? allWeekQuran.filter(s => s.childId === childId) : allWeekQuran.filter(s => !archivedIds.has(s.childId))
-
-  return NextResponse.json({
-    status: 'success',
-    data: [
-      { id: 'record_attendance', title: 'Attendance', count: weekAttendance.length, maxCount: maxAttendance > 0 ? maxAttendance : undefined, icon: 'CheckCircle', viewButton: 'View' },
-      { id: 'record_progress', title: 'Progress updates', count: completedLessons.length, maxCount: weekLessons.length > 0 ? weekLessons.length : undefined, icon: 'TrendingUp', viewButton: 'View' },
-      { id: 'record_portfolio', title: 'Portfolio evidence', count: weekEvidence.length, icon: 'Folder', viewButton: 'View' },
-      { id: 'record_quran', title: 'Quran sessions', count: weekQuran.length, icon: 'BookOpen', viewButton: 'View' },
-    ],
-    message: 'Records retrieved',
-    timestamp: new Date().toISOString(),
-  })
 }

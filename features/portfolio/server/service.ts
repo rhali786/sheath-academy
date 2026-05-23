@@ -1,134 +1,43 @@
+// Memory store removed. Stubs kept for compilation.
+// Callers (records, setup) are pending Postgres migration.
+// Use portfolio/server/repository for new code.
 import type { EvidenceItem, CreateEvidenceItemInput, EvidenceType } from '../types'
-import { evidenceStore } from './store'
-import { SEED_EVIDENCE } from './seed'
-import { generateEvidenceId, resetIdCounter } from './ids'
-import { validateEvidenceInput } from './validation'
 import type { ValidationError } from './validation'
-import { getStudentProfile } from '@/features/children/server/service'
-import { getSubject } from '@/features/subjects/server/service'
-import { getLessonTask } from '@/features/plan/server/service'
+import { and, gte, lte, sql } from 'drizzle-orm'
+import { getDb } from '@/features/lib/server/db'
+import { portfolioEvidence } from '@/db/schema'
 
-const deps = { getStudentProfile, getSubject, getLessonTask }
-
-export function listEvidenceItems(filters?: {
-  childId?: string
-  subjectId?: string
-  lessonTaskId?: string
-  type?: EvidenceType
-  startDate?: string
-  endDate?: string
-}): EvidenceItem[] {
-  let items = evidenceStore.getAll()
-  if (filters?.childId) {
-    items = items.filter(i => i.childId === filters.childId)
-  }
-  if (filters?.subjectId) {
-    items = items.filter(i => i.subjectId === filters.subjectId)
-  }
-  if (filters?.lessonTaskId) {
-    items = items.filter(i => i.lessonTaskId === filters.lessonTaskId)
-  }
-  if (filters?.type) {
-    items = items.filter(i => i.type === filters.type)
-  }
-  if (filters?.startDate) {
-    items = items.filter(i => i.date >= filters.startDate!)
-  }
-  if (filters?.endDate) {
-    items = items.filter(i => i.date <= filters.endDate!)
-  }
-  const sorted = [...items].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  )
-  return sorted.slice(0, 50)
+export interface AdminEvidenceCount {
+  householdId: string
+  count: number
+  lastDate: string | null
 }
 
-export function getEvidenceItemById(id: string): EvidenceItem | undefined {
-  return evidenceStore.getById(id)
+/** Cross-household aggregate for admin metrics. Uses portfolio_evidence_date_household_idx. */
+export async function getAdminEvidenceCounts(
+  periodStart: string,
+  periodEnd: string,
+): Promise<AdminEvidenceCount[]> {
+  const db = getDb()
+  const rows = await db
+    .select({
+      householdId: portfolioEvidence.householdId,
+      count: sql<number>`count(*)::int`,
+      lastDate: sql<string | null>`max(${portfolioEvidence.evidenceDate})`,
+    })
+    .from(portfolioEvidence)
+    .where(and(gte(portfolioEvidence.evidenceDate, periodStart), lte(portfolioEvidence.evidenceDate, periodEnd)))
+    .groupBy(portfolioEvidence.householdId)
+  return rows
 }
 
-export function createEvidenceItem(
-  input: CreateEvidenceItemInput
-): { item: EvidenceItem | null; errors: ValidationError[] } {
-  const errors = validateEvidenceInput(input, deps)
-  if (errors.length > 0) {
-    return { item: null, errors }
-  }
-  const now = new Date().toISOString()
-  const item: EvidenceItem = {
-    id: generateEvidenceId(),
-    title: input.title.trim(),
-    childId: input.childId,
-    subjectId: input.subjectId,
-    date: input.date,
-    type: input.type,
-    notes: input.notes,
-    reflection: input.reflection?.trim() || undefined,
-    url: input.url,
-    lessonTaskId: input.lessonTaskId,
-    createdBy: 'system',
-    createdAt: now,
-    updatedAt: now,
-  }
-  evidenceStore.insert(item)
-  return { item, errors: [] }
-}
-
-export function updateEvidenceItem(
-  id: string,
-  patch: Partial<CreateEvidenceItemInput>
-): { item: EvidenceItem | null; errors: ValidationError[] } {
-  const existing = evidenceStore.getById(id)
-  if (!existing) {
-    return { item: null, errors: [{ field: 'id', message: 'Evidence item not found' }] }
-  }
-  const merged: CreateEvidenceItemInput = {
-    title: patch.title ?? existing.title,
-    childId: patch.childId ?? existing.childId,
-    subjectId: patch.subjectId ?? existing.subjectId,
-    date: patch.date ?? existing.date,
-    type: patch.type ?? existing.type,
-    notes: patch.notes !== undefined ? patch.notes : existing.notes,
-    reflection: patch.reflection !== undefined ? patch.reflection?.trim() || undefined : existing.reflection,
-    url: patch.url !== undefined ? patch.url : existing.url,
-    lessonTaskId: patch.lessonTaskId !== undefined ? patch.lessonTaskId : existing.lessonTaskId,
-  }
-  const errors = validateEvidenceInput(merged, deps)
-  if (errors.length > 0) {
-    return { item: null, errors }
-  }
-  const updated = evidenceStore.update(id, {
-    ...merged,
-    updatedAt: new Date().toISOString(),
-  })
-  return { item: updated, errors: [] }
-}
-
-export function deleteEvidenceItem(id: string): boolean {
-  return evidenceStore.remove(id)
-}
-
-export function listEvidenceByChild(childId: string): EvidenceItem[] {
-  return listEvidenceItems({ childId })
-}
-
-export function listEvidenceBySubject(
-  childId: string | undefined,
-  subjectId: string
-): EvidenceItem[] {
-  return evidenceStore
-    .getAll()
-    .filter(i => i.subjectId === subjectId && (childId === undefined || i.childId === childId))
-}
-
-export function listEvidenceByLessonTask(lessonTaskId: string): EvidenceItem[] {
-  return listEvidenceItems({ lessonTaskId })
-}
-
-// Evidence items are historical records preserved for reporting; no isActive field.
+export function listEvidenceItems(_filters?: { childId?: string; subjectId?: string; lessonTaskId?: string; type?: EvidenceType; startDate?: string; endDate?: string }): EvidenceItem[] { return [] }
+export function getEvidenceItemById(_id: string): EvidenceItem | undefined { return undefined }
+export function createEvidenceItem(_data: CreateEvidenceItemInput): { item: EvidenceItem | null; errors: ValidationError[] } { return { item: null, errors: [] } }
+export function updateEvidenceItem(_id: string, _data: unknown): { item: EvidenceItem | null; errors: ValidationError[] } { return { item: null, errors: [] } }
+export function deleteEvidenceItem(_id: string): boolean { return false }
+export function listEvidenceByChild(_childId: string): EvidenceItem[] { return [] }
+export function listEvidenceBySubject(_subjectId: string, _childId?: string): EvidenceItem[] { return [] }
+export function listEvidenceByLessonTask(_lessonTaskId: string): EvidenceItem[] { return [] }
 export function archiveByChildId(_childId: string): void {}
-
-export function resetEvidenceStore(seed?: EvidenceItem[]): void {
-  evidenceStore.reset(seed ?? SEED_EVIDENCE)
-  resetIdCounter()
-}
+export function resetEvidenceStore(_seed?: EvidenceItem[]): void {}

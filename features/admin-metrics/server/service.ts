@@ -1,86 +1,122 @@
-import { isPostgresMode } from '@/features/lib/server/db'
+import { eq } from 'drizzle-orm'
+import { getDb } from '@/features/lib/server/db'
+import { households, users } from '@/db/schema'
+import { listLearners } from '@/features/children/server/repository'
+import { getAdminLessonCounts } from '@/features/plan/server/service'
+import { getAdminAttendanceCounts } from '@/features/attendance/server/service'
+import { getAdminQuranCounts } from '@/features/quran/server/service'
+import { getAdminEvidenceCounts } from '@/features/portfolio/server/service'
+import { defaultPeriodRange, filterAndSortUserRows, paginateRows } from './metrics'
 import type {
   AdminMetricsQuery,
   AdminMetricsSummary,
   AdminMetricsUsersResult,
-  UsageEvent,
+  AdminMetricsUserRow,
 } from '@/features/admin-metrics/types'
-import {
-  buildUserRow,
-  computeSummaryFromEvents,
-  defaultPeriodRange,
-  filterAndSortUserRows,
-  paginateRows,
-  type HouseholdSnapshot,
-} from './metrics'
-import { listUsageEvents } from './repository'
-import { getMemoryUsageEvents } from './store'
 
-async function listAllHouseholdSnapshots(): Promise<HouseholdSnapshot[]> {
-  if (isPostgresMode()) {
-    const { getDb } = await import('@/features/lib/server/db')
-    const { households, users } = await import('@/db/schema')
-    const { eq } = await import('drizzle-orm')
-    const { listLearners } = await import('@/features/children/server/repository')
-    const db = getDb()
-    const joined = await db
-      .select({
-        householdId: households.id,
-        householdName: households.name,
-        userId: households.userId,
-        userEmail: users.email,
-        userName: users.name,
-      })
-      .from(households)
-      .innerJoin(users, eq(households.userId, users.id))
-
-    const snapshots: HouseholdSnapshot[] = []
-    for (const row of joined) {
-      const learnerRows = await listLearners(row.householdId)
-      snapshots.push({
-        householdId: row.householdId,
-        householdName: row.householdName,
-        userId: row.userId,
-        userEmail: row.userEmail ?? undefined,
-        userName: row.userName ?? undefined,
-        learnerCount: learnerRows.length,
-        learnerNames: learnerRows.map(r => r.name),
-        lessonTasksInPeriod: 0,
-        lessonsCompletedInPeriod: 0,
-      })
-    }
-    return snapshots
-  }
-
-  const { getHouseholdProfile } = await import('@/features/household/server/service')
-  const { getStudentProfiles } = await import('@/features/children/server/service')
-  const profile = getHouseholdProfile()
-  if (!profile) return []
-  const learners = getStudentProfiles(profile.id)
-  return [
-    {
-      householdId: profile.id,
-      householdName: profile.familyName,
-      userId: 'memory-user',
-      userEmail: 'memory@test.local',
-      learnerCount: learners.length,
-      learnerNames: learners.map(l => l.name),
-      lessonTasksInPeriod: 0,
-      lessonsCompletedInPeriod: 0,
-    },
-  ]
+function latestDate(...dates: (string | null)[]): string | undefined {
+  const valid = dates.filter(Boolean) as string[]
+  if (!valid.length) return undefined
+  return valid.sort().at(-1)
 }
 
-async function fetchEvents(periodStart: string, periodEnd: string): Promise<UsageEvent[]> {
-  const start = new Date(`${periodStart}T00:00:00Z`)
-  const end = new Date(`${periodEnd}T23:59:59Z`)
-  if (isPostgresMode()) {
-    return listUsageEvents({ periodStart: start, periodEnd: end })
-  }
-  return getMemoryUsageEvents().filter(e => {
-    const d = e.occurredAt.slice(0, 10)
-    return d >= periodStart && d <= periodEnd
+export async function getAdminMetricsUsers(query: AdminMetricsQuery): Promise<AdminMetricsUsersResult> {
+  const { periodStart, periodEnd } = query
+  const page = query.page ?? 1
+  const pageSize = query.pageSize ?? 50
+
+  const db = getDb()
+
+  // 1. All households with their user info
+  const hhRows = await db
+    .select({
+      householdId: households.id,
+      householdName: households.name,
+      userId: households.userId,
+      userEmail: users.email,
+      userName: users.name,
+    })
+    .from(households)
+    .innerJoin(users, eq(households.userId, users.id))
+
+  // 2. Domain aggregates in parallel
+  const [lessonCounts, attendanceCounts, quranCounts, evidenceCounts] = await Promise.all([
+    getAdminLessonCounts(periodStart, periodEnd),
+    getAdminAttendanceCounts(periodStart, periodEnd),
+    getAdminQuranCounts(periodStart, periodEnd),
+    getAdminEvidenceCounts(periodStart, periodEnd),
+  ])
+
+  // Index by householdId for O(1) lookup
+  const lessonMap = new Map(lessonCounts.map(r => [r.householdId, r]))
+  const attMap = new Map(attendanceCounts.map(r => [r.householdId, r]))
+  const quranMap = new Map(quranCounts.map(r => [r.householdId, r]))
+  const evidenceMap = new Map(evidenceCounts.map(r => [r.householdId, r]))
+
+  // 3. Learner info per household
+  const learnersByHousehold = new Map<string, { count: number; names: string[] }>()
+  await Promise.all(
+    hhRows.map(async hh => {
+      const learners = await listLearners(hh.householdId)
+      learnersByHousehold.set(hh.householdId, {
+        count: learners.length,
+        names: learners.map(l => l.name),
+      })
+    }),
+  )
+
+  // 4. Build one row per household
+  const rows: AdminMetricsUserRow[] = hhRows.map(hh => {
+    const lessons = lessonMap.get(hh.householdId)
+    const att = attMap.get(hh.householdId)
+    const quran = quranMap.get(hh.householdId)
+    const evidence = evidenceMap.get(hh.householdId)
+    const learners = learnersByHousehold.get(hh.householdId) ?? { count: 0, names: [] }
+
+    const lessonCount = lessons?.count ?? 0
+    const completedCount = lessons?.completedCount ?? 0
+    const attCount = att?.count ?? 0
+    const quranCount = quran?.count ?? 0
+    const evidenceCount = evidence?.count ?? 0
+
+    const isActiveInPeriod = lessonCount > 0 || attCount > 0 || quranCount > 0 || evidenceCount > 0
+    const lastActiveAt = latestDate(lessons?.lastDueDate ?? null, att?.lastDate ?? null, quran?.lastDate ?? null, evidence?.lastDate ?? null)
+
+    // Drop-off signal: learners exist but zero activity
+    const dropOffSignals: import('@/features/admin-metrics/types').DropOffSignal[] =
+      learners.count > 0 && !isActiveInPeriod ? ['learners_no_activity'] : []
+
+    return {
+      userId: hh.userId,
+      userName: hh.userName ?? undefined,
+      userEmail: hh.userEmail ?? undefined,
+      workspaceId: hh.householdId,
+      workspaceName: hh.householdName,
+      workspaceType: 'family' as const,
+      isActiveInPeriod,
+      lastActiveAt,
+      learnerCount: learners.count,
+      learnerNames: learners.names,
+      lessonTasksInPeriod: lessonCount,
+      lessonsCompletedInPeriod: completedCount,
+      // Map domain counts to event-model fields for UI compatibility
+      sessionsLogged: lessonCount + quranCount,
+      completionEvents: completedCount,
+      startedNotCompletedCount: Math.max(0, lessonCount - completedCount),
+      quranRecordsCreated: quranCount,
+      arabicRecordsCreated: 0,
+      islamicStudiesRecordsCreated: 0,
+      deenRecordsCreated: quranCount,
+      evidenceItemsCreated: evidenceCount,
+      reportsGenerated: 0,
+      featureUsageByArea: {},
+      dropOffSignals,
+    }
   })
+
+  const filtered = filterAndSortUserRows(rows, query)
+  const { rows: pageRows, total } = paginateRows(filtered, page, pageSize)
+  return { rows: pageRows, total, page, pageSize }
 }
 
 export async function getAdminMetricsSummary(
@@ -90,76 +126,35 @@ export async function getAdminMetricsSummary(
   const defaults = defaultPeriodRange()
   const start = periodStart ?? defaults.periodStart
   const end = periodEnd ?? defaults.periodEnd
-  const spanMs =
-    new Date(`${end}T00:00:00Z`).getTime() - new Date(`${start}T00:00:00Z`).getTime()
-  const prevEnd = new Date(new Date(`${start}T00:00:00Z`).getTime() - 86400000)
-  const prevStart = new Date(prevEnd.getTime() - spanMs)
-  const fmt = (d: Date) => d.toISOString().slice(0, 10)
 
-  const [events, previousEvents] = await Promise.all([
-    fetchEvents(start, end),
-    fetchEvents(fmt(prevStart), fmt(prevEnd)),
-  ])
+  const { rows } = await getAdminMetricsUsers({
+    periodStart: start,
+    periodEnd: end,
+    page: 1,
+    pageSize: 10000,
+  })
 
-  return computeSummaryFromEvents(events, previousEvents, start, end)
-}
+  const activeHouseholds = rows.filter(r => r.isActiveInPeriod)
 
-export async function getAdminMetricsUsers(query: AdminMetricsQuery): Promise<AdminMetricsUsersResult> {
-  const page = query.page ?? 1
-  const pageSize = query.pageSize ?? 50
-  const snapshots = await listAllHouseholdSnapshots()
-  const { getLessonTaskPeriodCounts } = await import('@/features/plan/server/service')
-  const [periodEvents, allEvents, snapshotsWithStats] = await Promise.all([
-    fetchEvents(query.periodStart, query.periodEnd),
-    fetchEvents('2000-01-01', '2099-12-31'),
-    Promise.all(
-      snapshots.map(async s => {
-        const counts = await getLessonTaskPeriodCounts(
-          s.householdId,
-          query.periodStart,
-          query.periodEnd,
-        )
-        return { ...s, ...counts }
-      }),
-    ),
-  ])
-
-  const byHousehold = new Map<string, UsageEvent[]>()
-  const allByHousehold = new Map<string, UsageEvent[]>()
-  for (const e of periodEvents) {
-    const list = byHousehold.get(e.householdId) ?? []
-    list.push(e)
-    byHousehold.set(e.householdId, list)
+  return {
+    periodStart: start,
+    periodEnd: end,
+    activeUsers: activeHouseholds.length,
+    activeFamilies: activeHouseholds.length,
+    learnersCreated: rows.reduce((s, r) => s + r.learnerCount, 0),
+    sessionsLogged: rows.reduce((s, r) => s + r.sessionsLogged, 0),
+    completionEvents: rows.reduce((s, r) => s + r.completionEvents, 0),
+    deenRecordsCreated: rows.reduce((s, r) => s + r.deenRecordsCreated, 0),
+    evidenceItemsCreated: rows.reduce((s, r) => s + r.evidenceItemsCreated, 0),
+    reportsGenerated: 0,
+    previousPeriodComparison: { activeUsersDelta: 0, sessionsDelta: 0, evidenceReportsDelta: 0 },
   }
-  for (const e of allEvents) {
-    const list = allByHousehold.get(e.householdId) ?? []
-    list.push(e)
-    allByHousehold.set(e.householdId, list)
-  }
-
-  const rows = snapshotsWithStats.map(s =>
-    buildUserRow(
-      s,
-      byHousehold.get(s.householdId) ?? [],
-      allByHousehold.get(s.householdId) ?? [],
-      query.periodStart,
-      query.periodEnd,
-    ),
-  )
-
-  const filtered = filterAndSortUserRows(rows, query)
-  const { rows: pageRows, total } = paginateRows(filtered, page, pageSize)
-
-  return { rows: pageRows, total, page, pageSize }
 }
 
 export async function listAdminUsageEvents(
-  periodStart: string,
-  periodEnd: string,
-  limit = 100,
-): Promise<UsageEvent[]> {
-  const events = await fetchEvents(periodStart, periodEnd)
-  return events
-    .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
-    .slice(0, limit)
+  _periodStart: string,
+  _periodEnd: string,
+  _limit?: number,
+) {
+  return []
 }

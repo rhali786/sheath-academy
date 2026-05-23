@@ -44,7 +44,7 @@ export async function POST(request: Request): Promise<Response> {
     const session = await auth()
     const sessionEmail = session?.user?.email ?? (rest.respondentEmail as string) ?? ''
 
-    const record = createProductValidationResponse(
+    const record = await createProductValidationResponse(
       authCtx,
       rest as CreateProductValidationInput,
       sessionEmail,
@@ -68,7 +68,7 @@ export async function GET(request: Request): Promise<Response> {
   const gate = await requireAdminApi(request)
   if (!gate.ok) return gate.response
 
-  const data = listProductValidationResponses()
+  const data = await listProductValidationResponses()
   return NextResponse.json({
     status: 'success',
     data,

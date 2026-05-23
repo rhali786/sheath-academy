@@ -3,11 +3,17 @@ import type {
   CreateProductValidationInput,
   ProductValidationResponse,
   ProductValidationSummary,
+  ValidationPriceBucket,
 } from '../types'
-import { calculateForkTestFitScore, buildProductValidationSummary } from './scoring'
+import { calculateForkTestFitScore } from './scoring'
 import { validateCreateProductValidationInput } from './schema'
 import { generateProductValidationResponseId } from './ids'
-import { productValidationStore } from './store'
+import {
+  insertProductValidationResponse,
+  listProductValidationResponseRows,
+  getProductValidationResponseRow,
+  buildProductValidationSummaryFromDb,
+} from './repository'
 
 export class ProductValidationValidationError extends Error {
   constructor(
@@ -18,11 +24,11 @@ export class ProductValidationValidationError extends Error {
   }
 }
 
-export function createProductValidationResponse(
+export async function createProductValidationResponse(
   authCtx: AuthCtx,
   input: CreateProductValidationInput,
   sessionEmail: string,
-): ProductValidationResponse {
+): Promise<ProductValidationResponse> {
   const errors = validateCreateProductValidationInput(input)
   if (errors.length > 0) {
     throw new ProductValidationValidationError(errors)
@@ -46,22 +52,17 @@ export function createProductValidationResponse(
     updatedAt: now,
   }
 
-  productValidationStore.insert(record)
-  return record
+  return insertProductValidationResponse(record)
 }
 
-export function listProductValidationResponses(): ProductValidationResponse[] {
-  return [...productValidationStore.getAll()].sort(
-    (a, b) => b.createdAt.localeCompare(a.createdAt),
-  )
+export async function listProductValidationResponses(): Promise<ProductValidationResponse[]> {
+  return listProductValidationResponseRows()
 }
 
-export function getProductValidationResponseById(
-  id: string,
-): ProductValidationResponse | null {
-  return productValidationStore.getById(id) ?? null
+export async function getProductValidationResponseById(id: string): Promise<ProductValidationResponse | null> {
+  return getProductValidationResponseRow(id)
 }
 
-export function getProductValidationSummary(): ProductValidationSummary {
-  return buildProductValidationSummary(productValidationStore.getAll())
+export async function getProductValidationSummary(): Promise<ProductValidationSummary> {
+  return buildProductValidationSummaryFromDb()
 }

@@ -21,10 +21,7 @@
     "db:generate": "dotenv -e .env.local -- drizzle-kit generate",
     "db:migrate": "dotenv -e .env.local -- drizzle-kit migrate",
     "db:studio": "dotenv -e .env.local -- drizzle-kit studio",
-    "db:seed:dev": "dotenv -e .env.local -- tsx scripts/seed-dev-user.ts",
-    "db:seed:isolation": "dotenv -e .env.local -- tsx scripts/seed-isolation-test-users.ts",
-    "db:cleanup:test": "dotenv -e .env.local -- tsx scripts/db-cleanup-test-data.ts",
-    "db:reset:dev": "dotenv -e .env.local -- tsx scripts/db-cleanup-test-data.ts --reset-dev && dotenv -e .env.local -- tsx scripts/seed-dev-user.ts"
+    "db:seed:demo": "dotenv -e .env.local -- tsx scripts/seed-demo-households.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

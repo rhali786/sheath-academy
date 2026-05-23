@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { AdminMetricsFamilyCard } from '@/features/admin-metrics/front/components/AdminMetricsFamilyCard'
 import {
   DROP_OFF_LABELS,
-  SESSION_EVENTS_HELP,
+  ACTIVITY_LABEL,
+  ACTIVITY_HELP,
 } from '@/features/admin-metrics/front/constants'
 import { adminMetricsApi } from '@/features/admin-metrics/front/services/api'
 import type { AdminMetricsSummary, AdminMetricsUserRow, DropOffSignal } from '@/features/admin-metrics/types'
@@ -176,7 +177,7 @@ export function AdminMetricsDashboard() {
         </summary>
         <ul className="mt-3 space-y-2 list-disc pl-5">
           <li>
-            <span className="font-medium">Session events</span> — {SESSION_EVENTS_HELP}
+            <span className="font-medium">{ACTIVITY_LABEL}</span> — {ACTIVITY_HELP}
           </li>
           <li>
             <span className="font-medium">Lessons (planner)</span> — tasks with due date in the period;
@@ -211,7 +212,7 @@ export function AdminMetricsDashboard() {
           <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
             <p
               className="text-xs font-medium text-slate-500 uppercase tracking-wide"
-              title={SESSION_EVENTS_HELP}
+              title={ACTIVITY_HELP}
             >
               Learning activity (session events)
             </p>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import { getQuranSummary, type QuranSummary } from '@/features/quran/server/service'
+import { getHouseholdContext } from '@/features/lib/server/tenant'
 
 export async function GET(request: Request): Promise<NextResponse<ApiResponse<QuranSummary>>> {
   const { searchParams } = new URL(request.url)
@@ -8,12 +9,11 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Qu
   const startDate = searchParams.get('startDate') || undefined
   const endDate = searchParams.get('endDate') || undefined
 
-  const summary = getQuranSummary({ childId, startDate, endDate })
-
-  return NextResponse.json({
-    status: 'success',
-    data: summary,
-    message: 'Quran summary retrieved',
-    timestamp: new Date().toISOString(),
-  })
+  try {
+    const { householdId } = await getHouseholdContext()
+    const summary = await getQuranSummary(householdId, { childId, startDate, endDate })
+    return NextResponse.json({ status: 'success', data: summary, message: 'Quran summary retrieved', timestamp: new Date().toISOString() })
+  } catch {
+    return NextResponse.json({ status: 'error', data: null as unknown as QuranSummary, message: 'Failed to load quran summary', timestamp: new Date().toISOString() }, { status: 500 })
+  }
 }

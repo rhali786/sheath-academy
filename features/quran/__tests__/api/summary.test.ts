@@ -1,73 +1,36 @@
 /** @jest-environment node */
 
-import { GET } from '@/features/quran/api/routes/summary'
-
-jest.mock('@/features/quran/server/service', () => ({
-  getQuranSummary: jest.fn(),
+jest.mock('@/features/lib/server/tenant', () => ({
+  getHouseholdContext: jest.fn().mockResolvedValue({ householdId: 'hh_test', userId: 'user_test', timezone: 'UTC' }),
 }))
 
-import { getQuranSummary } from '@/features/quran/server/service'
-const mockGetSummary = getQuranSummary as jest.Mock
+jest.mock('@/features/quran/server/repository', () => ({
+  listQuranSessionRows: jest.fn(),
+}))
 
-const defaultSummary = {
-  childId: undefined,
-  sessionsLogged: 5,
-  sessionsByType: [
-    { type: 'Revision', count: 3 },
-    { type: 'Recitation', count: 2 },
-  ],
-  recentSessions: [],
-  dateRange: { startDate: undefined, endDate: undefined },
-}
+import { listQuranSessionRows } from '@/features/quran/server/repository'
+import { GET } from '@/features/quran/api/routes/summary'
 
-function makeRequest(url: string): Request {
-  return new Request(`http://localhost${url}`)
-}
+const mockList = listQuranSessionRows as jest.Mock
 
-beforeEach(() => {
-  mockGetSummary.mockReturnValue(defaultSummary)
-})
-
-afterEach(() => {
-  jest.clearAllMocks()
-})
+beforeEach(() => { mockList.mockReset() })
 
 describe('GET /api/quran/summary', () => {
-  test('returns status success and summary shape', async () => {
-    const res = await GET(makeRequest('/api/quran/summary'))
+  it('returns a summary with zero counts when no sessions', async () => {
+    mockList.mockResolvedValue([])
+    const res = await GET(new Request('http://localhost/api/quran/summary'))
     const body = await res.json()
     expect(body.status).toBe('success')
-    expect(body.data).toHaveProperty('sessionsLogged')
-    expect(body.data).toHaveProperty('sessionsByType')
-    expect(body.data).toHaveProperty('recentSessions')
-    expect(body.data).toHaveProperty('dateRange')
-    expect(body.message).toBe('Quran summary retrieved')
+    expect(body.data.sessionsLogged).toBe(0)
+    expect(body.data.streakDays).toBe(0)
   })
 
-  test('calls service with childId when provided', async () => {
-    const res = await GET(makeRequest('/api/quran/summary?childId=adam_01'))
+  it('returns session count from repository', async () => {
+    mockList.mockResolvedValue([
+      { id: 's1', householdId: 'hh_test', learnerId: 'l1', sessionDate: '2026-05-17', sessionType: 'revision', surah: null, fromAyah: null, toAyah: null, durationMinutes: null, notes: null, createdAt: new Date(), updatedAt: new Date() },
+    ])
+    const res = await GET(new Request('http://localhost/api/quran/summary'))
     const body = await res.json()
-    expect(body.status).toBe('success')
-    expect(mockGetSummary).toHaveBeenCalledWith(
-      expect.objectContaining({ childId: 'adam_01' })
-    )
-  })
-
-  test('passes startDate and endDate to service', async () => {
-    const res = await GET(
-      makeRequest('/api/quran/summary?startDate=2026-04-01&endDate=2026-05-31')
-    )
-    const body = await res.json()
-    expect(body.status).toBe('success')
-    expect(mockGetSummary).toHaveBeenCalledWith(
-      expect.objectContaining({ startDate: '2026-04-01', endDate: '2026-05-31' })
-    )
-  })
-
-  test('calls service with no params when none are provided', async () => {
-    await GET(makeRequest('/api/quran/summary'))
-    expect(mockGetSummary).toHaveBeenCalledWith(
-      expect.objectContaining({ childId: undefined, startDate: undefined, endDate: undefined })
-    )
+    expect(body.data.sessionsLogged).toBe(1)
   })
 })

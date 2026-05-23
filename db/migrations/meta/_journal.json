@@ -22,6 +22,20 @@
       "when": 1779460000000,
       "tag": "0002_usage_events",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779492938507,
+      "tag": "0003_dear_quentin_quire",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779496525731,
+      "tag": "0004_demonic_jack_murdock",
+      "breakpoints": true
     }
   ]
 }

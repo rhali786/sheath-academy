@@ -79,7 +79,7 @@ describe('AdminMetricsDashboard', () => {
     expect(screen.getByText('a@test.com')).toBeInTheDocument()
     expect(screen.getByText('Amina, Yusuf')).toBeInTheDocument()
     expect(screen.getByText('4 tasks · 2 completed')).toBeInTheDocument()
-    expect(screen.getByText(formatLastActive('2026-05-20T10:00:00Z'))).toBeInTheDocument()
+    expect(screen.getByText(new RegExp(formatLastActive('2026-05-20T10:00:00Z').replace(/[()]/g, '\\$&')))).toBeInTheDocument()
     expect(screen.queryByTestId('admin-metrics-table')).not.toBeInTheDocument()
   })
 
@@ -123,8 +123,8 @@ describe('AdminMetricsDashboard', () => {
     const glossary = await screen.findByTestId('admin-metrics-glossary')
     expect(glossary).toHaveTextContent('How to read these metrics')
     expect(glossary).toHaveTextContent('Drop-off signals')
-    expect(glossary).toHaveTextContent('Learners created, no activity')
-    expect(glossary).toHaveTextContent('Session events')
+    expect(glossary).toHaveTextContent('Learners exist')
+    expect(glossary).toHaveTextContent('Activity (lessons')
   })
 
   it('shows forbidden state on 403', async () => {

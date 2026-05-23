@@ -81,6 +81,35 @@ export async function createEvidenceRow(
   return inserted[0]
 }
 
+/** Inserts an evidence row with a caller-supplied id. No-ops on conflict. For seed scripts only. */
+export async function upsertEvidenceRow(
+  householdId: string,
+  id: string,
+  input: CreateEvidenceInput,
+): Promise<void> {
+  const db = getDb()
+  const now = new Date()
+  await db
+    .insert(portfolioEvidence)
+    .values({
+      id,
+      householdId,
+      learnerId: input.learnerId,
+      subjectId: input.subjectId ?? null,
+      lessonTaskId: input.lessonTaskId ?? null,
+      quranSessionId: input.quranSessionId ?? null,
+      attendanceEventId: input.attendanceEventId ?? null,
+      title: input.title,
+      description: input.description ?? null,
+      evidenceType: input.evidenceType,
+      url: input.url ?? null,
+      evidenceDate: input.evidenceDate,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoNothing()
+}
+
 export async function updateEvidenceRow(
   id: string,
   householdId: string,

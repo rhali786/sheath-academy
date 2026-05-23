@@ -72,6 +72,32 @@ export async function createAttendanceEvent(
   return inserted[0]
 }
 
+/** Inserts an attendance event with a caller-supplied id. No-ops on conflict. For seed scripts only. */
+export async function upsertAttendanceEvent(
+  householdId: string,
+  id: string,
+  input: CreateAttendanceEventInput,
+): Promise<void> {
+  const db = getDb()
+  const now = new Date()
+  await db
+    .insert(attendanceEvents)
+    .values({
+      id,
+      householdId,
+      learnerId: input.learnerId,
+      attendanceDate: input.attendanceDate,
+      status: input.status,
+      minutes: input.minutes ?? null,
+      notes: input.notes ?? null,
+      occurredAt: now,
+      voidedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoNothing()
+}
+
 export async function updateAttendanceEvent(
   id: string,
   householdId: string,

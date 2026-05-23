@@ -8,7 +8,7 @@ export async function GET(request: Request): Promise<Response> {
   const gate = await requireAdminApi(request)
   if (!gate.ok) return gate.response
 
-  const data = getProductValidationSummary()
+  const data = await getProductValidationSummary()
   return NextResponse.json({
     status: 'success',
     data,

@@ -1,9 +1,10 @@
+'use client'
 import {
   DROP_OFF_LABELS,
   LESSONS_HELP,
   LESSONS_LABEL,
-  SESSION_EVENTS_HELP,
-  SESSION_EVENTS_LABEL,
+  ACTIVITY_LABEL,
+  ACTIVITY_HELP,
 } from '@/features/admin-metrics/front/constants'
 import type { AdminMetricsUserRow } from '@/features/admin-metrics/types'
 
@@ -18,7 +19,7 @@ function learnerLine(row: AdminMetricsUserRow): string {
 function lessonsLine(row: AdminMetricsUserRow): string {
   const tasks = row.lessonTasksInPeriod ?? 0
   const completed = row.lessonsCompletedInPeriod ?? 0
-  return `${tasks} tasks · ${completed} completed`
+  return tasks === 0 ? '—' : `${tasks} tasks · ${completed} completed`
 }
 
 export interface AdminMetricsFamilyCardProps {
@@ -26,65 +27,50 @@ export interface AdminMetricsFamilyCardProps {
   formatLastActive: (iso?: string) => string
 }
 
+function MetricRow({ label, value, help }: { label: string; value: string | number; help?: string }) {
+  return (
+    <div className="flex items-baseline justify-between py-1 border-b border-slate-50 last:border-0">
+      <dt className="text-xs text-slate-500" title={help}>{label}</dt>
+      <dd className="text-sm font-medium text-slate-800 tabular-nums">{value}</dd>
+    </div>
+  )
+}
+
 export function AdminMetricsFamilyCard({ row, formatLastActive }: AdminMetricsFamilyCardProps) {
   const displayUser = row.userEmail ?? row.userName ?? row.userId
+  const isActive = row.isActiveInPeriod
 
   return (
     <article
-      className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm space-y-3"
+      className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden"
       data-testid={`admin-metrics-card-${row.workspaceId}`}
     >
-      <div>
-        <h3 className="font-semibold text-slate-900">{row.workspaceName}</h3>
-        <p className="text-sm text-slate-600">{displayUser}</p>
+      {/* Header band */}
+      <div className={`px-4 py-3 border-b ${isActive ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h3 className="font-semibold text-slate-900 leading-snug">{row.workspaceName}</h3>
+            <p className="text-xs text-slate-500 mt-0.5">{displayUser}</p>
+          </div>
+          <span className={`shrink-0 mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+            {isActive ? 'Active' : 'Inactive'}
+          </span>
+        </div>
+        <p className="text-xs text-slate-400 mt-1">Last activity: {formatLastActive(row.lastActiveAt)}</p>
       </div>
 
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-        <div>
-          <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">Active</dt>
-          <dd className="text-slate-800">{row.isActiveInPeriod ? 'Yes' : 'No'}</dd>
-        </div>
-        <div>
-          <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">Last active</dt>
-          <dd className="text-slate-800">{formatLastActive(row.lastActiveAt)}</dd>
-        </div>
-        <div className="col-span-2">
-          <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">Learners</dt>
-          <dd className="text-slate-800">{learnerLine(row)}</dd>
-        </div>
-        <div className="col-span-2">
-          <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide" title={LESSONS_HELP}>
-            {LESSONS_LABEL}
-          </dt>
-          <dd className="text-slate-800">{lessonsLine(row)}</dd>
-        </div>
-        <div>
-          <dt
-            className="text-xs font-medium text-slate-500 uppercase tracking-wide"
-            title={SESSION_EVENTS_HELP}
-          >
-            {SESSION_EVENTS_LABEL}
-          </dt>
-          <dd className="text-slate-800" title={SESSION_EVENTS_HELP}>
-            {row.sessionsLogged}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">Qur&apos;an</dt>
-          <dd className="text-slate-800">{row.quranRecordsCreated}</dd>
-        </div>
-        <div>
-          <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">Evidence</dt>
-          <dd className="text-slate-800">{row.evidenceItemsCreated}</dd>
-        </div>
-        <div>
-          <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">Reports</dt>
-          <dd className="text-slate-800">{row.reportsGenerated}</dd>
-        </div>
+      {/* Metric rows */}
+      <dl className="px-4 py-3 space-y-0">
+        <MetricRow label="Learners" value={learnerLine(row)} />
+        <MetricRow label={LESSONS_LABEL} value={lessonsLine(row)} help={LESSONS_HELP} />
+        <MetricRow label="Qur'an sessions" value={row.quranRecordsCreated} />
+        <MetricRow label="Portfolio evidence" value={row.evidenceItemsCreated} />
+        <MetricRow label={ACTIVITY_LABEL} value={row.sessionsLogged} help={ACTIVITY_HELP} />
       </dl>
 
+      {/* Drop-off signals */}
       {row.dropOffSignals.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 pt-1">
+        <div className="px-4 pb-3 flex flex-wrap gap-1.5">
           {row.dropOffSignals.map(signal => (
             <span
               key={signal}

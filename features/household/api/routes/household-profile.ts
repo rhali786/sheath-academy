@@ -1,67 +1,47 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, HouseholdProfile, DayOfWeek, DayLoadPreference, DateDisplayPreference } from '@/features/lib/types'
-import {
-  createHouseholdProfile,
-  getHouseholdProfile,
-  getWorkspace,
-  updateHouseholdProfile,
-} from '@/features/household/server/service'
 import { updateHouseholdName, updateHouseholdTimezone } from '@/features/household/server/repository'
-import { isPostgresMode } from '@/features/lib/server/db'
 import { getHouseholdContext } from '@/features/lib/server/tenant'
 import {
-  getHouseholdSetting,
   getAllHouseholdSettings,
   setHouseholdSetting,
 } from '@/features/settings/server/repository'
+import { getDb } from '@/features/lib/server/db'
+import { households } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 
 const DAYS_OF_WEEK: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const DAY_LOADS: DayLoadPreference[] = ['Off', 'Light', 'Normal', 'Heavy']
 const DATE_DISPLAYS: DateDisplayPreference[] = ['gregorian', 'gregorian-hijri-en', 'bilingual']
 
 export async function GET(): Promise<NextResponse<ApiResponse<HouseholdProfile | null>>> {
-  if (isPostgresMode()) {
-    try {
-      const { householdId } = await getHouseholdContext()
-      const { getHouseholdForUser } = await import('@/features/household/server/repository')
-      const { getDb } = await import('@/features/lib/server/db')
-      const { households } = await import('@/db/schema')
-      const { eq } = await import('drizzle-orm')
-      const db = getDb()
-      const rows = await db.select().from(households).where(eq(households.id, householdId)).limit(1)
-      if (!rows[0]) {
-        return NextResponse.json({ status: 'success', data: null, message: 'No household profile', timestamp: new Date().toISOString() })
-      }
-      const row = rows[0]
-      const settings = await getAllHouseholdSettings(householdId)
-      const profile: HouseholdProfile = {
-        id: row.id,
-        workspaceId: row.id,
-        familyName: row.name,
-        timezone: row.timezone ?? undefined,
-        weekStartDay: (settings['weekStartDay'] as DayOfWeek) ?? undefined,
-        schoolDays: (settings['schoolDays'] as DayOfWeek[]) ?? undefined,
-        dayLoad: (settings['dayLoad'] as Partial<Record<DayOfWeek, DayLoadPreference>>) ?? undefined,
-        reportingName: (settings['reportingName'] as string) ?? undefined,
-        dateDisplay: (settings['dateDisplay'] as DateDisplayPreference) ?? undefined,
-        jumuahLeaveWindow: (settings['jumuahLeaveWindow'] as string) ?? undefined,
-        jumuahReturnWindow: (settings['jumuahReturnWindow'] as string) ?? undefined,
-        createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
-      }
-      return NextResponse.json({ status: 'success', data: profile, message: 'Household profile retrieved', timestamp: new Date().toISOString() })
-    } catch {
+  try {
+    const { householdId } = await getHouseholdContext()
+    const db = getDb()
+    const rows = await db.select().from(households).where(eq(households.id, householdId)).limit(1)
+    if (!rows[0]) {
       return NextResponse.json({ status: 'success', data: null, message: 'No household profile', timestamp: new Date().toISOString() })
     }
+    const row = rows[0]
+    const settings = await getAllHouseholdSettings(householdId)
+    const profile: HouseholdProfile = {
+      id: row.id,
+      workspaceId: row.id,
+      familyName: row.name,
+      timezone: row.timezone ?? undefined,
+      weekStartDay: (settings['weekStartDay'] as DayOfWeek) ?? undefined,
+      schoolDays: (settings['schoolDays'] as DayOfWeek[]) ?? undefined,
+      dayLoad: (settings['dayLoad'] as Partial<Record<DayOfWeek, DayLoadPreference>>) ?? undefined,
+      reportingName: (settings['reportingName'] as string) ?? undefined,
+      dateDisplay: (settings['dateDisplay'] as DateDisplayPreference) ?? undefined,
+      jumuahLeaveWindow: (settings['jumuahLeaveWindow'] as string) ?? undefined,
+      jumuahReturnWindow: (settings['jumuahReturnWindow'] as string) ?? undefined,
+      createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
+    }
+    return NextResponse.json({ status: 'success', data: profile, message: 'Household profile retrieved', timestamp: new Date().toISOString() })
+  } catch {
+    return NextResponse.json({ status: 'success', data: null, message: 'No household profile', timestamp: new Date().toISOString() })
   }
-
-  // Memory path
-  const profile = getHouseholdProfile()
-  return NextResponse.json({
-    status: 'success',
-    data: profile,
-    message: 'Household profile retrieved',
-    timestamp: new Date().toISOString(),
-  })
 }
 
 export async function PUT(request: Request): Promise<NextResponse> {
@@ -74,20 +54,14 @@ export async function PUT(request: Request): Promise<NextResponse> {
 
   if (body?.weekStartDay !== undefined) {
     if (!DAYS_OF_WEEK.includes(body.weekStartDay)) {
-      return NextResponse.json(
-        { status: 'error', data: null, message: `weekStartDay must be one of: ${DAYS_OF_WEEK.join(', ')}`, timestamp: new Date().toISOString() },
-        { status: 400 }
-      )
+      return NextResponse.json({ status: 'error', data: null, message: `weekStartDay must be one of: ${DAYS_OF_WEEK.join(', ')}`, timestamp: new Date().toISOString() }, { status: 400 })
     }
     patch.weekStartDay = body.weekStartDay
   }
 
   if (body?.schoolDays !== undefined) {
     if (!Array.isArray(body.schoolDays) || body.schoolDays.some((d: unknown) => !DAYS_OF_WEEK.includes(d as DayOfWeek))) {
-      return NextResponse.json(
-        { status: 'error', data: null, message: 'schoolDays must be an array of valid day names', timestamp: new Date().toISOString() },
-        { status: 400 }
-      )
+      return NextResponse.json({ status: 'error', data: null, message: 'schoolDays must be an array of valid day names', timestamp: new Date().toISOString() }, { status: 400 })
     }
     patch.schoolDays = body.schoolDays
   }
@@ -96,10 +70,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
     const entries = Object.entries(body.dayLoad as Record<string, unknown>)
     for (const [day, load] of entries) {
       if (!DAYS_OF_WEEK.includes(day as DayOfWeek) || !DAY_LOADS.includes(load as DayLoadPreference)) {
-        return NextResponse.json(
-          { status: 'error', data: null, message: 'dayLoad contains invalid day or load value', timestamp: new Date().toISOString() },
-          { status: 400 }
-        )
+        return NextResponse.json({ status: 'error', data: null, message: 'dayLoad contains invalid day or load value', timestamp: new Date().toISOString() }, { status: 400 })
       }
     }
     patch.dayLoad = body.dayLoad
@@ -110,10 +81,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
 
   if (body?.dateDisplay !== undefined) {
     if (!DATE_DISPLAYS.includes(body.dateDisplay)) {
-      return NextResponse.json(
-        { status: 'error', data: null, message: `dateDisplay must be one of: ${DATE_DISPLAYS.join(', ')}`, timestamp: new Date().toISOString() },
-        { status: 400 }
-      )
+      return NextResponse.json({ status: 'error', data: null, message: `dateDisplay must be one of: ${DATE_DISPLAYS.join(', ')}`, timestamp: new Date().toISOString() }, { status: 400 })
     }
     patch.dateDisplay = body.dateDisplay
   }
@@ -122,69 +90,21 @@ export async function PUT(request: Request): Promise<NextResponse> {
   if (body?.jumuahReturnWindow !== undefined) patch.jumuahReturnWindow = String(body.jumuahReturnWindow).trim() || undefined
 
   if (Object.keys(patch).length === 0) {
-    return NextResponse.json(
-      { status: 'error', data: null, message: 'No valid fields provided for update', timestamp: new Date().toISOString() },
-      { status: 400 }
-    )
+    return NextResponse.json({ status: 'error', data: null, message: 'No valid fields provided for update', timestamp: new Date().toISOString() }, { status: 400 })
   }
 
-  if (isPostgresMode()) {
-    try {
-      const { householdId } = await getHouseholdContext()
-      if (patch.familyName) await updateHouseholdName(householdId, patch.familyName)
-      if (patch.timezone) await updateHouseholdTimezone(householdId, patch.timezone)
-      const settingsKeys = ['weekStartDay', 'schoolDays', 'dayLoad', 'reportingName', 'dateDisplay', 'jumuahLeaveWindow', 'jumuahReturnWindow'] as const
-      for (const key of settingsKeys) {
-        if (patch[key] !== undefined) {
-          await setHouseholdSetting(householdId, key, patch[key] as unknown)
-        }
+  try {
+    const { householdId } = await getHouseholdContext()
+    if (patch.familyName) await updateHouseholdName(householdId, patch.familyName)
+    if (patch.timezone) await updateHouseholdTimezone(householdId, patch.timezone)
+    const settingsKeys = ['weekStartDay', 'schoolDays', 'dayLoad', 'reportingName', 'dateDisplay', 'jumuahLeaveWindow', 'jumuahReturnWindow'] as const
+    for (const key of settingsKeys) {
+      if (patch[key] !== undefined) {
+        await setHouseholdSetting(householdId, key, patch[key] as unknown)
       }
-      // Re-read and return the updated profile
-      const updated = await GET()
-      return updated
-    } catch (e) {
-      return NextResponse.json(
-        { status: 'error', data: null, message: 'Failed to update household profile', timestamp: new Date().toISOString() },
-        { status: 500 }
-      )
     }
+    return await GET()
+  } catch {
+    return NextResponse.json({ status: 'error', data: null, message: 'Failed to update household profile', timestamp: new Date().toISOString() }, { status: 500 })
   }
-
-  // Memory path
-  let profile = getHouseholdProfile()
-  if (!profile) {
-    const workspace = getWorkspace()
-    if (!workspace) {
-      return NextResponse.json(
-        { status: 'error', data: null, message: 'No household profile found', timestamp: new Date().toISOString() },
-        { status: 404 }
-      )
-    }
-    profile = createHouseholdProfile(workspace.id, patch.familyName || 'My Household')
-    const remaining = { ...patch }
-    delete remaining.familyName
-    if (Object.keys(remaining).length > 0) {
-      profile = updateHouseholdProfile(remaining) ?? profile
-    }
-    return NextResponse.json({
-      status: 'success',
-      data: profile,
-      message: 'Household profile created',
-      timestamp: new Date().toISOString(),
-    })
-  }
-
-  const updated = updateHouseholdProfile(patch)
-  if (!updated) {
-    return NextResponse.json(
-      { status: 'error', data: null, message: 'No household profile found', timestamp: new Date().toISOString() },
-      { status: 404 }
-    )
-  }
-  return NextResponse.json({
-    status: 'success',
-    data: updated,
-    message: 'Household profile updated',
-    timestamp: new Date().toISOString(),
-  })
 }

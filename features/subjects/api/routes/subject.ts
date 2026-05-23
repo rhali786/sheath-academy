@@ -1,13 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { SubjectCourse, SubjectCourseCategory } from '@/features/subjects/types'
-import { getStudentProfile } from '@/features/children/server/service'
-import {
-  getSubject,
-  updateSubject,
-  archiveSubject,
-  restoreSubject,
-} from '@/features/subjects/server/service'
-import { archiveBySubjectId as archivePlannerBySubjectId } from '@/features/plan/server/service'
+import { getSubjectRow, updateSubjectRow, archiveSubjectRow } from '@/features/subjects/server/repository'
+import type { SubjectRow } from '@/features/subjects/server/repository'
+import { getHouseholdContext } from '@/features/lib/server/tenant'
 
 interface ApiResponse<T> {
   status: 'success' | 'error'
@@ -16,131 +11,52 @@ interface ApiResponse<T> {
   timestamp: string
 }
 
-export async function GET(id: string): Promise<NextResponse<ApiResponse<SubjectCourse | null>>> {
-  const subject = getSubject(id)
-
-  if (!subject) {
-    return NextResponse.json(
-      {
-        status: 'error',
-        data: null,
-        message: 'Subject not found',
-        timestamp: new Date().toISOString(),
-      },
-      { status: 404 }
-    )
+function rowToSubject(r: SubjectRow): SubjectCourse {
+  return {
+    id: r.id,
+    childId: r.learnerId ?? '',
+    learnerIds: r.learnerId ? [r.learnerId] : [],
+    name: r.name,
+    category: (r.category as SubjectCourseCategory) ?? 'core',
+    isActive: r.isActive,
+    order: r.sortOrder,
+    createdAt: r.createdAt?.toISOString() ?? new Date().toISOString(),
   }
+}
 
-  return NextResponse.json({
-    status: 'success',
-    data: subject,
-    message: 'Subject retrieved',
-    timestamp: new Date().toISOString(),
-  })
+export async function GET(id: string): Promise<NextResponse<ApiResponse<SubjectCourse | null>>> {
+  try {
+    const { householdId } = await getHouseholdContext()
+    const row = await getSubjectRow(id, householdId)
+    if (!row) return NextResponse.json({ status: 'error', data: null, message: 'Subject not found', timestamp: new Date().toISOString() }, { status: 404 })
+    return NextResponse.json({ status: 'success', data: rowToSubject(row), message: 'Subject retrieved', timestamp: new Date().toISOString() })
+  } catch { return NextResponse.json({ status: 'error', data: null, message: 'Subject not found', timestamp: new Date().toISOString() }, { status: 404 }) }
 }
 
 export async function PUT(id: string, request: Request): Promise<NextResponse> {
-  const subject = getSubject(id)
-  if (!subject) {
-    return NextResponse.json(
-      {
-        status: 'error',
-        data: null,
-        message: 'Subject not found',
-        timestamp: new Date().toISOString(),
-      },
-      { status: 404 }
-    )
-  }
-
   const body = await request.json()
-
-  if (body.childId !== undefined && typeof body.childId === 'string') {
-    if (!getStudentProfile(body.childId)) {
-      return NextResponse.json(
-        {
-          status: 'error',
-          data: null,
-          message: 'Child not found',
-          timestamp: new Date().toISOString(),
-        },
-        { status: 400 }
-      )
-    }
-  }
-
-  const updated = updateSubject(id, {
-    name: body.name !== undefined ? String(body.name).trim() : undefined,
-    category: body.category as SubjectCourseCategory | undefined,
-    order: body.order !== undefined ? Number(body.order) : undefined,
-    childId: typeof body.childId === 'string' ? body.childId : undefined,
-  })
-
-  if (!updated) {
-    return NextResponse.json(
-      {
-        status: 'error',
-        data: null,
-        message: 'Subject not found',
-        timestamp: new Date().toISOString(),
-      },
-      { status: 404 }
-    )
-  }
-
-  return NextResponse.json({
-    status: 'success',
-    data: updated,
-    message: 'Subject updated',
-    timestamp: new Date().toISOString(),
-  })
+  try {
+    const { householdId } = await getHouseholdContext()
+    const updated = await updateSubjectRow(id, householdId, {
+      name: body.name !== undefined ? String(body.name).trim() : undefined,
+      category: body.category as SubjectCourseCategory | undefined,
+      sortOrder: body.order !== undefined ? Number(body.order) : undefined,
+    })
+    if (!updated) return NextResponse.json({ status: 'error', data: null, message: 'Subject not found', timestamp: new Date().toISOString() }, { status: 404 })
+    return NextResponse.json({ status: 'success', data: rowToSubject(updated), message: 'Subject updated', timestamp: new Date().toISOString() })
+  } catch { return NextResponse.json({ status: 'error', data: null, message: 'Subject not found', timestamp: new Date().toISOString() }, { status: 404 }) }
 }
 
 export async function ARCHIVE(id: string): Promise<NextResponse> {
-  const subject = getSubject(id)
-  if (!subject) {
-    return NextResponse.json(
-      {
-        status: 'error',
-        data: null,
-        message: 'Subject not found',
-        timestamp: new Date().toISOString(),
-      },
-      { status: 404 }
-    )
-  }
-
-  const archived = archiveSubject(id)
-  archivePlannerBySubjectId(id)
-
-  return NextResponse.json({
-    status: 'success',
-    data: archived,
-    message: 'Subject archived',
-    timestamp: new Date().toISOString(),
-  })
+  try {
+    const { householdId } = await getHouseholdContext()
+    const archived = await archiveSubjectRow(id, householdId)
+    if (!archived) return NextResponse.json({ status: 'error', data: null, message: 'Subject not found', timestamp: new Date().toISOString() }, { status: 404 })
+    return NextResponse.json({ status: 'success', data: rowToSubject(archived), message: 'Subject archived', timestamp: new Date().toISOString() })
+  } catch { return NextResponse.json({ status: 'error', data: null, message: 'Subject not found', timestamp: new Date().toISOString() }, { status: 404 }) }
 }
 
-export async function RESTORE(id: string): Promise<NextResponse> {
-  const subject = getSubject(id)
-  if (!subject) {
-    return NextResponse.json(
-      {
-        status: 'error',
-        data: null,
-        message: 'Subject not found',
-        timestamp: new Date().toISOString(),
-      },
-      { status: 404 }
-    )
-  }
-
-  const restored = restoreSubject(id)
-
-  return NextResponse.json({
-    status: 'success',
-    data: restored,
-    message: 'Subject restored',
-    timestamp: new Date().toISOString(),
-  })
+export async function RESTORE(_id: string): Promise<NextResponse> {
+  // Restore not yet supported in Postgres repository — pending migration
+  return NextResponse.json({ status: 'error', data: null, message: 'Restore not yet implemented', timestamp: new Date().toISOString() }, { status: 501 })
 }

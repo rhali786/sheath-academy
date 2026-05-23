@@ -1,97 +1,49 @@
-import { LessonTask } from '../types'
-import { lessonsStore } from './store'
-import { SEED_LESSONS } from './seed'
-import { generateLessonTaskId, resetIdCounter } from './ids'
-import { getStudentProfile, getStudentProfiles } from '@/features/children/server/service'
-import { getSubject } from '@/features/subjects/server/service'
-import { isPostgresMode } from '@/features/lib/server/db'
+import type { LessonTask } from '../types'
+import { and, gte, lte, sql } from 'drizzle-orm'
+import { getDb } from '@/features/lib/server/db'
+import { lessonTasks } from '@/db/schema'
 import { listLessonTaskRows } from './repository'
+
+export interface AdminLessonCount {
+  householdId: string
+  count: number
+  completedCount: number
+  lastDueDate: string | null
+}
+
+/** Cross-household aggregate for admin metrics. Uses lesson_tasks_due_household_idx. */
+export async function getAdminLessonCounts(
+  periodStart: string,
+  periodEnd: string,
+): Promise<AdminLessonCount[]> {
+  const db = getDb()
+  const rows = await db
+    .select({
+      householdId: lessonTasks.householdId,
+      count: sql<number>`count(*)::int`,
+      completedCount: sql<number>`count(*) filter (where ${lessonTasks.status} = 'completed')::int`,
+      lastDueDate: sql<string | null>`max(${lessonTasks.dueDate})`,
+    })
+    .from(lessonTasks)
+    .where(and(gte(lessonTasks.dueDate, periodStart), lte(lessonTasks.dueDate, periodEnd)))
+    .groupBy(lessonTasks.householdId)
+  return rows
+}
+
+// Stub — callers (alerts, records, schedule, setup) are pending Postgres migration.
+export function getLessons(_childId?: string, _subjectId?: string): LessonTask[] { return [] }
+export function getLessonTask(_id: string): LessonTask | undefined { return undefined }
+export function createLessonTask(_data: unknown): LessonTask | null { return null }
+export function updateLessonTask(_id: string, _patch: unknown): LessonTask | null { return null }
+export function completeLessonTask(_id: string, _status?: string): LessonTask | null { return null }
+export function deleteLessonTask(_id: string): boolean { return false }
+export function archiveByChildId(_childId: string): void {}
+export function archiveBySubjectId(_subjectId: string): void {}
+export function resetStore(): void {}
 
 export type LessonTaskPeriodCounts = {
   lessonTasksInPeriod: number
   lessonsCompletedInPeriod: number
-}
-
-function dueDateInPeriod(dueDate: string, periodStart: string, periodEnd: string): boolean {
-  return dueDate >= periodStart && dueDate <= periodEnd
-}
-
-export function getLessons(childId?: string, subjectId?: string): LessonTask[] {
-  let lessons = lessonsStore.getAll()
-
-  if (childId) {
-    lessons = lessons.filter(l => l.childId === childId)
-  }
-
-  if (subjectId) {
-    lessons = lessons.filter(l => l.subjectId === subjectId)
-  }
-
-  return lessons
-}
-
-export function getLessonTask(id: string): LessonTask | undefined {
-  return lessonsStore.getById(id)
-}
-
-export function createLessonTask(
-  data: Omit<LessonTask, 'id' | 'createdAt' | 'updatedAt'>
-): LessonTask | null {
-  const student = getStudentProfile(data.childId)
-  if (!student) return null
-
-  const subject = getSubject(data.subjectId)
-  if (!subject) return null
-
-  const lesson: LessonTask = {
-    ...data,
-    status: data.status ?? 'not_started',
-    id: generateLessonTaskId(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
-
-  return lessonsStore.insert(lesson)
-}
-
-export function updateLessonTask(id: string, patch: Partial<LessonTask>): LessonTask | null {
-  const lesson = lessonsStore.getById(id)
-  if (!lesson) return null
-
-  const allowedPatch: Partial<LessonTask> = {}
-  if (patch.title !== undefined) allowedPatch.title = patch.title
-  if (patch.description !== undefined) allowedPatch.description = patch.description
-  if (patch.resourceLink !== undefined) allowedPatch.resourceLink = patch.resourceLink
-  if (patch.dueDate !== undefined) allowedPatch.dueDate = patch.dueDate
-  if (patch.status !== undefined) allowedPatch.status = patch.status
-  if (patch.order !== undefined) allowedPatch.order = patch.order
-  if (patch.estimatedDuration !== undefined) allowedPatch.estimatedDuration = patch.estimatedDuration
-  if (patch.lessonType !== undefined) allowedPatch.lessonType = patch.lessonType
-  allowedPatch.updatedAt = new Date().toISOString()
-
-  return lessonsStore.update(id, allowedPatch)
-}
-
-export function completeLessonTask(id: string, status: 'completed' | 'skipped' = 'completed'): LessonTask | null {
-  const lesson = lessonsStore.getById(id)
-  if (!lesson) return null
-
-  return lessonsStore.update(id, { status, updatedAt: new Date().toISOString() })
-}
-
-export function deleteLessonTask(id: string): boolean {
-  const lesson = lessonsStore.getById(id)
-  if (!lesson) return false
-  return lessonsStore.remove(id)
-}
-
-// Lesson history is preserved for reporting; no isActive field on LessonTask.
-export function archiveByChildId(_childId: string): void {}
-export function archiveBySubjectId(_subjectId: string): void {}
-
-export function resetStore(seed?: LessonTask[]): void {
-  lessonsStore.reset(seed ?? SEED_LESSONS)
-  resetIdCounter()
 }
 
 export async function getLessonTaskPeriodCounts(
@@ -99,23 +51,12 @@ export async function getLessonTaskPeriodCounts(
   periodStart: string,
   periodEnd: string,
 ): Promise<LessonTaskPeriodCounts> {
-  if (isPostgresMode()) {
-    const rows = await listLessonTaskRows(householdId, {
-      startDate: periodStart,
-      endDate: periodEnd,
-    })
-    return {
-      lessonTasksInPeriod: rows.length,
-      lessonsCompletedInPeriod: rows.filter(r => r.status === 'completed').length,
-    }
-  }
-
-  const childIds = new Set(getStudentProfiles(householdId).map(p => p.id))
-  const inPeriod = getLessons().filter(
-    l => childIds.has(l.childId) && dueDateInPeriod(l.dueDate, periodStart, periodEnd),
-  )
+  const rows = await listLessonTaskRows(householdId, {
+    startDate: periodStart,
+    endDate: periodEnd,
+  })
   return {
-    lessonTasksInPeriod: inPeriod.length,
-    lessonsCompletedInPeriod: inPeriod.filter(l => l.status === 'completed').length,
+    lessonTasksInPeriod: rows.length,
+    lessonsCompletedInPeriod: rows.filter(r => r.status === 'completed').length,
   }
 }

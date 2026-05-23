@@ -1,14 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { isPostgresMode } from '@/features/lib/server/db'
 import { resolveTenant } from '@/features/lib/server/tenant'
-import { getHouseholdForUser } from '@/features/household/server/repository'
-import { getHouseholdProfile } from '@/features/household/server/service'
-import { getStudentProfile } from '@/features/children/server/service'
-import { getLessonTask } from '@/features/plan/server/service'
-import { getRecord } from '@/features/attendance/server/service'
-import { quranSessionsStore } from '@/features/quran/server/store'
-import { getEvidenceItemById } from '@/features/portfolio/server/service'
 import { NotFoundError, isNotFoundError } from './errors'
 
 export interface AuthCtx {
@@ -86,20 +78,11 @@ export async function getAuthCtx(_request?: NextRequest): Promise<AuthCtx | null
     return null
   }
 
-  if (isPostgresMode()) {
-    try {
-      const tenant = await resolveTenant(session)
-      return { userId: tenant.userId, householdId: tenant.householdId, timezone: tenant.timezone }
-    } catch {
-      return null
-    }
-  }
-
-  const userId = session.user.id ?? session.user.email ?? ''
-  const profile = getHouseholdProfile()
-  return {
-    userId,
-    householdId: profile?.id ?? '',
+  try {
+    const tenant = await resolveTenant(session)
+    return { userId: tenant.userId, householdId: tenant.householdId, timezone: tenant.timezone }
+  } catch {
+    return null
   }
 }
 
@@ -125,13 +108,7 @@ export async function assertOwnership(
   if (!entityId?.trim()) {
     throw new NotFoundError()
   }
-
-  if (isPostgresMode()) {
-    await assertPostgresOwnership(authCtx, entityType, entityId)
-    return
-  }
-
-  assertMemoryOwnership(authCtx, entityType, entityId)
+  await assertPostgresOwnership(authCtx, entityType, entityId)
 }
 
 async function assertPostgresOwnership(
@@ -179,49 +156,6 @@ async function assertPostgresOwnership(
   }
 }
 
-function assertMemoryOwnership(
-  authCtx: AuthCtx,
-  entityType: OwnershipEntityType,
-  entityId: string,
-): void {
-  const { householdId } = authCtx
-
-  switch (entityType) {
-    case 'learner': {
-      const profile = getStudentProfile(entityId)
-      if (!profile || profile.householdId !== householdId) throw new NotFoundError()
-      return
-    }
-    case 'lesson': {
-      const lesson = getLessonTask(entityId)
-      if (!lesson || lesson.householdId !== householdId) throw new NotFoundError()
-      return
-    }
-    case 'attendance': {
-      const record = getRecord(entityId)
-      if (!record || record.householdId !== householdId) throw new NotFoundError()
-      return
-    }
-    case 'session': {
-      const session = quranSessionsStore.getById(entityId)
-      if (!session) throw new NotFoundError()
-      const child = getStudentProfile(session.childId)
-      if (!child || child.householdId !== householdId) throw new NotFoundError()
-      return
-    }
-    case 'evidence': {
-      const item = getEvidenceItemById(entityId)
-      if (!item) throw new NotFoundError()
-      const child = getStudentProfile(item.childId)
-      if (!child || child.householdId !== householdId) throw new NotFoundError()
-      return
-    }
-    case 'alert':
-      throw new NotFoundError()
-    default:
-      throw new NotFoundError()
-  }
-}
 
 /** For tests: user with household but no row yet (setup_required path). */
 export async function getAuthCtxWithoutHousehold(): Promise<AuthCtx | null> {
@@ -229,10 +163,7 @@ export async function getAuthCtxWithoutHousehold(): Promise<AuthCtx | null> {
   const session = await auth()
   if (!session?.user?.id) return null
 
-  if (isPostgresMode()) {
-    const household = await getHouseholdForUser(session.user.id)
-    return { userId: session.user.id, householdId: household?.id ?? '' }
-  }
-
-  return { userId: session.user.id, householdId: '' }
+  const { getHouseholdForUser } = await import('@/features/household/server/repository')
+  const household = await getHouseholdForUser(session.user.id)
+  return { userId: session.user.id, householdId: household?.id ?? '' }
 }

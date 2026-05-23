@@ -1,21 +1,7 @@
-import { isPostgresMode } from '@/features/lib/server/db'
+// Stub — usage_events table being removed in Wave 3.
+// Instrumentation calls are preserved in routes but events are no-ops until Wave 3 rewrites admin metrics.
 import type { TrackUsageEventInput, UsageEvent } from '@/features/admin-metrics/types'
-import { insertUsageEvent } from './repository'
-import { insertMemoryUsageEvent } from './store'
 
-/** Records a Fork Test usage event. Swallows errors so instrumentation never breaks routes. */
-export async function trackUsageEvent(input: TrackUsageEventInput): Promise<UsageEvent | null> {
-  try {
-    if (isPostgresMode()) {
-      return await insertUsageEvent(input)
-    }
-    const now = (input.occurredAt ?? new Date()).toISOString()
-    return insertMemoryUsageEvent({
-      id: `usage_mem_${Date.now()}`,
-      ...input,
-      occurredAt: now,
-    })
-  } catch {
-    return null
-  }
+export async function trackUsageEvent(_input: TrackUsageEventInput): Promise<UsageEvent | null> {
+  return null
 }

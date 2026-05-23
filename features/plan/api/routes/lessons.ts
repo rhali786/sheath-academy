@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { LessonTask } from '@/features/plan/types'
-import { getLessons, createLessonTask } from '@/features/plan/server/service'
 import { listLessonTaskRows, createLessonTaskRow } from '@/features/plan/server/repository'
 import type { LessonTaskRow } from '@/features/plan/server/repository'
-import { isPostgresMode } from '@/features/lib/server/db'
 import { guardOwnership, assertSessionOwnership, sessionAuthCtx } from '@/features/auth/server/routeOwnership'
 import { getHouseholdContext } from '@/features/lib/server/tenant'
-import { notFoundResponse } from '@/features/auth/server/context'
 
 function rowToLesson(r: LessonTaskRow): LessonTask {
   return {
@@ -56,28 +53,19 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Le
   const childIdArray = childIds ? childIds.split(',').filter(Boolean) : undefined
   const subjectIdArray = subjectIds ? subjectIds.split(',').filter(Boolean) : undefined
 
-  if (isPostgresMode()) {
-    try {
-      const { householdId } = await getHouseholdContext()
-      const filters: Parameters<typeof listLessonTaskRows>[1] = {}
-      if (childIdArray?.length === 1) filters.learnerId = childIdArray[0]
-      if (subjectIdArray?.length === 1) filters.subjectId = subjectIdArray[0]
-      if (weekRange) { filters.startDate = weekRange.start; filters.endDate = weekRange.end }
-      let rows = await listLessonTaskRows(householdId, filters)
-      if (childIdArray && childIdArray.length > 1) rows = rows.filter(r => childIdArray.includes(r.learnerId))
-      if (subjectIdArray && subjectIdArray.length > 1) rows = rows.filter(r => r.subjectId && subjectIdArray.includes(r.subjectId))
-      return NextResponse.json({ status: 'success', data: rows.map(rowToLesson), message: 'Lessons retrieved', timestamp: new Date().toISOString() })
-    } catch {
-      return NextResponse.json({ status: 'success', data: [], message: 'Lessons retrieved', timestamp: new Date().toISOString() })
-    }
+  try {
+    const { householdId } = await getHouseholdContext()
+    const filters: Parameters<typeof listLessonTaskRows>[1] = {}
+    if (childIdArray?.length === 1) filters.learnerId = childIdArray[0]
+    if (subjectIdArray?.length === 1) filters.subjectId = subjectIdArray[0]
+    if (weekRange) { filters.startDate = weekRange.start; filters.endDate = weekRange.end }
+    let rows = await listLessonTaskRows(householdId, filters)
+    if (childIdArray && childIdArray.length > 1) rows = rows.filter(r => childIdArray.includes(r.learnerId))
+    if (subjectIdArray && subjectIdArray.length > 1) rows = rows.filter(r => r.subjectId && subjectIdArray.includes(r.subjectId))
+    return NextResponse.json({ status: 'success', data: rows.map(rowToLesson), message: 'Lessons retrieved', timestamp: new Date().toISOString() })
+  } catch {
+    return NextResponse.json({ status: 'success', data: [], message: 'Lessons retrieved', timestamp: new Date().toISOString() })
   }
-
-  const { householdId } = await sessionAuthCtx()
-  let lessons = getLessons().filter(l => l.householdId === householdId)
-  if (weekRange) lessons = lessons.filter(l => l.dueDate >= weekRange!.start && l.dueDate <= weekRange!.end)
-  if (childIdArray && childIdArray.length > 0) lessons = lessons.filter(l => childIdArray.includes(l.childId))
-  if (subjectIdArray && subjectIdArray.length > 0) lessons = lessons.filter(l => subjectIdArray.includes(l.subjectId))
-  return NextResponse.json({ status: 'success', data: lessons, message: 'Lessons retrieved', timestamp: new Date().toISOString() })
 }
 
 export async function POST(request: Request): Promise<NextResponse<ApiResponse<LessonTask | null>>> {
@@ -88,53 +76,22 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<L
     return NextResponse.json({ status: 'error', data: null, message: 'childId, title, and dueDate are required', timestamp: new Date().toISOString() }, { status: 400 })
   }
 
-  if (isPostgresMode()) {
-    return guardOwnership(async () => {
-      await assertSessionOwnership('learner', childId)
-      const { householdId } = await sessionAuthCtx()
-      const row = await createLessonTaskRow(householdId, {
-        learnerId: childId,
-        subjectId,
-        title: title.trim(),
-        description: description?.trim(),
-        dueDate,
-        status: body.status ?? 'not_started',
-        sortOrder: body.order || 0,
-      })
-      const ctx = await sessionAuthCtx()
-      const { trackSessionStarted } = await import('@/features/admin-metrics/server/instrument')
-      void trackSessionStarted(ctx.userId, ctx.householdId, childId, row.id, 'planner')
-      return NextResponse.json(
-        { status: 'success', data: rowToLesson(row), message: 'Lesson created', timestamp: new Date().toISOString() },
-        { status: 201 },
-      )
-    }) as Promise<NextResponse<ApiResponse<LessonTask | null>>>
-  }
-
   return guardOwnership(async () => {
-    if (!subjectId) {
-      return NextResponse.json(
-        { status: 'error', data: null, message: 'childId, subjectId, title, and dueDate are required', timestamp: new Date().toISOString() },
-        { status: 400 },
-      )
-    }
     await assertSessionOwnership('learner', childId)
-    const { householdId } = await sessionAuthCtx()
-    const lesson = createLessonTask({
-      childId,
+    const { householdId, userId } = await sessionAuthCtx()
+    const row = await createLessonTaskRow(householdId, {
+      learnerId: childId,
       subjectId,
-      householdId,
       title: title.trim(),
-      description: description?.trim() || undefined,
+      description: description?.trim(),
       dueDate,
       status: body.status ?? 'not_started',
-      order: body.order || 0,
-      estimatedDuration: body.estimatedDuration,
-      lessonType: body.lessonType,
+      sortOrder: body.order || 0,
     })
-    if (!lesson) return notFoundResponse('Invalid childId or subjectId')
+    const { trackSessionStarted } = await import('@/features/admin-metrics/server/instrument')
+    void trackSessionStarted(userId, householdId, childId, row.id, 'planner')
     return NextResponse.json(
-      { status: 'success', data: lesson, message: 'Lesson created', timestamp: new Date().toISOString() },
+      { status: 'success', data: rowToLesson(row), message: 'Lesson created', timestamp: new Date().toISOString() },
       { status: 201 },
     )
   }) as Promise<NextResponse<ApiResponse<LessonTask | null>>>

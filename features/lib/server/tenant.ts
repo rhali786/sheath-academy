@@ -1,7 +1,5 @@
 import { upsertUserByEmail, upsertHouseholdForUser } from '@/features/household/server/repository'
-import { getHouseholdProfile } from '@/features/household/server/service'
 import { getDevSeedUserEmail } from '@/features/lib/server/devUserEmail'
-import { isPostgresMode } from '@/features/lib/server/db'
 
 export interface TenantContext {
   userId: string
@@ -51,19 +49,5 @@ export async function getHouseholdContext(): Promise<TenantContext> {
   if (!session?.user?.email) {
     throw new Error('Unauthenticated — no session email')
   }
-
-  if (isPostgresMode()) {
-    return resolveTenant(session)
-  }
-
-  const profile = getHouseholdProfile()
-  if (!profile) {
-    throw new Error('No household profile for session')
-  }
-
-  return {
-    userId: session.user.id ?? session.user.email ?? '',
-    householdId: profile.id,
-    timezone: 'America/New_York',
-  }
+  return resolveTenant(session)
 }

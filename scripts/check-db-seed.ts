@@ -99,7 +99,7 @@ async function main() {
       )
     } else {
       console.log(
-        'NOT SEEDED: database is empty — no users, no demo data. Run db:migrate then db:seed:dev if you want demo rows.',
+        'NOT SEEDED: database is empty — no users, no demo data. Run db:migrate then db:seed:demo if you want demo rows.',
       )
     }
   } finally {

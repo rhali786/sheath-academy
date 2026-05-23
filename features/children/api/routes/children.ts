@@ -1,11 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, StudentProfile } from '@/features/lib/types'
-import { getStudentProfiles, createStudentProfile } from '@/features/children/server/service'
-import { listLearners, createLearner } from '@/features/children/server/repository'
-import { isPostgresMode } from '@/features/lib/server/db'
-import { sessionAuthCtx } from '@/features/auth/server/routeOwnership'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
+import { listLearners, listAllLearners, createLearner } from '@/features/children/server/repository'
 import type { LearnerRow } from '@/features/children/server/repository'
+import { getHouseholdContext } from '@/features/lib/server/tenant'
 
 function learnerRowToStudentProfile(row: LearnerRow): StudentProfile {
   return {
@@ -25,82 +22,38 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<St
   const url = new URL(request.url)
   const includeArchived = url.searchParams.get('includeArchived') === 'true'
 
-  if (isPostgresMode()) {
-    try {
-      const { householdId } = await getHouseholdContext()
-      const { listAllLearners } = await import('@/features/children/server/repository')
-      const rows = includeArchived
-        ? await listAllLearners(householdId)
-        : await listLearners(householdId)
-      const profiles = rows.map(learnerRowToStudentProfile)
-      return NextResponse.json({ status: 'success', data: profiles, message: 'Student profiles retrieved', timestamp: new Date().toISOString() })
-    } catch {
-      return NextResponse.json({ status: 'success', data: [], message: 'Student profiles retrieved', timestamp: new Date().toISOString() })
-    }
+  try {
+    const { householdId } = await getHouseholdContext()
+    const rows = includeArchived ? await listAllLearners(householdId) : await listLearners(householdId)
+    return NextResponse.json({ status: 'success', data: rows.map(learnerRowToStudentProfile), message: 'Student profiles retrieved', timestamp: new Date().toISOString() })
+  } catch {
+    return NextResponse.json({ status: 'success', data: [], message: 'Student profiles retrieved', timestamp: new Date().toISOString() })
   }
-
-  // Memory path — scope to session household; ignore query householdId
-  const { householdId } = await sessionAuthCtx()
-  let profiles = getStudentProfiles(householdId)
-  if (!includeArchived) profiles = profiles.filter(p => p.isActive)
-  return NextResponse.json({
-    status: 'success',
-    data: profiles,
-    message: 'Student profiles retrieved',
-    timestamp: new Date().toISOString(),
-  })
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
   const body = await request.json()
 
-  if (isPostgresMode()) {
-    try {
-      const { householdId } = await getHouseholdContext()
-      const { name, gradeLabel } = body
-      if (!name?.trim()) {
-        return NextResponse.json(
-          { status: 'error', data: null, message: 'name is required', timestamp: new Date().toISOString() },
-          { status: 400 }
-        )
-      }
-      const row = await createLearner(householdId, { name: name.trim(), gradeLevel: gradeLabel?.trim() })
-      const { userId } = await getHouseholdContext()
-      const { trackLearnerCreated } = await import('@/features/admin-metrics/server/instrument')
-      void trackLearnerCreated(userId, householdId, row.id)
+  try {
+    const { householdId, userId } = await getHouseholdContext()
+    const { name, gradeLabel } = body
+    if (!name?.trim()) {
       return NextResponse.json(
-        { status: 'success', data: learnerRowToStudentProfile(row), message: 'Student profile created', timestamp: new Date().toISOString() },
-        { status: 201 }
-      )
-    } catch (e) {
-      return NextResponse.json(
-        { status: 'error', data: null, message: 'Failed to create student profile', timestamp: new Date().toISOString() },
-        { status: 500 }
+        { status: 'error', data: null, message: 'name is required', timestamp: new Date().toISOString() },
+        { status: 400 },
       )
     }
-  }
-
-  // Memory path — server-derived householdId only
-  const { householdId } = await sessionAuthCtx()
-  const { name, gradeLabel, username, password } = body
-  if (!name?.trim() || !gradeLabel?.trim() || !username?.trim() || !password) {
+    const row = await createLearner(householdId, { name: name.trim(), gradeLevel: gradeLabel?.trim() })
+    const { trackLearnerCreated } = await import('@/features/admin-metrics/server/instrument')
+    void trackLearnerCreated(userId, householdId, row.id)
     return NextResponse.json(
-      { status: 'error', data: null, message: 'name, gradeLabel, username, and password are required', timestamp: new Date().toISOString() },
-      { status: 400 }
+      { status: 'success', data: learnerRowToStudentProfile(row), message: 'Student profile created', timestamp: new Date().toISOString() },
+      { status: 201 },
+    )
+  } catch {
+    return NextResponse.json(
+      { status: 'error', data: null, message: 'Failed to create student profile', timestamp: new Date().toISOString() },
+      { status: 500 },
     )
   }
-  const profile = createStudentProfile({
-    householdId,
-    name: name.trim(),
-    gradeLabel: gradeLabel.trim(),
-    dob: body.dob || undefined,
-    teacherName: body.teacherName?.trim() || undefined,
-    username: username.trim(),
-    password: password.trim(),
-    avatarInitials: body.avatarInitials,
-  })
-  return NextResponse.json(
-    { status: 'success', data: profile, message: 'Student profile created', timestamp: new Date().toISOString() },
-    { status: 201 }
-  )
 }
