@@ -152,29 +152,6 @@ export function getDemoHouseholdConfigs(devEmail: string, aminaEmail: string): H
             { id: DEMO_B_PG_SEED.subMaryamReading, name: 'Reading', category: 'core' },
           ],
         },
-        {
-          id: DEMO_B_PG_SEED.yusuf,
-          key: 'yusuf',
-          name: 'Yusuf',
-          gradeLevel: 'Grade 2',
-          sortOrder: 3,
-          subjects: [
-            { id: DEMO_B_PG_SEED.subYusufMath, name: 'Mathematics', category: 'core' },
-            { id: DEMO_B_PG_SEED.subYusufQuran, name: 'Quran', category: 'quran' },
-          ],
-        },
-        {
-          id: DEMO_B_PG_SEED.bilal,
-          key: 'bilal',
-          name: 'Bilal',
-          gradeLevel: 'Grade 1',
-          sortOrder: 4,
-          subjects: [
-            { id: DEMO_B_PG_SEED.subBilalMath, name: 'Mathematics', category: 'core' },
-            { id: DEMO_B_PG_SEED.subBilalReading, name: 'Reading', category: 'core' },
-            { id: DEMO_B_PG_SEED.subBilalQuran, name: 'Quran', category: 'quran' },
-          ],
-        },
       ],
     },
   ]

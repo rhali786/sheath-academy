@@ -12,7 +12,7 @@
 
 import { getDevSeedUserEmail } from '../features/lib/server/devUserEmail'
 import { getDemoHouseholdConfigs } from './seed/demoConfig'
-import { buildDemoSeedPayload, summarizePayload } from './seed/buildPayload'
+import { buildDemoSeedPayload, summarizePayload, seedHistoryEndDate } from './seed/buildPayload'
 import { loadDemoSeedPayload } from './seed/loadPayload'
 
 async function main() {
@@ -29,6 +29,9 @@ async function main() {
   console.log(`  Household A: ${devEmail} (Barakah Academy)`)
   console.log(`  Household B: ${aminaEmail} (Crescent Cove Learning)`)
   console.log('  Building payload in memory…')
+
+  const endDate = seedHistoryEndDate()
+  console.log(`  History end date (includes today): ${endDate}`)
 
   const payload = buildDemoSeedPayload(configs)
   const counts = summarizePayload(payload)

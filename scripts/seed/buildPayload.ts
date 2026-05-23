@@ -13,11 +13,9 @@ import {
   productValidationResponses,
 } from '../../db/schema'
 import type { HouseholdSeedConfig, LearnerConfig } from './demoConfig'
+import { getHouseholdProfile, type HouseholdActivityProfile, type LearnerActivityProfile } from './householdProfiles'
 
 export const HISTORY_DAYS = 150
-
-/** Fixed anchor so demo history is identical regardless of seed run date. */
-export const SEED_HISTORY_END_DATE = '2026-05-22'
 
 const TASK_TITLES: Record<string, string[]> = {
   Mathematics: ['Complete worksheet 1–5', 'Review multiplication tables', 'Practice fractions', 'Word problems set A', 'Mental math drills'],
@@ -48,72 +46,165 @@ export type DemoSeedPayload = {
   productValidationResponses: (typeof productValidationResponses.$inferInsert)[]
 }
 
-function daysBeforeAnchor(n: number): string {
-  const d = new Date(`${SEED_HISTORY_END_DATE}T12:00:00Z`)
-  d.setUTCDate(d.getUTCDate() - n)
+/** UTC calendar date for today — history ends here (offset 0). */
+export function seedHistoryEndDate(reference = new Date()): string {
+  const y = reference.getUTCFullYear()
+  const m = String(reference.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(reference.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+export function daysBeforeEnd(endDate: string, daysAgo: number): string {
+  const d = new Date(`${endDate}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - daysAgo)
   return d.toISOString().split('T')[0]
 }
 
+function dayOfWeek(dateStr: string): number {
+  return new Date(`${dateStr}T12:00:00Z`).getUTCDay()
+}
+
+function isWeekend(dateStr: string): boolean {
+  const dow = dayOfWeek(dateStr)
+  return dow === 0 || dow === 6
+}
+
 function isWeekday(dateStr: string): boolean {
-  const day = new Date(`${dateStr}T12:00:00Z`).getUTCDay()
-  return day >= 1 && day <= 5
+  return !isWeekend(dateStr)
+}
+
+function stableHash(...parts: (string | number)[]): number {
+  const s = parts.join(':')
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0
+  return Math.abs(h)
+}
+
+function pickAttendanceStatus(
+  hhKey: string,
+  learnerKey: string,
+  offset: number,
+  profile: LearnerActivityProfile,
+): string | null {
+  const roll = stableHash(hhKey, learnerKey, offset, profile.attendancePhase) % 100
+  if (roll >= profile.attendanceRate * 100) return null
+
+  const variant = stableHash('att', hhKey, learnerKey, offset) % 100
+  if (variant < 4) return 'sick'
+  if (variant < 8) return 'excused'
+  if (variant < 14) return 'absent'
+  if (variant < 22) return 'partial'
+  return 'present'
+}
+
+function attendanceMinutes(status: string): number | null {
+  if (status === 'present') return 360
+  if (status === 'partial') return 300
+  if (status === 'sick') return 180
+  return null
+}
+
+function shouldSchoolDay(
+  dateStr: string,
+  offset: number,
+  learner: LearnerActivityProfile,
+  todayMarked: boolean,
+): boolean {
+  if (todayMarked && offset === 0) return true
+  if (isWeekday(dateStr)) return true
+  return learner.weekendWork && isWeekend(dateStr)
+}
+
+function shouldCreateLesson(
+  offset: number,
+  learner: LearnerActivityProfile,
+  slot: number,
+): boolean {
+  const every = slot === 0 ? learner.lessonEveryDays : learner.extraLessonEveryDays
+  if (every <= 0) return false
+  const phase = learner.lessonPhase + slot * 2
+  return (offset + phase) % every === 0
+}
+
+function lessonStatus(
+  offset: number,
+  learner: LearnerActivityProfile,
+  hhKey: string,
+  learnerKey: string,
+  slot: number,
+): 'completed' | 'not_started' {
+  if (offset <= 2) {
+    const backlog = stableHash('backlog', hhKey, learnerKey, offset, slot) % 100
+    return backlog < 45 ? 'not_started' : 'completed'
+  }
+  if (offset <= 7) {
+    const recent = stableHash('recent', hhKey, learnerKey, offset, slot) % 100
+    if (recent < 25) return 'not_started'
+  }
+  const roll = stableHash('done', hhKey, learnerKey, offset, slot) % 100
+  return roll < learner.completionRate * 100 ? 'completed' : 'not_started'
 }
 
 function buildHistoryRows(
-  hhKey: string,
-  householdId: string,
-  learnersList: LearnerConfig[],
+  cfg: HouseholdSeedConfig,
+  profile: HouseholdActivityProfile,
+  endDate: string,
   seedNow: Date,
 ): Pick<
   DemoSeedPayload,
   'attendanceEvents' | 'lessonTasks' | 'quranSessions' | 'portfolioEvidence'
 > {
+  const { hhKey, householdId, learners: learnersList } = cfg
   const attendanceEventsRows: (typeof attendanceEvents.$inferInsert)[] = []
   const lessonTasksRows: (typeof lessonTasks.$inferInsert)[] = []
   const quranSessionsRows: (typeof quranSessions.$inferInsert)[] = []
   const portfolioEvidenceRows: (typeof portfolioEvidence.$inferInsert)[] = []
 
-  for (let offset = HISTORY_DAYS; offset >= 1; offset--) {
-    const dateStr = daysBeforeAnchor(offset)
-    const weekday = isWeekday(dateStr)
+  const evidenceSet = new Set<string>()
+
+  for (let offset = HISTORY_DAYS; offset >= 0; offset--) {
+    const dateStr = daysBeforeEnd(endDate, offset)
 
     for (const lc of learnersList) {
+      const learnerProfile = profile.learners[lc.key]
+      if (!learnerProfile) continue
+
       const quranSub = lc.subjects.find(s => s.category === 'quran')
+      const todayMarked = profile.todayAttendanceKeys.includes(lc.key)
 
-      if (weekday) {
-        const attStatus =
-          offset % 13 === 0 ? 'sick' :
-          offset % 11 === 0 ? 'excused' :
-          offset % 9 === 0 ? 'absent' :
-          offset % 7 === 0 ? 'partial' :
-          'present'
-        const minutes =
-          attStatus === 'present' ? 360 :
-          attStatus === 'partial' ? 300 :
-          attStatus === 'sick' ? 180 :
-          null
+      if (shouldSchoolDay(dateStr, offset, learnerProfile, todayMarked)) {
+        let attStatus: string | null
+        if (offset === 0 && todayMarked) {
+          attStatus = 'present'
+        } else {
+          attStatus = pickAttendanceStatus(hhKey, lc.key, offset, learnerProfile)
+        }
 
-        attendanceEventsRows.push({
-          id: `att_${hhKey}_${lc.key}_${dateStr}`,
-          householdId,
-          learnerId: lc.id,
-          attendanceDate: dateStr,
-          status: attStatus,
-          minutes,
-          notes: null,
-          occurredAt: seedNow,
-          voidedAt: null,
-          createdAt: seedNow,
-          updatedAt: seedNow,
-        })
+        if (attStatus) {
+          attendanceEventsRows.push({
+            id: `att_${hhKey}_${lc.key}_${dateStr}`,
+            householdId,
+            learnerId: lc.id,
+            attendanceDate: dateStr,
+            status: attStatus,
+            minutes: attendanceMinutes(attStatus),
+            notes: null,
+            occurredAt: seedNow,
+            voidedAt: null,
+            createdAt: seedNow,
+            updatedAt: seedNow,
+          })
+        }
       }
 
-      if (offset % 2 === 0) {
-        const subIdx = Math.floor(offset / 2) % lc.subjects.length
+      for (let slot = 0; slot < 2; slot++) {
+        if (!shouldCreateLesson(offset, learnerProfile, slot)) continue
+
+        const subIdx = (offset + learnerProfile.lessonPhase + slot) % lc.subjects.length
         const sub = lc.subjects[subIdx]
         const titles = TASK_TITLES[sub.name] ?? ['Complete assignment', 'Review material', 'Assessment prep']
-        const titleIdx = Math.floor(offset / 2) % titles.length
-        const taskStatus = offset > 14 ? 'completed' : 'not_started'
+        const titleIdx = Math.floor((offset + slot) / 2) % titles.length
+        const taskStatus = lessonStatus(offset, learnerProfile, hhKey, lc.key, slot)
         const completedAt = taskStatus === 'completed' ? new Date(`${dateStr}T15:00:00Z`) : null
         const activityAt =
           taskStatus === 'completed'
@@ -121,7 +212,7 @@ function buildHistoryRows(
             : new Date(`${dateStr}T09:00:00Z`)
 
         lessonTasksRows.push({
-          id: `lt_${hhKey}_${lc.key}_${sub.id.slice(-8)}_o${offset}`,
+          id: `lt_${hhKey}_${lc.key}_${sub.id.slice(-8)}_o${offset}_s${slot}`,
           householdId,
           learnerId: lc.id,
           subjectId: sub.id,
@@ -130,7 +221,7 @@ function buildHistoryRows(
           notes: null,
           dueDate: dateStr,
           status: taskStatus,
-          sortOrder: 0,
+          sortOrder: slot,
           completedAt,
           skippedAt: null,
           createdAt: seedNow,
@@ -138,9 +229,14 @@ function buildHistoryRows(
         })
       }
 
-      if (offset % 3 === 0 && quranSub) {
-        const surahIdx = Math.floor(offset / 3) % SURAHS.length
-        const typeIdx = Math.floor(offset / 3) % SESSION_TYPES.length
+      if (
+        quranSub &&
+        learnerProfile.quranEveryDays > 0 &&
+        (offset + learnerProfile.quranPhase) % learnerProfile.quranEveryDays === 0 &&
+        shouldSchoolDay(dateStr, offset, learnerProfile, false)
+      ) {
+        const surahIdx = Math.floor(offset / learnerProfile.quranEveryDays) % SURAHS.length
+        const typeIdx = Math.floor(offset / 2) % SESSION_TYPES.length
 
         quranSessionsRows.push({
           id: `qur_${hhKey}_${lc.key}_o${offset}`,
@@ -157,24 +253,25 @@ function buildHistoryRows(
           updatedAt: seedNow,
         })
       }
+    }
 
-      if (offset % 30 === 0) {
-        const monthIdx = offset / 30 - 1
-        const monthLabels = ['march', 'february', 'january', 'december', 'november']
-        const monthLabel = monthLabels[monthIdx] ?? `month_${monthIdx + 1}`
-        const sub = lc.subjects[monthIdx % lc.subjects.length]
-        const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+    if (profile.evidenceOffsets.includes(offset)) {
+      for (const lc of learnersList) {
+        const key = `${lc.key}:${offset}`
+        if (evidenceSet.has(key)) continue
+        evidenceSet.add(key)
 
+        const sub = lc.subjects[offset % lc.subjects.length]
         portfolioEvidenceRows.push({
-          id: `ev_${hhKey}_${lc.key}_${monthLabel}`,
+          id: `ev_${hhKey}_${lc.key}_d${offset}`,
           householdId,
           learnerId: lc.id,
           subjectId: sub.id,
           lessonTaskId: null,
           quranSessionId: null,
           attendanceEventId: null,
-          title: `${sub.name} — ${cap(monthLabel)} portfolio`,
-          description: `Monthly work sample for ${sub.name}`,
+          title: `${sub.name} — work sample`,
+          description: `Portfolio sample for ${sub.name}`,
           evidenceType: 'work_sample',
           url: null,
           evidenceDate: dateStr,
@@ -193,8 +290,13 @@ function buildHistoryRows(
   }
 }
 
-function buildHouseholdRows(cfg: HouseholdSeedConfig, seedNow: Date): Omit<DemoSeedPayload, 'users'> {
+function buildHouseholdRows(
+  cfg: HouseholdSeedConfig,
+  endDate: string,
+  seedNow: Date,
+): Omit<DemoSeedPayload, 'users'> {
   const householdId = cfg.householdId
+  const profile = getHouseholdProfile(cfg.hhKey)
 
   const schoolYearsRows: (typeof schoolYears.$inferInsert)[] = [{
     id: cfg.schoolYearId,
@@ -276,7 +378,7 @@ function buildHouseholdRows(cfg: HouseholdSeedConfig, seedNow: Date): Omit<DemoS
     payScore: scores.pay,
     referralScore: scores.referral,
     positioningClarityScore: scores.clarity,
-    reasonableMonthlyPriceBucket: '$10–$20',
+    reasonableMonthlyPriceBucket: profile.priceBucket,
     pricingNotes: 'Fair for what it offers',
     replacedWhat: 'Spreadsheets and paper planners',
     mostUseful: 'Attendance tracking and daily planner',
@@ -294,7 +396,7 @@ function buildHouseholdRows(cfg: HouseholdSeedConfig, seedNow: Date): Omit<DemoS
     updatedAt: seedNow,
   }]
 
-  const history = buildHistoryRows(cfg.hhKey, householdId, cfg.learners, seedNow)
+  const history = buildHistoryRows(cfg, profile, endDate, seedNow)
 
   return {
     households: [{
@@ -317,7 +419,11 @@ function buildHouseholdRows(cfg: HouseholdSeedConfig, seedNow: Date): Omit<DemoS
 }
 
 /** Builds the full demo payload in memory — zero database calls. */
-export function buildDemoSeedPayload(configs: HouseholdSeedConfig[], seedNow = new Date()): DemoSeedPayload {
+export function buildDemoSeedPayload(
+  configs: HouseholdSeedConfig[],
+  seedNow = new Date(),
+  endDate = seedHistoryEndDate(seedNow),
+): DemoSeedPayload {
   const usersRows: (typeof users.$inferInsert)[] = configs.map(cfg => ({
     id: cfg.userId,
     email: cfg.email,
@@ -343,7 +449,7 @@ export function buildDemoSeedPayload(configs: HouseholdSeedConfig[], seedNow = n
   }
 
   for (const cfg of configs) {
-    const householdRows = buildHouseholdRows(cfg, seedNow)
+    const householdRows = buildHouseholdRows(cfg, endDate, seedNow)
     payload.households.push(...householdRows.households)
     payload.schoolYears.push(...householdRows.schoolYears)
     payload.learners.push(...householdRows.learners)
@@ -374,5 +480,15 @@ export function summarizePayload(payload: DemoSeedPayload): Record<string, numbe
     householdSettings: payload.householdSettings.length,
     userSettings: payload.userSettings.length,
     productValidationResponses: payload.productValidationResponses.length,
+  }
+}
+
+/** Count rows for one household id — useful in tests. */
+export function countForHousehold(payload: DemoSeedPayload, householdId: string) {
+  return {
+    attendance: payload.attendanceEvents.filter(r => r.householdId === householdId).length,
+    lessons: payload.lessonTasks.filter(r => r.householdId === householdId).length,
+    quran: payload.quranSessions.filter(r => r.householdId === householdId).length,
+    evidence: payload.portfolioEvidence.filter(r => r.householdId === householdId).length,
   }
 }

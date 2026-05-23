@@ -20,9 +20,9 @@ Creates two rich demo families:
 | Household | User | Learners |
 |-----------|------|----------|
 | Barakah Academy | `DEV_SEED_USER_EMAIL` (dev bypass) | 5 |
-| Crescent Cove Learning | `DEMO_PARENT_B_EMAIL` (default `amina@gmail.com`) | 5 |
+| Crescent Cove Learning | `DEMO_PARENT_B_EMAIL` (default `amina@gmail.com`) | 3 |
 
-Each household gets **150 days** of attendance (weekdays only), lessons, Qur'an sessions, and monthly portfolio evidence. History is anchored to **`2026-05-22`** so demo data is identical every run (not tied to the day you seed).
+Each household gets **150 days** of history through **today** (rolling anchor). Barakah Academy (5 learners, high engagement) and Crescent Cove (3 learners, lighter schedule) use **different per-learner profiles** — not shared modulo loops.
 
 ### Workflow
 
@@ -47,6 +47,7 @@ npm run db:reset:demo
 ```
 scripts/seed-demo-households.ts     ← entry point
 scripts/seed/demoConfig.ts          ← stable IDs + household definitions
+scripts/seed/householdProfiles.ts   ← per-household learner behaviour profiles
 scripts/seed/buildPayload.ts        ← pure in-memory row generation (no DB)
 scripts/seed/loadPayload.ts         ← FK-ordered bulk INSERT in one transaction
 scripts/seed/bulkInsert.ts          ← chunked INSERT helper (1000 rows/statement)
