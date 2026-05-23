@@ -1,19 +1,18 @@
 /** @jest-environment node */
 
-import { GET } from '@/features/alerts/api/routes/alerts'
+jest.mock('@/features/auth/server/requestAuth', () => {
+  const { mockRequestAuthModule } = require('@/features/auth/__tests__/helpers')
+  return mockRequestAuthModule({ householdId: 'hh_01', userId: 'user_01', timezone: 'America/New_York' })
+})
 
 jest.mock('@/features/alerts/server/service', () => ({
   getAlerts: jest.fn(),
 }))
 
-jest.mock('@/features/lib/server/tenant', () => ({
-  getHouseholdContext: jest.fn(),
-}))
-
+import { GET } from '@/features/alerts/api/routes/alerts'
 import { getAlerts } from '@/features/alerts/server/service'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
+
 const mockGetAlerts = getAlerts as jest.Mock
-const mockGetHouseholdContext = getHouseholdContext as jest.Mock
 
 const HOUSEHOLD_ID = 'hh_01'
 const TODAY = '2026-05-17'
@@ -61,7 +60,6 @@ function createRequest(url: string): Request {
 }
 
 beforeEach(() => {
-  mockGetHouseholdContext.mockResolvedValue({ householdId: HOUSEHOLD_ID, userId: 'user_01', timezone: 'America/New_York' })
   mockGetAlerts.mockResolvedValue([alert1, alert2, alert3])
 })
 
@@ -103,7 +101,6 @@ describe('GET /api/alerts', () => {
     const res = await GET(createRequest('/api/alerts?status=open'))
     const body = await res.json()
     expect(body.status).toBe('success')
-    // alert3 has status=dismissed, so only alert1 and alert2 should be returned
     expect(body.data).toHaveLength(2)
     expect(body.data.every((a: { status: string }) => a.status === 'open')).toBe(true)
   })
@@ -117,7 +114,6 @@ describe('GET /api/alerts', () => {
   })
 
   test('filters by startDate and endDate returns alerts in range', async () => {
-    // alert1 has date=YESTERDAY, alert2 date=TODAY, alert3 date=TODAY
     const res = await GET(createRequest(`/api/alerts?startDate=${TODAY}&endDate=${TODAY}`))
     const body = await res.json()
     expect(body.status).toBe('success')
@@ -136,7 +132,6 @@ describe('GET /api/alerts', () => {
     const res = await GET(createRequest('/api/alerts?status=open&type=pending_lessons'))
     const body = await res.json()
     expect(body.status).toBe('success')
-    // alert1 is open+pending_lessons, alert2 is open+attendance_missing, alert3 is dismissed+pending_lessons
     expect(body.data).toHaveLength(1)
     expect(body.data[0].id).toBe('pending_lessons_adam')
   })

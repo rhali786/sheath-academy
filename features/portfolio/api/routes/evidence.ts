@@ -1,10 +1,10 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { EvidenceItem, EvidenceType } from '@/features/portfolio/types'
 import { listEvidenceRows, createEvidenceRow } from '@/features/portfolio/server/repository'
 import type { EvidenceRow } from '@/features/portfolio/server/repository'
-import { guardOwnership, assertSessionOwnership, sessionAuthCtx } from '@/features/auth/server/routeOwnership'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
+import { guardOwnership, assertSessionOwnership } from '@/features/auth/server/routeOwnership'
 
 function rowToEvidence(r: EvidenceRow): EvidenceItem {
   const item: EvidenceItem = {
@@ -34,7 +34,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Ev
   const endDate = url.searchParams.get('endDate') ?? undefined
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const rows = await listEvidenceRows(householdId, { learnerId: childId, subjectId, lessonTaskId, startDate, endDate })
     const filtered = type ? rows.filter(r => r.evidenceType === type) : rows
     return NextResponse.json({ status: 'success', data: filtered.map(rowToEvidence), message: 'Evidence items retrieved', timestamp: new Date().toISOString() })
@@ -55,7 +55,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
       )
     }
     await assertSessionOwnership('learner', childId)
-    const { householdId, userId } = await sessionAuthCtx()
+    const { householdId, userId } = getRequestAuthCtx()
     const row = await createEvidenceRow(householdId, {
       learnerId: childId,
       title: title.trim(),

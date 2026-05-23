@@ -1,7 +1,7 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse, HouseholdProfile, DayOfWeek, DayLoadPreference, DateDisplayPreference } from '@/features/lib/types'
 import { updateHouseholdName, updateHouseholdTimezone } from '@/features/household/server/repository'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
 import {
   getAllHouseholdSettings,
   setHouseholdSetting,
@@ -36,7 +36,7 @@ async function profileFromRow(row: HouseholdRow): Promise<HouseholdProfile> {
 
 export async function GET(): Promise<NextResponse<ApiResponse<HouseholdProfile | null>>> {
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const db = getDb()
     const rows = await db.select().from(households).where(eq(households.id, householdId)).limit(1)
     if (!rows[0]) {
@@ -60,7 +60,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<H
   }
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const updated = await updateHouseholdName(householdId, familyName)
     if (!updated) {
       return NextResponse.json(
@@ -131,7 +131,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     if (patch.familyName) await updateHouseholdName(householdId, patch.familyName)
     if (patch.timezone) await updateHouseholdTimezone(householdId, patch.timezone)
     const settingsKeys = ['weekStartDay', 'schoolDays', 'dayLoad', 'reportingName', 'dateDisplay', 'jumuahLeaveWindow', 'jumuahReturnWindow'] as const

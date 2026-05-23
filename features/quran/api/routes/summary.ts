@@ -1,7 +1,7 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import { getQuranSummary, type QuranSummary } from '@/features/quran/server/service'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
 
 export async function GET(request: Request): Promise<NextResponse<ApiResponse<QuranSummary>>> {
   const { searchParams } = new URL(request.url)
@@ -10,7 +10,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Qu
   const endDate = searchParams.get('endDate') || undefined
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const summary = await getQuranSummary(householdId, { childId, startDate, endDate })
     return NextResponse.json({ status: 'success', data: summary, message: 'Quran summary retrieved', timestamp: new Date().toISOString() })
   } catch {

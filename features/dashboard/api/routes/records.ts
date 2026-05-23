@@ -1,6 +1,6 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse, DashboardRecord } from '@/features/lib/types'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
 import { listAttendanceEvents } from '@/features/attendance/server/repository'
 import { listLessonTaskRows } from '@/features/plan/server/repository'
 import { listEvidenceRows } from '@/features/portfolio/server/repository'
@@ -37,7 +37,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Da
   const { start, end } = getCurrentWeekRange()
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const activeLearners = await listLearners(householdId)
     const maxAttendance = childId ? weekdayCount(start, end) : activeLearners.length * weekdayCount(start, end)
 

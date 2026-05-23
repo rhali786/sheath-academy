@@ -1,8 +1,8 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { RecordsReport } from '@/features/records/types'
 import { getRecordsReport } from '@/features/records/server/service'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
 
 export async function GET(request: Request): Promise<NextResponse<ApiResponse<RecordsReport | null>>> {
   const url = new URL(request.url)
@@ -23,7 +23,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Re
   }
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const report = await getRecordsReport(householdId, { childId, startDate, endDate })
     return NextResponse.json({
       status: 'success',

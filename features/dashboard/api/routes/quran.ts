@@ -1,9 +1,9 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse, ChartSeries, QuranSessionRequest, QuranSession } from '@/features/lib/types'
 import { listQuranSessionRows, createQuranSessionRow } from '@/features/quran/server/repository'
 import { listLearners } from '@/features/children/server/repository'
-import { guardOwnership, assertSessionOwnership, sessionAuthCtx } from '@/features/auth/server/routeOwnership'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
+import { guardOwnership, assertSessionOwnership } from '@/features/auth/server/routeOwnership'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const
 
@@ -23,7 +23,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   const childId = searchParams.get('childId') || undefined
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const rows = await listQuranSessionRows(householdId, { learnerId: childId })
     const sessions: QuranSession[] = rows.map(r => ({
       id: r.id, childId: r.learnerId, type: r.sessionType,
@@ -47,7 +47,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   return guardOwnership(async () => {
     await assertSessionOwnership('learner', sessionData.childId)
-    const { householdId } = await sessionAuthCtx()
+    const { householdId } = getRequestAuthCtx()
     const today = new Date().toISOString().split('T')[0]
     const row = await createQuranSessionRow(householdId, {
       learnerId: sessionData.childId,

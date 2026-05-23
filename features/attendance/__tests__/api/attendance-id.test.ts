@@ -1,8 +1,9 @@
 /** @jest-environment node */
 
-jest.mock('@/features/lib/server/tenant', () => ({
-  getHouseholdContext: jest.fn().mockResolvedValue({ householdId: 'hh_test', userId: 'user_test', timezone: 'UTC' }),
-}))
+jest.mock('@/features/auth/server/requestAuth', () => {
+  const { mockRequestAuthModule } = require('@/features/auth/__tests__/helpers')
+  return mockRequestAuthModule({ householdId: 'hh_test', userId: 'user_test', timezone: 'UTC' })
+})
 
 jest.mock('@/features/attendance/server/repository', () => ({
   getAttendanceEvent: jest.fn(),

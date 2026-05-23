@@ -1,11 +1,11 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { SchoolYear } from '@/features/school-year/types'
 import { getSchoolYears, getActiveSchoolYear, createSchoolYear } from '@/features/school-year/server/service'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
 
 export async function GET(): Promise<NextResponse<ApiResponse<SchoolYear[]>>> {
-  const { householdId } = await getHouseholdContext()
+  const { householdId } = getRequestAuthCtx()
   const years = await getSchoolYears(householdId)
   return NextResponse.json({
     status: 'success',
@@ -16,7 +16,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<SchoolYear[]>>> {
 }
 
 export async function GET_ACTIVE(): Promise<NextResponse<ApiResponse<SchoolYear | null>>> {
-  const { householdId } = await getHouseholdContext()
+  const { householdId } = getRequestAuthCtx()
   const year = await getActiveSchoolYear(householdId)
   return NextResponse.json({
     status: 'success',
@@ -68,7 +68,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const effectiveActive = typeof isActive === 'boolean' ? isActive : true
 
-  const { householdId } = await getHouseholdContext()
+  const { householdId } = getRequestAuthCtx()
   const year = await createSchoolYear(householdId, {
     name: name.trim(),
     startDate,

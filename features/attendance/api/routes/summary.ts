@@ -1,8 +1,9 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { AttendanceSummary } from '@/features/attendance/types'
 import { getAttendanceSummary } from '@/features/attendance/server/service'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
+
 
 export async function GET(request: Request): Promise<NextResponse<ApiResponse<AttendanceSummary | null>>> {
   const url = new URL(request.url)
@@ -19,7 +20,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<At
   const endDate = url.searchParams.get('endDate') ?? undefined
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const summary = await getAttendanceSummary(householdId, childId, startDate, endDate)
     return NextResponse.json({
       status: 'success',

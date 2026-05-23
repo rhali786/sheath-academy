@@ -170,3 +170,23 @@ describe('response helpers', () => {
     expect(body.code).toBe('setup_required')
   })
 })
+
+describe('assertAppAdmin', () => {
+  const originalAdmin = process.env.ADMIN_EMAIL
+
+  afterEach(() => {
+    process.env.ADMIN_EMAIL = originalAdmin
+  })
+
+  test('returns true when ctx email matches ADMIN_EMAIL', async () => {
+    const { assertAppAdmin } = await import('@/features/auth/server/context')
+    process.env.ADMIN_EMAIL = 'admin@test.com'
+    expect(assertAppAdmin({ userId: 'u1', householdId: 'hh1', email: 'admin@test.com' })).toBe(true)
+  })
+
+  test('returns false for non-admin email', async () => {
+    const { assertAppAdmin } = await import('@/features/auth/server/context')
+    process.env.ADMIN_EMAIL = 'admin@test.com'
+    expect(assertAppAdmin({ userId: 'u1', householdId: 'hh1', email: 'parent@test.com' })).toBe(false)
+  })
+})

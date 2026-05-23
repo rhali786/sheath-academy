@@ -1,8 +1,8 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { SubjectCourse, SubjectCourseCategory } from '@/features/subjects/types'
 import { listSubjectRows, createSubjectRow } from '@/features/subjects/server/repository'
 import type { SubjectRow } from '@/features/subjects/server/repository'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
 
 interface ApiResponse<T> { status: 'success' | 'error'; data: T; message: string; timestamp: string }
 
@@ -24,7 +24,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Su
   const childId = url.searchParams.get('childId') ?? undefined
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const rows = await listSubjectRows(householdId, childId)
     return NextResponse.json({ status: 'success', data: rows.map(rowToSubject), message: 'Subjects retrieved', timestamp: new Date().toISOString() })
   } catch {
@@ -42,7 +42,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const primaryLearnerId = (learnerIds && learnerIds[0]) ?? childId
     const row = await createSubjectRow(householdId, { name: name.trim(), category, learnerId: primaryLearnerId })
     return NextResponse.json({ status: 'success', data: rowToSubject(row), message: 'Subject created', timestamp: new Date().toISOString() }, { status: 201 })

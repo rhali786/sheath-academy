@@ -1,8 +1,8 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { SubjectCourse, SubjectCourseCategory } from '@/features/subjects/types'
 import { getSubjectRow, updateSubjectRow, archiveSubjectRow } from '@/features/subjects/server/repository'
 import type { SubjectRow } from '@/features/subjects/server/repository'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
 
 interface ApiResponse<T> {
   status: 'success' | 'error'
@@ -26,7 +26,7 @@ function rowToSubject(r: SubjectRow): SubjectCourse {
 
 export async function GET(id: string): Promise<NextResponse<ApiResponse<SubjectCourse | null>>> {
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const row = await getSubjectRow(id, householdId)
     if (!row) return NextResponse.json({ status: 'error', data: null, message: 'Subject not found', timestamp: new Date().toISOString() }, { status: 404 })
     return NextResponse.json({ status: 'success', data: rowToSubject(row), message: 'Subject retrieved', timestamp: new Date().toISOString() })
@@ -36,7 +36,7 @@ export async function GET(id: string): Promise<NextResponse<ApiResponse<SubjectC
 export async function PUT(id: string, request: Request): Promise<NextResponse> {
   const body = await request.json()
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const updated = await updateSubjectRow(id, householdId, {
       name: body.name !== undefined ? String(body.name).trim() : undefined,
       category: body.category as SubjectCourseCategory | undefined,
@@ -49,7 +49,7 @@ export async function PUT(id: string, request: Request): Promise<NextResponse> {
 
 export async function ARCHIVE(id: string): Promise<NextResponse> {
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const archived = await archiveSubjectRow(id, householdId)
     if (!archived) return NextResponse.json({ status: 'error', data: null, message: 'Subject not found', timestamp: new Date().toISOString() }, { status: 404 })
     return NextResponse.json({ status: 'success', data: rowToSubject(archived), message: 'Subject archived', timestamp: new Date().toISOString() })

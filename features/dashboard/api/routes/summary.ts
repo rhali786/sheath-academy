@@ -1,7 +1,7 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse, DashboardMetrics } from '@/features/lib/types'
 import { getAlerts } from '@/features/alerts/server/service'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
 import { listAttendanceEvents } from '@/features/attendance/server/repository'
 import { listLessonTaskRows } from '@/features/plan/server/repository'
 import { listQuranSessionRows } from '@/features/quran/server/repository'
@@ -14,8 +14,8 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Da
   const childId = searchParams.get('childId') || undefined
 
   try {
-    const { householdId, timezone } = await getHouseholdContext()
-    const today = toDateString(new Date(), timezone)
+    const { householdId, timezone } = getRequestAuthCtx()
+    const today = toDateString(new Date(), timezone ?? 'America/New_York')
 
     const activeLearners = await listLearners(householdId)
     const totalChildren = childId ? 1 : activeLearners.length

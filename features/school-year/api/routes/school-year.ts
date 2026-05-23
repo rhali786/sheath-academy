@@ -1,11 +1,11 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { SchoolYear } from '@/features/school-year/types'
 import { getSchoolYear, updateSchoolYear, activateSchoolYear } from '@/features/school-year/server/service'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
 
 export async function GET(id: string): Promise<NextResponse<ApiResponse<SchoolYear | null>>> {
-  const { householdId } = await getHouseholdContext()
+  const { householdId } = getRequestAuthCtx()
   const year = await getSchoolYear(householdId, id)
 
   if (!year) {
@@ -31,7 +31,7 @@ export async function GET(id: string): Promise<NextResponse<ApiResponse<SchoolYe
 export async function PUT(id: string, request: Request): Promise<NextResponse> {
   const body = await request.json()
 
-  const { householdId } = await getHouseholdContext()
+  const { householdId } = getRequestAuthCtx()
   const existing = await getSchoolYear(householdId, id)
   if (!existing) {
     return NextResponse.json(
@@ -95,7 +95,7 @@ export async function PUT(id: string, request: Request): Promise<NextResponse> {
 }
 
 export async function ACTIVATE(id: string): Promise<NextResponse> {
-  const { householdId } = await getHouseholdContext()
+  const { householdId } = getRequestAuthCtx()
   const existing = await getSchoolYear(householdId, id)
   if (!existing) {
     return NextResponse.json(

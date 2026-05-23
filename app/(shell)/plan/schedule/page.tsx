@@ -2,7 +2,7 @@ import { SchedulePage } from '@/features/schedule/front/pages/SchedulePage'
 import { buildDailySchedule } from '@/features/schedule/server/service'
 import { listLessonTaskRows } from '@/features/plan/server/repository'
 import type { LessonTask } from '@/features/plan/types'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
+import { getAuthCtx } from '@/features/auth/server/context'
 
 function todayStr(): string {
   const d = new Date()
@@ -14,8 +14,9 @@ export default async function ScheduleRoute() {
 
   let todayLessons: LessonTask[] = []
   try {
-    const { householdId } = await getHouseholdContext()
-    const rows = await listLessonTaskRows(householdId, { startDate: today, endDate: today })
+    const ctx = await getAuthCtx()
+    if (!ctx) throw new Error('Unauthenticated')
+    const rows = await listLessonTaskRows(ctx.householdId, { startDate: today, endDate: today })
     todayLessons = rows
       .map(r => ({
         id: r.id, childId: r.learnerId, subjectId: r.subjectId ?? '', householdId: r.householdId,

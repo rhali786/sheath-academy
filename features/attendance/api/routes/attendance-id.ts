@@ -1,9 +1,9 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { AttendanceRecord } from '@/features/attendance/types'
 import { getAttendanceEvent, updateAttendanceEvent, voidAttendanceEvent } from '@/features/attendance/server/repository'
 import type { AttendanceEventRow } from '@/features/attendance/server/repository'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
 
 function rowToRecord(r: AttendanceEventRow): AttendanceRecord {
   return {
@@ -22,7 +22,7 @@ function rowToRecord(r: AttendanceEventRow): AttendanceRecord {
 
 export async function GET(id: string): Promise<NextResponse<ApiResponse<AttendanceRecord | null>>> {
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const row = await getAttendanceEvent(id, householdId)
     if (!row) return NextResponse.json({ status: 'error', data: null, message: 'Record not found', timestamp: new Date().toISOString() }, { status: 404 })
     return NextResponse.json({ status: 'success', data: rowToRecord(row), message: 'Attendance record retrieved', timestamp: new Date().toISOString() })
@@ -32,7 +32,7 @@ export async function GET(id: string): Promise<NextResponse<ApiResponse<Attendan
 export async function PATCH(id: string, request: Request): Promise<NextResponse<ApiResponse<AttendanceRecord | null>>> {
   const body = await request.json()
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const updated = await updateAttendanceEvent(id, householdId, { status: body.status, minutes: body.minutes, notes: body.notes })
     if (!updated) return NextResponse.json({ status: 'error', data: null, message: 'Record not found', timestamp: new Date().toISOString() }, { status: 404 })
     return NextResponse.json({ status: 'success', data: rowToRecord(updated), message: 'Attendance record updated', timestamp: new Date().toISOString() })
@@ -41,7 +41,7 @@ export async function PATCH(id: string, request: Request): Promise<NextResponse<
 
 export async function DELETE(id: string): Promise<NextResponse<ApiResponse<null>>> {
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const voided = await voidAttendanceEvent(id, householdId)
     if (!voided) return NextResponse.json({ status: 'error', data: null, message: 'Record not found', timestamp: new Date().toISOString() }, { status: 404 })
     return NextResponse.json({ status: 'success', data: null, message: 'Attendance record voided', timestamp: new Date().toISOString() })

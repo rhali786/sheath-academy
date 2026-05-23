@@ -1,8 +1,8 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse, StudentProfile } from '@/features/lib/types'
 import { listLearners, listAllLearners, createLearner } from '@/features/children/server/repository'
 import type { LearnerRow } from '@/features/children/server/repository'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
 
 function learnerRowToStudentProfile(row: LearnerRow): StudentProfile {
   return {
@@ -23,7 +23,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<St
   const includeArchived = url.searchParams.get('includeArchived') === 'true'
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const rows = includeArchived ? await listAllLearners(householdId) : await listLearners(householdId)
     return NextResponse.json({ status: 'success', data: rows.map(learnerRowToStudentProfile), message: 'Student profiles retrieved', timestamp: new Date().toISOString() })
   } catch {
@@ -35,7 +35,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   const body = await request.json()
 
   try {
-    const { householdId, userId } = await getHouseholdContext()
+    const { householdId, userId } = getRequestAuthCtx()
     const { name, gradeLabel } = body
     if (!name?.trim()) {
       return NextResponse.json(

@@ -1,9 +1,9 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse, QuranSession } from '@/features/lib/types'
 import { listQuranSessionRows, createQuranSessionRow, updateQuranSessionRow, deleteQuranSessionRow } from '@/features/quran/server/repository'
 import type { QuranSessionRow } from '@/features/quran/server/repository'
-import { guardOwnership, assertSessionOwnership, sessionAuthCtx } from '@/features/auth/server/routeOwnership'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
+import { guardOwnership, assertSessionOwnership } from '@/features/auth/server/routeOwnership'
 
 function rowToSession(r: QuranSessionRow): QuranSession {
   return {
@@ -18,7 +18,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   const childId = searchParams.get('childId') || undefined
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const rows = await listQuranSessionRows(householdId, { learnerId: childId })
     const sessions = rows.map(rowToSession)
     return NextResponse.json({ status: 'success', data: { sessions, chartData: [] }, message: 'Quran sessions retrieved', timestamp: new Date().toISOString() })
@@ -32,7 +32,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   return guardOwnership(async () => {
     await assertSessionOwnership('learner', sessionData.childId)
-    const { householdId, userId } = await sessionAuthCtx()
+    const { householdId, userId } = getRequestAuthCtx()
     const today = new Date().toISOString().split('T')[0]
     const row = await createQuranSessionRow(householdId, {
       learnerId: sessionData.childId,
@@ -57,7 +57,7 @@ export async function PATCH(request: Request, context: { id: string }): Promise<
   const patch = await request.json()
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const updated = await updateQuranSessionRow(id, householdId, patch)
     if (!updated) return NextResponse.json({ status: 'error', data: null, message: 'Session not found', timestamp: new Date().toISOString() }, { status: 404 })
     return NextResponse.json({ status: 'success', data: rowToSession(updated), message: 'Quran session updated', timestamp: new Date().toISOString() })
@@ -68,7 +68,7 @@ export async function DELETE(_request: Request, context: { id: string }): Promis
   const { id } = context
 
   try {
-    const { householdId } = await getHouseholdContext()
+    const { householdId } = getRequestAuthCtx()
     const removed = await deleteQuranSessionRow(id, householdId)
     if (!removed) return NextResponse.json({ status: 'error', data: null, message: 'Session not found', timestamp: new Date().toISOString() }, { status: 404 })
     return NextResponse.json({ status: 'success', data: null, message: 'Quran session deleted', timestamp: new Date().toISOString() })

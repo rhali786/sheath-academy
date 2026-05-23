@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { isAppAdmin } from '@/features/lib/server/appAdmin'
 import { NotFoundError, isNotFoundError } from './errors'
 
 export interface AuthCtx {
@@ -40,6 +41,11 @@ export function setupRequiredResponse(): Response {
     },
     { status: 403 },
   )
+}
+
+/** Returns true when the auth context belongs to an app admin (ADMIN_EMAIL). */
+export function assertAppAdmin(ctx: AuthCtx): boolean {
+  return isAppAdmin(ctx.email)
 }
 
 export function notFoundResponse(message = 'Not found'): NextResponse {

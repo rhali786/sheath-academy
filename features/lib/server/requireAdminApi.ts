@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getAuthCtx, unauthorizedResponse } from '@/features/auth/server/context'
-import { isAppAdmin } from '@/features/lib/server/appAdmin'
+import { assertAppAdmin, getAuthCtx, unauthorizedResponse } from '@/features/auth/server/context'
 
 export function forbiddenResponse(): Response {
   return NextResponse.json(
@@ -22,8 +21,7 @@ export async function requireAdminApi(request: Request): Promise<
   const authCtx = await getAuthCtx(request as NextRequest)
   if (!authCtx) return { ok: false, response: unauthorizedResponse() }
 
-  const email = authCtx.email
-  if (!email || !isAppAdmin(email)) return { ok: false, response: forbiddenResponse() }
+  if (!assertAppAdmin(authCtx)) return { ok: false, response: forbiddenResponse() }
 
-  return { ok: true, email }
+  return { ok: true, email: authCtx.email! }
 }

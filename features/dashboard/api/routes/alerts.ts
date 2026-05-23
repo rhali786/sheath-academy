@@ -1,13 +1,13 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse, Alert } from '@/features/lib/types'
 import { getAlerts } from '@/features/alerts/server/service'
-import { getHouseholdContext } from '@/features/lib/server/tenant'
 
 export async function GET(request: Request): Promise<NextResponse<ApiResponse<Alert[]>>> {
   const { searchParams } = new URL(request.url)
   const childId = searchParams.get('childId') ?? undefined
 
-  const { householdId } = await getHouseholdContext()
+  const { householdId } = getRequestAuthCtx()
   const alerts = await getAlerts(householdId, childId)
 
   const response: ApiResponse<Alert[]> = {

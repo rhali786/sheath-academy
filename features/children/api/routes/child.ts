@@ -1,3 +1,4 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse, StudentProfile } from '@/features/lib/types'
 import {
@@ -8,7 +9,7 @@ import {
   type LearnerRow,
 } from '@/features/children/server/repository'
 import { archiveSubjectsByLearner } from '@/features/subjects/server/repository'
-import { guardOwnership, sessionAuthCtx } from '@/features/auth/server/routeOwnership'
+import { guardOwnership } from '@/features/auth/server/routeOwnership'
 import { notFoundResponse } from '@/features/auth/server/context'
 
 function learnerRowToStudentProfile(row: LearnerRow): StudentProfile {
@@ -27,7 +28,7 @@ function learnerRowToStudentProfile(row: LearnerRow): StudentProfile {
 
 export async function GET(id: string): Promise<NextResponse> {
   return guardOwnership(async () => {
-    const { householdId } = await sessionAuthCtx()
+    const { householdId } = getRequestAuthCtx()
     const row = await getLearner(id, householdId)
     if (!row) return notFoundResponse('Student profile not found')
     return NextResponse.json({ status: 'success', data: learnerRowToStudentProfile(row), message: 'Student profile retrieved', timestamp: new Date().toISOString() })
@@ -37,7 +38,7 @@ export async function GET(id: string): Promise<NextResponse> {
 export async function PUT(id: string, request: Request): Promise<NextResponse> {
   return guardOwnership(async () => {
     const body = await request.json()
-    const { householdId } = await sessionAuthCtx()
+    const { householdId } = getRequestAuthCtx()
     const updated = await updateLearner(id, householdId, {
       name: body.name !== undefined ? body.name.trim() : undefined,
       gradeLevel: body.gradeLabel !== undefined ? body.gradeLabel.trim() : undefined,
@@ -49,7 +50,7 @@ export async function PUT(id: string, request: Request): Promise<NextResponse> {
 
 export async function ARCHIVE(id: string): Promise<NextResponse> {
   return guardOwnership(async () => {
-    const { householdId } = await sessionAuthCtx()
+    const { householdId } = getRequestAuthCtx()
     const archived = await archiveLearner(id, householdId)
     if (!archived) return notFoundResponse('Student profile not found')
     await archiveSubjectsByLearner(id, householdId)
@@ -59,7 +60,7 @@ export async function ARCHIVE(id: string): Promise<NextResponse> {
 
 export async function RESTORE(id: string): Promise<NextResponse> {
   return guardOwnership(async () => {
-    const { householdId } = await sessionAuthCtx()
+    const { householdId } = getRequestAuthCtx()
     const restored = await restoreLearner(id, householdId)
     if (!restored) return notFoundResponse('Student profile not found')
     return NextResponse.json({ status: 'success', data: learnerRowToStudentProfile(restored), message: 'Student profile restored', timestamp: new Date().toISOString() })

@@ -11,3 +11,19 @@ export const SEED_AUTH_CTX: AuthCtx = {
 export function seedAuthCtx(overrides?: Partial<AuthCtx>): AuthCtx {
   return { ...SEED_AUTH_CTX, ...overrides }
 }
+
+/** Default request-scoped auth for API route handler tests. */
+export const SEED_REQUEST_AUTH_CTX: AuthCtx = {
+  ...SEED_AUTH_CTX,
+  timezone: 'UTC',
+}
+
+/** Jest mock factory for `@/features/auth/server/requestAuth`. */
+export function mockRequestAuthModule(overrides?: Partial<AuthCtx>) {
+  const ctx = { ...SEED_REQUEST_AUTH_CTX, ...overrides }
+  return {
+    getRequestAuthCtx: jest.fn(() => ctx),
+    tryGetRequestAuthCtx: jest.fn(() => ctx),
+    runWithAuthCtx: jest.fn((_authCtx: unknown, fn: () => unknown) => fn()),
+  }
+}
