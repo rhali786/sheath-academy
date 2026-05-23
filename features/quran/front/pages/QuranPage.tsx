@@ -49,7 +49,7 @@ export default function QuranPage() {
   const [sessions, setSessions] = useState<QuranSession[]>([])
   const [children, setChildren] = useState<StudentProfile[]>([])
   const [loading, setLoading] = useState(true)
-  const [showAddForm, setShowAddForm] = useState(true)
+  const [showAddForm, setShowAddForm] = useState(false)
   const [addForm, setAddForm] = useState<AddState>(emptyAdd())
   const [addSaving, setAddSaving] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)

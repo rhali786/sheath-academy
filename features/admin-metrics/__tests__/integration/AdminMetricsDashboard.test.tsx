@@ -25,6 +25,7 @@ const summary = {
   learnersCreated: 4,
   sessionsLogged: 10,
   completionEvents: 6,
+  attendanceEventsLogged: 12,
   deenRecordsCreated: 2,
   evidenceItemsCreated: 3,
   reportsGenerated: 1,
@@ -44,6 +45,7 @@ const row = {
   learnerNames: ['Amina', 'Yusuf'],
   lessonTasksInPeriod: 4,
   lessonsCompletedInPeriod: 2,
+  attendanceEventsInPeriod: 8,
   sessionsLogged: 5,
   completionEvents: 3,
   startedNotCompletedCount: 1,
@@ -74,6 +76,7 @@ describe('AdminMetricsDashboard', () => {
       expect(screen.getByTestId('admin-metrics-hero')).toBeInTheDocument()
     })
     expect(screen.getByTestId('hero-active-users')).toHaveTextContent('3 users')
+    expect(screen.getByTestId('hero-attendance')).toHaveTextContent('12')
     expect(screen.getByTestId('admin-metrics-cards')).toBeInTheDocument()
     expect(screen.getByTestId('admin-metrics-card-hh1')).toBeInTheDocument()
     expect(screen.getByText('a@test.com')).toBeInTheDocument()

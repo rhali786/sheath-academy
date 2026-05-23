@@ -70,6 +70,13 @@ function todayLocal(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+async function openMarkForm() {
+  fireEvent.click(screen.getByRole('button', { name: /mark attendance/i }))
+  await waitFor(() => {
+    expect(screen.getByLabelText(/^date$/i)).toBeInTheDocument()
+  })
+}
+
 beforeEach(() => {
   mockSearchParams = new URLSearchParams()
   mockGetAllChildren.mockResolvedValue(ok(mockChildren))
@@ -97,20 +104,24 @@ describe('AttendancePage', () => {
     })
   })
 
-  it('renders a learner selector with loaded children', async () => {
+  it('renders a learner selector with loaded children when form is open', async () => {
     render(<AttendancePage />)
+    await openMarkForm()
     await waitFor(() => {
-      expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0)
+      expect(screen.getByLabelText(/^learner$/i)).toBeInTheDocument()
     })
     expect(screen.getAllByText('Adam').length).toBeGreaterThan(0)
   })
 
-  it('renders Present, Absent, Partial quick-mark buttons', async () => {
+  it('renders all attendance status quick-mark buttons when form is open', async () => {
     render(<AttendancePage />)
+    await openMarkForm()
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^present$/i })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /^absent$/i })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /^partial$/i })).toBeInTheDocument()
+      expect(screen.getByTestId('attendance-status-excused')).toBeInTheDocument()
+      expect(screen.getByTestId('attendance-status-sick')).toBeInTheDocument()
     })
   })
 
@@ -137,7 +148,7 @@ describe('AttendancePage', () => {
 
   it('clicking Present button calls createRecord with status present', async () => {
     render(<AttendancePage />)
-    // Wait for children to load so selectedChildId is set (required for markAttendance to proceed)
+    await openMarkForm()
     await waitFor(() => {
       expect(screen.getAllByText('Adam').length).toBeGreaterThan(0)
     })
@@ -200,17 +211,16 @@ describe('AttendancePage', () => {
 
   // FB-014 TDD tests
 
-  it('date field defaults to today', async () => {
+  it('date field defaults to today when form is open', async () => {
     render(<AttendancePage />)
-    await waitFor(() => {
-      const dateInput = screen.getByLabelText(/^date$/i) as HTMLInputElement
-      expect(dateInput.value).toBe(todayLocal())
-    })
+    await openMarkForm()
+    const dateInput = screen.getByLabelText(/^date$/i) as HTMLInputElement
+    expect(dateInput.value).toBe(todayLocal())
   })
 
   it('renders all active learners in batch mode', async () => {
     render(<AttendancePage />)
-    // Wait for children to load (Adam appears in the learner dropdown)
+    await openMarkForm()
     await waitFor(() => expect(screen.getAllByText('Adam').length).toBeGreaterThan(0))
     fireEvent.click(screen.getByRole('button', { name: /batch mode/i }))
     await waitFor(() => {
@@ -224,6 +234,7 @@ describe('AttendancePage', () => {
 
   it('clicking Mark all present sets all learner statuses to present', async () => {
     render(<AttendancePage />)
+    await openMarkForm()
     await waitFor(() => expect(screen.getAllByText('Adam').length).toBeGreaterThan(0))
     fireEvent.click(screen.getByRole('button', { name: /batch mode/i }))
     await waitFor(() => screen.getByRole('button', { name: /mark all present/i }))
@@ -239,6 +250,7 @@ describe('AttendancePage', () => {
 
   it('status dropdown includes Field trip and Co-op day options in batch mode', async () => {
     render(<AttendancePage />)
+    await openMarkForm()
     await waitFor(() => expect(screen.getAllByText('Adam').length).toBeGreaterThan(0))
     fireEvent.click(screen.getByRole('button', { name: /batch mode/i }))
     await waitFor(() => {
@@ -292,8 +304,9 @@ describe('AttendancePage', () => {
     mockSearchParams = new URLSearchParams('childId=child_002')
     mockGetSummary.mockResolvedValue(ok({ childId: 'child_002', totalRecorded: 0, byStatus: emptyAttendanceStatusCounts() }))
     render(<AttendancePage />)
+    await openMarkForm()
     await waitFor(() => {
-      const selector = screen.getAllByRole('combobox')[0]
+      const selector = screen.getByLabelText(/^learner$/i)
       expect(selector).toHaveValue('child_002')
     })
   })
@@ -301,16 +314,18 @@ describe('AttendancePage', () => {
   it('falls back to first child when ?childId is invalid', async () => {
     mockSearchParams = new URLSearchParams('childId=invalid_id')
     render(<AttendancePage />)
+    await openMarkForm()
     await waitFor(() => {
-      const selector = screen.getAllByRole('combobox')[0]
+      const selector = screen.getByLabelText(/^learner$/i)
       expect(selector).toHaveValue('child_001')
     })
   })
 
   it('uses first child when no ?childId param', async () => {
     render(<AttendancePage />)
+    await openMarkForm()
     await waitFor(() => {
-      const selector = screen.getAllByRole('combobox')[0]
+      const selector = screen.getByLabelText(/^learner$/i)
       expect(selector).toHaveValue('child_001')
     })
   })
@@ -319,13 +334,12 @@ describe('AttendancePage', () => {
     mockSearchParams = new URLSearchParams()
     const { rerender } = render(<AttendancePage />)
 
-    // Wait for children to load — first child selected by default
+    await openMarkForm()
     await waitFor(() => {
       const sel = screen.getByLabelText(/^learner$/i) as HTMLSelectElement
       expect(sel).toHaveValue('child_001')
     })
 
-    // Simulate URL change while component stays mounted
     act(() => { mockSearchParams = new URLSearchParams('childId=child_002') })
     rerender(<AttendancePage />)
 

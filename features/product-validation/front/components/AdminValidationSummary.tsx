@@ -85,30 +85,36 @@ export function AdminValidationSummary() {
 
   return (
     <section data-testid="admin-validation-section" className="space-y-8">
-      <div>
-        <h2 className="text-lg font-bold text-slate-900">Product validation</h2>
-        <p className="text-sm text-slate-500 mt-1">
-          Fork Test Framework responses from signed-in users. Open text is shown beside scores.
-        </p>
-      </div>
+      <p className="text-sm text-slate-500">
+        Fork Test Framework responses from signed-in users. Open text is shown beside scores.
+      </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <MetricCard label="Responses" value={String(summary.totalResponses)} />
         <MetricCard
           label="Fork Test Fit (avg)"
           value={summary.averageForkTestFitScore?.toFixed(2) ?? '—'}
+          help="Weighted score from pain, improvement, ease, trust, retention, pay, referral, and clarity (0–10)."
         />
         <MetricCard
-          label="Pain (avg)"
+          label="Previous pain (avg)"
           value={summary.averagePreviousPainScore?.toFixed(2) ?? '—'}
+          help="How painful the problem was before Sheath (0 = none, 10 = severe)."
         />
         <MetricCard
           label="Improvement (avg)"
           value={summary.averageImprovementScore?.toFixed(2) ?? '—'}
+          help="How much the product improved their homeschool workflow (0–10)."
         />
         <MetricCard label="Contact OK" value={String(summary.mayContactCount)} />
-        <MetricCard label="Quote (anon)" value={String(summary.mayQuoteAnonymizedCount)} />
-        <MetricCard label="Quote (named)" value={String(summary.mayQuoteWithNameCount)} />
+        <MetricCard
+          label="OK to quote anonymously"
+          value={String(summary.mayQuoteAnonymizedCount)}
+        />
+        <MetricCard
+          label="OK to quote with name"
+          value={String(summary.mayQuoteWithNameCount)}
+        />
       </div>
 
       <div>
@@ -187,11 +193,12 @@ export function AdminValidationSummary() {
   )
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
+function MetricCard({ label, value, help }: { label: string; value: string; help?: string }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-100 px-4 py-3 shadow-sm">
+    <div className="bg-white rounded-xl border border-slate-100 px-4 py-3 shadow-sm" title={help}>
       <p className="text-xs text-slate-500">{label}</p>
       <p className="text-lg font-bold text-slate-900 tabular-nums mt-0.5">{value}</p>
+      {help && <p className="text-[10px] text-slate-400 mt-1 leading-snug">{help}</p>}
     </div>
   )
 }

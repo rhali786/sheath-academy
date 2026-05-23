@@ -63,6 +63,7 @@ export interface AdminMetricsSummary {
   learnersCreated: number
   sessionsLogged: number
   completionEvents: number
+  attendanceEventsLogged: number
   deenRecordsCreated: number
   evidenceItemsCreated: number
   reportsGenerated: number
@@ -88,6 +89,7 @@ export interface AdminMetricsUserRow {
   learnerNames: string[]
   lessonTasksInPeriod: number
   lessonsCompletedInPeriod: number
+  attendanceEventsInPeriod: number
   sessionsLogged: number
   completionEvents: number
   startedNotCompletedCount: number

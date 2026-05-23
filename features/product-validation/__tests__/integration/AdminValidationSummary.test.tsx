@@ -127,7 +127,7 @@ describe('AdminValidationSummary', () => {
     await waitFor(() => {
       expect(screen.getByTestId('admin-validation-section')).toBeInTheDocument()
     })
-    expect(screen.getByText(/fork test fit/i)).toBeInTheDocument()
+    expect(screen.getByText(/ok to quote anonymously/i)).toBeInTheDocument()
     expect(screen.getByText('Responses').closest('div')?.parentElement).toBeTruthy()
     expect(screen.getAllByText('4.00').length).toBeGreaterThan(0)
   })

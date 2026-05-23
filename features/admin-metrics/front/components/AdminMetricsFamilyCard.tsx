@@ -3,6 +3,8 @@ import {
   DROP_OFF_LABELS,
   LESSONS_HELP,
   LESSONS_LABEL,
+  ATTENDANCE_LABEL,
+  ATTENDANCE_HELP,
   ACTIVITY_LABEL,
   ACTIVITY_HELP,
 } from '@/features/admin-metrics/front/constants'
@@ -63,6 +65,7 @@ export function AdminMetricsFamilyCard({ row, formatLastActive }: AdminMetricsFa
       <dl className="px-4 py-3 space-y-0">
         <MetricRow label="Learners" value={learnerLine(row)} />
         <MetricRow label={LESSONS_LABEL} value={lessonsLine(row)} help={LESSONS_HELP} />
+        <MetricRow label={ATTENDANCE_LABEL} value={row.attendanceEventsInPeriod} help={ATTENDANCE_HELP} />
         <MetricRow label="Qur'an sessions" value={row.quranRecordsCreated} />
         <MetricRow label="Portfolio evidence" value={row.evidenceItemsCreated} />
         <MetricRow label={ACTIVITY_LABEL} value={row.sessionsLogged} help={ACTIVITY_HELP} />

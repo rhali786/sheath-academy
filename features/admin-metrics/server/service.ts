@@ -99,6 +99,7 @@ export async function getAdminMetricsUsers(query: AdminMetricsQuery): Promise<Ad
       learnerNames: learners.names,
       lessonTasksInPeriod: lessonCount,
       lessonsCompletedInPeriod: completedCount,
+      attendanceEventsInPeriod: attCount,
       // Map domain counts to event-model fields for UI compatibility
       sessionsLogged: lessonCount + quranCount,
       completionEvents: completedCount,
@@ -144,6 +145,7 @@ export async function getAdminMetricsSummary(
     learnersCreated: rows.reduce((s, r) => s + r.learnerCount, 0),
     sessionsLogged: rows.reduce((s, r) => s + r.sessionsLogged, 0),
     completionEvents: rows.reduce((s, r) => s + r.completionEvents, 0),
+    attendanceEventsLogged: rows.reduce((s, r) => s + r.attendanceEventsInPeriod, 0),
     deenRecordsCreated: rows.reduce((s, r) => s + r.deenRecordsCreated, 0),
     evidenceItemsCreated: rows.reduce((s, r) => s + r.evidenceItemsCreated, 0),
     reportsGenerated: 0,

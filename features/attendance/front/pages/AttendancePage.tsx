@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { attendanceApi } from '@/features/attendance/front/services/api'
 import { AttendanceList } from '@/features/attendance/front/components/AttendanceList'
 import { AttendanceSummary } from '@/features/attendance/front/components/AttendanceSummary'
+import { AttendanceStatusButtons } from '@/features/attendance/front/components/AttendanceStatusButtons'
 import { BatchAttendanceForm } from '@/features/attendance/front/components/BatchAttendanceForm'
 import type { AttendanceRecord, AttendanceStatus, AttendanceSummary as SummaryType } from '@/features/attendance/types'
 import { emptyAttendanceSummary } from '@/features/attendance/types'
@@ -45,7 +46,7 @@ export function AttendancePage() {
   const [dateSort, setDateSort] = useState<DateSort>('desc')
   const [mode, setMode] = useState<Mode>('individual')
   const [batchLoading, setBatchLoading] = useState(false)
-  const [showForm, setShowForm] = useState(true)
+  const [showForm, setShowForm] = useState(false)
 
   useEffect(() => {
     childrenApi.getAllChildren()
@@ -161,13 +162,6 @@ export function AttendancePage() {
           </button>
           <button
             type="button"
-            onClick={() => setMode(m => m === 'individual' ? 'batch' : 'individual')}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
-          >
-            {mode === 'individual' ? 'Batch mode' : 'Individual mode'}
-          </button>
-          <button
-            type="button"
             onClick={() => setShowForm(v => !v)}
             className="px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800"
           >
@@ -176,100 +170,90 @@ export function AttendancePage() {
         </div>
       </div>
 
-      {/* Quick mark / batch form */}
-      {showForm && <h2 className="form-section-heading">Mark attendance</h2>}
-      {showForm && <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-40">
-            <label htmlFor="attendance-date" className="block text-sm font-medium text-slate-700 mb-1">Date</label>
-            <input
-              id="attendance-date"
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
-            />
-          </div>
-          {mode === 'individual' && (
-            <div className="flex-1 min-w-40">
-              <label htmlFor="learner-select" className="block text-sm font-medium text-slate-700 mb-1">Learner</label>
-              <select
-                id="learner-select"
-                value={selectedChildId}
-                onChange={e => setSelectedChildId(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
-              >
-                {children.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-
-        {mode === 'batch' ? (
-          <BatchAttendanceForm
-            learners={activeChildren}
-            date={date}
-            onSubmit={handleBatchSubmit}
-            loading={batchLoading}
-          />
-        ) : (
-          <>
-            <div className="flex flex-wrap gap-2">
-              <label className="block text-sm font-medium text-slate-700 w-full">Mark as</label>
-              <button
-                onClick={() => markAttendance('present')}
-                className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
-              >
-                Present
-              </button>
-              <button
-                onClick={() => markAttendance('absent')}
-                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
-              >
-                Absent
-              </button>
-              <button
-                onClick={() => markAttendance('partial')}
-                className="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg transition-colors"
-              >
-                Partial
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <input
-                type="text"
-                placeholder="Notes (optional)"
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
-              />
-              <div className="flex gap-3">
-                <input
-                  type="number"
-                  placeholder="Hours"
-                  value={hours}
-                  onChange={e => setHours(e.target.value)}
-                  min={0}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
-                />
-                <input
-                  type="number"
-                  placeholder="Minutes"
-                  value={minutes}
-                  onChange={e => setMinutes(e.target.value)}
-                  min={0}
-                  max={59}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
-                />
+      {showForm && (
+        <>
+          <h2 className="form-section-heading">Mark attendance</h2>
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div className="flex flex-wrap gap-4 flex-1">
+                <div className="flex-1 min-w-40">
+                  <label htmlFor="attendance-date" className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                  <input
+                    id="attendance-date"
+                    type="date"
+                    value={date}
+                    onChange={e => setDate(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+                  />
+                </div>
+                {mode === 'individual' && (
+                  <div className="flex-1 min-w-40">
+                    <label htmlFor="learner-select" className="block text-sm font-medium text-slate-700 mb-1">Learner</label>
+                    <select
+                      id="learner-select"
+                      value={selectedChildId}
+                      onChange={e => setSelectedChildId(e.target.value)}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+                    >
+                      {children.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
+              <button
+                type="button"
+                onClick={() => setMode(m => m === 'individual' ? 'batch' : 'individual')}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                {mode === 'individual' ? 'Batch mode' : 'Individual mode'}
+              </button>
             </div>
-          </>
-        )}
-      </div>}
 
+            {mode === 'batch' ? (
+              <BatchAttendanceForm
+                learners={activeChildren}
+                date={date}
+                onSubmit={handleBatchSubmit}
+                loading={batchLoading}
+              />
+            ) : (
+              <>
+                <AttendanceStatusButtons onSelect={markAttendance} />
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    placeholder="Notes (optional)"
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+                  />
+                  <div className="flex gap-3">
+                    <input
+                      type="number"
+                      placeholder="Hours"
+                      value={hours}
+                      onChange={e => setHours(e.target.value)}
+                      min={0}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Minutes"
+                      value={minutes}
+                      onChange={e => setMinutes(e.target.value)}
+                      min={0}
+                      max={59}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
       <div>
         <h2 className="text-lg font-bold text-slate-900 mb-3">Summary</h2>
         <AttendanceSummary summary={summary} />

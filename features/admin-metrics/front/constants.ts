@@ -12,6 +12,10 @@ export const LESSONS_LABEL = 'Lessons'
 export const LESSONS_HELP =
   'Lesson tasks with due date in the selected period; completed count reflects tasks with status = completed.'
 
+export const ATTENDANCE_LABEL = 'Attendance records'
+export const ATTENDANCE_HELP =
+  'Non-voided attendance events with date in the selected period (one row per learner per day).'
+
 export const ACTIVITY_LABEL = 'Activity (lessons + Qur\'an)'
 export const ACTIVITY_HELP =
   'Total lesson tasks + Qur\'an sessions logged in the selected period.'

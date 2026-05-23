@@ -36,7 +36,7 @@ export function LessonsPage() {
   const [filterChildId, setFilterChildId] = useState<string>('')
   const [filterStatus, setFilterStatus] = useState<LessonTaskStatus | ''>('')
   const [dateSort, setDateSort] = useState<DateSort>('desc')
-  const [showForm, setShowForm] = useState(true)
+  const [showForm, setShowForm] = useState(false)
 
   useEffect(() => {
     const init = async () => {

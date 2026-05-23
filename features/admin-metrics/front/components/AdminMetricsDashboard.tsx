@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { AdminMetricsFamilyCard } from '@/features/admin-metrics/front/components/AdminMetricsFamilyCard'
 import {
   DROP_OFF_LABELS,
+  ATTENDANCE_HELP,
   ACTIVITY_LABEL,
   ACTIVITY_HELP,
 } from '@/features/admin-metrics/front/constants'
@@ -181,11 +182,14 @@ export function AdminMetricsDashboard() {
           </li>
           <li>
             <span className="font-medium">Lessons (planner)</span> — tasks with due date in the period;
-            completed uses planner status, not usage events alone.
+            completed uses planner status.
           </li>
           <li>
-            <span className="font-medium">Qur&apos;an / Evidence / Reports</span> — counts from usage
-            events (quran_record_created, evidence_created, report_generated) in the period.
+            <span className="font-medium">Attendance</span> — {ATTENDANCE_HELP}
+          </li>
+          <li>
+            <span className="font-medium">Qur&apos;an / Evidence</span> — session and portfolio rows
+            with dates in the period.
           </li>
         </ul>
         <p className="mt-3 font-medium text-slate-800">Drop-off signals</p>
@@ -199,7 +203,7 @@ export function AdminMetricsDashboard() {
       </details>
 
       {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-testid="admin-metrics-hero">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" data-testid="admin-metrics-hero">
           <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Active users / families</p>
             <p className="text-2xl font-bold text-slate-900 mt-1" data-testid="hero-active-users">
@@ -222,6 +226,15 @@ export function AdminMetricsDashboard() {
             <p className="text-xs text-slate-500 mt-1">
               Δ sessions {formatDelta(summary.previousPeriodComparison.sessionsDelta)}
             </p>
+          </div>
+          <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide" title={ATTENDANCE_HELP}>
+              Attendance records
+            </p>
+            <p className="text-2xl font-bold text-slate-900 mt-1" data-testid="hero-attendance">
+              {summary.attendanceEventsLogged}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">Learner-day entries in period</p>
           </div>
           <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Proof & records</p>
