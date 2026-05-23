@@ -5,11 +5,12 @@ import type { RecordsReport } from '@/features/records/types'
 
 jest.mock('@/features/household/front/context', () => ({
   useHousehold: jest.fn(() => ({
-    workspace: { id: 'ws_001', name: 'Test', ownerId: 'u', createdAt: '2026-01-01T00:00:00.000Z' },
-    householdProfile: { id: 'hh_001', workspaceId: 'ws_001', familyName: 'Test', createdAt: '2026-01-01T00:00:00.000Z' },
+    householdProfile: { id: 'hh_001', workspaceId: 'hh_001', familyName: 'Test', createdAt: '2026-01-01T00:00:00.000Z' },
     loading: false,
     needsSetup: false,
     familyName: 'Test',
+    error: null,
+    refetch: jest.fn(),
   })),
 }))
 
