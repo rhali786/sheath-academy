@@ -62,18 +62,10 @@ const { schoolYearApi } = jest.requireMock('@/features/school-year/front/service
   schoolYearApi: { getActiveSchoolYear: jest.Mock }
 }
 
-const mockWorkspace = {
-  id: 'workspace_001',
-  name: 'Test Academy',
-  ownerId: 'user_001',
-  createdAt: '2026-01-01T00:00:00.000Z',
-}
-
 const loadedHousehold: HouseholdContextType = {
-  workspace: mockWorkspace,
   householdProfile: {
     id: 'household_001',
-    workspaceId: 'workspace_001',
+    workspaceId: 'household_001',
     familyName: 'Test Family',
     createdAt: '2026-01-01T00:00:00.000Z',
   },
@@ -156,10 +148,11 @@ describe('SettingsPage', () => {
     useHousehold.mockReturnValue(loadedHousehold)
   })
 
-  it('shows loading when workspace is not yet available', () => {
+  it('shows loading when household profile is not yet available', () => {
     useHousehold.mockReturnValue({
       ...loadedHousehold,
-      workspace: null,
+      householdProfile: null,
+      loading: true,
     })
     render(<SettingsPage />)
     expect(screen.getByText('Loading...')).toBeInTheDocument()
@@ -186,7 +179,7 @@ describe('SettingsPage', () => {
     schoolYearApi.getActiveSchoolYear.mockResolvedValueOnce({
       data: {
         id: 'sy1',
-        workspaceId: mockWorkspace.id,
+        workspaceId: 'household_001',
         name: '2025–2026',
         startDate: '2025-08-01',
         endDate: '2026-05-31',
@@ -211,7 +204,7 @@ describe('SettingsPage', () => {
       data: [
         {
           id: 'c1',
-          householdId: mockWorkspace.id,
+          householdId: 'household_001',
           name: 'Only',
           gradeLabel: '1',
           username: 'a',
@@ -236,7 +229,7 @@ describe('SettingsPage', () => {
       data: [
         {
           id: 'c1',
-          householdId: mockWorkspace.id,
+          householdId: 'household_001',
           name: 'Ada',
           gradeLabel: '1',
           username: 'a',
@@ -246,7 +239,7 @@ describe('SettingsPage', () => {
         },
         {
           id: 'c2',
-          householdId: mockWorkspace.id,
+          householdId: 'household_001',
           name: 'Ben',
           gradeLabel: '2',
           username: 'b',

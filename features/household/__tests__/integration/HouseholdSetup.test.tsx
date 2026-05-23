@@ -22,7 +22,6 @@ jest.mock('@/features/household/front/context', () => ({
 jest.mock('@/features/household/front/services/api', () => ({
   householdApi: {
     setup: jest.fn(),
-    getWorkspace: jest.fn(),
     getProfile: jest.fn(),
   },
 }))
@@ -49,21 +48,14 @@ const { useHousehold } = jest.requireMock('@/features/household/front/context') 
   useHousehold: jest.MockedFunction<() => HouseholdContextType>
 }
 
-const mockWorkspace = {
-  id: 'workspace_001',
-  name: 'Test Academy',
-  ownerId: 'user_001',
-  createdAt: '2026-01-01T00:00:00.000Z',
-}
 const mockProfile = {
   id: 'household_001',
-  workspaceId: 'workspace_001',
+  workspaceId: 'household_001',
   familyName: 'Test Family',
   createdAt: '2026-01-01T00:00:00.000Z',
 }
 
 const baseHouseholdExists: HouseholdContextType = {
-  workspace: mockWorkspace,
   householdProfile: mockProfile,
   familyName: 'Test Family',
   needsSetup: false,
@@ -73,7 +65,6 @@ const baseHouseholdExists: HouseholdContextType = {
 }
 
 const noHousehold: HouseholdContextType = {
-  workspace: null,
   householdProfile: null,
   familyName: '',
   needsSetup: true,

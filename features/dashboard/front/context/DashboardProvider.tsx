@@ -38,7 +38,7 @@ export function useContext_Dashboard() {
 }
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
-  const { workspace, householdProfile, loading: householdLoading } = useHousehold()
+  const { householdProfile, loading: householdLoading } = useHousehold()
   const [studentProfiles, setStudentProfiles] = useState<StudentProfile[]>([])
   const [allAlerts, setAllAlerts] = useState<Alert[]>([])
   const [quranSessions, setQuranSessions] = useState<QuranSession[]>([])
@@ -55,7 +55,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
     const fetchData = async () => {
       try {
-        const householdId = householdProfile?.id ?? workspace?.id
+        const householdId = householdProfile?.id
         const childrenPromise = householdId
           ? childrenApi.getChildren(householdId, false)
           : Promise.resolve({
@@ -90,7 +90,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     void fetchData()
     // selectedChildId intentionally excluded — re-fetch is handled by the effect below
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspace?.id, householdProfile?.id, householdLoading])
+  }, [householdProfile?.id, householdLoading])
 
   // Re-fetch per-child data whenever selected child changes (after initial load)
   useEffect(() => {

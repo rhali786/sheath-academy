@@ -12,10 +12,10 @@ export interface SetupCard_SubjectsProps {
 }
 
 export function SetupCard_Subjects({ onSubjectAdded }: SetupCard_SubjectsProps) {
-  const { workspace, householdProfile } = useHousehold()
+  const { householdProfile } = useHousehold()
   const [refreshKey, setRefreshKey] = useState(0)
   const [primaryChildId, setPrimaryChildId] = useState<string | null>(null)
-  const householdId = householdProfile?.id ?? workspace?.id ?? ''
+  const householdId = householdProfile?.id ?? ''
 
   useEffect(() => {
     if (!householdId) {

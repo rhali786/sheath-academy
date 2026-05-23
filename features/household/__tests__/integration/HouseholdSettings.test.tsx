@@ -26,23 +26,15 @@ const { useHousehold } = jest.requireMock('@/features/household/front/context') 
 }
 const { householdApi } = jest.requireMock('@/features/household/front/services/api')
 
-const mockWorkspace = {
-  id: 'workspace_001',
-  name: 'Test Academy',
-  ownerId: 'user_001',
-  createdAt: '2026-01-01T00:00:00.000Z',
-}
-
 const mockProfileMonday: HouseholdProfile = {
   id: 'household_001',
-  workspaceId: 'workspace_001',
+  workspaceId: 'household_001',
   familyName: 'Test Family',
   weekStartDay: 'Monday',
   createdAt: '2026-01-01T00:00:00.000Z',
 }
 
 const baseCtx: HouseholdContextType = {
-  workspace: mockWorkspace,
   householdProfile: mockProfileMonday,
   familyName: 'Test Family',
   needsSetup: false,

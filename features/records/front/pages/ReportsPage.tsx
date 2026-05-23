@@ -17,7 +17,7 @@ function todayLocal(): string {
 }
 
 export function ReportsPage() {
-  const { workspace, householdProfile, loading: householdLoading } = useHousehold()
+  const { householdProfile, loading: householdLoading } = useHousehold()
   const [studentProfiles, setStudentProfiles] = useState<StudentProfile[]>([])
   const [childrenLoading, setChildrenLoading] = useState(true)
   const [selectedChildId, setSelectedChildId] = useState<string>('')
@@ -30,7 +30,7 @@ export function ReportsPage() {
 
   useEffect(() => {
     if (householdLoading) return
-    const householdId = householdProfile?.id ?? workspace?.id
+    const householdId = householdProfile?.id
     if (!householdId) { setChildrenLoading(false); return }
     childrenApi.getChildren(householdId, false)
       .then(res => {
@@ -40,7 +40,7 @@ export function ReportsPage() {
       })
       .catch(() => {})
       .finally(() => setChildrenLoading(false))
-  }, [householdLoading, workspace?.id, householdProfile?.id])
+  }, [householdLoading, householdProfile?.id])
 
   const dateError = useMemo(() => {
     if (startDate && startDate > today) return 'Start date cannot be in the future.'

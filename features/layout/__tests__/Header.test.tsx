@@ -15,7 +15,6 @@ jest.mock('next/navigation', () => ({
 jest.mock('@/features/household/front/context', () => ({
   useHousehold: jest.fn(() => ({
     familyName: '',
-    workspace: null,
     householdProfile: null,
     needsSetup: false,
     loading: false,
@@ -44,7 +43,6 @@ const mockUseNavigation = useNavigation as jest.Mock
 
 const defaultHousehold = () => ({
   familyName: '',
-  workspace: null,
   householdProfile: null,
   needsSetup: false,
   loading: false,

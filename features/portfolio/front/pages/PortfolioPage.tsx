@@ -13,7 +13,7 @@ import { EvidenceFilters } from '../components/EvidenceFilters'
 import { EvidenceList } from '../components/EvidenceList'
 
 export function PortfolioPage() {
-  const { workspace, householdProfile, loading: householdLoading } = useHousehold()
+  const { householdProfile, loading: householdLoading } = useHousehold()
   const [studentProfiles, setStudentProfiles] = useState<StudentProfile[]>([])
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
 
@@ -32,7 +32,7 @@ export function PortfolioPage() {
   // Fetch children when household is ready
   useEffect(() => {
     if (householdLoading) return
-    const householdId = householdProfile?.id ?? workspace?.id
+    const householdId = householdProfile?.id
     if (!householdId) return
     childrenApi.getChildren(householdId, false)
       .then(res => {
@@ -44,7 +44,7 @@ export function PortfolioPage() {
         }
       })
       .catch(() => {})
-  }, [householdLoading, workspace?.id, householdProfile?.id])
+  }, [householdLoading, householdProfile?.id])
 
   // Sync filter when selected child changes
   useEffect(() => {
