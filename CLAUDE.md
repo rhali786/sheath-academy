@@ -60,7 +60,10 @@ Run these checks before touching any file:
 | `npm run dev:clean` | Delete `.next` then dev — fixes stale/mixed build artifacts |
 | `npm run build` | Production build (must pass before merge) |
 | `npm run start` | Production server after build |
-| `npm test` | Jest (API + integration; `jsdom` for UI) |
+| `npm test` | Jest unit + integration tests (`jsdom` for UI) |
+| `npm run test:watch` | Jest in watch mode |
+| `npm run test:e2e` | Playwright e2e suite (requires built app + `DATABASE_URL`) |
+| `npm run test:e2e:ui` | Playwright with interactive UI |
 | `npm run smoke` | After build: checks `/api/health` and static assets. Uses a random free port by default; set `SMOKE_PORT=3010` only if that port is free |
 | `npm run db:generate` | Generate Drizzle migration from schema diff |
 | `npm run db:migrate` | Apply pending migrations to the database |
@@ -201,4 +204,4 @@ See **[docs/testing-patterns.md](docs/testing-patterns.md)** for boilerplate for
 
 ## Known product gaps (not bugs)
 
-Limited validation and error boundaries; no e2e suite. Auth still uses in-memory adapter (pending Drizzle adapter migration). Features still on memory stubs: `resources` (catalog only), `school-year`, `records/service`, `setup/service`. Backlog: Playwright e2e, accessibility pass, richer filtering, email allow-list, user-to-household binding, reports persistence table.
+Limited validation and error boundaries. Backlog: accessibility pass, richer filtering, email allow-list, user-to-household binding.

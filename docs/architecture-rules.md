@@ -48,11 +48,8 @@ API route handlers should be thin: parse/validate the request, call the feature 
 
 - First look for an existing service function. If one exists, use it.
 - If one does not exist, add or extend a feature service function.
-- Do **not** import `createMemoryStore` directly into API route handlers.
 - Do **not** create a second store for the same entity.
 - Do **not** bypass validation by importing a store directly into UI-facing routes.
-
-`features/lib/server/memoryStore.ts` still exists for `resources` (catalog) and `school-year` — both pending migration. Do not use it for new features.
 
 ---
 
