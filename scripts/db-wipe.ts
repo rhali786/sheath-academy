@@ -18,6 +18,7 @@ const APP_TABLES = [
   'quran_sessions',
   'attendance_events',
   'lesson_tasks',
+  'resources',
   'subjects',
   'school_years',
   'learners',

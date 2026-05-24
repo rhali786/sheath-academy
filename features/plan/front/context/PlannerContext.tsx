@@ -7,6 +7,7 @@ import type { StudentProfile, ApiResponse } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { getWeekStartDate } from '../utils/weekDate'
 import { useHousehold } from '@/features/household/front/context'
+import { latencyTrace } from '@/features/lib/debug/latencyTrace'
 
 export { getWeekStartDate }
 
@@ -47,9 +48,16 @@ function getApiBaseUrl(): string {
 }
 
 async function get<T>(path: string): Promise<ApiResponse<T>> {
+  const t0 = performance.now()
+  latencyTrace('PlannerContext.tsx:get', 'fetch_start', { path }, 'C')
   const res = await fetch(`${getApiBaseUrl()}${path}`)
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
-  return res.json()
+  if (!res.ok) {
+    latencyTrace('PlannerContext.tsx:get', 'fetch_end', { path, ms: Math.round(performance.now() - t0), ok: false }, 'C')
+    throw new Error(`Request failed: ${res.status}`)
+  }
+  const json = await res.json()
+  latencyTrace('PlannerContext.tsx:get', 'fetch_end', { path, ms: Math.round(performance.now() - t0), ok: true }, 'C')
+  return json
 }
 
 export function PlannerProvider({ children }: { children: React.ReactNode }) {
@@ -70,9 +78,14 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
 
   // Init: children + subjects only — profile comes from HouseholdProvider
   useEffect(() => {
-    if (householdLoading) return
+    if (householdLoading) {
+      latencyTrace('PlannerContext.tsx:init', 'init_blocked_household_loading', {}, 'B')
+      return
+    }
     let cancelled = false
     ;(async () => {
+      const initT0 = performance.now()
+      latencyTrace('PlannerContext.tsx:init', 'init_start', { householdLoading }, 'B')
       setIsInitializing(true)
       setError(null)
       try {
@@ -85,6 +98,16 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
         setSelectedChildIds(childrenResponse.data.map(c => c.id))
         setSubjectsList(subjectsResponse.data)
         setSelectedSubjectIds(subjectsResponse.data.map(s => s.id))
+        latencyTrace(
+          'PlannerContext.tsx:init',
+          'init_end',
+          {
+            ms: Math.round(performance.now() - initT0),
+            childCount: childrenResponse.data.length,
+            subjectCount: subjectsResponse.data.length,
+          },
+          'B',
+        )
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load planner')
       } finally {
@@ -96,13 +119,23 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
 
   // Lessons: separate loading flag, fires after init completes
   useEffect(() => {
-    if (householdLoading || isInitializing) return
+    if (householdLoading || isInitializing) {
+      latencyTrace(
+        'PlannerContext.tsx:lessons',
+        'lessons_blocked',
+        { householdLoading, isInitializing },
+        'C',
+      )
+      return
+    }
     if (selectedChildIds.length === 0 || selectedSubjectIds.length === 0) {
       setLessons([])
       return
     }
     let cancelled = false
     ;(async () => {
+      const lessonsT0 = performance.now()
+      latencyTrace('PlannerContext.tsx:lessons', 'lessons_start', { childCount: selectedChildIds.length }, 'C')
       setIsLessonsLoading(true)
       setError(null)
       try {
@@ -113,6 +146,12 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
           selectedSubjectIds,
         )
         if (!cancelled) setLessons(lessonsList)
+        latencyTrace(
+          'PlannerContext.tsx:lessons',
+          'lessons_end',
+          { ms: Math.round(performance.now() - lessonsT0), count: lessonsList.length },
+          'C',
+        )
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load lessons')
       } finally {

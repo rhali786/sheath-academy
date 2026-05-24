@@ -3,6 +3,7 @@
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import type { HouseholdProfile } from '@/features/lib/types'
 import { householdApi } from '../services/api'
+import { latencyTrace } from '@/features/lib/debug/latencyTrace'
 
 export interface HouseholdContextType {
   householdProfile: HouseholdProfile | null
@@ -30,13 +31,27 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
 
   const fetchHousehold = useCallback(() => {
     setLoading(true)
+  const t0 = performance.now()
+  latencyTrace('HouseholdContext.tsx:fetchHousehold', 'profile_fetch_start', { source: 'HouseholdProvider' }, 'A')
     householdApi
       .getProfile()
       .then((profileRes) => {
+        latencyTrace(
+          'HouseholdContext.tsx:fetchHousehold',
+          'profile_fetch_end',
+          { source: 'HouseholdProvider', ms: Math.round(performance.now() - t0), ok: true },
+          'A',
+        )
         setHouseholdProfile(profileRes.data)
         setLoading(false)
       })
       .catch((err) => {
+        latencyTrace(
+          'HouseholdContext.tsx:fetchHousehold',
+          'profile_fetch_end',
+          { source: 'HouseholdProvider', ms: Math.round(performance.now() - t0), ok: false },
+          'A',
+        )
         setError(err instanceof Error ? err.message : 'Failed to load household')
         setLoading(false)
       })

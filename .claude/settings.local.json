@@ -18,7 +18,8 @@
       "Bash(npx drizzle-kit *)",
       "Bash(npx dotenv *)",
       "Bash(npx next *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(Get-Date *)"
     ]
   }
 }

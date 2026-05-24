@@ -8,6 +8,7 @@ import { ChildSubjectFilter } from './ChildSubjectFilter'
 import { WeekGrid } from './WeekGrid'
 import { WeeklyList } from './WeeklyList'
 import { EmptyWeekState } from './EmptyWeekState'
+import { latencyTrace } from '@/features/lib/debug/latencyTrace'
 
 export function WeeklyPlannerPage() {
   const { lessons, isInitializing, isLessonsLoading, error } = usePlanner()
@@ -23,6 +24,20 @@ export function WeeklyPlannerPage() {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  useEffect(() => {
+    const phase = householdLoading || isInitializing
+      ? 'full_spinner'
+      : isLessonsLoading
+        ? 'chrome_lessons_loading'
+        : 'ready'
+    latencyTrace(
+      'WeeklyPlannerPage.tsx:phase',
+      'ui_phase',
+      { phase, householdLoading, isInitializing, isLessonsLoading, lessonCount: lessons.length },
+      'D',
+    )
+  }, [householdLoading, isInitializing, isLessonsLoading, lessons.length])
 
   if (householdLoading || isInitializing) {
     return (
