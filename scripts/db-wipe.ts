@@ -24,6 +24,8 @@ const APP_TABLES = [
   'learners',
   'household_settings',
   'user_settings',
+  'auth_accounts',
+  'verification_tokens',
   'households',
   'users',
 ] as const

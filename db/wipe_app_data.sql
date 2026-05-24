@@ -13,6 +13,8 @@ TRUNCATE
   user_settings,
   learners,
   product_validation_responses,
+  auth_accounts,
+  verification_tokens,
   households,
   users
 CASCADE;

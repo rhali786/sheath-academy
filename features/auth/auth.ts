@@ -1,13 +1,32 @@
 import NextAuth from 'next-auth'
+import type { Adapter } from '@auth/core/adapters'
 import Resend from 'next-auth/providers/resend'
 import Google from 'next-auth/providers/google'
 import Facebook from 'next-auth/providers/facebook'
 import Credentials from 'next-auth/providers/credentials'
 import { getDevSeedUserEmail } from '@/features/lib/server/devUserEmail'
-import { memoryAdapter } from './lib/memoryAdapter'
+
+/** Lazy-load Postgres adapter so middleware (Edge) does not bundle `postgres`. */
+function lazyDrizzleAdapter(): Adapter {
+  let adapter: Adapter | undefined
+  const getAdapter = (): Adapter => {
+    if (!adapter) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      adapter = require('./lib/drizzleAdapter').drizzleAdapter as Adapter
+    }
+    return adapter
+  }
+
+  return new Proxy({} as Adapter, {
+    get(_target, prop) {
+      const value = getAdapter()[prop as keyof Adapter]
+      return typeof value === 'function' ? value.bind(getAdapter()) : value
+    },
+  })
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: memoryAdapter,
+  adapter: lazyDrizzleAdapter(),
   session: { strategy: 'jwt' },
   pages: { signIn: '/login' },
   // Render (and most cloud hosts) terminate SSL at the load balancer;
