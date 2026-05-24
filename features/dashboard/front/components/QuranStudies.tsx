@@ -70,7 +70,9 @@ export function QuranStudies({ children, quranSessions, onAddSession, chartData 
             Quran Logging
           </p>
           {children.map((child, i) => {
-            const session = quranSessions.find(s => s.childId === child.id)
+            const session = quranSessions
+              .filter(s => s.childId === child.id)
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
             const dotColor = childColors[i] || childColors[0]
             return (
               <div key={child.id} className="bg-white rounded-xl shadow-sm p-5">

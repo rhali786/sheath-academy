@@ -50,9 +50,14 @@ export const subjectsApi = {
     get(childId ? `/api/subjects?childId=${encodeURIComponent(childId)}` : '/api/subjects'),
 
   createSubject: (body: {
-    childId: string
+    childId?: string
+    learnerIds?: string[]
     name: string
     category: SubjectCourseCategory
+    customCategory?: string
+    instructorName?: string
+    level?: string
+    schoolYearId?: string
     order?: number
   }): Promise<ApiResponse<SubjectCourse>> => post('/api/subjects', body),
 

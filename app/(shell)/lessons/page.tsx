@@ -1,4 +1,4 @@
-import { LessonsPage } from '@/features/planner/front/pages/LessonsPage'
+import { LessonsPage } from '@/features/plan/front/pages/LessonsPage'
 
 export const dynamic = 'force-dynamic'
 

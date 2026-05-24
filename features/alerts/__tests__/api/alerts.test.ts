@@ -1,14 +1,20 @@
 /** @jest-environment node */
 
-import { GET } from '@/features/alerts/api/routes/alerts'
+jest.mock('@/features/auth/server/requestAuth', () => {
+  const { mockRequestAuthModule } = require('@/features/auth/__tests__/helpers')
+  return mockRequestAuthModule({ householdId: 'hh_01', userId: 'user_01', timezone: 'America/New_York' })
+})
 
 jest.mock('@/features/alerts/server/service', () => ({
   getAlerts: jest.fn(),
 }))
 
+import { GET } from '@/features/alerts/api/routes/alerts'
 import { getAlerts } from '@/features/alerts/server/service'
+
 const mockGetAlerts = getAlerts as jest.Mock
 
+const HOUSEHOLD_ID = 'hh_01'
 const TODAY = '2026-05-17'
 const YESTERDAY = '2026-05-16'
 
@@ -54,7 +60,11 @@ function createRequest(url: string): Request {
 }
 
 beforeEach(() => {
-  mockGetAlerts.mockReturnValue([alert1, alert2, alert3])
+  mockGetAlerts.mockResolvedValue([alert1, alert2, alert3])
+})
+
+afterEach(() => {
+  jest.clearAllMocks()
 })
 
 describe('GET /api/alerts', () => {
@@ -63,10 +73,11 @@ describe('GET /api/alerts', () => {
     const body = await res.json()
     expect(body.status).toBe('success')
     expect(body.data).toHaveLength(3)
+    expect(mockGetAlerts).toHaveBeenCalledWith(HOUSEHOLD_ID, undefined)
   })
 
   test('filters alerts by childId', async () => {
-    mockGetAlerts.mockImplementation((childId?: string) =>
+    mockGetAlerts.mockImplementation(async (_householdId: string, childId?: string) =>
       childId === 'adam_01'
         ? [alert1]
         : [alert1, alert2, alert3]
@@ -75,10 +86,11 @@ describe('GET /api/alerts', () => {
     const body = await res.json()
     expect(body.status).toBe('success')
     expect(body.data.every((a: { childId: string | null }) => a.childId === 'adam_01' || a.childId === null)).toBe(true)
+    expect(mockGetAlerts).toHaveBeenCalledWith(HOUSEHOLD_ID, 'adam_01')
   })
 
   test('returns empty array when no alerts', async () => {
-    mockGetAlerts.mockReturnValue([])
+    mockGetAlerts.mockResolvedValue([])
     const res = await GET(createRequest('/api/alerts'))
     const body = await res.json()
     expect(body.status).toBe('success')
@@ -89,7 +101,6 @@ describe('GET /api/alerts', () => {
     const res = await GET(createRequest('/api/alerts?status=open'))
     const body = await res.json()
     expect(body.status).toBe('success')
-    // alert3 has status=dismissed, so only alert1 and alert2 should be returned
     expect(body.data).toHaveLength(2)
     expect(body.data.every((a: { status: string }) => a.status === 'open')).toBe(true)
   })
@@ -103,7 +114,6 @@ describe('GET /api/alerts', () => {
   })
 
   test('filters by startDate and endDate returns alerts in range', async () => {
-    // alert1 has date=YESTERDAY, alert2 date=TODAY, alert3 date=TODAY
     const res = await GET(createRequest(`/api/alerts?startDate=${TODAY}&endDate=${TODAY}`))
     const body = await res.json()
     expect(body.status).toBe('success')
@@ -122,7 +132,6 @@ describe('GET /api/alerts', () => {
     const res = await GET(createRequest('/api/alerts?status=open&type=pending_lessons'))
     const body = await res.json()
     expect(body.status).toBe('success')
-    // alert1 is open+pending_lessons, alert2 is open+attendance_missing, alert3 is dismissed+pending_lessons
     expect(body.data).toHaveLength(1)
     expect(body.data[0].id).toBe('pending_lessons_adam')
   })

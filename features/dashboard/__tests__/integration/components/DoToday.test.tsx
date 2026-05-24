@@ -5,7 +5,7 @@ import { DashboardContext } from '@/features/dashboard/front/context/DashboardPr
 import type { DashboardContextType } from '@/features/dashboard/front/context/DashboardProvider'
 import type { StudentProfile } from '@/features/lib/types'
 
-jest.mock('@/features/planner/front/services/api', () => ({
+jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: { getLessons: jest.fn().mockResolvedValue([]) },
 }))
 
@@ -52,48 +52,38 @@ function renderDoToday(ctx: DashboardContextType) {
 }
 
 describe('DoToday', () => {
-  it('shows "Select a child" prompt when selectedChildId is null', () => {
-    renderDoToday(makeCtx({ selectedChildId: null }))
-    expect(screen.getByText(/select a child/i)).toBeInTheDocument()
-  })
-
-  it('renders TodayLessonCard when selectedChildId is set', async () => {
-    renderDoToday(makeCtx({ selectedChildId: 'child_001' }))
+  it('renders TodayLessonCard with the selected child when selectedChildId is set', async () => {
+    renderDoToday(makeCtx({ selectedChildId: 'child_001', children: [mockChild] }))
     await waitFor(() => {
-      // TodayLessonCard renders its heading "Today —"
       expect(screen.getByText(/today —/i)).toBeInTheDocument()
     })
   })
 
-  it('does not render TodayLessonCard when selectedChildId is null', () => {
-    renderDoToday(makeCtx({ selectedChildId: null }))
-    expect(screen.queryByText(/today —/i)).not.toBeInTheDocument()
+  it('renders TodayLessonCard for all children when no child is selected', async () => {
+    renderDoToday(makeCtx({ selectedChildId: null, children: [mockChild] }))
+    await waitFor(() => {
+      // TodayLessonCard still renders its "Today —" heading when children are provided
+      expect(screen.getByText(/today —/i)).toBeInTheDocument()
+    })
+  })
+
+  it('renders TodayLessonCard even with empty children list', async () => {
+    renderDoToday(makeCtx({ selectedChildId: null, children: [] }))
+    await waitFor(() => {
+      expect(screen.getByText(/today —/i)).toBeInTheDocument()
+    })
   })
 })
 
 describe('DashboardProvider auto-selects first child', () => {
-  it('calls setSelectedChildId with first child id when selectedChildId is null and children load', async () => {
-    const setSelectedChildId = jest.fn()
+  it('shows TodayLessonCard when selectedChildId is provided with a child', async () => {
     const ctx = makeCtx({
-      selectedChildId: null,
+      selectedChildId: 'child_001',
       children: [mockChild],
-      setSelectedChildId,
     })
-
-    // Render DoToday in the context; the auto-select logic lives in DashboardProvider useEffect
-    // but we test it here by verifying DoToday shows the card after auto-select
-    // The DashboardProvider effect is: if !selectedChildId && children.length > 0 → setSelectedChildId(children[0].id)
     renderDoToday(ctx)
-
-    // DoToday itself just reads selectedChildId from context — we confirm the "select a child" path
-    // and that setSelectedChildId would be called by DashboardProvider with the first child.
-    // The DashboardProvider auto-select effect runs in the Provider, not here; we verify the
-    // contract: when selectedChildId is provided, TodayLessonCard appears.
-    const ctxWithChild = makeCtx({ selectedChildId: 'child_001', children: [mockChild] })
-    const { unmount } = renderDoToday(ctxWithChild)
     await waitFor(() => {
       expect(screen.getByText(/today —/i)).toBeInTheDocument()
     })
-    unmount()
   })
 })

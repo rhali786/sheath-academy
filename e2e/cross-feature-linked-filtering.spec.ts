@@ -160,6 +160,139 @@ test.describe('Cross-feature linked filtering — Records & Proof', () => {
   })
 })
 
+test.describe('Cross-feature linked filtering — Attendance destination sync', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginDev(page)
+    await page.goto('/')
+    await page.waitForTimeout(1000)
+  })
+
+  test('Attendance Learner selector shows selected child after navigation from dashboard', async ({ page }) => {
+    const childSelector = page.locator('select').first()
+    const options = await childSelector.locator('option').all()
+    let childId = ''
+    for (const opt of options) {
+      const val = await opt.getAttribute('value')
+      if (val && val !== '') { childId = val; break }
+    }
+    if (!childId) { test.skip(); return }
+
+    await childSelector.selectOption(childId)
+    await page.waitForTimeout(500)
+
+    const attendanceLink = page.getByRole('link', { name: /attendance ready/i })
+    if (await attendanceLink.count() === 0) { test.skip(); return }
+
+    await attendanceLink.click()
+    await page.waitForURL(/\/attendance/, { timeout: 5000 })
+    await page.waitForTimeout(800)
+
+    // The Learner selector on the Attendance page should match the child from the URL
+    const learnerSelect = page.getByLabel(/^learner$/i)
+    if (await learnerSelect.count() === 0) { test.skip(); return }
+    const selectedValue = await learnerSelect.inputValue()
+    expect(selectedValue).toBe(childId)
+  })
+})
+
+test.describe('Cross-feature linked filtering — Quran destination sync', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginDev(page)
+    await page.goto('/')
+    await page.waitForTimeout(1200)
+  })
+
+  test('Quran page child filter select shows the child from ?childId param', async ({ page }) => {
+    // Navigate directly to /quran with a childId param (simulating what the circle link does)
+    // First get a valid childId from the dashboard Quran circles
+    const quranLinks = page.locator('a[href*="/quran?childId="]')
+    if (await quranLinks.count() === 0) { test.skip(); return }
+
+    const href = await quranLinks.first().getAttribute('href')
+    const childIdMatch = href?.match(/childId=([^&]+)/)
+    if (!childIdMatch) { test.skip(); return }
+    const childId = childIdMatch[1]
+
+    await quranLinks.first().click()
+    await page.waitForURL(/\/quran/, { timeout: 5000 })
+    await page.waitForTimeout(800)
+
+    // "All children" select should show the selected child
+    const childFilterSelect = page.locator('select').filter({ hasText: 'All children' })
+    if (await childFilterSelect.count() === 0) { test.skip(); return }
+    const selectedValue = await childFilterSelect.inputValue()
+    expect(selectedValue).toBe(childId)
+  })
+})
+
+test.describe('Cross-feature linked filtering — URL change while page is mounted', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginDev(page)
+  })
+
+  test('Attendance Learner selector updates when URL childId changes without full remount', async ({ page }) => {
+    // First navigate to /attendance without a childId
+    await page.goto('/attendance')
+    await page.waitForTimeout(800)
+
+    const learnerSelect = page.getByLabel(/^learner$/i)
+    if (await learnerSelect.count() === 0) { test.skip(); return }
+    const initialValue = await learnerSelect.inputValue()
+
+    // Now navigate to /attendance?childId=... (client-side, keeps component mounted in App Router)
+    await page.goto('/attendance')
+    await page.waitForTimeout(400)
+
+    // Get a valid childId from the learner selector options
+    const options = await learnerSelect.locator('option').all()
+    let secondChildId = ''
+    for (const opt of options) {
+      const val = await opt.getAttribute('value')
+      if (val && val !== initialValue) { secondChildId = val; break }
+    }
+    if (!secondChildId) { test.skip(); return }
+
+    // Use Next.js client-side navigation to change the URL with same component mounted
+    await page.evaluate((id) => {
+      const url = `/attendance?childId=${id}`
+      window.history.pushState({}, '', url)
+      // Dispatch popstate so Next.js router picks it up
+      window.dispatchEvent(new PopStateEvent('popstate', { state: {} }))
+    }, secondChildId)
+    await page.waitForTimeout(800)
+
+    const updatedValue = await learnerSelect.inputValue()
+    expect(updatedValue).toBe(secondChildId)
+  })
+
+  test('Quran child filter updates when navigating to /quran?childId=... from /quran', async ({ page }) => {
+    await page.goto('/quran')
+    await page.waitForTimeout(800)
+
+    const childFilterSelect = page.locator('select').filter({ hasText: 'All children' })
+    if (await childFilterSelect.count() === 0) { test.skip(); return }
+
+    // Get a valid childId from the select options
+    const options = await childFilterSelect.locator('option').all()
+    let childId = ''
+    for (const opt of options) {
+      const val = await opt.getAttribute('value')
+      if (val && val !== '') { childId = val; break }
+    }
+    if (!childId) { test.skip(); return }
+
+    // Navigate to the same page with childId (simulates in-app link click staying mounted)
+    await page.evaluate((id) => {
+      window.history.pushState({}, '', `/quran?childId=${id}`)
+      window.dispatchEvent(new PopStateEvent('popstate', { state: {} }))
+    }, childId)
+    await page.waitForTimeout(800)
+
+    const selectedValue = await childFilterSelect.inputValue()
+    expect(selectedValue).toBe(childId)
+  })
+})
+
 test.describe('Cross-feature linked filtering — Lesson alert → Lessons page', () => {
   test.beforeEach(async ({ page }) => {
     await loginDev(page)

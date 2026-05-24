@@ -40,6 +40,14 @@ export const quranApi = {
     return res.json()
   },
 
+  deleteSession: async (id: string): Promise<ApiResponse<null>> => {
+    const res = await fetch(`${getApiBaseUrl()}/api/quran/sessions/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    })
+    if (!res.ok) throw new Error('Failed to delete quran session')
+    return res.json()
+  },
+
   getSummary: async ({
     childId,
     startDate,

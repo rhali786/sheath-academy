@@ -1,0 +1,123 @@
+import { render, screen, waitFor } from '@testing-library/react'
+import { PlannerProvider } from '@/features/plan/front/context/PlannerContext'
+import { WeeklyPlannerPage } from '@/features/plan/front/components/WeeklyPlannerPage'
+import type { StudentProfile } from '@/features/lib/types'
+import type { SubjectCourse } from '@/features/subjects/types'
+
+const mockChildren: StudentProfile[] = [
+  { id: 'child_001', householdId: 'hh_001', name: 'Adam', gradeLabel: '5th', isActive: true, username: 'adam', password: 'pwd', createdAt: '2026-01-01T00:00:00Z' },
+]
+
+const mockSubjects: SubjectCourse[] = [
+  { id: 'subj_001', childId: 'child_001', name: 'Math', category: 'Math', isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
+]
+
+const baseHousehold = {
+  householdProfile: { id: 'hh_001', weekStartDay: 'Monday', familyName: 'Test' },
+  studentProfiles: mockChildren,
+  allSubjects: mockSubjects,
+  loading: false,
+  familyName: 'Test',
+  needsSetup: false,
+  error: null,
+  refetch: jest.fn(),
+}
+
+jest.mock('@/features/household/front/context', () => ({
+  useHousehold: jest.fn(() => baseHousehold),
+}))
+
+jest.mock('@/features/plan/front/services/api', () => ({
+  plannerApi: {
+    getLessons: jest.fn(() => Promise.resolve([])),
+    getLesson: jest.fn(),
+    createLesson: jest.fn(),
+    updateLesson: jest.fn(),
+    completeLesson: jest.fn(),
+  },
+}))
+
+import { useHousehold } from '@/features/household/front/context'
+const mockUseHousehold = useHousehold as jest.Mock
+
+function renderWithPlanner() {
+  return render(
+    <PlannerProvider>
+      <WeeklyPlannerPage />
+    </PlannerProvider>
+  )
+}
+
+beforeEach(() => {
+  global.fetch = jest.fn(() =>
+    Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: [] }) })
+  ) as jest.Mock
+})
+
+afterEach(() => {
+  jest.clearAllMocks()
+  mockUseHousehold.mockImplementation(() => baseHousehold)
+})
+
+describe('WeeklyPlannerPage', () => {
+  it('shows loading spinner while household is initializing', () => {
+    mockUseHousehold.mockImplementation(() => ({
+      ...baseHousehold,
+      loading: true,
+      studentProfiles: [],
+      allSubjects: [],
+    }))
+
+    renderWithPlanner()
+
+    expect(screen.getByText(/loading planner/i)).toBeInTheDocument()
+  })
+
+  it('shows error state when lessons fetch fails', async () => {
+    const { plannerApi } = require('@/features/plan/front/services/api')
+    plannerApi.getLessons.mockRejectedValueOnce(new Error('Lessons fetch failed'))
+
+    renderWithPlanner()
+
+    await waitFor(() => {
+      expect(screen.getByText(/error loading planner/i)).toBeInTheDocument()
+    })
+  })
+
+  it('loads and displays lessons for the current week on mount', async () => {
+    renderWithPlanner()
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading planner/i)).not.toBeInTheDocument()
+    })
+
+    // PlannerContext must not fetch profile — HouseholdProvider owns it
+    const profileCalls = (global.fetch as jest.Mock | undefined)?.mock?.calls?.filter(
+      ([url]: [string]) => typeof url === 'string' && url.includes('/api/household/profile')
+    ) ?? []
+    expect(profileCalls).toHaveLength(0)
+  })
+
+  it('shows empty state when no lessons exist for the week', async () => {
+    renderWithPlanner()
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading planner/i)).not.toBeInTheDocument()
+    })
+  })
+
+  it('shows planner chrome while lessons are still loading', async () => {
+    const { plannerApi } = require('@/features/plan/front/services/api')
+    plannerApi.getLessons.mockImplementation(() => new Promise(() => {}))
+
+    renderWithPlanner()
+
+    // Wait for init spinner to clear (household loaded immediately from mock)
+    await waitFor(() => {
+      expect(screen.queryByText(/loading planner/i)).not.toBeInTheDocument()
+    })
+
+    // Chrome (WeekNavigator) is visible before lessons resolve
+    expect(screen.getByRole('button', { name: /previous week/i })).toBeInTheDocument()
+  })
+})

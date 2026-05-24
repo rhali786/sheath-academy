@@ -3,8 +3,10 @@ import { render, screen } from '@testing-library/react'
 import { TodayState } from '@/features/dashboard/front/components/TodayState'
 import { RecordsProof } from '@/features/dashboard/front/components/RecordsProof'
 import { QuranStreak } from '@/features/dashboard/front/components/QuranStreak'
+import { AlertItem } from '@/features/dashboard/front/components/shared/AlertItem'
 import type { DashboardMetrics, DashboardRecord, QuranSession } from '@/features/dashboard/front/types'
 import type { StudentProfile } from '@/features/lib/types'
+import type { Alert } from '@/features/alerts/types'
 
 const CHILD_ID = 'student_seed_layth_001'
 
@@ -154,5 +156,69 @@ describe('QuranStreak — child circles link to /quran?childId', () => {
     const laythLink = screen.getByRole('link', { name: /layth/i })
     expect(laythLink).toHaveAttribute('href', `/quran?childId=${CHILD_ID}`)
     expect(screen.queryByRole('link', { name: /hawa/i })).not.toBeInTheDocument()
+  })
+})
+
+// ---- AlertItem ----
+
+function makeAlert(overrides: Partial<Alert> = {}): Alert {
+  return {
+    id: 'alert_001',
+    childId: null,
+    type: 'missing_attendance',
+    status: 'open',
+    severity: 'medium',
+    title: 'Missing attendance',
+    message: 'Attendance not recorded for today',
+    sourceFeature: 'attendance',
+    createdAt: '2026-05-17T00:00:00Z',
+    ...overrides,
+  }
+}
+
+describe('AlertItem — linked hrefs', () => {
+  it('renders as a link when alert.href is set', () => {
+    const alert = makeAlert({ href: `/attendance?childId=${CHILD_ID}`, childId: CHILD_ID, childName: 'Layth' })
+    render(<AlertItem alert={alert} />)
+    const link = screen.getByRole('link')
+    expect(link).toHaveAttribute('href', `/attendance?childId=${CHILD_ID}`)
+  })
+
+  it('does not render a link when alert.href is absent', () => {
+    const alert = makeAlert({ href: undefined })
+    render(<AlertItem alert={alert} />)
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  it('child-specific alert includes childId in href', () => {
+    const alert = makeAlert({
+      childId: CHILD_ID,
+      childName: 'Layth',
+      href: `/attendance?childId=${CHILD_ID}`,
+    })
+    render(<AlertItem alert={alert} />)
+    const link = screen.getByRole('link')
+    expect(link.getAttribute('href')).toContain(`childId=${CHILD_ID}`)
+  })
+
+  it('household-level alert (childId null) renders plain href without childId', () => {
+    const alert = makeAlert({ childId: null, href: '/attendance' })
+    render(<AlertItem alert={alert} />)
+    const link = screen.getByRole('link')
+    expect(link).toHaveAttribute('href', '/attendance')
+    expect(link.getAttribute('href')).not.toContain('childId')
+  })
+
+  it('renders child name label when childName is provided', () => {
+    const alert = makeAlert({ childId: CHILD_ID, childName: 'Layth', href: `/attendance?childId=${CHILD_ID}` })
+    render(<AlertItem alert={alert} />)
+    expect(screen.getByText('Layth')).toBeInTheDocument()
+  })
+
+  it('renders alert title and message', () => {
+    const alert = makeAlert({ title: 'Low attendance', message: 'Below 80%', href: '/attendance' })
+    render(<AlertItem alert={alert} />)
+    expect(screen.getByText('Low attendance')).toBeInTheDocument()
+    expect(screen.getByText('Below 80%')).toBeInTheDocument()
   })
 })

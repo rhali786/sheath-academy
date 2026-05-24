@@ -1,6 +1,6 @@
 'use client'
 
-import type { AttendanceRecord, AttendanceSummary } from '@/features/attendance/types'
+import type { AttendanceRecord, AttendanceSummary, AttendanceStatus } from '@/features/attendance/types'
 import type { ApiResponse } from '@/features/lib/types'
 
 function getBase(): string {
@@ -51,8 +51,20 @@ export const attendanceApi = {
     })
   },
 
-  deleteRecord(id: string): Promise<ApiResponse<null>> {
+  archiveRecord(id: string): Promise<ApiResponse<null>> {
     return apiFetch(`/api/attendance/${id}`, { method: 'DELETE' })
+  },
+
+  batchRecord(data: {
+    date: string
+    householdId: string
+    entries: Array<{ childId: string; status: AttendanceStatus }>
+  }): Promise<ApiResponse<AttendanceRecord[]>> {
+    return apiFetch('/api/attendance/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
   },
 
   getSummary(childId: string, startDate?: string, endDate?: string): Promise<ApiResponse<AttendanceSummary>> {

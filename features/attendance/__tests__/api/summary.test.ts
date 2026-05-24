@@ -1,58 +1,55 @@
 /** @jest-environment node */
 
-import { GET } from '@/features/attendance/api/routes/summary'
-import { resetStore } from '@/features/attendance/server/service'
-import { SEED_IDS } from '@/features/lib/seedIds'
-
-beforeEach(() => {
-  resetStore()
+jest.mock('@/features/auth/server/requestAuth', () => {
+  const { mockRequestAuthModule } = require('@/features/auth/__tests__/helpers')
+  return mockRequestAuthModule({ householdId: 'hh_test', userId: 'user_test', timezone: 'UTC' })
 })
 
-function makeGetRequest(params: Record<string, string> = {}): Request {
-  const url = new URL('http://localhost/api/attendance/summary')
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
-  return new Request(url.toString())
-}
+jest.mock('@/features/attendance/server/repository', () => ({
+  listAttendanceEvents: jest.fn(),
+}))
+
+import { GET } from '@/features/attendance/api/routes/summary'
+import { listAttendanceEvents } from '@/features/attendance/server/repository'
+
+const mockList = listAttendanceEvents as jest.Mock
 
 describe('GET /api/attendance/summary', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
   it('returns 400 when childId is missing', async () => {
-    const res = await GET(makeGetRequest())
+    const res = await GET(new Request('http://localhost/api/attendance/summary'))
     expect(res.status).toBe(400)
-    const body = await res.json()
-    expect(body.status).toBe('error')
   })
 
-  it('returns summary counts for a child', async () => {
-    const res = await GET(makeGetRequest({ childId: SEED_IDS.layth }))
+  it('returns status counts for the learner', async () => {
+    mockList.mockResolvedValue([
+      { status: 'present' },
+      { status: 'present' },
+      { status: 'excused' },
+    ])
+
+    const res = await GET(new Request('http://localhost/api/attendance/summary?childId=learner_1'))
     const body = await res.json()
+
+    expect(res.status).toBe(200)
     expect(body.status).toBe('success')
-    expect(body.data.childId).toBe(SEED_IDS.layth)
-    expect(typeof body.data.totalPresent).toBe('number')
-    expect(typeof body.data.totalAbsent).toBe('number')
-    expect(typeof body.data.totalPartial).toBe('number')
-    expect(body.data.totalRecorded).toBe(
-      body.data.totalPresent + body.data.totalAbsent + body.data.totalPartial
-    )
+    expect(body.data.childId).toBe('learner_1')
+    expect(body.data.totalRecorded).toBe(3)
+    expect(body.data.byStatus.present).toBe(2)
+    expect(body.data.byStatus.excused).toBe(1)
+    expect(mockList).toHaveBeenCalledWith('hh_test', { learnerId: 'learner_1', startDate: undefined, endDate: undefined })
   })
 
-  it('counts match the seed records for adam', async () => {
-    const res = await GET(makeGetRequest({ childId: SEED_IDS.layth }))
-    const body = await res.json()
-    // Seed has at least one present record for adam
-    expect(body.data.totalPresent).toBeGreaterThan(0)
-  })
-
-  it('returns zero counts for child with no records', async () => {
-    const res = await GET(makeGetRequest({ childId: 'child_with_no_records' }))
-    const body = await res.json()
-    expect(body.status).toBe('success')
-    expect(body.data.totalRecorded).toBe(0)
-  })
-
-  it('filters summary by date range', async () => {
-    const res = await GET(makeGetRequest({ childId: SEED_IDS.layth, startDate: '2000-01-01', endDate: '2000-12-31' }))
-    const body = await res.json()
-    expect(body.status).toBe('success')
-    expect(body.data.totalRecorded).toBe(0)
+  it('passes optional date range filters', async () => {
+    mockList.mockResolvedValue([])
+    await GET(new Request('http://localhost/api/attendance/summary?childId=learner_1&startDate=2026-01-01&endDate=2026-01-31'))
+    expect(mockList).toHaveBeenCalledWith('hh_test', {
+      learnerId: 'learner_1',
+      startDate: '2026-01-01',
+      endDate: '2026-01-31',
+    })
   })
 })

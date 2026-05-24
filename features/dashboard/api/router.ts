@@ -22,7 +22,7 @@ export async function handleDashboardRoute(
 
   // Handle /dashboard/tasks
   if (slug.length === 1 && slug[0] === 'tasks' && method === 'GET') {
-    return tasksHandler.GET()
+    return tasksHandler.GET(request)
   }
 
   // Handle /dashboard/tasks/[id]/complete

@@ -3,7 +3,7 @@
 import { useEffect, useState, FormEvent } from 'react'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourseCategory } from '@/features/subjects/types'
-import { SUBJECT_COURSE_CATEGORIES } from '@/features/subjects/front/lib/categories'
+import { SUBJECT_COURSE_CATEGORIES, formatCategory } from '@/features/subjects/front/lib/categories'
 import { childrenApi } from '@/features/children/front/services/api'
 import { subjectsApi } from '@/features/subjects/front/services/api'
 
@@ -12,18 +12,23 @@ export interface SubjectFormProps {
   householdId: string
   /** Called after a subject is created successfully */
   onSuccess?: () => void
-  /** When set, keeps `childId` in sync (e.g. Settings child tabs). */
+  /** When set, pre-selects this learner (legacy tab mode). */
   defaultChildId?: string
-  /** Hide the child dropdown — parent UI owns child selection (tabs only). */
+  /** Hide the learner checkboxes — parent UI owns child selection (tabs only). */
   hideChildSelect?: boolean
 }
 
 export function SubjectForm({ householdId, onSuccess, defaultChildId, hideChildSelect }: SubjectFormProps) {
   const [children, setChildren] = useState<StudentProfile[]>([])
   const [loadingChildren, setLoadingChildren] = useState(true)
-  const [childId, setChildId] = useState(defaultChildId ?? '')
+  const [selectedLearnerIds, setSelectedLearnerIds] = useState<string[]>(
+    defaultChildId ? [defaultChildId] : []
+  )
   const [name, setName] = useState('')
-  const [category, setCategory] = useState<SubjectCourseCategory>('Math')
+  const [category, setCategory] = useState<SubjectCourseCategory>('Quran')
+  const [customCategory, setCustomCategory] = useState('')
+  const [instructorName, setInstructorName] = useState('')
+  const [level, setLevel] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -31,7 +36,7 @@ export function SubjectForm({ householdId, onSuccess, defaultChildId, hideChildS
     let cancelled = false
     if (!householdId.trim()) {
       setChildren([])
-      setChildId('')
+      setSelectedLearnerIds([])
       setLoadingChildren(false)
       return
     }
@@ -43,11 +48,9 @@ export function SubjectForm({ householdId, onSuccess, defaultChildId, hideChildS
         const list = (res.data ?? []).filter((c) => c.isActive !== false)
         setChildren(list)
         if (defaultChildId) {
-          setChildId(defaultChildId)
+          setSelectedLearnerIds([defaultChildId])
         } else if (list.length === 1) {
-          setChildId(list[0].id)
-        } else {
-          setChildId('')
+          setSelectedLearnerIds([list[0].id])
         }
       })
       .catch(() => {
@@ -61,25 +64,33 @@ export function SubjectForm({ householdId, onSuccess, defaultChildId, hideChildS
     }
   }, [defaultChildId, householdId])
 
+  function toggleLearner(id: string) {
+    setSelectedLearnerIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    if (!childId || !name.trim()) {
-      setError(
-        hideChildSelect && children.length > 1
-          ? 'Pick a child using the tabs above, then enter a subject name.'
-          : 'Choose a child and enter a subject name.'
-      )
+    if (selectedLearnerIds.length === 0 || !name.trim()) {
+      setError('Choose at least one learner and enter a course name.')
       return
     }
     setSubmitting(true)
     try {
       await subjectsApi.createSubject({
-        childId,
+        learnerIds: selectedLearnerIds,
         name: name.trim(),
         category,
+        ...(category === 'OtherCustom' && customCategory.trim() && { customCategory: customCategory.trim() }),
+        ...(instructorName.trim() && { instructorName: instructorName.trim() }),
+        ...(level.trim() && { level: level.trim() }),
       })
       setName('')
+      setCustomCategory('')
+      setInstructorName('')
+      setLevel('')
       onSuccess?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create subject')
@@ -112,29 +123,24 @@ export function SubjectForm({ householdId, onSuccess, defaultChildId, hideChildS
     )
   }
 
-  const needsChildPlaceholder = !hideChildSelect && children.length > 1
-
   return (
     <form onSubmit={handleSubmit} className="space-y-3" data-testid="subject-form">
       {!hideChildSelect && (
         <div>
-          <label htmlFor="subject-child" className="block text-xs font-medium text-slate-600 mb-1">
-            Subject for (child)
-          </label>
-          <select
-            id="subject-child"
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
-            value={childId}
-            onChange={(e) => setChildId(e.target.value)}
-          >
-            {needsChildPlaceholder && <option value="">Select child</option>}
+          <p className="block text-xs font-medium text-slate-600 mb-1.5">Learner(s)</p>
+          <div className="flex flex-wrap gap-2">
             {children.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
+              <label key={c.id} className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedLearnerIds.includes(c.id)}
+                  onChange={() => toggleLearner(c.id)}
+                  className="rounded"
+                />
+                <span className="text-sm text-slate-700">{c.name}</span>
+              </label>
             ))}
-          </select>
-          <p className="text-xs text-slate-400 mt-1">Each subject is stored for one child.</p>
+          </div>
         </div>
       )}
 
@@ -146,7 +152,7 @@ export function SubjectForm({ householdId, onSuccess, defaultChildId, hideChildS
 
       <div>
         <label htmlFor="subject-name" className="block text-xs font-medium text-slate-600 mb-1">
-          Subject name
+          Course / Subject name
         </label>
         <input
           id="subject-name"
@@ -154,37 +160,86 @@ export function SubjectForm({ householdId, onSuccess, defaultChildId, hideChildS
           className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Algebra"
+          placeholder="e.g. Algebra I"
           maxLength={120}
         />
       </div>
 
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label htmlFor="subject-category" className="block text-xs font-medium text-slate-600 mb-1">
+            Category
+          </label>
+          <select
+            id="subject-category"
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+            value={category}
+            onChange={(e) => setCategory(e.target.value as SubjectCourseCategory)}
+          >
+            {SUBJECT_COURSE_CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {formatCategory(c)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="subject-level" className="block text-xs font-medium text-slate-600 mb-1">
+            Level/Grade <span className="text-slate-400">(optional)</span>
+          </label>
+          <input
+            id="subject-level"
+            type="text"
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+            value={level}
+            onChange={(e) => setLevel(e.target.value)}
+            placeholder="e.g. Grade 5"
+            maxLength={60}
+          />
+        </div>
+      </div>
+
+      {category === 'OtherCustom' && (
+        <div>
+          <label htmlFor="subject-custom-category" className="block text-xs font-medium text-slate-600 mb-1">
+            Custom category
+          </label>
+          <input
+            id="subject-custom-category"
+            type="text"
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+            value={customCategory}
+            onChange={(e) => setCustomCategory(e.target.value)}
+            placeholder="e.g. Nature Journaling"
+            maxLength={80}
+          />
+        </div>
+      )}
+
       <div>
-        <label htmlFor="subject-category" className="block text-xs font-medium text-slate-600 mb-1">
-          Category
+        <label htmlFor="subject-instructor" className="block text-xs font-medium text-slate-600 mb-1">
+          Instructor/Teacher <span className="text-slate-400">(optional)</span>
         </label>
-        <select
-          id="subject-category"
+        <input
+          id="subject-instructor"
+          type="text"
           className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
-          value={category}
-          onChange={(e) => setCategory(e.target.value as SubjectCourseCategory)}
-        >
-          {SUBJECT_COURSE_CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+          value={instructorName}
+          onChange={(e) => setInstructorName(e.target.value)}
+          placeholder="e.g. Umm Layth"
+          maxLength={80}
+        />
       </div>
 
       {error && <p className="text-xs text-red-600">{error}</p>}
 
       <button
         type="submit"
-        disabled={submitting || !name.trim() || !childId}
+        disabled={submitting || !name.trim() || selectedLearnerIds.length === 0}
         className="w-full py-2.5 bg-forest-900 text-white rounded-lg text-sm font-medium hover:bg-forest-800 disabled:opacity-50"
       >
-        {submitting ? 'Saving…' : 'Add subject'}
+        {submitting ? 'Saving…' : 'Add course'}
       </button>
     </form>
   )

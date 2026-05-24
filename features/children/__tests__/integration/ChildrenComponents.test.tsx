@@ -4,7 +4,7 @@ import { ChildrenContext } from '@/features/children/front/context/ChildrenConte
 import { ChildList } from '@/features/children/front/components/ChildList'
 import { ChildCard } from '@/features/children/front/components/ChildCard'
 import { ChildForm } from '@/features/children/front/components/ChildForm'
-import { mockStudentProfiles, activeProfiles, archivedProfiles } from '../fixtures/mockStudentProfiles'
+import { mockStudentProfiles, activeProfiles, archivedProfiles, profileWithFullName, profileWithLoginDisabled } from '../fixtures/mockStudentProfiles'
 import type { ChildrenContextType } from '@/features/children/front/context/ChildrenContext'
 
 function makeContext(overrides: Partial<ChildrenContextType> = {}): ChildrenContextType {
@@ -75,9 +75,9 @@ describe('ChildList component', () => {
     expect(screen.getByText(/They'll be hidden from active lists/i)).toBeInTheDocument()
   })
 
-  test('shows edit form with child name when Edit is clicked', () => {
+  test('shows edit form with child name when Edit profile is clicked', () => {
     renderWithContext(<ChildList />, makeContext())
-    const editButtons = screen.getAllByText('Edit')
+    const editButtons = screen.getAllByRole('button', { name: /edit profile/i })
     fireEvent.click(editButtons[0])
     expect(screen.getByText(`Edit ${activeProfiles[0].name}`)).toBeInTheDocument()
   })
@@ -94,14 +94,9 @@ describe('ChildCard component', () => {
     expect(screen.getByText(activeProfiles[0].gradeLabel)).toBeInTheDocument()
   })
 
-  test('renders teacher name when present', () => {
+  test('renders learner login status', () => {
     render(<ChildCard child={activeProfiles[0]} onEdit={onEdit} onArchive={onArchive} onRestore={onRestore} />)
-    expect(screen.getByText(activeProfiles[0].teacherName!)).toBeInTheDocument()
-  })
-
-  test('renders username', () => {
-    render(<ChildCard child={activeProfiles[0]} onEdit={onEdit} onArchive={onArchive} onRestore={onRestore} />)
-    expect(screen.getByText(activeProfiles[0].username)).toBeInTheDocument()
+    expect(screen.getByText(/Learner login/i)).toBeInTheDocument()
   })
 
   test('shows Archive button for active child', () => {
@@ -116,9 +111,9 @@ describe('ChildCard component', () => {
     expect(screen.queryByText('Archive')).not.toBeInTheDocument()
   })
 
-  test('calls onEdit when Edit button is clicked', () => {
+  test('calls onEdit when Edit profile button is clicked', () => {
     render(<ChildCard child={activeProfiles[0]} onEdit={onEdit} onArchive={onArchive} onRestore={onRestore} />)
-    fireEvent.click(screen.getByText('Edit'))
+    fireEvent.click(screen.getByRole('button', { name: /edit profile/i }))
     expect(onEdit).toHaveBeenCalledWith(activeProfiles[0])
   })
 
@@ -143,14 +138,13 @@ describe('ChildForm component', () => {
     jest.clearAllMocks()
   })
 
-  test('renders all required fields for new child', () => {
+  test('renders First name and Last name fields for new child', () => {
     render(<ChildForm householdId="workspace_test" onSubmit={onSubmit} onCancel={onCancel} />)
-    expect(screen.getByLabelText(/Child's name/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/First name/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Last name/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/Grade\/Level/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/Date of birth/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/Teacher/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/Username/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/Password/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/Teacher/i)).not.toBeInTheDocument()
   })
 
   test('shows "Add child" button for new child form', () => {
@@ -163,10 +157,10 @@ describe('ChildForm component', () => {
     expect(screen.getByText('Save changes')).toBeInTheDocument()
   })
 
-  test('pre-fills fields when editing existing child', () => {
+  test('pre-fills grade and username when editing existing child', () => {
     render(<ChildForm householdId="workspace_test" child={activeProfiles[0]} onSubmit={onSubmit} onCancel={onCancel} />)
-    expect(screen.getByDisplayValue(activeProfiles[0].name)).toBeInTheDocument()
     expect(screen.getByDisplayValue(activeProfiles[0].gradeLabel)).toBeInTheDocument()
+    // activeProfiles[0] has username, so learnerLoginEnabled defaults to true → username input shown
     expect(screen.getByDisplayValue(activeProfiles[0].username)).toBeInTheDocument()
   })
 
@@ -181,5 +175,78 @@ describe('ChildForm component', () => {
     fireEvent.click(screen.getByText('Add child'))
     expect(screen.getByText(/Please fill in all required fields/i)).toBeInTheDocument()
     expect(onSubmit).not.toHaveBeenCalled()
+  })
+})
+
+describe('ChildForm — Wave 7 FB-002', () => {
+  const onSubmit = jest.fn()
+  const onCancel = jest.fn()
+
+  beforeEach(() => jest.clearAllMocks())
+
+  test('Grade/Level is a dropdown containing PK, K, Grade 1–12, Other/custom', () => {
+    render(<ChildForm householdId="workspace_test" onSubmit={onSubmit} onCancel={onCancel} />)
+    const gradeSelect = screen.getByLabelText(/Grade\/Level/i) as HTMLSelectElement
+    const options = Array.from(gradeSelect.options).map(o => o.text)
+    expect(options).toContain('PK')
+    expect(options).toContain('K')
+    expect(options).toContain('Grade 1')
+    expect(options).toContain('Grade 12')
+    expect(options).toContain('Other/custom')
+  })
+
+  test('username and password hidden when learner login toggle is off (new child)', () => {
+    render(<ChildForm householdId="workspace_test" onSubmit={onSubmit} onCancel={onCancel} />)
+    expect(screen.queryByLabelText(/Username/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Password/i)).not.toBeInTheDocument()
+  })
+
+  test('username and password visible when learner login toggle is enabled', () => {
+    render(<ChildForm householdId="workspace_test" onSubmit={onSubmit} onCancel={onCancel} />)
+    const toggle = screen.getByLabelText(/Allow learner to sign in/i)
+    fireEvent.click(toggle)
+    expect(screen.getByLabelText(/Username/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Password/i)).toBeInTheDocument()
+  })
+
+  test('shows helper text about reports and transcripts', () => {
+    render(<ChildForm householdId="workspace_test" onSubmit={onSubmit} onCancel={onCancel} />)
+    expect(screen.getByText(/reports, transcripts/i)).toBeInTheDocument()
+  })
+})
+
+describe('ChildCard — Wave 7 FB-002', () => {
+  const onEdit = jest.fn()
+  const onArchive = jest.fn()
+  const onRestore = jest.fn()
+
+  test('displays firstName + lastName when both are present', () => {
+    render(<ChildCard child={profileWithFullName} onEdit={onEdit} onArchive={onArchive} onRestore={onRestore} />)
+    expect(screen.getByText('Adam Al-Rashid')).toBeInTheDocument()
+  })
+
+  test('shows "Learner login: Enabled" when learnerLoginEnabled is true', () => {
+    render(<ChildCard child={profileWithFullName} onEdit={onEdit} onArchive={onArchive} onRestore={onRestore} />)
+    expect(screen.getByText('Enabled')).toBeInTheDocument()
+  })
+
+  test('shows "Learner login: Not enabled" when learnerLoginEnabled is false', () => {
+    render(<ChildCard child={profileWithLoginDisabled} onEdit={onEdit} onArchive={onArchive} onRestore={onRestore} />)
+    expect(screen.getByText('Not enabled')).toBeInTheDocument()
+  })
+
+  test('does not show raw username on ChildCard', () => {
+    render(<ChildCard child={profileWithFullName} onEdit={onEdit} onArchive={onArchive} onRestore={onRestore} />)
+    expect(screen.queryByText(profileWithFullName.username)).not.toBeInTheDocument()
+  })
+
+  test('Edit button is labelled "Edit profile"', () => {
+    render(<ChildCard child={profileWithFullName} onEdit={onEdit} onArchive={onArchive} onRestore={onRestore} />)
+    expect(screen.getByRole('button', { name: /edit profile/i })).toBeInTheDocument()
+  })
+
+  test('Date of birth is hidden when dob is not set', () => {
+    render(<ChildCard child={profileWithLoginDisabled} onEdit={onEdit} onArchive={onArchive} onRestore={onRestore} />)
+    expect(screen.queryByText('DOB')).not.toBeInTheDocument()
   })
 })

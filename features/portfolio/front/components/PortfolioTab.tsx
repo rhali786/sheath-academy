@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { EvidenceItem, CreateEvidenceItemInput, EvidenceType } from '@/features/portfolio/types'
 import type { SubjectCourse } from '@/features/subjects/types'
-import type { LessonTask } from '@/features/planner/types'
+import type { LessonTask } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import { useContext_Dashboard } from '@/features/dashboard/front/context'
 import { portfolioApi } from '../services/api'
@@ -53,7 +53,7 @@ export function PortfolioTab() {
     if (targetChildId) {
       const params = new URLSearchParams({ childId: targetChildId })
       if (subjectId) params.set('subjectId', subjectId)
-      fetch(`/api/planner/lessons?${params.toString()}`)
+      fetch(`/api/plan/lessons?${params.toString()}`)
         .then(r => r.json())
         .then(res => setLessons(Array.isArray(res.data) ? res.data : []))
         .catch(() => setLessons([]))

@@ -1,9 +1,10 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import type { SetupStatus, SetupStep } from '@/features/setup/types'
 
-const STEP_MESSAGES: Record<SetupStep, { title: string; detail: string; stub?: boolean }> = {
+const STEP_MESSAGES: Record<SetupStep, { title: string; detail: string; href?: string }> = {
   household: {
     title: 'Set up your household',
     detail: 'Create your workspace and family name to get started.',
@@ -18,18 +19,18 @@ const STEP_MESSAGES: Record<SetupStep, { title: string; detail: string; stub?: b
   },
   firstLesson: {
     title: 'Plan your first lesson',
-    detail: 'Lesson planning is coming soon.',
-    stub: true,
+    detail: 'Head to the Lessons page to schedule your first lesson.',
+    href: '/lessons',
   },
   firstAttendance: {
     title: 'Mark attendance',
-    detail: 'Attendance tracking is coming soon.',
-    stub: true,
+    detail: 'Head to the Attendance page to record your first school day.',
+    href: '/attendance',
   },
   firstPortfolio: {
     title: 'Add portfolio evidence',
-    detail: 'Portfolio uploads are coming soon.',
-    stub: true,
+    detail: 'Head to Portfolio to add your first piece of evidence.',
+    href: '/portfolio',
   },
 }
 
@@ -78,15 +79,13 @@ export function NextSetupStrip() {
           <p className="text-sm font-semibold text-forest-900">{meta.title}</p>
           <p className="text-xs text-forest-800/80 mt-0.5">{meta.detail}</p>
         </div>
-        {meta.stub ? (
-          <button
-            type="button"
-            disabled
-            title="Coming soon"
-            className="self-start text-xs px-3 py-1.5 rounded-lg border border-forest-200 text-forest-700 opacity-60 cursor-not-allowed"
+        {meta.href ? (
+          <Link
+            href={meta.href}
+            className="self-start text-xs px-3 py-1.5 rounded-lg border border-forest-200 text-forest-700 hover:bg-forest-100 transition-colors"
           >
-            Coming soon
-          </button>
+            Go →
+          </Link>
         ) : null}
       </div>
     </div>

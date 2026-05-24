@@ -7,10 +7,10 @@ import { RecordsProof } from '@/features/dashboard/front/components/RecordsProof
 import { mockChildren, mockAlerts, mockQuranSessions, mockRecords, mockProgressData } from '../../fixtures/mockData'
 
 jest.mock('@/features/dashboard/front/context/DashboardProvider', () => ({
-  useContext_Dashboard: jest.fn(() => ({ selectedChildId: null })),
+  useContext_Dashboard: jest.fn(() => ({ selectedChildId: null, children: [] })),
 }))
 
-jest.mock('@/features/planner/front/services/api', () => ({
+jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: { getLessons: jest.fn().mockResolvedValue([]) },
 }))
 
@@ -128,13 +128,13 @@ describe('Dashboard Components - Unit Tests', () => {
     test('renders without errors with valid props', () => {
       render(<RecordsProof records={mockRecords} />)
 
-      expect(screen.getByText(/Records & Proof/i)).toBeInTheDocument()
+      expect(screen.getByText(/Records Readiness/i)).toBeInTheDocument()
     })
 
     test('renders empty state when no records', () => {
       render(<RecordsProof records={[]} />)
 
-      expect(screen.getByText(/Records & Proof/i)).toBeInTheDocument()
+      expect(screen.getByText(/Records Readiness/i)).toBeInTheDocument()
     })
 
     test('displays record categories', () => {

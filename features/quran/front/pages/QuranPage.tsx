@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Pencil, X, Check } from 'lucide-react'
+import { Pencil, Trash2, X, Check } from 'lucide-react'
 import { quranApi } from '@/features/quran/front/services/api'
 import { childrenApi } from '@/features/children/front/services/api'
 import type { QuranSession } from '@/features/lib/types'
@@ -31,34 +31,88 @@ function toEditState(s: QuranSession): EditState {
   }
 }
 
+interface AddState {
+  childId: string
+  type: string
+  surah: string
+  fromAyah: string
+  toAyah: string
+  notes: string
+}
+
+function emptyAdd(defaultChildId = ''): AddState {
+  return { childId: defaultChildId, type: SESSION_TYPES[0], surah: '', fromAyah: '', toAyah: '', notes: '' }
+}
+
 export default function QuranPage() {
   const searchParams = useSearchParams()
   const [sessions, setSessions] = useState<QuranSession[]>([])
   const [children, setChildren] = useState<StudentProfile[]>([])
   const [loading, setLoading] = useState(true)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [addForm, setAddForm] = useState<AddState>(emptyAdd())
+  const [addSaving, setAddSaving] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<EditState | null>(null)
   const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [filterChildId, setFilterChildId] = useState<string>('')
   const [filterType, setFilterType] = useState<string>('')
   const [dateSort, setDateSort] = useState<DateSort>('desc')
 
   useEffect(() => {
-    const urlChildId = searchParams.get('childId')
     childrenApi.getAllChildren()
       .then(res => {
         setChildren(res.data)
-        if (urlChildId) {
-          const matched = res.data.find((c: StudentProfile) => c.id === urlChildId)
-          if (matched) setFilterChildId(matched.id)
+        if (res.data.length > 0) {
+          setAddForm(prev => ({ ...prev, childId: prev.childId || res.data[0].id }))
         }
       })
       .catch(() => {})
+  }, [])
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault()
+    if (!addForm.childId || !addForm.surah.trim()) {
+      setAddError('Child and Surah are required.')
+      return
+    }
+    setAddSaving(true)
+    setAddError(null)
+    try {
+      const res = await quranApi.addSession({
+        childId: addForm.childId,
+        type: addForm.type,
+        surah: addForm.surah.trim(),
+        fromAyah: Number(addForm.fromAyah) || 1,
+        toAyah: Number(addForm.toAyah) || 1,
+        notes: addForm.notes.trim(),
+      })
+      setSessions(prev => [res.data, ...prev])
+      setAddForm(emptyAdd(addForm.childId))
+    } catch {
+      setAddError('Failed to save session. Please try again.')
+    } finally {
+      setAddSaving(false)
+    }
+  }
+
+  useEffect(() => {
     quranApi.getSessions()
       .then(res => setSessions(res.data.sessions ?? []))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  // Sync URL childId → filterChildId after children load and on URL changes
+  useEffect(() => {
+    if (children.length === 0) return
+    const urlChildId = searchParams.get('childId')
+    const matched = urlChildId ? children.find(c => c.id === urlChildId) : null
+    setFilterChildId(matched ? matched.id : '')
+  }, [searchParams, children])
 
   const displayedSessions = useMemo(() => {
     let list = sessions
@@ -71,6 +125,7 @@ export default function QuranPage() {
   }, [sessions, filterChildId, filterType, dateSort])
 
   function startEdit(session: QuranSession) {
+    setConfirmDeleteId(null)
     setEditingId(session.id)
     setEditForm(toEditState(session))
   }
@@ -102,10 +157,123 @@ export default function QuranPage() {
     }
   }
 
+  function startConfirmDelete(id: string) {
+    setEditingId(null)
+    setEditForm(null)
+    setConfirmDeleteId(id)
+  }
+
+  function cancelDelete() {
+    setConfirmDeleteId(null)
+  }
+
+  async function confirmDelete(id: string) {
+    setDeletingId(id)
+    try {
+      await quranApi.deleteSession(id)
+      setSessions(prev => prev.filter(s => s.id !== id))
+      setConfirmDeleteId(null)
+    } catch {
+      // keep confirmation open on error
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
-      <h1 className="text-2xl font-bold text-slate-900 mb-2">Quran Studies</h1>
+    <div className="max-w-5xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="page-title mb-0">Quran Studies</h1>
+        <button
+          type="button"
+          onClick={() => setShowAddForm(v => !v)}
+          className="px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800"
+        >
+          {showAddForm ? 'Cancel' : 'Log session'}
+        </button>
+      </div>
       <p className="text-sm text-slate-500 mb-8">Track Quran memorisation and recitation sessions.</p>
+
+      {/* Add session form */}
+      {showAddForm && <div className="mb-8">
+        <h2 className="form-section-heading">Log session</h2>
+        <div className="add-form-card">
+          <form onSubmit={handleAdd} className="space-y-4">
+            <div className="flex flex-wrap gap-4">
+              {children.length > 1 && (
+                <div className="flex-1 min-w-36">
+                  <label className="block text-xs font-medium text-slate-600 mb-1.5">Child</label>
+                  <select
+                    value={addForm.childId}
+                    onChange={e => setAddForm(f => ({ ...f, childId: e.target.value }))}
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-900"
+                  >
+                    {children.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              )}
+              <div className="flex-1 min-w-36">
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">Type</label>
+                <select
+                  value={addForm.type}
+                  onChange={e => setAddForm(f => ({ ...f, type: e.target.value }))}
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-900"
+                >
+                  {SESSION_TYPES.map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="flex-1 min-w-36">
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">Surah</label>
+                <input
+                  type="text"
+                  value={addForm.surah}
+                  onChange={e => setAddForm(f => ({ ...f, surah: e.target.value }))}
+                  placeholder="e.g. Al-Fatiha"
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-900"
+                />
+              </div>
+              <div className="w-24">
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">From ayah</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={addForm.fromAyah}
+                  onChange={e => setAddForm(f => ({ ...f, fromAyah: e.target.value }))}
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-900"
+                />
+              </div>
+              <div className="w-24">
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">To ayah</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={addForm.toAyah}
+                  onChange={e => setAddForm(f => ({ ...f, toAyah: e.target.value }))}
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-900"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">Notes (optional)</label>
+              <input
+                type="text"
+                value={addForm.notes}
+                onChange={e => setAddForm(f => ({ ...f, notes: e.target.value }))}
+                placeholder="Any notes about this session…"
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-900"
+              />
+            </div>
+            {addError && <p className="text-xs text-red-600">{addError}</p>}
+            <button
+              type="submit"
+              disabled={addSaving}
+              className="px-5 py-2.5 bg-forest-900 text-white rounded-lg text-sm font-medium hover:bg-forest-800 disabled:opacity-50 transition-colors"
+            >
+              {addSaving ? 'Saving…' : 'Log session'}
+            </button>
+          </form>
+        </div>
+      </div>}
 
       {/* Filters */}
       {!loading && sessions.length > 0 && (
@@ -149,6 +317,7 @@ export default function QuranPage() {
           {displayedSessions.map(s => (
             <div key={s.id} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
               {editingId === s.id && editForm ? (
+                /* Edit expansion */
                 <div className="p-4 space-y-3">
                   <div className="flex gap-3 flex-wrap">
                     <div className="flex-1 min-w-32">
@@ -214,6 +383,7 @@ export default function QuranPage() {
                   <div className="flex gap-2 justify-end">
                     <button
                       onClick={cancelEdit}
+                      aria-label="Cancel edit"
                       className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 border border-slate-200 rounded-lg transition-colors"
                     >
                       <X className="w-3 h-3" /> Cancel
@@ -221,13 +391,40 @@ export default function QuranPage() {
                     <button
                       onClick={() => saveEdit(s.id)}
                       disabled={saving}
+                      aria-label="Save session"
                       className="flex items-center gap-1 text-xs text-white bg-forest-900 hover:bg-forest-800 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
                     >
                       <Check className="w-3 h-3" /> {saving ? 'Saving…' : 'Save'}
                     </button>
                   </div>
                 </div>
+              ) : confirmDeleteId === s.id ? (
+                /* Delete confirmation panel */
+                <div className="p-4 bg-red-50 border-t border-red-100">
+                  <p className="text-sm text-red-700 font-medium mb-3">Delete this session?</p>
+                  <p className="text-xs text-red-600 mb-3">
+                    {s.surah} · {s.type} · {s.date}
+                  </p>
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={cancelDelete}
+                      aria-label="Cancel delete"
+                      className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 border border-slate-200 rounded-lg bg-white transition-colors"
+                    >
+                      <X className="w-3 h-3" /> Cancel
+                    </button>
+                    <button
+                      onClick={() => confirmDelete(s.id)}
+                      disabled={deletingId === s.id}
+                      aria-label="Confirm delete session"
+                      className="flex items-center gap-1 text-xs text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3 h-3" /> {deletingId === s.id ? 'Deleting…' : 'Delete'}
+                    </button>
+                  </div>
+                </div>
               ) : (
+                /* Read state */
                 <div className="flex items-center justify-between gap-4 p-4">
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-900 text-sm">{s.surah}</p>
@@ -242,6 +439,13 @@ export default function QuranPage() {
                       className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                     >
                       <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => startConfirmDelete(s.id)}
+                      aria-label="Delete session"
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>

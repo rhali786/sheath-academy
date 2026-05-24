@@ -1,16 +1,23 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
+import { requireAuthCtx } from '@/features/auth/server/context'
+import { runWithAuthCtx } from '@/features/auth/server/requestAuth'
 import { handleDashboardRoute } from '@/features/dashboard/api/router'
 import { handleHouseholdRoute } from '@/features/household/api/router'
 import { handleChildrenRoute } from '@/features/children/api/router'
 import { handleSubjectsRoute } from '@/features/subjects/api/router'
 import { handleSchoolYearsRoute } from '@/features/school-year/api/router'
 import { handleSetupStatusRoute } from '@/features/setup/api/router'
-import { handlePlannerRoute } from '@/features/planner/api/router'
+import { handlePlanRoute } from '@/features/plan/api/router'
 import { handleAttendanceRoute } from '@/features/attendance/api/router'
 import { handlePortfolioRoute } from '@/features/portfolio/api/router'
-import { handleReportsRoute } from '@/features/reports/api/router'
+import { handleRecordsRoute } from '@/features/records/api/router'
 import { handleAlertsRoute } from '@/features/alerts/api/router'
 import { handleQuranRoute } from '@/features/quran/api/router'
+import { handleScheduleRoute } from '@/features/schedule/api/router'
+import { handleResourcesRoute } from '@/features/resources/api/router'
+import { handleProductValidationRoute } from '@/features/product-validation/api/router'
+import { handleAdminMetricsRoute } from '@/features/admin-metrics/api/router'
+import { latencyTrace } from '@/features/lib/debug/latencyTrace'
 
 async function handleRoute(slug: string[], request: Request): Promise<NextResponse | null> {
   if (slug[0] === 'dashboard') {
@@ -25,8 +32,8 @@ async function handleRoute(slug: string[], request: Request): Promise<NextRespon
     return await handleChildrenRoute(slug.slice(1), request)
   }
 
-  if (slug[0] === 'planner') {
-    return await handlePlannerRoute(slug.slice(1), request)
+  if (slug[0] === 'plan') {
+    return await handlePlanRoute(slug.slice(1), request)
   }
 
   if (slug[0] === 'subjects') {
@@ -49,8 +56,8 @@ async function handleRoute(slug: string[], request: Request): Promise<NextRespon
     return await handlePortfolioRoute(slug.slice(1), request)
   }
 
-  if (slug[0] === 'reports') {
-    return await handleReportsRoute(slug.slice(1), request)
+  if (slug[0] === 'records') {
+    return await handleRecordsRoute(slug.slice(1), request)
   }
 
   if (slug[0] === 'alerts') {
@@ -61,100 +68,90 @@ async function handleRoute(slug: string[], request: Request): Promise<NextRespon
     return await handleQuranRoute(slug.slice(1), request)
   }
 
+  if (slug[0] === 'schedule') {
+    return await handleScheduleRoute(slug.slice(1), request)
+  }
+
+  if (slug[0] === 'resources') {
+    return await handleResourcesRoute(slug.slice(1), request)
+  }
+
+  if (slug[0] === 'product-validation') {
+    return await handleProductValidationRoute(slug.slice(1), request)
+  }
+
+  if (slug[0] === 'admin') {
+    return await handleAdminMetricsRoute(slug.slice(1), request)
+  }
+
   return null
+}
+
+async function dispatch(
+  request: Request,
+  params: Promise<{ slug: string[] }>,
+): Promise<NextResponse | Response> {
+  const routeT0 = Date.now()
+  const authT0 = Date.now()
+  const authResult = await requireAuthCtx(request as NextRequest)
+  const authMs = Date.now() - authT0
+  if (authResult instanceof Response) return authResult
+
+  const { slug } = await params
+  const path = `/api/${slug.join('/')}`
+  const handlerT0 = Date.now()
+  const response = await runWithAuthCtx(authResult, () => handleRoute(slug, request))
+  const handlerMs = Date.now() - handlerT0
+  latencyTrace(
+    'route.ts:dispatch',
+    'api_request',
+    { path, authMs, handlerMs, totalMs: Date.now() - routeT0 },
+    'E',
+  )
+  if (response) return response
+
+  return NextResponse.json(
+    {
+      status: 'error',
+      data: null,
+      message: 'Not found',
+      timestamp: new Date().toISOString(),
+    },
+    { status: 404 },
+  )
 }
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ slug: string[] }> }
+  context: { params: Promise<{ slug: string[] }> },
 ): Promise<NextResponse | Response> {
-  const { slug } = await params
-  const response = await handleRoute(slug, request)
-  if (response) return response
-
-  return NextResponse.json(
-    {
-      status: 'error',
-      data: null,
-      message: 'Not found',
-      timestamp: new Date().toISOString(),
-    },
-    { status: 404 }
-  )
+  return dispatch(request, context.params)
 }
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ slug: string[] }> }
+  context: { params: Promise<{ slug: string[] }> },
 ): Promise<NextResponse | Response> {
-  const { slug } = await params
-  const response = await handleRoute(slug, request)
-  if (response) return response
-
-  return NextResponse.json(
-    {
-      status: 'error',
-      data: null,
-      message: 'Not found',
-      timestamp: new Date().toISOString(),
-    },
-    { status: 404 }
-  )
+  return dispatch(request, context.params)
 }
 
 export async function PUT(
   request: Request,
-  { params }: { params: Promise<{ slug: string[] }> }
+  context: { params: Promise<{ slug: string[] }> },
 ): Promise<NextResponse | Response> {
-  const { slug } = await params
-  const response = await handleRoute(slug, request)
-  if (response) return response
-
-  return NextResponse.json(
-    {
-      status: 'error',
-      data: null,
-      message: 'Not found',
-      timestamp: new Date().toISOString(),
-    },
-    { status: 404 }
-  )
+  return dispatch(request, context.params)
 }
 
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ slug: string[] }> }
+  context: { params: Promise<{ slug: string[] }> },
 ): Promise<NextResponse | Response> {
-  const { slug } = await params
-  const response = await handleRoute(slug, request)
-  if (response) return response
-
-  return NextResponse.json(
-    {
-      status: 'error',
-      data: null,
-      message: 'Not found',
-      timestamp: new Date().toISOString(),
-    },
-    { status: 404 }
-  )
+  return dispatch(request, context.params)
 }
 
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ slug: string[] }> }
+  context: { params: Promise<{ slug: string[] }> },
 ): Promise<NextResponse | Response> {
-  const { slug } = await params
-  const response = await handleRoute(slug, request)
-  if (response) return response
-
-  return NextResponse.json(
-    {
-      status: 'error',
-      data: null,
-      message: 'Not found',
-      timestamp: new Date().toISOString(),
-    },
-    { status: 404 }
-  )
+  return dispatch(request, context.params)
 }

@@ -1,7 +1,8 @@
 import React from 'react'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { AttendancePage } from '@/features/attendance/front/pages/AttendancePage'
 import type { AttendanceRecord } from '@/features/attendance/types'
+import { emptyAttendanceStatusCounts } from '@/features/attendance/types'
 import type { StudentProfile, ApiResponse } from '@/features/lib/types'
 
 let mockSearchParams = new URLSearchParams()
@@ -15,7 +16,8 @@ jest.mock('@/features/attendance/front/services/api', () => ({
     getRecords: jest.fn(),
     createRecord: jest.fn(),
     updateRecord: jest.fn(),
-    deleteRecord: jest.fn(),
+    archiveRecord: jest.fn(),
+    batchRecord: jest.fn(),
     getSummary: jest.fn(),
   },
 }))
@@ -27,7 +29,16 @@ jest.mock('@/features/children/front/services/api', () => ({
 }))
 
 jest.mock('@/features/household/front/context', () => ({
-  useHousehold: jest.fn(() => ({ householdProfile: { id: 'hh_001' } })),
+  useHousehold: jest.fn(() => ({
+    householdProfile: { id: 'hh_001' },
+    studentProfiles: [],
+    allSubjects: [],
+    loading: false,
+    needsSetup: false,
+    familyName: '',
+    error: null,
+    refetch: jest.fn(),
+  })),
 }))
 
 import { attendanceApi } from '@/features/attendance/front/services/api'
@@ -35,6 +46,9 @@ import { childrenApi } from '@/features/children/front/services/api'
 
 const mockGetRecords = attendanceApi.getRecords as jest.Mock
 const mockCreateRecord = attendanceApi.createRecord as jest.Mock
+const mockUpdateRecord = attendanceApi.updateRecord as jest.Mock
+const mockArchiveRecord = attendanceApi.archiveRecord as jest.Mock
+const mockBatchRecord = attendanceApi.batchRecord as jest.Mock
 const mockGetSummary = attendanceApi.getSummary as jest.Mock
 const mockGetAllChildren = (childrenApi as any).getAllChildren as jest.Mock
 
@@ -60,12 +74,31 @@ function ok<T>(data: T): ApiResponse<T> {
   return { status: 'success', data, message: '', timestamp: '' }
 }
 
+function todayLocal(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+async function openMarkForm() {
+  fireEvent.click(screen.getByRole('button', { name: /mark attendance/i }))
+  await waitFor(() => {
+    expect(screen.getByLabelText(/^date$/i)).toBeInTheDocument()
+  })
+}
+
 beforeEach(() => {
   mockSearchParams = new URLSearchParams()
   mockGetAllChildren.mockResolvedValue(ok(mockChildren))
   mockGetRecords.mockResolvedValue(ok([]))
   mockCreateRecord.mockResolvedValue(ok(makeRecord()))
-  mockGetSummary.mockResolvedValue(ok({ childId: 'child_001', totalPresent: 0, totalAbsent: 0, totalPartial: 0, totalRecorded: 0 }))
+  mockUpdateRecord.mockResolvedValue(ok(makeRecord()))
+  mockArchiveRecord.mockResolvedValue(ok(null))
+  mockBatchRecord.mockResolvedValue(ok([]))
+  mockGetSummary.mockResolvedValue(ok({
+    childId: 'child_001',
+    totalRecorded: 0,
+    byStatus: emptyAttendanceStatusCounts(),
+  }))
 })
 
 afterEach(() => {
@@ -76,24 +109,28 @@ describe('AttendancePage', () => {
   it('renders the page heading', async () => {
     render(<AttendancePage />)
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /attendance/i })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /^attendance$/i, level: 1 })).toBeInTheDocument()
     })
   })
 
-  it('renders a child selector with loaded children', async () => {
+  it('renders a learner selector with loaded children when form is open', async () => {
     render(<AttendancePage />)
+    await openMarkForm()
     await waitFor(() => {
-      expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0)
+      expect(screen.getByLabelText(/^learner$/i)).toBeInTheDocument()
     })
-    expect(screen.getByText('Adam')).toBeInTheDocument()
+    expect(screen.getAllByText('Adam').length).toBeGreaterThan(0)
   })
 
-  it('renders Present, Absent, Partial quick-mark buttons', async () => {
+  it('renders all attendance status quick-mark buttons when form is open', async () => {
     render(<AttendancePage />)
+    await openMarkForm()
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /present/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /absent/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /partial/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^present$/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^absent$/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^partial$/i })).toBeInTheDocument()
+      expect(screen.getByTestId('attendance-status-excused')).toBeInTheDocument()
+      expect(screen.getByTestId('attendance-status-sick')).toBeInTheDocument()
     })
   })
 
@@ -101,24 +138,30 @@ describe('AttendancePage', () => {
     mockGetRecords.mockResolvedValue(ok([makeRecord({ status: 'present', date: '2026-05-12' })]))
     render(<AttendancePage />)
     await waitFor(() => {
-      expect(screen.getByText('present')).toBeInTheDocument()
+      expect(screen.getAllByText('Present').length).toBeGreaterThan(0)
     })
   })
 
   it('shows summary counts', async () => {
-    mockGetSummary.mockResolvedValue(ok({ childId: 'child_001', totalPresent: 3, totalAbsent: 1, totalPartial: 0, totalRecorded: 4 }))
+    const byStatus = emptyAttendanceStatusCounts()
+    byStatus.present = 3
+    byStatus.absent = 1
+    mockGetSummary.mockResolvedValue(ok({ childId: 'child_001', totalRecorded: 4, byStatus }))
     render(<AttendancePage />)
     await waitFor(() => {
       expect(screen.getByText('3')).toBeInTheDocument()
+      expect(screen.getByTestId('attendance-summary-present')).toBeInTheDocument()
+      expect(screen.getByTestId('attendance-summary-absent')).toBeInTheDocument()
     })
   })
 
   it('clicking Present button calls createRecord with status present', async () => {
     render(<AttendancePage />)
+    await openMarkForm()
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /present/i })).toBeInTheDocument()
+      expect(screen.getAllByText('Adam').length).toBeGreaterThan(0)
     })
-    fireEvent.click(screen.getByRole('button', { name: /present/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^present$/i }))
     await waitFor(() => {
       expect(mockCreateRecord).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'present' })
@@ -138,7 +181,7 @@ describe('AttendancePage', () => {
     mockGetRecords.mockResolvedValue(ok([makeRecord({ childId: 'child_001', status: 'present' })]))
     render(<AttendancePage />)
     await waitFor(() => {
-      expect(screen.getByText('Adam')).toBeInTheDocument()
+      expect(screen.getAllByText('Adam').length).toBeGreaterThan(0)
     })
   })
 
@@ -175,13 +218,104 @@ describe('AttendancePage', () => {
     })
   })
 
-  it('selects the child from ?childId query param after children load', async () => {
-    mockSearchParams = new URLSearchParams('childId=child_002')
-    mockGetSummary.mockResolvedValue(ok({ childId: 'child_002', totalPresent: 0, totalAbsent: 0, totalPartial: 0, totalRecorded: 0 }))
+  // FB-014 TDD tests
+
+  it('date field defaults to today when form is open', async () => {
+    render(<AttendancePage />)
+    await openMarkForm()
+    const dateInput = screen.getByLabelText(/^date$/i) as HTMLInputElement
+    expect(dateInput.value).toBe(todayLocal())
+  })
+
+  it('renders all active learners in batch mode', async () => {
+    render(<AttendancePage />)
+    await openMarkForm()
+    await waitFor(() => expect(screen.getAllByText('Adam').length).toBeGreaterThan(0))
+    fireEvent.click(screen.getByRole('button', { name: /batch mode/i }))
+    await waitFor(() => {
+      expect(screen.getAllByText('Adam').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Khadijah').length).toBeGreaterThan(0)
+    })
+    // In batch mode, each learner has a status dropdown labeled "Status for <name>"
+    expect(screen.getByLabelText('Status for Adam')).toBeInTheDocument()
+    expect(screen.getByLabelText('Status for Khadijah')).toBeInTheDocument()
+  })
+
+  it('clicking Mark all present sets all learner statuses to present', async () => {
+    render(<AttendancePage />)
+    await openMarkForm()
+    await waitFor(() => expect(screen.getAllByText('Adam').length).toBeGreaterThan(0))
+    fireEvent.click(screen.getByRole('button', { name: /batch mode/i }))
+    await waitFor(() => screen.getByRole('button', { name: /mark all present/i }))
+    fireEvent.click(screen.getByRole('button', { name: /mark all present/i }))
+    const statusSelects = screen.getAllByRole('combobox').filter(
+      el => el.getAttribute('aria-label')?.startsWith('Status for')
+    ) as HTMLSelectElement[]
+    expect(statusSelects.length).toBeGreaterThan(0)
+    statusSelects.forEach(sel => {
+      expect(sel.value).toBe('present')
+    })
+  })
+
+  it('status dropdown includes Field trip and Co-op day options in batch mode', async () => {
+    render(<AttendancePage />)
+    await openMarkForm()
+    await waitFor(() => expect(screen.getAllByText('Adam').length).toBeGreaterThan(0))
+    fireEvent.click(screen.getByRole('button', { name: /batch mode/i }))
+    await waitFor(() => {
+      const options = screen.getAllByRole('option')
+      expect(options.some(o => o.textContent === 'Field trip')).toBe(true)
+      expect(options.some(o => o.textContent === 'Co-op day')).toBe(true)
+    })
+  })
+
+  it('Void icon button shows inline confirm UI and archives the record on confirm', async () => {
+    mockGetRecords.mockResolvedValue(ok([makeRecord({ id: 'rec_001', status: 'present' })]))
+    render(<AttendancePage />)
+    await waitFor(() => screen.getByRole('button', { name: /void record/i }))
+    fireEvent.click(screen.getByRole('button', { name: /void record/i }))
+    // Inline confirm UI should appear (no window.confirm)
+    await waitFor(() => expect(screen.getByRole('button', { name: /confirm void/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /confirm void/i }))
+    await waitFor(() => {
+      expect(mockArchiveRecord).toHaveBeenCalledWith('rec_001')
+    })
+  })
+
+  it('Void icon button does not archive when inline cancel is clicked', async () => {
+    mockGetRecords.mockResolvedValue(ok([makeRecord({ id: 'rec_001', status: 'present' })]))
+    render(<AttendancePage />)
+    await waitFor(() => screen.getByRole('button', { name: /void record/i }))
+    fireEvent.click(screen.getByRole('button', { name: /void record/i }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /cancel void/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /cancel void/i }))
+    expect(mockArchiveRecord).not.toHaveBeenCalled()
+    // Void button should be back
+    expect(screen.getByRole('button', { name: /void record/i })).toBeInTheDocument()
+  })
+
+  it('filter by learner shows only that learner records', async () => {
+    mockGetRecords.mockResolvedValue(ok([
+      makeRecord({ id: 'rec_001', childId: 'child_001', status: 'present', date: '2026-05-12' }),
+      makeRecord({ id: 'rec_002', childId: 'child_002', status: 'absent', date: '2026-05-13' }),
+    ]))
     render(<AttendancePage />)
     await waitFor(() => {
-      // The child selector should show Khadijah (child_002) as selected
-      const selector = screen.getAllByRole('combobox')[0]
+      expect(screen.getAllByRole('button', { name: /void record/i })).toHaveLength(2)
+    })
+    fireEvent.change(screen.getByLabelText(/filter by learner/i), { target: { value: 'child_002' } })
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: /void record/i })).toHaveLength(1)
+    })
+  })
+
+  it('selects the child from ?childId query param after children load', async () => {
+    mockSearchParams = new URLSearchParams('childId=child_002')
+    mockGetSummary.mockResolvedValue(ok({ childId: 'child_002', totalRecorded: 0, byStatus: emptyAttendanceStatusCounts() }))
+    render(<AttendancePage />)
+    await openMarkForm()
+    await waitFor(() => {
+      const selector = screen.getByLabelText(/^learner$/i)
       expect(selector).toHaveValue('child_002')
     })
   })
@@ -189,17 +323,38 @@ describe('AttendancePage', () => {
   it('falls back to first child when ?childId is invalid', async () => {
     mockSearchParams = new URLSearchParams('childId=invalid_id')
     render(<AttendancePage />)
+    await openMarkForm()
     await waitFor(() => {
-      const selector = screen.getAllByRole('combobox')[0]
+      const selector = screen.getByLabelText(/^learner$/i)
       expect(selector).toHaveValue('child_001')
     })
   })
 
   it('uses first child when no ?childId param', async () => {
     render(<AttendancePage />)
+    await openMarkForm()
     await waitFor(() => {
-      const selector = screen.getAllByRole('combobox')[0]
+      const selector = screen.getByLabelText(/^learner$/i)
       expect(selector).toHaveValue('child_001')
+    })
+  })
+
+  it('updates selected learner when URL childId changes while component stays mounted', async () => {
+    mockSearchParams = new URLSearchParams()
+    const { rerender } = render(<AttendancePage />)
+
+    await openMarkForm()
+    await waitFor(() => {
+      const sel = screen.getByLabelText(/^learner$/i) as HTMLSelectElement
+      expect(sel).toHaveValue('child_001')
+    })
+
+    act(() => { mockSearchParams = new URLSearchParams('childId=child_002') })
+    rerender(<AttendancePage />)
+
+    await waitFor(() => {
+      const sel = screen.getByLabelText(/^learner$/i) as HTMLSelectElement
+      expect(sel).toHaveValue('child_002')
     })
   })
 })

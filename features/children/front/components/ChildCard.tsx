@@ -10,44 +10,54 @@ interface ChildCardProps {
 }
 
 export function ChildCard({ child, onEdit, onArchive, onRestore }: ChildCardProps) {
-  const formattedDob = child.dob ? new Date(child.dob).toLocaleDateString() : 'Not specified'
+  const displayName = (child.firstName || child.lastName)
+    ? `${child.firstName ?? ''} ${child.lastName ?? ''}`.trim()
+    : child.name
+
+  const initials = child.avatarInitials || displayName.charAt(0).toUpperCase()
+
+  const hasLogin = child.learnerLoginEnabled ?? !!child.username
+
+  const formattedDob = child.dob
+    ? new Date(child.dob + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    : null
 
   return (
     <div className={`border rounded-lg p-4 ${child.isActive ? 'border-slate-200 bg-white' : 'border-slate-300 bg-slate-50'}`}>
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-forest-900 text-white flex items-center justify-center font-bold text-sm">
-            {child.avatarInitials || child.name.charAt(0).toUpperCase()}
+            {initials}
           </div>
           <div>
             <h3 className={`font-semibold ${child.isActive ? 'text-slate-900' : 'text-slate-600'}`}>
-              {child.name}
+              {displayName}
             </h3>
             <p className="text-xs text-slate-500">{child.gradeLabel}</p>
           </div>
         </div>
-        {child.isActive ? (
+        {child.isActive && (
           <button
             onClick={() => onEdit(child)}
             className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
           >
-            Edit
+            Edit profile
           </button>
-        ) : null}
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-        <div>
-          <p className="text-slate-500">Teacher</p>
-          <p className="text-slate-900">{child.teacherName || '—'}</p>
-        </div>
-        <div>
-          <p className="text-slate-500">DOB</p>
-          <p className="text-slate-900">{formattedDob}</p>
-        </div>
-        <div className="col-span-2">
-          <p className="text-slate-500">Username</p>
-          <p className="text-slate-900 font-mono">{child.username}</p>
+        {formattedDob && (
+          <div>
+            <p className="text-slate-500">DOB</p>
+            <p className="text-slate-900">{formattedDob}</p>
+          </div>
+        )}
+        <div className={formattedDob ? '' : 'col-span-2'}>
+          <p className="text-slate-500">Learner login</p>
+          <p className={`font-medium ${hasLogin ? 'text-green-700' : 'text-slate-400'}`}>
+            {hasLogin ? 'Enabled' : 'Not enabled'}
+          </p>
         </div>
       </div>
 

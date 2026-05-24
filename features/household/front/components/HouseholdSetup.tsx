@@ -21,7 +21,7 @@ interface HouseholdSetupProps {
 }
 
 export function HouseholdSetup({ onComplete }: HouseholdSetupProps = {}) {
-  const { workspace, householdProfile, refetch } = useHousehold()
+  const { householdProfile, refetch } = useHousehold()
 
   // Household name form state
   const [name, setName] = useState('')
@@ -30,7 +30,7 @@ export function HouseholdSetup({ onComplete }: HouseholdSetupProps = {}) {
 
   // Whether we are in the setup-cards phase (household exists either from
   // context on mount, or because it was just created in this session).
-  const [inCardsPhase, setInCardsPhase] = useState(() => Boolean(workspace))
+  const [inCardsPhase, setInCardsPhase] = useState(() => Boolean(householdProfile))
 
   // Status of the three required setup steps — null while still fetching.
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null)
@@ -41,7 +41,7 @@ export function HouseholdSetup({ onComplete }: HouseholdSetupProps = {}) {
   const fetchSetupStatus = useCallback(async () => {
     setCheckingStatus(true)
     try {
-      const hid = householdProfile?.id ?? workspace?.id
+      const hid = householdProfile?.id
       const childrenUrl =
         hid != null && hid !== ''
           ? `/api/children/children?householdId=${encodeURIComponent(hid)}&includeArchived=false`
@@ -70,7 +70,7 @@ export function HouseholdSetup({ onComplete }: HouseholdSetupProps = {}) {
     } finally {
       setCheckingStatus(false)
     }
-  }, [workspace?.id, householdProfile?.id])
+  }, [householdProfile?.id])
 
   // Enter cards phase and start fetching status when appropriate.
   useEffect(() => {
@@ -138,9 +138,9 @@ export function HouseholdSetup({ onComplete }: HouseholdSetupProps = {}) {
               {showSchoolYear && (
                 <SetupCard_SchoolYear onSchoolYearCreated={fetchSetupStatus} />
               )}
-              {showChildren && workspace && (
+              {showChildren && householdProfile && (
                 <SetupCard_Children
-                  householdId={householdProfile?.id ?? workspace.id}
+                  householdId={householdProfile.id}
                   onChildAdded={fetchSetupStatus}
                 />
               )}

@@ -2,6 +2,7 @@ import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { WeekAttendanceCard } from '@/features/dashboard/front/components/WeekAttendanceCard'
 import type { AttendanceSummary } from '@/features/attendance/types'
+import { emptyAttendanceStatusCounts } from '@/features/attendance/types'
 
 jest.mock('@/features/attendance/front/services/api', () => ({
   attendanceApi: {
@@ -12,12 +13,15 @@ jest.mock('@/features/attendance/front/services/api', () => ({
 import { attendanceApi } from '@/features/attendance/front/services/api'
 const mockGetSummary = attendanceApi.getSummary as jest.Mock
 
+const mockByStatus = emptyAttendanceStatusCounts()
+mockByStatus.present = 3
+mockByStatus.absent = 1
+mockByStatus.partial = 1
+
 const mockSummary: AttendanceSummary = {
   childId: 'child_a',
-  totalPresent: 3,
-  totalAbsent: 1,
-  totalPartial: 1,
   totalRecorded: 5,
+  byStatus: mockByStatus,
 }
 
 describe('WeekAttendanceCard', () => {
@@ -33,14 +37,15 @@ describe('WeekAttendanceCard', () => {
     mockGetSummary.mockResolvedValue({ data: mockSummary })
     render(<WeekAttendanceCard childId="child_a" />)
     await waitFor(() => {
-      expect(screen.getByText('3')).toBeInTheDocument() // present
-      expect(screen.getAllByText('1')).toHaveLength(2)   // absent=1 and partial=1
+      expect(screen.getByText('3')).toBeInTheDocument()
+      expect(screen.getByText('Present')).toBeInTheDocument()
+      expect(screen.getAllByText('1')).toHaveLength(2)
     })
   })
 
   it('shows empty state when no records for this week', async () => {
     mockGetSummary.mockResolvedValue({
-      data: { childId: 'child_a', totalPresent: 0, totalAbsent: 0, totalPartial: 0, totalRecorded: 0 },
+      data: { childId: 'child_a', totalRecorded: 0, byStatus: emptyAttendanceStatusCounts() },
     })
     render(<WeekAttendanceCard childId="child_a" />)
     await waitFor(() => {
@@ -68,7 +73,7 @@ describe('WeekAttendanceCard', () => {
       expect(mockGetSummary).toHaveBeenCalledWith(
         'child_a',
         expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-        expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+        expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
       )
     })
   })

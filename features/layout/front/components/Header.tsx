@@ -1,16 +1,20 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useHousehold } from '@/features/household/front/context'
 import { useNavigation } from '@/features/layout/front/context/NavigationContext'
 import { formatHeaderDates, type HeaderDateDisplay } from '@/features/layout/lib/formatHeaderDates'
+import { useSyncAppHeaderHeight } from '@/features/layout/front/hooks/useSyncAppHeaderHeight'
 
 export function Header() {
+  const headerRef = useRef<HTMLElement>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [headerDates, setHeaderDates] = useState<HeaderDateDisplay | null>(null)
+
+  useSyncAppHeaderHeight(headerRef)
 
   useEffect(() => {
     setHeaderDates(formatHeaderDates(new Date()))
@@ -29,12 +33,12 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-slate-100 shadow-sm">
+    <header ref={headerRef} className="sticky top-0 z-50 bg-white border-b border-slate-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Brand row */}
         <div className="flex items-center justify-between py-4">
-          <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <div className="w-9 h-9 rounded-xl bg-forest-900 flex items-center justify-center flex-shrink-0 shadow-sm">
               <span className="text-white text-base font-bold leading-none" aria-hidden="true">ش</span>
             </div>
@@ -47,7 +51,7 @@ export function Header() {
               </h1>
               <p className="text-xs text-slate-400">{familyName || 'Home Education'}</p>
             </div>
-          </div>
+          </Link>
 
           <div className="flex items-center gap-3">
             {/* Hijri date — hidden on small screens */}
@@ -117,34 +121,44 @@ export function Header() {
             </button>
           ))}
           <Link
-            href="/portfolio"
+            href="/growth"
             className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
-              pathname.startsWith('/portfolio')
+              pathname.startsWith('/growth') || pathname.startsWith('/portfolio')
                 ? 'bg-forest-900 text-white'
                 : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
-            Portfolio
+            Growth
           </Link>
           <Link
-            href="/reports"
+            href="/records"
             className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
-              pathname.startsWith('/reports')
+              pathname.startsWith('/records') || pathname.startsWith('/reports')
                 ? 'bg-forest-900 text-white'
                 : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
-            Reports
+            Records
           </Link>
           <Link
-            href="/planner"
+            href="/plan"
             className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
-              pathname.startsWith('/planner')
+              pathname.startsWith('/plan') || pathname.startsWith('/planner')
                 ? 'bg-forest-900 text-white'
                 : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
-            Weekly
+            Plan
+          </Link>
+          <Link
+            href="/resources"
+            className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
+              pathname.startsWith('/resources')
+                ? 'bg-forest-900 text-white'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            Resources
           </Link>
           <Link
             href="/lessons"
@@ -187,6 +201,16 @@ export function Header() {
             Settings
           </Link>
           <Link
+            href="/admin/metrics"
+            className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
+              pathname.startsWith('/admin')
+                ? 'bg-forest-900 text-white'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            Admin
+          </Link>
+          <Link
             href="/about"
             className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
               pathname === '/about'
@@ -226,37 +250,48 @@ export function Header() {
               </button>
             ))}
             <Link
-              href="/portfolio"
+              href="/growth"
               onClick={() => setMenuOpen(false)}
               className={`block px-4 py-3 text-sm font-medium transition-colors ${
-                pathname.startsWith('/portfolio')
+                pathname.startsWith('/growth') || pathname.startsWith('/portfolio')
                   ? 'bg-forest-50 text-forest-900'
                   : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              Portfolio
+              Growth
             </Link>
             <Link
-              href="/reports"
+              href="/records"
               onClick={() => setMenuOpen(false)}
               className={`block px-4 py-3 text-sm font-medium transition-colors ${
-                pathname.startsWith('/reports')
+                pathname.startsWith('/records') || pathname.startsWith('/reports')
                   ? 'bg-forest-50 text-forest-900'
                   : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              Reports
+              Records
             </Link>
             <Link
-              href="/planner"
+              href="/plan"
               onClick={() => setMenuOpen(false)}
               className={`block px-4 py-3 text-sm font-medium transition-colors ${
-                pathname.startsWith('/planner')
+                pathname.startsWith('/plan') || pathname.startsWith('/planner')
                   ? 'bg-forest-50 text-forest-900'
                   : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              Weekly
+              Plan
+            </Link>
+            <Link
+              href="/resources"
+              onClick={() => setMenuOpen(false)}
+              className={`block px-4 py-3 text-sm font-medium transition-colors ${
+                pathname.startsWith('/resources')
+                  ? 'bg-forest-50 text-forest-900'
+                  : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              Resources
             </Link>
             <Link
               href="/lessons"
@@ -301,6 +336,17 @@ export function Header() {
               }`}
             >
               Settings
+            </Link>
+            <Link
+              href="/admin/metrics"
+              onClick={() => setMenuOpen(false)}
+              className={`block px-4 py-3 text-sm font-medium transition-colors ${
+                pathname.startsWith('/admin')
+                  ? 'bg-forest-50 text-forest-900'
+                  : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              Admin
             </Link>
             <Link
               href="/about"

@@ -1,6 +1,6 @@
 {
   "name": "sheath-academy",
-  "version": "0.35.34",
+  "version": "0.35.40",
   "private": true,
   "engines": {
     "node": ">=22.22.2"
@@ -17,7 +17,13 @@
     "test:e2e:ui": "playwright test --ui",
     "smoke": "node scripts/smoke.cjs",
     "setup-hooks": "sh scripts/setup-hooks.sh",
-    "prepare": "sh scripts/setup-hooks.sh"
+    "prepare": "sh scripts/setup-hooks.sh",
+    "db:generate": "dotenv -e .env.local -- drizzle-kit generate",
+    "db:migrate": "dotenv -e .env.local -- drizzle-kit migrate",
+    "db:studio": "dotenv -e .env.local -- drizzle-kit studio",
+    "db:seed:demo": "dotenv -e .env.local -- tsx scripts/seed-demo-households.ts",
+    "db:wipe": "dotenv -e .env.local -- tsx scripts/db-wipe.ts",
+    "db:reset:demo": "dotenv -e .env.local -- tsx scripts/db-wipe.ts && dotenv -e .env.local -- tsx scripts/seed-demo-households.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -26,9 +32,11 @@
     "@nivo/line": "^0.83.0",
     "axios": "^1.6.0",
     "clsx": "^2.0.0",
+    "drizzle-orm": "^0.45.2",
     "lucide-react": "^0.294.0",
     "next": "^15.0.0",
     "next-auth": "^5.0.0-beta.31",
+    "postgres": "^3.4.9",
     "prop-types": "^15.8.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -45,12 +53,15 @@
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.0",
+    "dotenv-cli": "^11.0.0",
+    "drizzle-kit": "^0.31.10",
     "jest": "^29.5.0",
     "jest-environment-jsdom": "^29.5.0",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.3.0",
     "ts-jest": "^29.4.9",
     "ts-node": "^10.9.1",
+    "tsx": "^4.22.3",
     "typescript": "^5.3.0"
   }
 }

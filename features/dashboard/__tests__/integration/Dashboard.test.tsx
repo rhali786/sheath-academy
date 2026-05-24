@@ -22,13 +22,21 @@ jest.mock('next/navigation', () => ({
   useRouter: jest.fn(() => ({ push: jest.fn() })),
 }))
 
+jest.mock('@/features/dashboard/front/components/SchoolYearProgressCard', () => ({
+  SchoolYearProgressCard: () => <div data-testid="school-year-progress-card" />,
+}))
+
+jest.mock('@/features/schedule/front/components/ScheduleNowNextCard', () => ({
+  ScheduleNowNextCard: () => <div data-testid="schedule-now-next-card" />,
+}))
+
 jest.mock('@/features/alerts/front/services/api', () => ({
   alertsApi: {
     getAlerts: jest.fn(() => Promise.resolve({ data: [] })),
   },
 }))
 
-jest.mock('@/features/planner/front/services/api', () => ({
+jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: {
     getProgress: jest.fn(() => Promise.resolve([])),
     getLessons: jest.fn(() => Promise.resolve([])),
@@ -81,11 +89,8 @@ jest.mock('@/features/children/front/services/api', () => ({
 
 jest.mock('@/features/household/front/services/api', () => ({
   householdApi: {
-    getWorkspace: jest.fn(() => Promise.resolve({
-      data: { id: 'workspace_001', name: 'Naeem Household', ownerId: 'user_001', createdAt: '2026-01-01T00:00:00.000Z' }
-    })),
     getProfile: jest.fn(() => Promise.resolve({
-      data: { id: 'household_001', workspaceId: 'workspace_001', familyName: 'Naeem Family', createdAt: '2026-01-01T00:00:00.000Z' }
+      data: { id: 'household_001', workspaceId: 'household_001', familyName: 'Naeem Family', createdAt: '2026-01-01T00:00:00.000Z' }
     })),
     setup: jest.fn(() => Promise.resolve({ data: {} })),
     updateProfile: jest.fn(() => Promise.resolve({ data: {} })),
@@ -135,6 +140,28 @@ describe('Dashboard Page Integration', () => {
     })
 
     expect(screen.getByText(/Today's State/i)).toBeInTheDocument()
+  })
+
+  test('ScheduleNowNextCard is rendered on the Today tab', async () => {
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading dashboard/i)).not.toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('schedule-now-next-card')).toBeInTheDocument()
+  })
+
+  test('child selector bar uses measured app header offset for sticky positioning', async () => {
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading dashboard/i)).not.toBeInTheDocument()
+    })
+
+    const stickyBar = document.querySelector('.top-app-header')
+    expect(stickyBar).toBeInTheDocument()
+    expect(stickyBar).toHaveClass('sticky')
   })
 
   test('DashboardProvider does not auto-select first child on load', async () => {

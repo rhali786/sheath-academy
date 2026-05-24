@@ -1,12 +1,16 @@
 'use client'
 
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import type { Workspace, HouseholdProfile } from '@/features/lib/types'
+import type { HouseholdProfile, StudentProfile } from '@/features/lib/types'
+import type { SubjectCourse } from '@/features/subjects/types'
 import { householdApi } from '../services/api'
+import { childrenApi } from '@/features/children/front/services/api'
+import { subjectsApi } from '@/features/subjects/front/services/api'
 
 export interface HouseholdContextType {
-  workspace: Workspace | null
   householdProfile: HouseholdProfile | null
+  studentProfiles: StudentProfile[]
+  allSubjects: SubjectCourse[]
   familyName: string
   needsSetup: boolean
   loading: boolean
@@ -25,17 +29,23 @@ export function useHousehold(): HouseholdContextType {
 }
 
 export function HouseholdProvider({ children }: { children: ReactNode }) {
-  const [workspace, setWorkspace] = useState<Workspace | null>(null)
   const [householdProfile, setHouseholdProfile] = useState<HouseholdProfile | null>(null)
+  const [studentProfiles, setStudentProfiles] = useState<StudentProfile[]>([])
+  const [allSubjects, setAllSubjects] = useState<SubjectCourse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchHousehold = useCallback(() => {
     setLoading(true)
-    Promise.all([householdApi.getWorkspace(), householdApi.getProfile()])
-      .then(([wsRes, profileRes]) => {
-        setWorkspace(wsRes.data)
+    Promise.all([
+      householdApi.getProfile(),
+      childrenApi.getAllChildren(false),
+      subjectsApi.getSubjects(),
+    ])
+      .then(([profileRes, childrenRes, subjectsRes]) => {
         setHouseholdProfile(profileRes.data)
+        setStudentProfiles(childrenRes.data ?? [])
+        setAllSubjects(subjectsRes.data ?? [])
         setLoading(false)
       })
       .catch((err) => {
@@ -48,12 +58,13 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
     fetchHousehold()
   }, [fetchHousehold])
 
-  const familyName = householdProfile?.familyName ?? workspace?.name ?? ''
-  const needsSetup = !loading && !workspace && !householdProfile
+  const familyName = householdProfile?.familyName ?? ''
+  const needsSetup = !loading && !householdProfile
 
   const value: HouseholdContextType = {
-    workspace,
     householdProfile,
+    studentProfiles,
+    allSubjects,
     familyName,
     needsSetup,
     loading,

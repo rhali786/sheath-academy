@@ -1,10 +1,11 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse, DashboardRecord } from '@/features/lib/types'
-import { getRecords as getAttendanceRecords } from '@/features/attendance/server/service'
-import { getLessons } from '@/features/planner/server/service'
-import { listEvidenceItems } from '@/features/portfolio/server/service'
-import { getQuranSessions } from '@/features/quran/server/service'
-import { getStudentProfiles } from '@/features/children/server/service'
+import { listAttendanceEvents } from '@/features/attendance/server/repository'
+import { listLessonTaskRows } from '@/features/plan/server/repository'
+import { listEvidenceRows } from '@/features/portfolio/server/repository'
+import { listQuranSessionRows } from '@/features/quran/server/repository'
+import { listLearners } from '@/features/children/server/repository'
 
 function getCurrentWeekRange(): { start: string; end: string } {
   const today = new Date()
@@ -35,59 +36,29 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Da
   const childId = searchParams.get('childId') || undefined
   const { start, end } = getCurrentWeekRange()
 
-  const allProfiles = getStudentProfiles()
-  const archivedIds = new Set(allProfiles.filter(p => !p.isActive).map(p => p.id))
-  const activeChildren = allProfiles.filter(p => p.isActive)
-  const maxAttendance = childId
-    ? weekdayCount(start, end)
-    : activeChildren.length * weekdayCount(start, end)
+  try {
+    const { householdId } = getRequestAuthCtx()
+    const activeLearners = await listLearners(householdId)
+    const maxAttendance = childId ? weekdayCount(start, end) : activeLearners.length * weekdayCount(start, end)
 
-  const weekAttendance = getAttendanceRecords({ childId, startDate: start, endDate: end })
-  const weekLessons = getLessons(childId).filter(l => l.dueDate >= start && l.dueDate <= end)
-  const completedLessons = weekLessons.filter(l => l.status === 'completed')
-  const weekEvidence = listEvidenceItems({ childId, startDate: start, endDate: end })
-  const allWeekQuran = getQuranSessions().filter(s => s.date >= start && s.date <= end)
-  const weekQuran = childId
-    ? allWeekQuran.filter(s => s.childId === childId)
-    : allWeekQuran.filter(s => !archivedIds.has(s.childId))
+    const weekAttendance = await listAttendanceEvents(householdId, { learnerId: childId, startDate: start, endDate: end })
+    const weekLessons = await listLessonTaskRows(householdId, { learnerId: childId, startDate: start, endDate: end })
+    const completedLessons = weekLessons.filter(l => l.status === 'completed')
+    const weekEvidence = await listEvidenceRows(householdId, { learnerId: childId, startDate: start, endDate: end })
+    const weekQuran = await listQuranSessionRows(householdId, { learnerId: childId, startDate: start, endDate: end })
 
-  const records: DashboardRecord[] = [
-    {
-      id: 'record_attendance',
-      title: 'Attendance',
-      count: weekAttendance.length,
-      maxCount: maxAttendance > 0 ? maxAttendance : undefined,
-      icon: 'CheckCircle',
-      viewButton: 'View',
-    },
-    {
-      id: 'record_progress',
-      title: 'Progress updates',
-      count: completedLessons.length,
-      maxCount: weekLessons.length > 0 ? weekLessons.length : undefined,
-      icon: 'TrendingUp',
-      viewButton: 'View',
-    },
-    {
-      id: 'record_portfolio',
-      title: 'Portfolio evidence',
-      count: weekEvidence.length,
-      icon: 'Folder',
-      viewButton: 'View',
-    },
-    {
-      id: 'record_quran',
-      title: 'Quran sessions',
-      count: weekQuran.length,
-      icon: 'BookOpen',
-      viewButton: 'View',
-    },
-  ]
-
-  return NextResponse.json({
-    status: 'success',
-    data: records,
-    message: 'Records retrieved',
-    timestamp: new Date().toISOString(),
-  })
+    return NextResponse.json({
+      status: 'success',
+      data: [
+        { id: 'record_attendance', title: 'Attendance', count: weekAttendance.length, maxCount: maxAttendance > 0 ? maxAttendance : undefined, icon: 'CheckCircle', viewButton: 'View' },
+        { id: 'record_progress', title: 'Progress updates', count: completedLessons.length, maxCount: weekLessons.length > 0 ? weekLessons.length : undefined, icon: 'TrendingUp', viewButton: 'View' },
+        { id: 'record_portfolio', title: 'Portfolio evidence', count: weekEvidence.length, icon: 'Folder', viewButton: 'View' },
+        { id: 'record_quran', title: 'Quran sessions', count: weekQuran.length, icon: 'BookOpen', viewButton: 'View' },
+      ],
+      message: 'Records retrieved',
+      timestamp: new Date().toISOString(),
+    })
+  } catch {
+    return NextResponse.json({ status: 'error', data: [], message: 'Failed to load records', timestamp: new Date().toISOString() }, { status: 500 })
+  }
 }

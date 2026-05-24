@@ -1,24 +1,91 @@
-import type { SchoolYear } from '@/features/school-year/types'
-import { schoolYearsStore } from './store'
-import { SEED_SCHOOL_YEARS } from './seed'
-import { generateSchoolYearId, resetIdCounter } from './ids'
-import { getWorkspace } from '@/features/household/server/service'
+import type { DayOfWeek, SchoolBreak, SchoolYear, SchoolYearProgress } from '@/features/school-year/types'
+import { calculatePlannedDaysLocal } from '@/features/school-year/front/lib/calculateDays'
+import {
+  activateSchoolYearRow,
+  createSchoolYearRow,
+  getActiveSchoolYearRow,
+  getSchoolYearRow,
+  listSchoolYearRows,
+  mapSchoolYearRow,
+  updateSchoolYearRow,
+  type SchoolYearInput,
+  type SchoolYearPatch,
+} from './repository'
 
-export function getSchoolYears(): SchoolYear[] {
-  return schoolYearsStore.getAll()
+/**
+ * Counts planned school days between startDate and endDate (inclusive),
+ * excluding any days that fall within a break and any day not in schoolDays.
+ */
+export function calculatePlannedSchoolDays(params: {
+  startDate: string
+  endDate: string
+  schoolDays: DayOfWeek[]
+  breaks?: SchoolBreak[]
+}): number {
+  return calculatePlannedDaysLocal(params)
 }
 
-export function getActiveSchoolYear(): SchoolYear | null {
-  return schoolYearsStore.getAll().find(y => y.isActive) ?? null
+/**
+ * Returns day/week progress for the given school year.
+ * Uses schoolDays from the year if set, otherwise defaults to Mon-Fri.
+ */
+export async function getSchoolYearProgress(
+  householdId: string,
+  schoolYearId: string,
+): Promise<SchoolYearProgress | null> {
+  const year = await getSchoolYear(householdId, schoolYearId)
+  if (!year) return null
+
+  const schoolDays = year.schoolDays ?? ['mon', 'tue', 'wed', 'thu', 'fri']
+  const breaks = year.breaks ?? []
+
+  const totalDays = calculatePlannedDaysLocal({
+    startDate: year.startDate,
+    endDate: year.endDate,
+    schoolDays,
+    breaks,
+  })
+
+  const now = new Date()
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+  let dayNumber = 0
+  if (todayStr >= year.startDate) {
+    const effectiveEnd = todayStr <= year.endDate ? todayStr : year.endDate
+    dayNumber = calculatePlannedDaysLocal({
+      startDate: year.startDate,
+      endDate: effectiveEnd,
+      schoolDays,
+      breaks,
+    })
+  }
+
+  const totalWeeks = Math.ceil(totalDays / schoolDays.length) || 0
+  const daysPerWeek = schoolDays.length || 5
+  const weekNumber = Math.min(Math.ceil(dayNumber / daysPerWeek), totalWeeks)
+
+  return { dayNumber, totalDays, weekNumber, totalWeeks }
 }
 
-export function getSchoolYear(id: string): SchoolYear | null {
-  return schoolYearsStore.getById(id) ?? null
+export async function getSchoolYears(householdId: string): Promise<SchoolYear[]> {
+  const rows = await listSchoolYearRows(householdId)
+  return rows.map(mapSchoolYearRow)
 }
 
-export function createSchoolYear(
-  data: { name: string; startDate: string; endDate: string; isActive?: boolean }
-): SchoolYear {
+export async function getActiveSchoolYear(householdId: string): Promise<SchoolYear | null> {
+  const row = await getActiveSchoolYearRow(householdId)
+  return row ? mapSchoolYearRow(row) : null
+}
+
+export async function getSchoolYear(householdId: string, id: string): Promise<SchoolYear | null> {
+  const row = await getSchoolYearRow(id, householdId)
+  return row ? mapSchoolYearRow(row) : null
+}
+
+export async function createSchoolYear(
+  householdId: string,
+  data: SchoolYearInput,
+): Promise<SchoolYear> {
   if (!data.name?.trim()) {
     throw new Error('name is required')
   }
@@ -26,35 +93,20 @@ export function createSchoolYear(
     throw new Error('endDate must be after startDate')
   }
 
-  const workspace = getWorkspace()
-  const workspaceId = workspace?.id ?? ''
-
-  const isActive = data.isActive ?? false
-  if (isActive) {
-    for (const existing of [...schoolYearsStore.getAll()]) {
-      if (existing.isActive) {
-        schoolYearsStore.update(existing.id, { isActive: false })
-      }
-    }
-  }
-
-  const year: SchoolYear = {
-    id: generateSchoolYearId(),
-    workspaceId,
+  const row = await createSchoolYearRow(householdId, {
+    ...data,
     name: data.name.trim(),
-    startDate: data.startDate,
-    endDate: data.endDate,
-    isActive,
-    createdAt: new Date().toISOString(),
-  }
-  return schoolYearsStore.insert(year)
+    isActive: data.isActive ?? false,
+  })
+  return mapSchoolYearRow(row)
 }
 
-export function updateSchoolYear(
+export async function updateSchoolYear(
+  householdId: string,
   id: string,
-  patch: Partial<Pick<SchoolYear, 'name' | 'startDate' | 'endDate' | 'isActive'>>
-): SchoolYear | null {
-  const existing = schoolYearsStore.getById(id)
+  patch: SchoolYearPatch,
+): Promise<SchoolYear | null> {
+  const existing = await getSchoolYear(householdId, id)
   if (!existing) return null
 
   const startDate = patch.startDate ?? existing.startDate
@@ -63,35 +115,29 @@ export function updateSchoolYear(
     throw new Error('endDate must be after startDate')
   }
 
-  const allowedPatch: Partial<SchoolYear> = {}
+  const allowedPatch: SchoolYearPatch = {}
   if (patch.name !== undefined) allowedPatch.name = patch.name.trim()
   if (patch.startDate !== undefined) allowedPatch.startDate = patch.startDate
   if (patch.endDate !== undefined) allowedPatch.endDate = patch.endDate
   if (patch.isActive !== undefined) allowedPatch.isActive = patch.isActive
+  if (patch.requiredDays !== undefined) allowedPatch.requiredDays = patch.requiredDays
+  if (patch.requiredHours !== undefined) allowedPatch.requiredHours = patch.requiredHours
+  if (patch.trackingMethod !== undefined) allowedPatch.trackingMethod = patch.trackingMethod
+  if (patch.schoolDays !== undefined) allowedPatch.schoolDays = patch.schoolDays
+  if (patch.breaks !== undefined) allowedPatch.breaks = patch.breaks
+  if (patch.termStructure !== undefined) allowedPatch.termStructure = patch.termStructure
 
-  return schoolYearsStore.update(id, allowedPatch)
+  const row = await updateSchoolYearRow(id, householdId, allowedPatch)
+  return row ? mapSchoolYearRow(row) : null
 }
 
-export function activateSchoolYear(id: string): SchoolYear | null {
-  const target = schoolYearsStore.getById(id)
+export async function activateSchoolYear(
+  householdId: string,
+  id: string,
+): Promise<SchoolYear | null> {
+  const target = await getSchoolYear(householdId, id)
   if (!target) return null
 
-  // Deactivate all others
-  schoolYearsStore.getAll().forEach(y => {
-    if (y.id !== id && y.isActive) {
-      schoolYearsStore.update(y.id, { isActive: false })
-    }
-  })
-
-  return schoolYearsStore.update(id, { isActive: true })
-}
-
-export function resetStore(): void {
-  schoolYearsStore.reset(SEED_SCHOOL_YEARS)
-  resetIdCounter()
-}
-
-/** Seeds school years for tests that need to pre-populate store state. */
-export function seedSchoolYears(years: SchoolYear[]): void {
-  schoolYearsStore.reset(years)
+  const row = await activateSchoolYearRow(id, householdId)
+  return row ? mapSchoolYearRow(row) : null
 }

@@ -1,4 +1,4 @@
-import type { ApiResponse, Workspace, HouseholdProfile } from '@/features/lib/types'
+import type { ApiResponse, HouseholdProfile, DayOfWeek, DayLoadPreference, DateDisplayPreference } from '@/features/lib/types'
 
 function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
@@ -35,22 +35,24 @@ async function put<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
 }
 
 export const householdApi = {
-  getWorkspace: (): Promise<ApiResponse<Workspace | null>> =>
-    get('/api/household/workspace'),
-
   getProfile: (): Promise<ApiResponse<HouseholdProfile | null>> =>
     get('/api/household/profile'),
 
-  setup: (familyName: string): Promise<ApiResponse<{ workspace: Workspace; profile: HouseholdProfile }>> =>
-    post('/api/household/workspace', { familyName }),
+  setup: (familyName: string): Promise<ApiResponse<HouseholdProfile>> =>
+    post('/api/household/profile', { familyName }),
 
   updateProfile: (
-    familyName?: string,
-    weekStartDay?: 'Monday' | 'Sunday'
-  ): Promise<ApiResponse<HouseholdProfile>> => {
-    const body: Record<string, string> = {}
-    if (familyName !== undefined) body.familyName = familyName
-    if (weekStartDay !== undefined) body.weekStartDay = weekStartDay
-    return put('/api/household/profile', body)
-  },
+    patch: {
+      familyName?: string
+      weekStartDay?: DayOfWeek
+      schoolDays?: DayOfWeek[]
+      dayLoad?: Partial<Record<DayOfWeek, DayLoadPreference>>
+      reportingName?: string
+      timezone?: string
+      dateDisplay?: DateDisplayPreference
+      jumuahLeaveWindow?: string
+      jumuahReturnWindow?: string
+    }
+  ): Promise<ApiResponse<HouseholdProfile>> =>
+    put('/api/household/profile', patch),
 }

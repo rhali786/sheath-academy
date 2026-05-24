@@ -2,17 +2,17 @@ import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { SubjectProgressCard } from '@/features/dashboard/front/components/SubjectProgressCard'
 import { RecentLessonsCard } from '@/features/dashboard/front/components/RecentLessonsCard'
-import type { SubjectProgressSummary } from '@/features/planner/utils/progressBySubject'
-import type { LessonTask } from '@/features/planner/types'
+import type { SubjectProgressSummary } from '@/features/plan/utils/progressBySubject'
+import type { LessonTask } from '@/features/plan/types'
 
-jest.mock('@/features/planner/front/services/api', () => ({
+jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: {
     getProgress: jest.fn(),
     getHistory: jest.fn(),
   },
 }))
 
-import { plannerApi } from '@/features/planner/front/services/api'
+import { plannerApi } from '@/features/plan/front/services/api'
 const mockGetProgress = plannerApi.getProgress as jest.Mock
 const mockGetHistory = plannerApi.getHistory as jest.Mock
 

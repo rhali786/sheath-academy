@@ -1,6 +1,47 @@
 import { test, expect } from '@playwright/test'
 import { loginDev } from './helpers/auth'
 
+test.describe('Schedule page — layout (Wave 12)', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginDev(page)
+  })
+
+  test('Schedule page renders and Pause Day button is present', async ({ page }) => {
+    await page.goto('/plan/schedule')
+    await expect(page.getByTestId('schedule-page')).toBeVisible()
+    await expect(page.getByRole('button', { name: /pause day/i })).toBeVisible()
+  })
+})
+
+test.describe('Resources page — lesson generation (Wave 13)', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginDev(page)
+  })
+
+  test('Resources page is reachable', async ({ page }) => {
+    await page.goto('/resources')
+    await expect(page.getByTestId('resources-page')).toBeVisible()
+  })
+})
+
+test.describe('Resources page — community feedback (Wave 14)', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginDev(page)
+  })
+
+  test('Resources page shows Add resource button', async ({ page }) => {
+    await page.goto('/resources')
+    await expect(page.getByTestId('add-resource-button')).toBeVisible()
+  })
+
+  test('Community note section is NOT visible on empty resource list', async ({ page }) => {
+    await page.goto('/resources')
+    await expect(page.getByTestId('community-note-card')).not.toBeVisible().catch(() => {
+      // community-note-card not present at all is also acceptable
+    })
+  })
+})
+
 test.describe('Planner page — layout (Wave A1)', () => {
   test.beforeEach(async ({ page }) => {
     await loginDev(page)

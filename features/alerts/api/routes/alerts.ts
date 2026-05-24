@@ -1,3 +1,4 @@
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { Alert } from '@/features/alerts/types'
@@ -12,7 +13,8 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Al
   const type = searchParams.get('type') ?? undefined
   const status = searchParams.get('status') ?? undefined
 
-  let alerts = getAlerts(childId)
+  const { householdId } = getRequestAuthCtx()
+  let alerts = await getAlerts(householdId, childId)
 
   if (date) {
     alerts = alerts.filter(a => a.date === date)

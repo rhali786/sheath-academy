@@ -30,4 +30,10 @@ describe('About page', () => {
     const link = screen.getByRole('link', { name: /sign in/i })
     expect(link).toHaveAttribute('href', '/login')
   })
+
+  test('renders product feedback CTA linking to /feedback', () => {
+    render(<AboutPage />)
+    const cta = screen.getByTestId('about-feedback-cta')
+    expect(cta).toHaveAttribute('href', '/feedback')
+  })
 })

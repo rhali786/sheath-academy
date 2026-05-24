@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { EvidenceItem, CreateEvidenceItemInput, EvidenceType } from '@/features/portfolio/types'
 import type { SubjectCourse } from '@/features/subjects/types'
-import type { LessonTask } from '@/features/planner/types'
+import type { LessonTask } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import { useHousehold } from '@/features/household/front/context'
 import { childrenApi } from '@/features/children/front/services/api'
@@ -13,7 +13,7 @@ import { EvidenceFilters } from '../components/EvidenceFilters'
 import { EvidenceList } from '../components/EvidenceList'
 
 export function PortfolioPage() {
-  const { workspace, householdProfile, loading: householdLoading } = useHousehold()
+  const { householdProfile, loading: householdLoading } = useHousehold()
   const [studentProfiles, setStudentProfiles] = useState<StudentProfile[]>([])
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
 
@@ -27,11 +27,12 @@ export function PortfolioPage() {
   const [filterEndDate, setFilterEndDate] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showForm, setShowForm] = useState(true)
 
   // Fetch children when household is ready
   useEffect(() => {
     if (householdLoading) return
-    const householdId = householdProfile?.id ?? workspace?.id
+    const householdId = householdProfile?.id
     if (!householdId) return
     childrenApi.getChildren(householdId, false)
       .then(res => {
@@ -43,7 +44,7 @@ export function PortfolioPage() {
         }
       })
       .catch(() => {})
-  }, [householdLoading, workspace?.id, householdProfile?.id])
+  }, [householdLoading, householdProfile?.id])
 
   // Sync filter when selected child changes
   useEffect(() => {
@@ -68,7 +69,7 @@ export function PortfolioPage() {
     if (!targetChildId) { setLessons([]); return }
     const params = new URLSearchParams({ childId: targetChildId })
     if (subjectId) params.set('subjectId', subjectId)
-    fetch(`/api/planner/lessons?${params.toString()}`)
+    fetch(`/api/plan/lessons?${params.toString()}`)
       .then(r => r.json())
       .then(res => setLessons(Array.isArray(res.data) ? res.data : []))
       .catch(() => setLessons([]))
@@ -91,8 +92,7 @@ export function PortfolioPage() {
       .finally(() => setLoading(false))
   }, [filterChildId, filterSubjectId, filterType, filterStartDate, filterEndDate])
 
-  async function handleSave(input: CreateEvidenceItemInput) {
-    await portfolioApi.createEvidence(input)
+  async function refreshItems() {
     const res = await portfolioApi.listEvidence({
       childId: filterChildId ?? undefined,
       subjectId: filterSubjectId ?? undefined,
@@ -101,6 +101,21 @@ export function PortfolioPage() {
       endDate: filterEndDate ?? undefined,
     })
     setItems(Array.isArray(res.data) ? res.data : [])
+  }
+
+  async function handleCreate(input: CreateEvidenceItemInput) {
+    await portfolioApi.createEvidence(input)
+    await refreshItems()
+  }
+
+  async function handleUpdate(id: string, patch: Partial<CreateEvidenceItemInput>) {
+    await portfolioApi.updateEvidence(id, patch)
+    await refreshItems()
+  }
+
+  async function handleDelete(id: string) {
+    await portfolioApi.deleteEvidence(id)
+    await refreshItems()
   }
 
   const children = studentProfiles.map(p => ({ id: p.id, name: p.name }))
@@ -112,16 +127,32 @@ export function PortfolioPage() {
   const lessonOptions = lessons.map(l => ({ id: l.id, title: l.title, dueDate: l.dueDate, childId: l.childId, subjectId: l.subjectId }))
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-4">
-      <h2 className="text-xl font-bold text-gray-900">Portfolio</h2>
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-4">
+      <div className="flex items-center justify-between">
+        <h1 className="page-title mb-0">Growth</h1>
+        <button
+          type="button"
+          onClick={() => setShowForm(v => !v)}
+          className="px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800"
+        >
+          {showForm ? 'Cancel' : 'Add evidence'}
+        </button>
+      </div>
 
-      <EvidenceForm
-        children={children}
-        subjects={subjectOptions}
-        lessons={lessonOptions}
-        onSave={handleSave}
-        initialChildId={filterChildId}
-      />
+      {showForm && (
+        <div>
+          <h2 className="form-section-heading">Add evidence</h2>
+          <div className="add-form-card">
+            <EvidenceForm
+              children={children}
+              subjects={subjectOptions}
+              lessons={lessonOptions}
+              onSave={handleCreate}
+              initialChildId={filterChildId}
+            />
+          </div>
+        </div>
+      )}
 
       <EvidenceFilters
         children={children}
@@ -145,6 +176,11 @@ export function PortfolioPage() {
         loading={loading}
         error={error}
         hasActiveFilters={!!(filterSubjectId || filterType || filterStartDate || filterEndDate)}
+        onUpdate={handleUpdate}
+        onDelete={handleDelete}
+        childOptions={children}
+        subjects={subjectOptions}
+        lessons={lessonOptions}
       />
     </div>
   )

@@ -13,12 +13,15 @@ export interface StudentProfile {
   id: string
   householdId: string
   name: string
+  firstName?: string
+  lastName?: string
   gradeLabel: string
   dob?: string
   teacherName?: string
   username: string
   password: string
   isActive: boolean
+  learnerLoginEnabled?: boolean
   avatarInitials?: string
   createdAt: string
 }
@@ -107,11 +110,22 @@ export interface Workspace {
   createdAt: string
 }
 
+export type DayOfWeek = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday'
+export type DayLoadPreference = 'Off' | 'Light' | 'Normal' | 'Heavy'
+export type DateDisplayPreference = 'gregorian' | 'gregorian-hijri-en' | 'bilingual'
+
 export interface HouseholdProfile {
   id: string
   workspaceId: string
   familyName: string
-  weekStartDay?: 'Monday' | 'Sunday'
+  weekStartDay?: DayOfWeek
+  schoolDays?: DayOfWeek[]
+  dayLoad?: Partial<Record<DayOfWeek, DayLoadPreference>>
+  reportingName?: string
+  timezone?: string
+  dateDisplay?: DateDisplayPreference
+  jumuahLeaveWindow?: string
+  jumuahReturnWindow?: string
   createdAt: string
 }
 

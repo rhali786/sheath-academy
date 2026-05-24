@@ -1,0 +1,69 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1779453828566,
+      "tag": "0000_curved_silver_sable",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779455476583,
+      "tag": "0001_third_maginty",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779460000000,
+      "tag": "0002_usage_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779492938507,
+      "tag": "0003_dear_quentin_quire",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779496525731,
+      "tag": "0004_demonic_jack_murdock",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779536574974,
+      "tag": "0005_eminent_lady_mastermind",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779538411999,
+      "tag": "0006_dusty_fat_cobra",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779545583291,
+      "tag": "0007_talented_black_bird",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1779647379160,
+      "tag": "0008_orange_toad",
+      "breakpoints": true
+    }
+  ]
+}

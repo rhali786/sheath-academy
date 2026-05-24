@@ -1,90 +1,130 @@
 import {
-  getSchoolYear,
-  updateSchoolYear,
   activateSchoolYear,
+  getSchoolYear,
   getSchoolYears,
-  resetStore,
+  updateSchoolYear,
 } from '@/features/school-year/server/service'
-import { SEED_SCHOOL_YEARS } from '@/features/school-year/server/seed'
+import {
+  activateSchoolYearRow,
+  getSchoolYearRow,
+  listSchoolYearRows,
+  updateSchoolYearRow,
+} from '@/features/school-year/server/repository'
 import { SEED_IDS } from '@/features/lib/seedIds'
 
+jest.mock('@/features/school-year/server/repository', () => {
+  const actual = jest.requireActual('@/features/school-year/server/repository')
+  return {
+    ...actual,
+    activateSchoolYearRow: jest.fn(),
+    getSchoolYearRow: jest.fn(),
+    listSchoolYearRows: jest.fn(),
+    updateSchoolYearRow: jest.fn(),
+  }
+})
+
+const mockActivateSchoolYearRow = activateSchoolYearRow as jest.Mock
+const mockGetSchoolYearRow = getSchoolYearRow as jest.Mock
+const mockListSchoolYearRows = listSchoolYearRows as jest.Mock
+const mockUpdateSchoolYearRow = updateSchoolYearRow as jest.Mock
+
+const HOUSEHOLD_ID = 'hh_01'
+
+function makeRow(overrides = {}) {
+  return {
+    id: SEED_IDS.schoolYear,
+    householdId: HOUSEHOLD_ID,
+    name: '2025-2026',
+    startDate: '2025-08-01',
+    endDate: '2026-05-31',
+    isActive: true,
+    requiredDays: null,
+    requiredHours: null,
+    trackingMethod: null,
+    schoolDays: null,
+    breaks: null,
+    termStructure: null,
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    ...overrides,
+  }
+}
+
 beforeEach(() => {
-  resetStore()
+  mockGetSchoolYearRow.mockResolvedValue(makeRow())
+  mockListSchoolYearRows.mockResolvedValue([makeRow()])
+  mockUpdateSchoolYearRow.mockImplementation(async (_id: string, _householdId: string, patch: Record<string, unknown>) =>
+    makeRow(patch),
+  )
+  mockActivateSchoolYearRow.mockResolvedValue(makeRow({ isActive: true }))
+})
+
+afterEach(() => {
+  jest.clearAllMocks()
 })
 
 describe('School Year - Single Item Operations', () => {
   describe('getSchoolYear()', () => {
-    it('GET /school-years/:id returns the year for a known id', () => {
-      const year = getSchoolYear(SEED_IDS.schoolYear)
+    it('returns the year for a known household-scoped id', async () => {
+      const year = await getSchoolYear(HOUSEHOLD_ID, SEED_IDS.schoolYear)
       expect(year).not.toBeNull()
       expect(year!.id).toBe(SEED_IDS.schoolYear)
+      expect(mockGetSchoolYearRow).toHaveBeenCalledWith(SEED_IDS.schoolYear, HOUSEHOLD_ID)
     })
 
-    it('GET /school-years/:id returns 404 for unknown id', () => {
-      const year = getSchoolYear('nonexistent_id')
+    it('returns null for unknown id', async () => {
+      mockGetSchoolYearRow.mockResolvedValue(null)
+      const year = await getSchoolYear(HOUSEHOLD_ID, 'nonexistent_id')
       expect(year).toBeNull()
     })
   })
 
   describe('updateSchoolYear()', () => {
-    it('PUT /school-years/:id updates the year', () => {
-      const updated = updateSchoolYear(SEED_IDS.schoolYear, { name: 'Updated Name' })
+    it('updates the year through the repository', async () => {
+      const updated = await updateSchoolYear(HOUSEHOLD_ID, SEED_IDS.schoolYear, { name: 'Updated Name' })
       expect(updated).not.toBeNull()
       expect(updated!.name).toBe('Updated Name')
+      expect(mockUpdateSchoolYearRow).toHaveBeenCalledWith(SEED_IDS.schoolYear, HOUSEHOLD_ID, { name: 'Updated Name' })
     })
 
-    it('PUT /school-years/:id returns null for unknown id', () => {
-      const updated = updateSchoolYear('nonexistent_id', { name: 'Ghost' })
+    it('returns null for unknown id', async () => {
+      mockGetSchoolYearRow.mockResolvedValue(null)
+      const updated = await updateSchoolYear(HOUSEHOLD_ID, 'nonexistent_id', { name: 'Ghost' })
       expect(updated).toBeNull()
+      expect(mockUpdateSchoolYearRow).not.toHaveBeenCalled()
     })
 
-    it('PUT /school-years/:id validates endDate > startDate', () => {
-      expect(() =>
-        updateSchoolYear(SEED_IDS.schoolYear, {
+    it('validates endDate > startDate', async () => {
+      await expect(
+        updateSchoolYear(HOUSEHOLD_ID, SEED_IDS.schoolYear, {
           startDate: '2026-08-01',
           endDate: '2026-07-01',
-        })
-      ).toThrow(/endDate must be after startDate/i)
+        }),
+      ).rejects.toThrow(/endDate must be after startDate/i)
     })
   })
 
   describe('activateSchoolYear()', () => {
-    it('PATCH /school-years/:id/activate sets that year active and others inactive', () => {
-      const allBefore = getSchoolYears()
-      expect(allBefore.length).toBeGreaterThan(0)
-
-      const targetId = SEED_IDS.schoolYear
-      const activated = activateSchoolYear(targetId)
+    it('activates the requested school year through the repository', async () => {
+      const activated = await activateSchoolYear(HOUSEHOLD_ID, SEED_IDS.schoolYear)
       expect(activated).not.toBeNull()
       expect(activated!.isActive).toBe(true)
-
-      const allAfter = getSchoolYears()
-      const others = allAfter.filter(y => y.id !== targetId)
-      others.forEach(y => expect(y.isActive).toBe(false))
+      expect(mockActivateSchoolYearRow).toHaveBeenCalledWith(SEED_IDS.schoolYear, HOUSEHOLD_ID)
     })
 
-    it('PATCH /school-years/:id/activate returns null for unknown id', () => {
-      const result = activateSchoolYear('nonexistent_id')
+    it('returns null for unknown id', async () => {
+      mockGetSchoolYearRow.mockResolvedValue(null)
+      const result = await activateSchoolYear(HOUSEHOLD_ID, 'nonexistent_id')
       expect(result).toBeNull()
+      expect(mockActivateSchoolYearRow).not.toHaveBeenCalled()
     })
   })
 
   describe('business rules', () => {
-    it('only one school year is active at a time after activation', () => {
-      const years = getSchoolYears()
-      const secondId = years.find(y => y.id !== SEED_IDS.schoolYear)?.id
-      if (!secondId) return
-
-      activateSchoolYear(secondId)
-      const allAfter = getSchoolYears()
-      const activeYears = allAfter.filter(y => y.isActive)
-      expect(activeYears).toHaveLength(1)
-      expect(activeYears[0].id).toBe(secondId)
-    })
-
-    it('seed data has exactly one active school year', () => {
-      const activeYears = SEED_SCHOOL_YEARS.filter(y => y.isActive)
-      expect(activeYears).toHaveLength(1)
+    it('lists household-scoped school years from the repository', async () => {
+      const years = await getSchoolYears(HOUSEHOLD_ID)
+      expect(years).toHaveLength(1)
+      expect(mockListSchoolYearRows).toHaveBeenCalledWith(HOUSEHOLD_ID)
     })
   })
 })

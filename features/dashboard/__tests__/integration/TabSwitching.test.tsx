@@ -29,11 +29,8 @@ jest.mock('next/navigation', () => ({
 
 jest.mock('@/features/household/front/services/api', () => ({
   householdApi: {
-    getWorkspace: jest.fn(() => Promise.resolve({
-      data: { id: 'ws_001', name: 'Ahmed Household', ownerId: 'u1', createdAt: '2026-01-01T00:00:00.000Z' },
-    })),
     getProfile: jest.fn(() => Promise.resolve({
-      data: { id: 'hp_001', workspaceId: 'ws_001', familyName: 'Ahmed Academy', createdAt: '2026-01-01T00:00:00.000Z' },
+      data: { id: 'hp_001', workspaceId: 'hp_001', familyName: 'Ahmed Academy', createdAt: '2026-01-01T00:00:00.000Z' },
     })),
     setup: jest.fn(),
     updateProfile: jest.fn(),
@@ -67,7 +64,7 @@ jest.mock('@/features/children/front/services/api', () => ({
   },
 }))
 
-jest.mock('@/features/planner/front/services/api', () => ({
+jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: {
     getProgress: jest.fn(() => Promise.resolve([])),
     getHistory: jest.fn(() => Promise.resolve([])),
@@ -91,7 +88,7 @@ jest.mock('@/features/quran/front/services/api', () => ({
 jest.mock('@/features/attendance/front/services/api', () => ({
   attendanceApi: {
     getSummary: jest.fn(() => Promise.resolve({
-      data: { childId: 'c1', totalPresent: 0, totalAbsent: 0, totalPartial: 0, totalRecorded: 0 },
+      data: { childId: 'c1', totalRecorded: 0, byStatus: { present: 0, absent: 0, partial: 0, excused: 0, sick: 0, holiday: 0, field_trip: 0, coop: 0, makeup: 0, not_school: 0 } },
     })),
   },
 }))
@@ -143,11 +140,11 @@ describe('Tab switching — NavigationContext regression', () => {
     })
   })
 
-  test('Portfolio link is present in navigation', async () => {
+  test('Growth link is present in navigation', async () => {
     renderWithShell()
     await waitForDashboard()
 
-    expect(screen.getAllByRole('link', { name: 'Portfolio' })[0]).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'Growth' })[0]).toBeInTheDocument()
   })
 
   test('Settings link is present in navigation', async () => {

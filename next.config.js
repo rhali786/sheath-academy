@@ -10,6 +10,14 @@ const isDevServer = process.argv.includes('dev')
 const nextConfig = {
   // Expose the package.json version to client components at build time.
   env: { NEXT_PUBLIC_APP_VERSION: version },
+  async redirects() {
+    return [
+      { source: '/planner', destination: '/plan', permanent: true },
+      { source: '/planner/:path*', destination: '/plan/:path*', permanent: true },
+      { source: '/reports', destination: '/records', permanent: true },
+      { source: '/reports/:path*', destination: '/records/:path*', permanent: true },
+    ]
+  },
   ...(!isDevServer
     ? {
         outputFileTracingRoot: path.join(__dirname),

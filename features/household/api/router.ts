@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import * as workspaceHandler from './routes/workspace'
 import * as householdProfileHandler from './routes/household-profile'
 
 export async function handleHouseholdRoute(
@@ -8,19 +7,14 @@ export async function handleHouseholdRoute(
 ): Promise<NextResponse | null> {
   const method = request.method
 
-  // GET /household/workspace
-  if (slug.length === 1 && slug[0] === 'workspace' && method === 'GET') {
-    return workspaceHandler.GET()
-  }
-
-  // POST /household/workspace  — create workspace + profile (first-time setup)
-  if (slug.length === 1 && slug[0] === 'workspace' && method === 'POST') {
-    return workspaceHandler.POST(request)
-  }
-
   // GET /household/profile
   if (slug.length === 1 && slug[0] === 'profile' && method === 'GET') {
     return householdProfileHandler.GET()
+  }
+
+  // POST /household/profile — first-time setup (set household name)
+  if (slug.length === 1 && slug[0] === 'profile' && method === 'POST') {
+    return householdProfileHandler.POST(request)
   }
 
   // PUT /household/profile  — rename household

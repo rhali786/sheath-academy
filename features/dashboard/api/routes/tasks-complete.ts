@@ -1,20 +1,19 @@
 import { NextResponse } from 'next/server'
 import type { ApiResponse, Task } from '@/features/lib/types'
-import { getTasks, updateTask } from '@/features/dashboard/server/service'
+import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
+import { completeLessonTaskRow, getLessonTaskRow } from '@/features/plan/server/repository'
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<ApiResponse<Task>>> {
+  const { householdId } = getRequestAuthCtx()
   const { completed } = await request.json()
   const { id } = await params
-  const taskId = id
+  const status = completed ? 'completed' : 'not_started'
 
-  updateTask(taskId, completed)
-  const tasks = getTasks()
-  const updatedTask = tasks.find(t => t.id === taskId)
-
-  if (!updatedTask) {
+  const row = await completeLessonTaskRow(id, householdId, status === 'completed' ? 'completed' : 'skipped')
+  if (!row) {
     return NextResponse.json(
       {
         status: 'error',
@@ -26,12 +25,17 @@ export async function POST(
     )
   }
 
-  const response: ApiResponse<Task> = {
+  return NextResponse.json({
     status: 'success',
-    data: updatedTask,
+    data: {
+      id: row.id,
+      childId: row.learnerId,
+      subject: row.subjectId ?? '',
+      description: row.title,
+      status: row.status,
+      completed: row.status === 'completed',
+    },
     message: 'Task updated',
     timestamp: new Date().toISOString(),
-  }
-
-  return NextResponse.json(response)
+  })
 }

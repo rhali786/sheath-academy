@@ -1,4 +1,4 @@
-import type { SubjectProgressSummary } from '@/features/planner/utils/progressBySubject'
+import type { SubjectProgressSummary } from '@/features/plan/utils/progressBySubject'
 
 export type ProgressData = Record<string, { subjects: Array<{ subject: string; completion: number }> }>
 

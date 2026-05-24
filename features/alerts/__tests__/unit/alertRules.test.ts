@@ -1,196 +1,298 @@
 import { getAlerts } from '@/features/alerts/server/service'
 
-jest.mock('@/features/planner/server/service', () => ({
-  getLessons: jest.fn(),
+jest.mock('@/features/children/server/repository', () => ({
+  listAllLearners: jest.fn(),
 }))
 
-jest.mock('@/features/attendance/server/service', () => ({
-  getRecords: jest.fn(),
+jest.mock('@/features/plan/server/repository', () => ({
+  listLessonTaskRows: jest.fn(),
 }))
 
-jest.mock('@/features/children/server/service', () => ({
-  getStudentProfiles: jest.fn(),
+jest.mock('@/features/attendance/server/repository', () => ({
+  listAttendanceEvents: jest.fn(),
 }))
 
-import { getLessons } from '@/features/planner/server/service'
-import { getRecords } from '@/features/attendance/server/service'
-import { getStudentProfiles } from '@/features/children/server/service'
+import { listAllLearners } from '@/features/children/server/repository'
+import { listLessonTaskRows } from '@/features/plan/server/repository'
+import { listAttendanceEvents } from '@/features/attendance/server/repository'
 
-const mockGetLessons = getLessons as jest.Mock
-const mockGetRecords = getRecords as jest.Mock
-const mockGetProfiles = getStudentProfiles as jest.Mock
+const mockListAllLearners = listAllLearners as jest.Mock
+const mockListLessonTaskRows = listLessonTaskRows as jest.Mock
+const mockListAttendanceEvents = listAttendanceEvents as jest.Mock
 
-const TODAY = new Date().toISOString().slice(0, 10)
-const YESTERDAY = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+const HOUSEHOLD_ID = 'hh_01'
 
-const activeAdam = { id: 'adam_01', name: 'Adam', isActive: true, householdId: 'hh_01', gradeLabel: 'Grade 5', username: 'adam', password: '', createdAt: '' }
-const activeKhadijah = { id: 'khadijah_01', name: 'Khadijah', isActive: true, householdId: 'hh_01', gradeLabel: 'Grade 3', username: 'khadijah', password: '', createdAt: '' }
-const archivedZayd = { id: 'zayd_01', name: 'Zayd', isActive: false, householdId: 'hh_01', gradeLabel: 'Grade 8', username: 'zayd', password: '', createdAt: '' }
+function localDateStr(offsetDays = 0): string {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetDays)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+const TODAY = localDateStr(0)
+const YESTERDAY = localDateStr(-1)
+
+const activeAdam = {
+  id: 'adam_01',
+  householdId: HOUSEHOLD_ID,
+  name: 'Adam',
+  displayColor: null,
+  gradeLevel: 'Grade 5',
+  isActive: true,
+  archivedAt: null,
+  sortOrder: 0,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+}
+
+const activeKhadijah = {
+  id: 'khadijah_01',
+  householdId: HOUSEHOLD_ID,
+  name: 'Khadijah',
+  displayColor: null,
+  gradeLevel: 'Grade 3',
+  isActive: true,
+  archivedAt: null,
+  sortOrder: 1,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+}
+
+const archivedZayd = {
+  id: 'zayd_01',
+  householdId: HOUSEHOLD_ID,
+  name: 'Zayd',
+  displayColor: null,
+  gradeLevel: 'Grade 8',
+  isActive: false,
+  archivedAt: new Date(),
+  sortOrder: 2,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+}
+
+function makeLesson(learnerId: string, overrides = {}) {
+  return {
+    id: `lesson_${learnerId}`,
+    householdId: HOUSEHOLD_ID,
+    learnerId,
+    subjectId: 'subject_01',
+    title: 'Math',
+    description: null,
+    notes: null,
+    dueDate: TODAY,
+    status: 'not_started',
+    sortOrder: 0,
+    completedAt: null,
+    skippedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  }
+}
+
+function makeAttendance(learnerId: string) {
+  return {
+    id: `attendance_${learnerId}`,
+    householdId: HOUSEHOLD_ID,
+    learnerId,
+    attendanceDate: TODAY,
+    status: 'present',
+    minutes: null,
+    notes: null,
+    occurredAt: new Date(),
+    voidedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+}
 
 beforeEach(() => {
-  mockGetProfiles.mockReturnValue([activeAdam, activeKhadijah, archivedZayd])
-  mockGetLessons.mockReturnValue([])
-  mockGetRecords.mockReturnValue([])
+  mockListAllLearners.mockResolvedValue([activeAdam, activeKhadijah, archivedZayd])
+  mockListLessonTaskRows.mockResolvedValue([])
+  mockListAttendanceEvents.mockResolvedValue([])
 })
 
-describe('getAlerts — unit tests', () => {
-  test('returns no alerts when all children have completed lessons and attendance', () => {
-    mockGetLessons.mockImplementation((childId?: string) =>
-      childId === activeAdam.id || !childId
-        ? [{ id: 'l1', childId: activeAdam.id, title: 'Math', status: 'completed', dueDate: TODAY, subjectId: 's1' }]
-        : []
-    )
-    mockGetRecords.mockReturnValue([
-      { childId: activeAdam.id, date: TODAY, status: 'present' },
-      { childId: activeKhadijah.id, date: TODAY, status: 'present' },
+afterEach(() => {
+  jest.clearAllMocks()
+})
+
+describe('getAlerts - unit tests', () => {
+  test('uses household-scoped repositories', async () => {
+    mockListAttendanceEvents.mockResolvedValue([
+      makeAttendance(activeAdam.id),
+      makeAttendance(activeKhadijah.id),
     ])
 
-    const alerts = getAlerts()
+    const alerts = await getAlerts(HOUSEHOLD_ID)
+
+    expect(alerts).toHaveLength(0)
+    expect(mockListAllLearners).toHaveBeenCalledWith(HOUSEHOLD_ID)
+    expect(mockListLessonTaskRows).toHaveBeenCalledWith(HOUSEHOLD_ID, { learnerId: activeAdam.id, endDate: TODAY })
+    expect(mockListLessonTaskRows).toHaveBeenCalledWith(HOUSEHOLD_ID, { learnerId: activeKhadijah.id, endDate: TODAY })
+    expect(mockListLessonTaskRows).not.toHaveBeenCalledWith(HOUSEHOLD_ID, expect.objectContaining({ learnerId: archivedZayd.id }))
+    expect(mockListAttendanceEvents).toHaveBeenCalledWith(HOUSEHOLD_ID, { date: TODAY })
+  })
+
+  test('fetches lessons for all active children in parallel (not sequentially)', async () => {
+    const callOrder: string[] = []
+    mockListLessonTaskRows.mockImplementation(
+      async (_hh: string, filters: { learnerId?: string }) =>
+        new Promise(resolve =>
+          // Stagger resolutions slightly to confirm ordering doesn't matter
+          setTimeout(() => { callOrder.push(filters.learnerId ?? '?'); resolve([]) }, 10)
+        )
+    )
+    mockListAttendanceEvents.mockResolvedValue([
+      makeAttendance(activeAdam.id),
+      makeAttendance(activeKhadijah.id),
+    ])
+
+    await getAlerts(HOUSEHOLD_ID)
+
+    // Both children fetched exactly once — neither blocks the other
+    expect(mockListLessonTaskRows).toHaveBeenCalledTimes(2)
+    expect(callOrder).toHaveLength(2)
+    expect(callOrder).toContain(activeAdam.id)
+    expect(callOrder).toContain(activeKhadijah.id)
+  })
+
+  test('returns no alerts when all children have completed lessons and attendance', async () => {
+    mockListLessonTaskRows.mockImplementation(async (_householdId: string, filters: { learnerId?: string }) =>
+      filters.learnerId === activeAdam.id
+        ? [makeLesson(activeAdam.id, { id: 'l1', title: 'Math', status: 'completed' })]
+        : []
+    )
+    mockListAttendanceEvents.mockResolvedValue([
+      makeAttendance(activeAdam.id),
+      makeAttendance(activeKhadijah.id),
+    ])
+
+    const alerts = await getAlerts(HOUSEHOLD_ID)
     expect(alerts.filter(a => a.id.startsWith('pending_lessons'))).toHaveLength(0)
     expect(alerts.filter(a => a.id.startsWith('attendance_missing'))).toHaveLength(0)
   })
 
-  test('produces a pending lessons alert for a child with overdue lessons', () => {
-    mockGetLessons.mockImplementation((childId?: string) =>
-      !childId || childId === activeAdam.id
-        ? [{ id: 'l1', childId: activeAdam.id, title: 'Fractions', status: 'not_started', dueDate: YESTERDAY, subjectId: 's1' }]
+  test('produces a pending lessons alert for a child with overdue lessons', async () => {
+    mockListLessonTaskRows.mockImplementation(async (_householdId: string, filters: { learnerId?: string }) =>
+      filters.learnerId === activeAdam.id
+        ? [makeLesson(activeAdam.id, { id: 'l1', title: 'Fractions', dueDate: YESTERDAY })]
         : []
     )
-    mockGetRecords.mockReturnValue([
-      { childId: activeAdam.id, date: TODAY, status: 'present' },
-      { childId: activeKhadijah.id, date: TODAY, status: 'present' },
+    mockListAttendanceEvents.mockResolvedValue([
+      makeAttendance(activeAdam.id),
+      makeAttendance(activeKhadijah.id),
     ])
 
-    const alerts = getAlerts()
+    const alerts = await getAlerts(HOUSEHOLD_ID)
     const adamAlert = alerts.find(a => a.childId === activeAdam.id)
     expect(adamAlert).toBeDefined()
     expect(adamAlert?.message).toMatch(/overdue/i)
     expect(adamAlert?.severity).toBe('high')
   })
 
-  test('produces a due-today alert (not overdue) when lesson due date is today', () => {
-    mockGetLessons.mockImplementation((childId?: string) =>
-      !childId || childId === activeAdam.id
-        ? [{ id: 'l1', childId: activeAdam.id, title: 'Reading', status: 'not_started', dueDate: TODAY, subjectId: 's1' }]
+  test('produces a due-today alert when lesson due date is today', async () => {
+    mockListLessonTaskRows.mockImplementation(async (_householdId: string, filters: { learnerId?: string }) =>
+      filters.learnerId === activeAdam.id
+        ? [makeLesson(activeAdam.id, { id: 'l1', title: 'Reading', dueDate: TODAY })]
         : []
     )
-    mockGetRecords.mockReturnValue([
-      { childId: activeAdam.id, date: TODAY, status: 'present' },
-      { childId: activeKhadijah.id, date: TODAY, status: 'present' },
+    mockListAttendanceEvents.mockResolvedValue([
+      makeAttendance(activeAdam.id),
+      makeAttendance(activeKhadijah.id),
     ])
 
-    const alerts = getAlerts()
+    const alerts = await getAlerts(HOUSEHOLD_ID)
     const adamAlert = alerts.find(a => a.childId === activeAdam.id)
     expect(adamAlert).toBeDefined()
     expect(adamAlert?.message).toMatch(/due today/i)
     expect(adamAlert?.severity).toBe('medium')
   })
 
-  test('completed lessons do not produce an alert', () => {
-    mockGetLessons.mockReturnValue([
-      { id: 'l1', childId: activeAdam.id, title: 'Math', status: 'completed', dueDate: TODAY, subjectId: 's1' },
-      { id: 'l2', childId: activeKhadijah.id, title: 'Reading', status: 'completed', dueDate: YESTERDAY, subjectId: 's2' },
+  test('completed lessons do not produce an alert', async () => {
+    mockListLessonTaskRows.mockImplementation(async (_householdId: string, filters: { learnerId?: string }) => [
+      makeLesson(filters.learnerId ?? activeAdam.id, { status: 'completed', dueDate: YESTERDAY }),
     ])
-    mockGetRecords.mockReturnValue([
-      { childId: activeAdam.id, date: TODAY, status: 'present' },
-      { childId: activeKhadijah.id, date: TODAY, status: 'present' },
+    mockListAttendanceEvents.mockResolvedValue([
+      makeAttendance(activeAdam.id),
+      makeAttendance(activeKhadijah.id),
     ])
 
-    const alerts = getAlerts()
+    const alerts = await getAlerts(HOUSEHOLD_ID)
     expect(alerts.filter(a => a.id.startsWith('pending_lessons'))).toHaveLength(0)
   })
 
-  test('archived child does not produce active alerts', () => {
-    mockGetProfiles.mockReturnValue([activeAdam, archivedZayd])
-    mockGetLessons.mockImplementation((childId?: string) =>
-      !childId || childId === archivedZayd.id
-        ? [{ id: 'l1', childId: archivedZayd.id, title: 'Essay', status: 'not_started', dueDate: YESTERDAY, subjectId: 's1' }]
+  test('archived child does not produce active alerts', async () => {
+    mockListAllLearners.mockResolvedValue([activeAdam, archivedZayd])
+    mockListLessonTaskRows.mockImplementation(async (_householdId: string, filters: { learnerId?: string }) =>
+      filters.learnerId === archivedZayd.id
+        ? [makeLesson(archivedZayd.id, { title: 'Essay', dueDate: YESTERDAY })]
         : []
     )
-    mockGetRecords.mockReturnValue([
-      { childId: activeAdam.id, date: TODAY, status: 'present' },
-    ])
+    mockListAttendanceEvents.mockResolvedValue([makeAttendance(activeAdam.id)])
 
-    const alerts = getAlerts()
+    const alerts = await getAlerts(HOUSEHOLD_ID)
     const zaydAlert = alerts.find(a => a.childId === archivedZayd.id)
     expect(zaydAlert).toBeUndefined()
   })
 
-  test('produces an attendance alert when active children have no attendance today', () => {
-    mockGetLessons.mockReturnValue([])
-    mockGetRecords.mockReturnValue([])
-
-    const alerts = getAlerts()
+  test('produces a household attendance alert when active children have no attendance today', async () => {
+    const alerts = await getAlerts(HOUSEHOLD_ID)
     const attendanceAlert = alerts.find(a => a.id.startsWith('attendance_missing'))
     expect(attendanceAlert).toBeDefined()
     expect(attendanceAlert?.message).toMatch(/Adam/i)
     expect(attendanceAlert?.message).toMatch(/Khadijah/i)
+    expect(attendanceAlert?.childId).toBeNull()
+    expect(attendanceAlert?.href).toBe('/attendance')
   })
 
-  test('attendance alert excludes children who have attendance logged', () => {
-    mockGetLessons.mockReturnValue([])
-    mockGetRecords.mockReturnValue([
-      { childId: activeAdam.id, date: TODAY, status: 'present' },
-    ])
+  test('attendance alert excludes children who have attendance logged', async () => {
+    mockListAttendanceEvents.mockResolvedValue([makeAttendance(activeAdam.id)])
 
-    const alerts = getAlerts()
+    const alerts = await getAlerts(HOUSEHOLD_ID)
     const attendanceAlert = alerts.find(a => a.id.startsWith('attendance_missing'))
     expect(attendanceAlert).toBeDefined()
     expect(attendanceAlert?.message).toMatch(/Khadijah/i)
     expect(attendanceAlert?.message).not.toMatch(/Adam/i)
   })
 
-  test('getAlerts filters by childId when provided', () => {
-    mockGetLessons.mockImplementation(() => [
-      { id: 'l1', childId: activeAdam.id, title: 'Math', status: 'not_started', dueDate: YESTERDAY, subjectId: 's1' },
-      { id: 'l2', childId: activeKhadijah.id, title: 'Reading', status: 'not_started', dueDate: YESTERDAY, subjectId: 's2' },
+  test('getAlerts filters by childId when provided', async () => {
+    mockListLessonTaskRows.mockImplementation(async (_householdId: string, filters: { learnerId?: string }) => [
+      makeLesson(filters.learnerId ?? activeAdam.id, { dueDate: YESTERDAY }),
     ])
-    mockGetRecords.mockReturnValue([
-      { childId: activeAdam.id, date: TODAY, status: 'present' },
-      { childId: activeKhadijah.id, date: TODAY, status: 'present' },
+    mockListAttendanceEvents.mockResolvedValue([
+      makeAttendance(activeAdam.id),
+      makeAttendance(activeKhadijah.id),
     ])
 
-    const adamAlerts = getAlerts(activeAdam.id)
+    const adamAlerts = await getAlerts(HOUSEHOLD_ID, activeAdam.id)
     const childSpecificAlerts = adamAlerts.filter(a => a.childId !== null)
     expect(childSpecificAlerts.every(a => a.childId === activeAdam.id)).toBe(true)
+    expect(mockListLessonTaskRows).toHaveBeenCalledTimes(1)
+    expect(mockListLessonTaskRows).toHaveBeenCalledWith(HOUSEHOLD_ID, { learnerId: activeAdam.id, endDate: TODAY })
   })
 
-  test('child-scoped lesson alert href includes childId query param', () => {
-    mockGetLessons.mockImplementation((childId?: string) =>
-      !childId || childId === activeAdam.id
-        ? [{ id: 'l1', childId: activeAdam.id, title: 'Math', status: 'not_started', dueDate: YESTERDAY, subjectId: 's1' }]
+  test('child-scoped lesson alert href includes childId query param', async () => {
+    mockListLessonTaskRows.mockImplementation(async (_householdId: string, filters: { learnerId?: string }) =>
+      filters.learnerId === activeAdam.id
+        ? [makeLesson(activeAdam.id, { title: 'Math', dueDate: YESTERDAY })]
         : []
     )
-    mockGetRecords.mockReturnValue([
-      { childId: activeAdam.id, date: TODAY, status: 'present' },
-      { childId: activeKhadijah.id, date: TODAY, status: 'present' },
+    mockListAttendanceEvents.mockResolvedValue([
+      makeAttendance(activeAdam.id),
+      makeAttendance(activeKhadijah.id),
     ])
 
-    const alerts = getAlerts()
+    const alerts = await getAlerts(HOUSEHOLD_ID)
     const adamAlert = alerts.find(a => a.childId === activeAdam.id && a.type === 'pending_lessons')
     expect(adamAlert).toBeDefined()
     expect(adamAlert?.href).toBe(`/lessons?childId=${activeAdam.id}`)
   })
 
-  test('child-scoped attendance alert href includes childId query param', () => {
-    mockGetLessons.mockReturnValue([])
-    // No attendance records for Khadijah today
-    mockGetRecords.mockReturnValue([])
-
-    const alerts = getAlerts(activeKhadijah.id)
+  test('child-scoped attendance alert href includes childId query param', async () => {
+    const alerts = await getAlerts(HOUSEHOLD_ID, activeKhadijah.id)
     const attendanceAlert = alerts.find(a => a.id.startsWith('attendance_missing'))
     expect(attendanceAlert).toBeDefined()
     expect(attendanceAlert?.href).toBe(`/attendance?childId=${activeKhadijah.id}`)
-  })
-
-  test('household-level attendance alert href does not include childId', () => {
-    mockGetLessons.mockReturnValue([])
-    mockGetRecords.mockReturnValue([])
-
-    const alerts = getAlerts()
-    const attendanceAlert = alerts.find(a => a.id.startsWith('attendance_missing'))
-    expect(attendanceAlert).toBeDefined()
-    expect(attendanceAlert?.href).toBe('/attendance')
-    expect(attendanceAlert?.childId).toBeNull()
+    expect(attendanceAlert?.childId).toBe(activeKhadijah.id)
   })
 })

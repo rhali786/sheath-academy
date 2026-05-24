@@ -1,13 +1,13 @@
 'use client'
 
 import React, { createContext, useState, useEffect, useMemo, ReactNode } from 'react'
-import type { Alert, QuranSession, DashboardRecord, DashboardMetrics, StudentProfile, NivoLineSeries } from '@/features/lib/types'
+import type { Alert, QuranSession, DashboardRecord, DashboardMetrics, NivoLineSeries } from '@/features/lib/types'
 import { dashboardApi } from '@/features/dashboard/front/services/api'
 import { alertsApi } from '@/features/alerts/front/services/api'
 import { quranApi } from '@/features/quran/front/services/api'
-import { childrenApi } from '@/features/children/front/services/api'
 import { useSelectedChild } from '@/features/dashboard/front/hooks/useSelectedChild'
 import { useHousehold } from '@/features/household/front/context'
+import type { StudentProfile } from '@/features/lib/types'
 
 export interface DashboardContextType {
   children: StudentProfile[]
@@ -38,8 +38,7 @@ export function useContext_Dashboard() {
 }
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
-  const { workspace, householdProfile, loading: householdLoading } = useHousehold()
-  const [studentProfiles, setStudentProfiles] = useState<StudentProfile[]>([])
+  const { householdProfile, loading: householdLoading, studentProfiles } = useHousehold()
   const [allAlerts, setAllAlerts] = useState<Alert[]>([])
   const [quranSessions, setQuranSessions] = useState<QuranSession[]>([])
   const [quranChartData, setQuranChartData] = useState<NivoLineSeries[]>([])
@@ -55,22 +54,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
     const fetchData = async () => {
       try {
-        const householdId = householdProfile?.id ?? workspace?.id
-        const childrenPromise = householdId
-          ? childrenApi.getChildren(householdId, false)
-          : Promise.resolve({
-              data: [] as StudentProfile[],
-              status: 'success' as const,
-              message: '',
-              timestamp: '',
-            })
-
-        const [alertsRes, quranRes, recordsRes, summaryRes, childrenRes] = await Promise.all([
+        const [alertsRes, quranRes, recordsRes, summaryRes] = await Promise.all([
           alertsApi.getAlerts(selectedChildId ?? undefined),
           quranApi.getSessions(selectedChildId ?? undefined),
           dashboardApi.getRecords(selectedChildId ?? undefined),
           dashboardApi.getSummary(selectedChildId ?? undefined),
-          childrenPromise,
         ])
 
         setAllAlerts(alertsRes.data)
@@ -78,7 +66,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         setQuranChartData(quranRes.data.chartData ?? [])
         setRecords(recordsRes.data)
         setMetrics(summaryRes.data)
-        setStudentProfiles(childrenRes.data ?? [])
         setLoading(false)
         setInitialLoadDone(true)
       } catch (err) {
@@ -88,9 +75,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
 
     void fetchData()
-    // selectedChildId intentionally excluded — re-fetch is handled by the effect below
+    // selectedChildId intentionally excluded — re-fetch handled by the effect below
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspace?.id, householdProfile?.id, householdLoading])
+  }, [householdProfile?.id, householdLoading])
 
   // Re-fetch per-child data whenever selected child changes (after initial load)
   useEffect(() => {

@@ -1,7 +1,14 @@
 'use client'
 
-import { useState, FormEvent, useEffect } from 'react'
+import { useState, FormEvent } from 'react'
 import type { StudentProfile } from '@/features/lib/types'
+
+const GRADE_OPTIONS = [
+  'PK', 'K',
+  'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6',
+  'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12',
+  'Other/custom',
+]
 
 interface ChildFormProps {
   householdId: string
@@ -11,20 +18,25 @@ interface ChildFormProps {
 }
 
 export function ChildForm({ householdId, child, onSubmit, onCancel }: ChildFormProps) {
-  const [formData, setFormData] = useState({
-    name: child?.name || '',
-    gradeLabel: child?.gradeLabel || '',
-    dob: child?.dob || '',
-    teacherName: child?.teacherName || '',
-    username: child?.username || '',
-    password: child?.password || '',
-  })
+  const [firstName, setFirstName] = useState(child?.firstName || '')
+  const [lastName, setLastName] = useState(child?.lastName || '')
+  const [gradeLabel, setGradeLabel] = useState(child?.gradeLabel || '')
+  const [dob, setDob] = useState(child?.dob || '')
+  const [learnerLoginEnabled, setLearnerLoginEnabled] = useState(
+    child?.learnerLoginEnabled !== undefined ? child.learnerLoginEnabled : (child ? !!child.username : false)
+  )
+  const [username, setUsername] = useState(child?.username || '')
+  const [password, setPassword] = useState(child?.password || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!formData.name.trim() || !formData.gradeLabel.trim() || !formData.username.trim() || !formData.password.trim()) {
+    if (!firstName.trim() || !lastName.trim() || !gradeLabel.trim()) {
+      setError('Please fill in all required fields')
+      return
+    }
+    if (learnerLoginEnabled && (!username.trim() || !password.trim())) {
       setError('Please fill in all required fields')
       return
     }
@@ -34,21 +46,22 @@ export function ChildForm({ householdId, child, onSubmit, onCancel }: ChildFormP
     try {
       await onSubmit({
         householdId,
-        name: formData.name.trim(),
-        gradeLabel: formData.gradeLabel.trim(),
-        dob: formData.dob || undefined,
-        teacherName: formData.teacherName?.trim() || undefined,
-        username: formData.username.trim(),
-        password: formData.password.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        name: `${firstName.trim()} ${lastName.trim()}`,
+        gradeLabel: gradeLabel.trim(),
+        dob: dob || undefined,
+        learnerLoginEnabled,
+        username: learnerLoginEnabled ? username.trim() : '',
+        password: learnerLoginEnabled ? password.trim() : '',
       })
-      setFormData({
-        name: '',
-        gradeLabel: '',
-        dob: '',
-        teacherName: '',
-        username: '',
-        password: '',
-      })
+      setFirstName('')
+      setLastName('')
+      setGradeLabel('')
+      setDob('')
+      setLearnerLoginEnabled(false)
+      setUsername('')
+      setPassword('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setSaving(false)
@@ -57,35 +70,52 @@ export function ChildForm({ householdId, child, onSubmit, onCancel }: ChildFormP
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="name" className="block text-xs font-medium text-slate-600 mb-1.5">
-          Child's name *
-        </label>
-        <input
-          id="name"
-          type="text"
-          value={formData.name}
-          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-          placeholder="e.g. Adam"
-          className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900"
-          maxLength={80}
-        />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label htmlFor="firstName" className="block text-xs font-medium text-slate-600 mb-1.5">
+            First name *
+          </label>
+          <input
+            id="firstName"
+            type="text"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            placeholder="e.g. Adam"
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900"
+            maxLength={80}
+          />
+        </div>
+        <div>
+          <label htmlFor="lastName" className="block text-xs font-medium text-slate-600 mb-1.5">
+            Last name *
+          </label>
+          <input
+            id="lastName"
+            type="text"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            placeholder="e.g. Al-Rashid"
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900"
+            maxLength={80}
+          />
+        </div>
       </div>
+      <p className="text-xs text-slate-400 -mt-2">Names entered here may appear on reports, transcripts, and exported records.</p>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label htmlFor="gradeLabel" className="block text-xs font-medium text-slate-600 mb-1.5">
             Grade/Level *
           </label>
-          <input
+          <select
             id="gradeLabel"
-            type="text"
-            value={formData.gradeLabel}
-            onChange={(e) => setFormData(prev => ({ ...prev, gradeLabel: e.target.value }))}
-            placeholder="e.g. Grade 5"
+            value={gradeLabel}
+            onChange={(e) => setGradeLabel(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900"
-            maxLength={50}
-          />
+          >
+            <option value="">Select grade...</option>
+            {GRADE_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
         </div>
         <div>
           <label htmlFor="dob" className="block text-xs font-medium text-slate-600 mb-1.5">
@@ -94,58 +124,58 @@ export function ChildForm({ householdId, child, onSubmit, onCancel }: ChildFormP
           <input
             id="dob"
             type="date"
-            value={formData.dob}
-            onChange={(e) => setFormData(prev => ({ ...prev, dob: e.target.value }))}
+            value={dob}
+            onChange={(e) => setDob(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900"
           />
         </div>
       </div>
 
       <div>
-        <label htmlFor="teacherName" className="block text-xs font-medium text-slate-600 mb-1.5">
-          Teacher/Instructor name
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            id="learnerLoginEnabled"
+            type="checkbox"
+            checked={learnerLoginEnabled}
+            onChange={(e) => setLearnerLoginEnabled(e.target.checked)}
+            className="rounded"
+          />
+          <span className="text-xs font-medium text-slate-600">Allow learner to sign in</span>
         </label>
-        <input
-          id="teacherName"
-          type="text"
-          value={formData.teacherName}
-          onChange={(e) => setFormData(prev => ({ ...prev, teacherName: e.target.value }))}
-          placeholder="e.g. Mrs. Fatima"
-          className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900"
-          maxLength={80}
-        />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label htmlFor="username" className="block text-xs font-medium text-slate-600 mb-1.5">
-            Username *
-          </label>
-          <input
-            id="username"
-            type="text"
-            value={formData.username}
-            onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-            placeholder="e.g. adam.student"
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900"
-            maxLength={50}
-          />
+      {learnerLoginEnabled && (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="username" className="block text-xs font-medium text-slate-600 mb-1.5">
+              Username *
+            </label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="e.g. adam.student"
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900"
+              maxLength={50}
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="block text-xs font-medium text-slate-600 mb-1.5">
+              Password *
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900"
+              maxLength={100}
+            />
+          </div>
         </div>
-        <div>
-          <label htmlFor="password" className="block text-xs font-medium text-slate-600 mb-1.5">
-            Password *
-          </label>
-          <input
-            id="password"
-            type="password"
-            value={formData.password}
-            onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-            placeholder="••••••••"
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900"
-            maxLength={100}
-          />
-        </div>
-      </div>
+      )}
 
       {error && <p className="text-red-600 text-xs">{error}</p>}
 

@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { EvidenceList } from '@/features/portfolio/front/components/EvidenceList'
 import type { EvidenceItem } from '@/features/portfolio/types'
 
@@ -128,5 +128,70 @@ describe('EvidenceList', () => {
       />
     )
     expect(screen.getByText(/failed to load portfolio/i)).toBeInTheDocument()
+  })
+})
+
+describe('EvidenceList — inline edit expansion (Phase 5 — updated)', () => {
+  it('shows Pencil icon button when onUpdate is provided', () => {
+    const onUpdate = jest.fn()
+    const item = makeItem({ id: 'ev_click', title: 'Clickable Evidence' })
+    render(
+      <EvidenceList
+        items={[item]}
+        childMap={childMap}
+        subjectMap={subjectMap}
+        loading={false}
+        error={null}
+        onUpdate={onUpdate}
+      />
+    )
+    expect(screen.getByRole('button', { name: /edit evidence/i })).toBeInTheDocument()
+  })
+
+  it('shows Trash icon button when onDelete is provided', () => {
+    const onDelete = jest.fn()
+    const item = makeItem({ id: 'ev_del', title: 'Deletable Evidence' })
+    render(
+      <EvidenceList
+        items={[item]}
+        childMap={childMap}
+        subjectMap={subjectMap}
+        loading={false}
+        error={null}
+        onDelete={onDelete}
+      />
+    )
+    expect(screen.getByRole('button', { name: /delete evidence/i })).toBeInTheDocument()
+  })
+
+  it('calls legacy onEdit when onEdit is provided and Pencil is clicked', () => {
+    const onEdit = jest.fn()
+    const item = makeItem({ id: 'ev_click', title: 'Clickable Evidence' })
+    render(
+      <EvidenceList
+        items={[item]}
+        childMap={childMap}
+        subjectMap={subjectMap}
+        loading={false}
+        error={null}
+        onEdit={onEdit}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit evidence/i }))
+    expect(onEdit).toHaveBeenCalledWith(item)
+  })
+
+  it('does not show edit button when neither onEdit nor onUpdate is provided', () => {
+    const item = makeItem({ title: 'No Edit Handler' })
+    render(
+      <EvidenceList
+        items={[item]}
+        childMap={childMap}
+        subjectMap={subjectMap}
+        loading={false}
+        error={null}
+      />
+    )
+    expect(screen.queryByRole('button', { name: /edit evidence/i })).not.toBeInTheDocument()
   })
 })

@@ -5,7 +5,8 @@ import { ResponsiveBar } from '@nivo/bar'
 import { ChartContainer } from './shared/ChartContainer'
 import { nivoTheme, childColors } from '../theme'
 import type { QuranSession } from '../types'
-import type { LessonTask } from '@/features/planner/types'
+import type { LessonTask } from '@/features/plan/types'
+import { getLessonActivityDate } from '@/features/plan/utils/lessonActivityDate'
 import type { StudentProfile } from '@/features/lib/types'
 
 interface WeeklyActivityProps {
@@ -53,7 +54,7 @@ export function WeeklyActivity({ lessons, quranSessions, children, selectedChild
 
       const data = weekDays.map(({ date, dayLabel }) => ({
         day: dayLabel,
-        lessons: completedLessons.filter(l => l.updatedAt.slice(0, 10) === date).length,
+        lessons: completedLessons.filter(l => getLessonActivityDate(l) === date).length,
         quranSessions: childSessions.filter(s => s.date === date).length,
       }))
 
@@ -65,7 +66,7 @@ export function WeeklyActivity({ lessons, quranSessions, children, selectedChild
         const row: Record<string, string | number> = { day: dayLabel }
         activeChildren.forEach(child => {
           const lessonCount = lessons.filter(
-            l => l.status === 'completed' && l.childId === child.id && l.updatedAt.slice(0, 10) === date
+            l => l.status === 'completed' && l.childId === child.id && getLessonActivityDate(l) === date
           ).length
           const quranCount = quranSessions.filter(s => s.childId === child.id && s.date === date).length
           row[child.name] = lessonCount + quranCount

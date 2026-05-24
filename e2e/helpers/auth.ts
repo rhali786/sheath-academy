@@ -9,11 +9,19 @@ const BYPASS_SECRET = process.env.DEV_BYPASS_SECRET ?? 'dev2026'
  *   DEV_BYPASS_SECRET=<secret>
  *   AUTH_SECRET=<any value>
  */
-export async function loginDev(page: Page) {
-  await page.goto('/login')
+export async function loginDev(page: Page, callbackUrl = '/') {
+  const q =
+    callbackUrl && callbackUrl !== '/'
+      ? `?callbackUrl=${encodeURIComponent(callbackUrl)}`
+      : ''
+  await page.goto(`/login${q}`)
   const tokenInput = page.getByLabel('Dev bypass token')
   await tokenInput.fill(BYPASS_SECRET)
   await tokenInput.press('Enter')
-  // Wait for redirect away from /login
-  await page.waitForURL(url => !url.pathname.startsWith('/login'), { timeout: 10_000 })
+  await page.waitForURL(
+    url =>
+      !url.pathname.startsWith('/login') &&
+      (callbackUrl === '/' || url.pathname === callbackUrl || url.pathname.startsWith(callbackUrl)),
+    { timeout: 10_000 },
+  )
 }
