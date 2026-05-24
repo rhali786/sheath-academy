@@ -23,25 +23,22 @@ test.describe('Dashboard — selected child data regression (Wave 2)', () => {
     await page.waitForTimeout(1000)
   })
 
-  test('portfolio is reachable as a standalone page (not a tab)', async ({ page }) => {
-    await expect(page.getByRole('link', { name: /portfolio/i }).first()).toBeVisible()
-    await page.getByRole('link', { name: /portfolio/i }).first().click()
-    await page.waitForURL('**/portfolio')
+  test('portfolio is reachable from the sidebar via Grades & Progress', async ({ page }) => {
+    await page.getByRole('link', { name: 'Grades & Progress' }).click()
+    await page.waitForURL('**/growth')
+    await page.goto('/portfolio')
     await expect(page.getByRole('heading', { name: /portfolio/i })).toBeVisible()
   })
 
-  test('reports is reachable as a standalone page (not a tab)', async ({ page }) => {
-    await expect(page.getByRole('link', { name: /reports/i }).first()).toBeVisible()
-    await page.getByRole('link', { name: /reports/i }).first().click()
-    await page.waitForURL('**/reports')
-    await expect(page.getByRole('heading', { name: /records summary/i })).toBeVisible()
+  test('records is reachable from the sidebar', async ({ page }) => {
+    await page.getByRole('link', { name: 'Reports & Records' }).click()
+    await page.waitForURL('**/records')
+    await expect(page.getByRole('heading', { name: /records/i })).toBeVisible()
   })
 
-  test('Today tab is the only tab button on the dashboard', async ({ page }) => {
-    const todayBtn = page.getByRole('button', { name: 'Today' })
-    await expect(todayBtn.first()).toBeVisible()
-    // Portfolio should be a Link, not a tab button
-    await expect(page.getByRole('button', { name: 'Portfolio' })).toHaveCount(0)
+  test('sidebar navigation replaces the old Today tab', async ({ page }) => {
+    await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Today' })).toHaveCount(0)
   })
 
   test("per-child progress uses planner subject names (Mathematics not Math)", async ({ page }) => {

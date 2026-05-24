@@ -4,16 +4,7 @@ import { loginDev } from './helpers/auth'
 test.describe('Portfolio tab — layout (Wave A1)', () => {
   test.beforeEach(async ({ page }) => {
     await loginDev(page)
-    // Portfolio is the third tab in the dashboard navigation
-    await page.goto('/')
-    // Click the Portfolio tab
-    const portfolioTab = page.getByRole('button', { name: /portfolio/i })
-    if (await portfolioTab.count() > 0) {
-      await portfolioTab.click()
-    } else {
-      // Fallback: navigate if direct tab not found
-      await page.getByRole('link', { name: /portfolio/i }).click()
-    }
+    await page.goto('/portfolio')
     await page.waitForTimeout(500)
   })
 

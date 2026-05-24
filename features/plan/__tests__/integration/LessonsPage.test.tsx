@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor, act } from '@testing-library/react'
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
 import { LessonsPage } from '@/features/plan/front/pages/LessonsPage'
 
 const mockReplace = jest.fn()
@@ -86,13 +86,17 @@ afterEach(() => {
   jest.clearAllMocks()
 })
 
+async function openAddLessonForm() {
+  fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
+  await waitFor(() => {
+    expect(screen.getByRole('heading', { name: /add lesson/i })).toBeInTheDocument()
+  })
+}
+
 describe('LessonsPage', () => {
-  it('renders the Add lesson form heading on mount', async () => {
+  it('renders the Add lesson form heading when the form is expanded', async () => {
     render(<LessonsPage />)
-    await waitFor(() => {
-      // Use role to distinguish the h2 from the form submit button
-      expect(screen.getByRole('heading', { name: /add lesson/i })).toBeInTheDocument()
-    })
+    await openAddLessonForm()
   })
 
   it('renders Today section when children have loaded', async () => {
@@ -146,16 +150,12 @@ describe('LessonsPage', () => {
     })
   })
 
-  it('always shows the Add lesson form heading (inline edit is per-card, not top form)', async () => {
+  it('shows the Add lesson form heading when expanded (inline edit is per-card, not top form)', async () => {
     const editLesson = makeLesson({ id: 'edit_001', title: 'Lesson To Edit' })
     mockGetLessons.mockResolvedValue([editLesson])
 
     render(<LessonsPage />)
-
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /add lesson/i })).toBeInTheDocument()
-    })
-    // Top form is always "Add lesson" — edit is inline per card
+    await openAddLessonForm()
     expect(screen.queryByRole('heading', { name: /edit lesson/i })).not.toBeInTheDocument()
   })
 

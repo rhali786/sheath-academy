@@ -63,7 +63,15 @@ function renderWithPlanner() {
 }
 
 beforeEach(() => {
-  global.fetch = jest.fn()
+  global.fetch = jest.fn((url: string) => {
+    if (String(url).includes('/ingest/')) {
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    }
+    return Promise.resolve({
+      ok: true,
+      json: async () => ({ status: 'success', data: [] }),
+    })
+  })
 })
 
 afterEach(() => {
@@ -85,7 +93,12 @@ describe('WeeklyPlannerPage', () => {
   })
 
   it('shows error state when init fetch fails', async () => {
-    ;(global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Children fetch failed'))
+    ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (String(url).includes('/ingest/')) {
+        return Promise.resolve({ ok: true, json: async () => ({}) })
+      }
+      return Promise.reject(new Error('Children fetch failed'))
+    })
 
     renderWithPlanner()
 

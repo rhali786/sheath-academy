@@ -14,7 +14,6 @@
 import { render, screen, waitFor, act } from '@testing-library/react'
 import { DashboardProvider } from '@/features/dashboard/front/context'
 import { HouseholdProvider } from '@/features/household/front/context'
-import { NavigationProvider } from '@/features/layout/front/context/NavigationContext'
 import Dashboard from '@/features/dashboard/front/pages/Dashboard'
 
 jest.mock('next/navigation', () => ({
@@ -99,13 +98,11 @@ jest.mock('@/features/household/front/services/api', () => ({
 
 function renderDashboard() {
   return render(
-    <NavigationProvider>
-      <HouseholdProvider>
-        <DashboardProvider>
-          <Dashboard />
-        </DashboardProvider>
-      </HouseholdProvider>
-    </NavigationProvider>
+    <HouseholdProvider>
+      <DashboardProvider>
+        <Dashboard />
+      </DashboardProvider>
+    </HouseholdProvider>
   )
 }
 

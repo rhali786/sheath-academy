@@ -19,7 +19,6 @@ import { buildDailySchedule } from '@/features/schedule/server/service'
 import { useContext_Dashboard } from '../context'
 import { useHousehold } from '@/features/household/front/context'
 import { HouseholdSetup } from '@/features/household/front/components/HouseholdSetup'
-import { useNavigation } from '@/features/layout/front/context/NavigationContext'
 import { ChildSelector } from '../components/ChildSelector'
 import { NextSetupStrip } from '@/features/setup/front/components/NextSetupStrip'
 import { plannerApi } from '@/features/plan/front/services/api'
@@ -39,7 +38,6 @@ function getCurrentTime(): string {
 }
 
 export default function Dashboard() {
-  const { selectedTab } = useNavigation()
   const {
     children: studentProfiles, alerts, quranSessions, records, metrics,
     loading, error, addQuranSession, selectedChildId,
@@ -132,10 +130,7 @@ export default function Dashboard() {
 
   return (
     <div className="bg-slate-50 min-h-screen">
-
-      {selectedTab === 'Today' && (
-        <>
-          <NextSetupStrip />
+      <NextSetupStrip />
 
           {/* Sticky child selector — stays visible while scrolling */}
           <div className="sticky top-app-header z-40 bg-white border-b border-slate-100 shadow-sm">
@@ -201,9 +196,6 @@ export default function Dashboard() {
               worklog
             </Link>
           </div>
-        </>
-      )}
-
     </div>
   )
 }
