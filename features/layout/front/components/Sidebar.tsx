@@ -8,11 +8,29 @@ import {
   isNavItemActive,
   type NavItem,
 } from '@/features/layout/lib/navConfig'
+import { getNavIcon } from '@/features/layout/lib/navIcons'
 import { formatHeaderDates, type HeaderDateDisplay } from '@/features/layout/lib/formatHeaderDates'
+import { SheathLogo } from './SheathLogo'
 
 interface SidebarProps {
   mobileOpen?: boolean
   onClose?: () => void
+}
+
+function NavIcon({ itemId, active }: { itemId: string; active: boolean }) {
+  const Icon = getNavIcon(itemId)
+  if (!Icon) return null
+
+  return (
+    <span
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+        active ? 'bg-forest-200/80 text-forest-900' : 'bg-white text-slate-500 shadow-sm'
+      }`}
+      data-testid={`nav-icon-${itemId}`}
+    >
+      <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden="true" />
+    </span>
+  )
 }
 
 function NavRow({
@@ -27,10 +45,17 @@ function NavRow({
   const active = isNavItemActive(pathname, item)
 
   const baseClass =
-    'flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors'
+    'flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl text-sm font-medium transition-colors'
   const activeClass = active
-    ? 'bg-forest-900 text-white'
-    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+    ? 'bg-forest-100 text-forest-900 shadow-sm'
+    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+
+  const labelRow = (
+    <span className="flex items-center gap-3 min-w-0">
+      <NavIcon itemId={item.id} active={active} />
+      <span className="truncate">{item.label}</span>
+    </span>
+  )
 
   if (item.disabled) {
     return (
@@ -39,11 +64,14 @@ function NavRow({
         aria-disabled="true"
         data-testid={`nav-disabled-${item.id}`}
       >
-        <span>{item.label}</span>
+        <span className="flex items-center gap-3 min-w-0 opacity-60">
+          <NavIcon itemId={item.id} active={false} />
+          <span className="truncate">{item.label}</span>
+        </span>
         {item.showDisabledBadge && (
           <span
             data-testid="nav-badge-messages"
-            className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400 opacity-40"
+            className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-400 opacity-40"
             aria-hidden="true"
           >
             3
@@ -60,7 +88,7 @@ function NavRow({
       className={`${baseClass} ${activeClass}`}
       aria-current={active ? 'page' : undefined}
     >
-      <span>{item.label}</span>
+      {labelRow}
     </Link>
   )
 }
@@ -78,18 +106,14 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
 
   const panel = (
     <aside
-      className="flex flex-col h-full w-60 bg-white border-r border-slate-100"
+      className="flex flex-col h-full w-60 bg-slate-50 border-r border-slate-200/80"
       data-testid="sidebar"
       aria-label="Main navigation"
     >
       <div className="px-4 pt-5 pb-4 border-b border-slate-100">
         <Link href="/" className="block hover:opacity-80 transition-opacity" onClick={onClose}>
           <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-8 h-8 rounded-lg bg-forest-900 flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-sm font-bold leading-none" aria-hidden="true">
-                ش
-              </span>
-            </div>
+            <SheathLogo size={34} data-testid="sheath-logo" />
             <span className="text-lg font-bold text-slate-900 tracking-tight">Sheath</span>
           </div>
           <p className="text-xs text-slate-400 pl-[2.625rem]">Faith. Learning. Purpose.</p>

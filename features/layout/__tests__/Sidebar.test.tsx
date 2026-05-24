@@ -23,6 +23,15 @@ describe('Sidebar', () => {
     render(<Sidebar />)
     expect(screen.getByText('Sheath')).toBeInTheDocument()
     expect(screen.getByText('Faith. Learning. Purpose.')).toBeInTheDocument()
+    expect(screen.getByTestId('sheath-logo')).toBeInTheDocument()
+  })
+
+  test('renders icon badge for each nav item', () => {
+    render(<Sidebar />)
+    expect(screen.getByTestId('nav-icon-dashboard')).toBeInTheDocument()
+    expect(screen.getByTestId('nav-icon-lesson-planner')).toBeInTheDocument()
+    expect(screen.getByTestId('nav-icon-messages')).toBeInTheDocument()
+    expect(screen.getByTestId('nav-icon-settings')).toBeInTheDocument()
   })
 
   test('renders Hijri date under logo', () => {
@@ -63,7 +72,7 @@ describe('Sidebar', () => {
     mockUsePathname.mockReturnValue('/plan')
     render(<Sidebar />)
     const planner = screen.getByRole('link', { name: 'Lesson Planner' })
-    expect(planner.className).toContain('bg-forest-900')
+    expect(planner.className).toContain('bg-forest-100')
   })
 
   test('mobile drawer closes when a link is clicked', () => {

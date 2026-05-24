@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { Sun, Plus, ListChecks } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useHousehold } from '@/features/household/front/context'
 import { formatHeaderDates } from '@/features/layout/lib/formatHeaderDates'
@@ -53,7 +54,8 @@ export function DashboardHeader() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">
+            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <Sun className="h-6 w-6 text-amber-400 shrink-0" aria-hidden="true" />
               Assalamu alaikum, {name}
             </h2>
             <p className="text-sm text-slate-500 mt-1">
@@ -80,6 +82,7 @@ export function DashboardHeader() {
                 aria-expanded={quickAddOpen}
                 aria-haspopup="menu"
               >
+                <Plus className="h-4 w-4" aria-hidden="true" />
                 Quick Add
               </button>
               {quickAddOpen && (
@@ -102,8 +105,9 @@ export function DashboardHeader() {
             </div>
             <Link
               href="/plan"
-              className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg bg-forest-900 text-white hover:bg-forest-800"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-forest-900 text-forest-900 hover:bg-forest-50"
             >
+              <ListChecks className="h-4 w-4" aria-hidden="true" />
               Today&apos;s Plan
             </Link>
           </div>
