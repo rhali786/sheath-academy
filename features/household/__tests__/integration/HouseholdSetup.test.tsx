@@ -57,6 +57,8 @@ const mockProfile = {
 
 const baseHouseholdExists: HouseholdContextType = {
   householdProfile: mockProfile,
+  studentProfiles: [],
+  allSubjects: [],
   familyName: 'Test Family',
   needsSetup: false,
   loading: false,
@@ -66,6 +68,8 @@ const baseHouseholdExists: HouseholdContextType = {
 
 const noHousehold: HouseholdContextType = {
   householdProfile: null,
+  studentProfiles: [],
+  allSubjects: [],
   familyName: '',
   needsSetup: true,
   loading: false,

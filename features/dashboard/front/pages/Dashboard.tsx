@@ -23,9 +23,8 @@ import { useNavigation } from '@/features/layout/front/context/NavigationContext
 import { ChildSelector } from '../components/ChildSelector'
 import { NextSetupStrip } from '@/features/setup/front/components/NextSetupStrip'
 import { plannerApi } from '@/features/plan/front/services/api'
-import { subjectsApi } from '@/features/subjects/front/services/api'
+import { getWeekStartDate } from '@/features/plan/front/utils/weekDate'
 import type { LessonTask } from '@/features/plan/types'
-import type { SubjectCourse } from '@/features/subjects/types'
 import type { DaySchedule } from '@/features/schedule/types'
 
 function getTodayStr(): string {
@@ -45,10 +44,11 @@ export default function Dashboard() {
     loading, error, addQuranSession, selectedChildId,
   } = useContext_Dashboard()
 
-  const { needsSetup, loading: householdLoading } = useHousehold()
+  const { needsSetup, loading: householdLoading, householdProfile, allSubjects: subjects } = useHousehold()
+  const weekStartDay: 'Monday' | 'Sunday' =
+    householdProfile?.weekStartDay === 'Sunday' ? 'Sunday' : 'Monday'
 
   const [allLessons, setAllLessons] = useState<LessonTask[]>([])
-  const [subjects, setSubjects] = useState<SubjectCourse[]>([])
 
   // Compute Islamic calendar countdowns client-side (pure calculation, no API needed)
   const islamicCountdowns = useMemo(() => getIslamicCalendarCountdowns(getTodayStr()), [])
@@ -86,17 +86,13 @@ export default function Dashboard() {
     })
   }, [allLessons])
 
-  // Fetch subjects once
+  // Fetch current-week lessons; derive weeklyLessons and todaySchedule via useMemo
   useEffect(() => {
-    subjectsApi.getSubjects().then(res => setSubjects(res.data)).catch(() => {})
-  }, [])
-
-  // Fetch all lessons; derive weeklyLessons and todaySchedule via useMemo
-  useEffect(() => {
-    plannerApi.getLessons(undefined, selectedChildId ? [selectedChildId] : undefined)
+    const weekStart = getWeekStartDate(new Date(), weekStartDay)
+    plannerApi.getLessons(weekStart, selectedChildId ? [selectedChildId] : undefined)
       .then(lessons => setAllLessons(lessons))
       .catch(() => {})
-  }, [selectedChildId])
+  }, [selectedChildId, weekStartDay])
 
   if (loading || householdLoading) {
     return (

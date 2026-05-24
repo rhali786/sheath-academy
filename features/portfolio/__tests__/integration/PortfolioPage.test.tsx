@@ -1,10 +1,13 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { PortfolioPage } from '@/features/portfolio/front/pages/PortfolioPage'
 import type { EvidenceItem } from '@/features/portfolio/types'
+import { useHousehold } from '@/features/household/front/context'
 
 jest.mock('@/features/household/front/context', () => ({
   useHousehold: jest.fn(() => ({
     householdProfile: { id: 'hh_001', workspaceId: 'hh_001', familyName: 'Test', createdAt: '2026-01-01T00:00:00.000Z' },
+    studentProfiles: [],
+    allSubjects: [],
     loading: false,
     needsSetup: false,
     familyName: 'Test',
@@ -74,6 +77,31 @@ describe('PortfolioPage — standalone (no DashboardProvider)', () => {
     render(<PortfolioPage />)
     await waitFor(() => expect(screen.queryByText(/loading/i)).not.toBeInTheDocument(), { timeout: 2000 })
     expect(screen.getByRole('heading', { name: /growth/i, level: 1 })).toBeInTheDocument()
+  })
+})
+
+describe('PortfolioPage — lesson URL', () => {
+  beforeEach(() => {
+    ;(useHousehold as jest.Mock).mockImplementation(() => ({
+      householdProfile: { id: 'hh_001', workspaceId: 'hh_001', familyName: 'Test', createdAt: '2026-01-01T00:00:00.000Z' },
+      studentProfiles: [
+        { id: 'c1', name: 'Khadijah', householdId: 'hh_001', gradeLabel: 'Grade 3', username: 'k', password: '', isActive: true, createdAt: '2026-01-01T00:00:00.000Z' },
+      ],
+      allSubjects: [],
+      loading: false,
+      needsSetup: false,
+      familyName: 'Test',
+      error: null,
+      refetch: jest.fn(),
+    }))
+  })
+
+  test('fetches lessons from /api/plan/lessons (not /api/planner/lessons)', async () => {
+    render(<PortfolioPage />)
+    await waitFor(() => expect(screen.queryByText(/loading/i)).not.toBeInTheDocument(), { timeout: 2000 })
+    const fetchCalls = (global.fetch as jest.Mock).mock.calls.map(([url]: [string]) => url as string)
+    const plannerCalls = fetchCalls.filter((url) => url.includes('/api/planner/'))
+    expect(plannerCalls).toHaveLength(0)
   })
 })
 

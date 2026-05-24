@@ -6,6 +6,8 @@ import type { RecordsReport } from '@/features/records/types'
 jest.mock('@/features/household/front/context', () => ({
   useHousehold: jest.fn(() => ({
     householdProfile: { id: 'hh_001', workspaceId: 'hh_001', familyName: 'Test', createdAt: '2026-01-01T00:00:00.000Z' },
+    studentProfiles: [],
+    allSubjects: [],
     loading: false,
     needsSetup: false,
     familyName: 'Test',

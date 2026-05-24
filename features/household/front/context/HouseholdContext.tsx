@@ -1,12 +1,16 @@
 'use client'
 
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import type { HouseholdProfile } from '@/features/lib/types'
+import type { HouseholdProfile, StudentProfile } from '@/features/lib/types'
+import type { SubjectCourse } from '@/features/subjects/types'
 import { householdApi } from '../services/api'
-import { latencyTrace } from '@/features/lib/debug/latencyTrace'
+import { childrenApi } from '@/features/children/front/services/api'
+import { subjectsApi } from '@/features/subjects/front/services/api'
 
 export interface HouseholdContextType {
   householdProfile: HouseholdProfile | null
+  studentProfiles: StudentProfile[]
+  allSubjects: SubjectCourse[]
   familyName: string
   needsSetup: boolean
   loading: boolean
@@ -26,32 +30,25 @@ export function useHousehold(): HouseholdContextType {
 
 export function HouseholdProvider({ children }: { children: ReactNode }) {
   const [householdProfile, setHouseholdProfile] = useState<HouseholdProfile | null>(null)
+  const [studentProfiles, setStudentProfiles] = useState<StudentProfile[]>([])
+  const [allSubjects, setAllSubjects] = useState<SubjectCourse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchHousehold = useCallback(() => {
     setLoading(true)
-  const t0 = performance.now()
-  latencyTrace('HouseholdContext.tsx:fetchHousehold', 'profile_fetch_start', { source: 'HouseholdProvider' }, 'A')
-    householdApi
-      .getProfile()
-      .then((profileRes) => {
-        latencyTrace(
-          'HouseholdContext.tsx:fetchHousehold',
-          'profile_fetch_end',
-          { source: 'HouseholdProvider', ms: Math.round(performance.now() - t0), ok: true },
-          'A',
-        )
+    Promise.all([
+      householdApi.getProfile(),
+      childrenApi.getAllChildren(false),
+      subjectsApi.getSubjects(),
+    ])
+      .then(([profileRes, childrenRes, subjectsRes]) => {
         setHouseholdProfile(profileRes.data)
+        setStudentProfiles(childrenRes.data ?? [])
+        setAllSubjects(subjectsRes.data ?? [])
         setLoading(false)
       })
       .catch((err) => {
-        latencyTrace(
-          'HouseholdContext.tsx:fetchHousehold',
-          'profile_fetch_end',
-          { source: 'HouseholdProvider', ms: Math.round(performance.now() - t0), ok: false },
-          'A',
-        )
         setError(err instanceof Error ? err.message : 'Failed to load household')
         setLoading(false)
       })
@@ -66,6 +63,8 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
 
   const value: HouseholdContextType = {
     householdProfile,
+    studentProfiles,
+    allSubjects,
     familyName,
     needsSetup,
     loading,

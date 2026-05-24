@@ -13,16 +13,25 @@ export async function getAlerts(householdId: string, childId?: string): Promise<
   const allProfiles = await listAllLearners(householdId)
   const activeChildren = allProfiles.filter(p => p.isActive)
   const targetChildren = childId ? activeChildren.filter(c => c.id === childId) : activeChildren
-  const alerts: Alert[] = []
   const now = new Date().toISOString()
-  const todayAttendance = await listAttendanceEvents(householdId, { date: today })
 
-  for (const child of targetChildren) {
-    const lessons = await listLessonTaskRows(householdId, { learnerId: child.id })
-    const pendingLessons = lessons.filter((lesson) => {
-      const dueDate = lesson.dueDate
-      return dueDate !== null && dueDate <= today && lesson.status !== 'completed'
-    })
+  // Fetch attendance and all per-child lesson batches in parallel
+  const [todayAttendance, lessonsByChild] = await Promise.all([
+    listAttendanceEvents(householdId, { date: today }),
+    Promise.all(
+      targetChildren.map(child =>
+        listLessonTaskRows(householdId, { learnerId: child.id, endDate: today })
+      )
+    ),
+  ])
+
+  const alerts: Alert[] = []
+
+  targetChildren.forEach((child, i) => {
+    const lessons = lessonsByChild[i]
+    const pendingLessons = lessons.filter(
+      lesson => lesson.dueDate !== null && lesson.status !== 'completed',
+    )
     if (pendingLessons.length > 0) {
       const overdue = pendingLessons.filter(l => l.dueDate && l.dueDate < today)
       const message = overdue.length > 0
@@ -44,11 +53,11 @@ export async function getAlerts(householdId: string, childId?: string): Promise<
         createdAt: now,
       })
     }
-  }
+  })
 
-  // Household-wide: flag missing attendance for today (only when not filtering by child)
+  const childIdsWithAttendance = new Set(todayAttendance.map(r => r.learnerId))
+
   if (!childId) {
-    const childIdsWithAttendance = new Set(todayAttendance.map(r => r.learnerId))
     const missingAttendance = activeChildren.filter(c => !childIdsWithAttendance.has(c.id))
     if (missingAttendance.length > 0) {
       alerts.push({
@@ -66,8 +75,7 @@ export async function getAlerts(householdId: string, childId?: string): Promise<
       })
     }
   } else {
-    const todayChildAttendance = todayAttendance.filter(r => r.learnerId === childId)
-    if (todayChildAttendance.length === 0) {
+    if (!childIdsWithAttendance.has(childId)) {
       const child = activeChildren.find(c => c.id === childId)
       if (child) {
         alerts.push({

@@ -29,7 +29,16 @@ jest.mock('@/features/children/front/services/api', () => ({
 }))
 
 jest.mock('@/features/household/front/context', () => ({
-  useHousehold: jest.fn(() => ({ householdProfile: { id: 'hh_001' } })),
+  useHousehold: jest.fn(() => ({
+    householdProfile: { id: 'hh_001' },
+    studentProfiles: [],
+    allSubjects: [],
+    loading: false,
+    needsSetup: false,
+    familyName: '',
+    error: null,
+    refetch: jest.fn(),
+  })),
 }))
 
 import { attendanceApi } from '@/features/attendance/front/services/api'

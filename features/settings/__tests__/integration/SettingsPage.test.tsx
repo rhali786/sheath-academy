@@ -69,6 +69,8 @@ const loadedHousehold: HouseholdContextType = {
     familyName: 'Test Family',
     createdAt: '2026-01-01T00:00:00.000Z',
   },
+  studentProfiles: [],
+  allSubjects: [],
   familyName: 'Test Family',
   needsSetup: false,
   loading: false,

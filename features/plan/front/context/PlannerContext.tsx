@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { LessonTask } from '../../types'
 import { plannerApi } from '../services/api'
-import type { StudentProfile, ApiResponse } from '@/features/lib/types'
+import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { getWeekStartDate } from '../utils/weekDate'
 import { useHousehold } from '@/features/household/front/context'
@@ -39,29 +39,8 @@ export function usePlanner() {
   return context
 }
 
-function getApiBaseUrl(): string {
-  if (typeof window !== 'undefined') {
-    return window.location.origin
-  }
-  const port = process.env.PORT || '3000'
-  return `http://127.0.0.1:${port}`
-}
-
-async function get<T>(path: string): Promise<ApiResponse<T>> {
-  const t0 = performance.now()
-  latencyTrace('PlannerContext.tsx:get', 'fetch_start', { path }, 'C')
-  const res = await fetch(`${getApiBaseUrl()}${path}`)
-  if (!res.ok) {
-    latencyTrace('PlannerContext.tsx:get', 'fetch_end', { path, ms: Math.round(performance.now() - t0), ok: false }, 'C')
-    throw new Error(`Request failed: ${res.status}`)
-  }
-  const json = await res.json()
-  latencyTrace('PlannerContext.tsx:get', 'fetch_end', { path, ms: Math.round(performance.now() - t0), ok: true }, 'C')
-  return json
-}
-
 export function PlannerProvider({ children }: { children: React.ReactNode }) {
-  const { householdProfile, loading: householdLoading } = useHousehold()
+  const { householdProfile, loading: householdLoading, studentProfiles, allSubjects } = useHousehold()
   const weekStartDay: 'Monday' | 'Sunday' =
     householdProfile?.weekStartDay === 'Sunday' ? 'Sunday' : 'Monday'
 
@@ -69,63 +48,25 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const [selectedWeek, setSelectedWeek] = useState<Date>(new Date())
   const [selectedChildIds, setSelectedChildIds] = useState<string[]>([])
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([])
-  const [isInitializing, setIsInitializing] = useState(true)
   const [isLessonsLoading, setIsLessonsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [childrenList, setChildrenList] = useState<StudentProfile[]>([])
-  const [subjectsList, setSubjectsList] = useState<SubjectCourse[]>([])
   const [lessonsFetchKey, setLessonsFetchKey] = useState(0)
 
-  // Init: children + subjects only — profile comes from HouseholdProvider
+  // Sync child/subject selection from HouseholdProvider when it finishes loading
+  useEffect(() => {
+    if (householdLoading) return
+    const activeChildren = studentProfiles.filter(p => p.isActive)
+    setSelectedChildIds(activeChildren.map(c => c.id))
+    setSelectedSubjectIds(allSubjects.map(s => s.id))
+  }, [householdLoading, studentProfiles, allSubjects])
+
+  // isInitializing mirrors householdLoading — children+subjects now come from context
+  const isInitializing = householdLoading
+
+  // Lessons: fires after household (and therefore children+subjects) have loaded
   useEffect(() => {
     if (householdLoading) {
-      latencyTrace('PlannerContext.tsx:init', 'init_blocked_household_loading', {}, 'B')
-      return
-    }
-    let cancelled = false
-    ;(async () => {
-      const initT0 = performance.now()
-      latencyTrace('PlannerContext.tsx:init', 'init_start', { householdLoading }, 'B')
-      setIsInitializing(true)
-      setError(null)
-      try {
-        const [childrenResponse, subjectsResponse] = await Promise.all([
-          get<StudentProfile[]>('/api/children/children'),
-          get<SubjectCourse[]>('/api/subjects'),
-        ])
-        if (cancelled) return
-        setChildrenList(childrenResponse.data)
-        setSelectedChildIds(childrenResponse.data.map(c => c.id))
-        setSubjectsList(subjectsResponse.data)
-        setSelectedSubjectIds(subjectsResponse.data.map(s => s.id))
-        latencyTrace(
-          'PlannerContext.tsx:init',
-          'init_end',
-          {
-            ms: Math.round(performance.now() - initT0),
-            childCount: childrenResponse.data.length,
-            subjectCount: subjectsResponse.data.length,
-          },
-          'B',
-        )
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load planner')
-      } finally {
-        if (!cancelled) setIsInitializing(false)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [householdLoading])
-
-  // Lessons: separate loading flag, fires after init completes
-  useEffect(() => {
-    if (householdLoading || isInitializing) {
-      latencyTrace(
-        'PlannerContext.tsx:lessons',
-        'lessons_blocked',
-        { householdLoading, isInitializing },
-        'C',
-      )
+      latencyTrace('PlannerContext.tsx:lessons', 'lessons_blocked', { householdLoading }, 'C')
       return
     }
     if (selectedChildIds.length === 0 || selectedSubjectIds.length === 0) {
@@ -159,7 +100,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       }
     })()
     return () => { cancelled = true }
-  }, [householdLoading, isInitializing, selectedWeek, selectedChildIds, selectedSubjectIds, weekStartDay, lessonsFetchKey])
+  }, [householdLoading, selectedWeek, selectedChildIds, selectedSubjectIds, weekStartDay, lessonsFetchKey])
 
   const refreshLessons = useCallback(() => {
     setLessonsFetchKey(k => k + 1)
@@ -178,8 +119,8 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     isLoading: isInitializing || isLessonsLoading,
     error,
     weekStartDay,
-    children: childrenList,
-    subjects: subjectsList,
+    children: studentProfiles.filter(p => p.isActive),
+    subjects: allSubjects,
     refreshLessons,
   }
 

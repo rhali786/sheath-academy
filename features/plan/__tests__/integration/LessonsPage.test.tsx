@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor, act } from '@testing-library/react'
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
 import { LessonsPage } from '@/features/plan/front/pages/LessonsPage'
 
 const mockReplace = jest.fn()
@@ -34,7 +34,16 @@ jest.mock('@/features/subjects/front/services/api', () => ({
 }))
 
 jest.mock('@/features/household/front/context', () => ({
-  useHousehold: jest.fn(() => ({ householdProfile: { id: 'hh_001' } })),
+  useHousehold: jest.fn(() => ({
+    householdProfile: { id: 'hh_001' },
+    studentProfiles: [],
+    allSubjects: [],
+    loading: false,
+    needsSetup: false,
+    familyName: '',
+    error: null,
+    refetch: jest.fn(),
+  })),
 }))
 
 import { plannerApi } from '@/features/plan/front/services/api'
@@ -87,10 +96,11 @@ afterEach(() => {
 })
 
 describe('LessonsPage', () => {
-  it('renders the Add lesson form heading on mount', async () => {
+  it('shows the Add lesson form heading after clicking the toggle button', async () => {
     render(<LessonsPage />)
+    // Form is hidden by default — toggle it open
+    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
     await waitFor(() => {
-      // Use role to distinguish the h2 from the form submit button
       expect(screen.getByRole('heading', { name: /add lesson/i })).toBeInTheDocument()
     })
   })
@@ -146,11 +156,13 @@ describe('LessonsPage', () => {
     })
   })
 
-  it('always shows the Add lesson form heading (inline edit is per-card, not top form)', async () => {
+  it('form heading says Add lesson (not Edit lesson) — inline edit is per-card only', async () => {
     const editLesson = makeLesson({ id: 'edit_001', title: 'Lesson To Edit' })
     mockGetLessons.mockResolvedValue([editLesson])
 
     render(<LessonsPage />)
+    // Open the form
+    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /add lesson/i })).toBeInTheDocument()

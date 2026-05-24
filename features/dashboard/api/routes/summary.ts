@@ -17,22 +17,24 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Da
     const { householdId, timezone } = getRequestAuthCtx()
     const today = toDateString(new Date(), timezone ?? 'America/New_York')
 
-    const activeLearners = await listLearners(householdId)
+    const [activeLearners, todayAttendance, todayLessons, todayQuran, portfolioRows, alerts] =
+      await Promise.all([
+        listLearners(householdId),
+        listAttendanceEvents(householdId, { learnerId: childId, date: today }),
+        listLessonTaskRows(householdId, { learnerId: childId, startDate: today, endDate: today }),
+        listQuranSessionRows(householdId, { learnerId: childId, startDate: today, endDate: today }),
+        listEvidenceRows(householdId, { learnerId: childId }),
+        getAlerts(householdId, childId),
+      ])
+
     const totalChildren = childId ? 1 : activeLearners.length
-
-    const todayAttendance = await listAttendanceEvents(householdId, { learnerId: childId, date: today })
     const readyCount = todayAttendance.filter(r => r.status === 'present' || r.status === 'partial').length
-
-    const todayLessons = await listLessonTaskRows(householdId, { learnerId: childId, startDate: today, endDate: today })
-    const todayQuran = await listQuranSessionRows(householdId, { learnerId: childId, startDate: today, endDate: today })
-    const portfolioRows = await listEvidenceRows(householdId, { learnerId: childId })
-
-    const alerts = (await getAlerts(householdId, childId)).filter(a => a.status === 'open')
+    const openAlerts = alerts.filter(a => a.status === 'open')
 
     const metrics: DashboardMetrics = {
       attendanceReady: totalChildren > 0 ? `${readyCount}/${totalChildren}` : '0/0',
       lessonsPlanned: todayLessons.length,
-      needsAttention: alerts.length,
+      needsAttention: openAlerts.length,
       quranLogged: todayQuran.length > 0
         ? `${todayQuran.length} session${todayQuran.length !== 1 ? 's' : ''}`
         : 'None today',
@@ -41,6 +43,9 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Da
 
     return NextResponse.json({ status: 'success', data: metrics, message: 'Dashboard summary retrieved', timestamp: new Date().toISOString() })
   } catch {
-    return NextResponse.json({ status: 'error', data: { attendanceReady: '0/0', lessonsPlanned: 0, needsAttention: 0, quranLogged: 'None today', portfolioItems: 0 }, message: 'Failed to load dashboard', timestamp: new Date().toISOString() }, { status: 500 })
+    return NextResponse.json(
+      { status: 'error', data: { attendanceReady: '0/0', lessonsPlanned: 0, needsAttention: 0, quranLogged: 'None today', portfolioItems: 0 }, message: 'Failed to load dashboard', timestamp: new Date().toISOString() },
+      { status: 500 }
+    )
   }
 }
