@@ -17,12 +17,26 @@ function lazyDrizzleAdapter(): Adapter {
     return adapter
   }
 
-  return new Proxy({} as Adapter, {
-    get(_target, prop) {
-      const value = getAdapter()[prop as keyof Adapter]
-      return typeof value === 'function' ? value.bind(getAdapter()) : value
-    },
-  })
+  const bind = <K extends keyof Adapter>(method: K): NonNullable<Adapter[K]> =>
+    ((...args: unknown[]) => {
+      const fn = getAdapter()[method]
+      if (typeof fn !== 'function') {
+        throw new Error(`Adapter method ${String(method)} is not implemented`)
+      }
+      return (fn as (...a: unknown[]) => unknown).apply(getAdapter(), args)
+    }) as NonNullable<Adapter[K]>
+
+  // Methods must exist on the object itself — Auth.js validates at startup.
+  return {
+    createUser: bind('createUser'),
+    getUser: bind('getUser'),
+    getUserByEmail: bind('getUserByEmail'),
+    updateUser: bind('updateUser'),
+    getUserByAccount: bind('getUserByAccount'),
+    linkAccount: bind('linkAccount'),
+    createVerificationToken: bind('createVerificationToken'),
+    useVerificationToken: bind('useVerificationToken'),
+  }
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
