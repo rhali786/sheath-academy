@@ -21,6 +21,13 @@ jest.mock('next/navigation', () => ({
   useRouter: jest.fn(() => ({ push: jest.fn() })),
 }))
 
+jest.mock('next-auth/react', () => ({
+  useSession: jest.fn(() => ({
+    data: { user: { name: 'Aisha Parent', email: 'aisha@example.com' } },
+    status: 'authenticated',
+  })),
+}))
+
 jest.mock('@/features/dashboard/front/components/SchoolYearProgressCard', () => ({
   SchoolYearProgressCard: () => <div data-testid="school-year-progress-card" />,
 }))
@@ -66,7 +73,10 @@ jest.mock('@/features/dashboard/front/services/api', () => ({
         needsAttention: 2,
         quranLogged: '1 session',
         portfolioItems: 1,
-      }
+        tasksCompleted: 3,
+        tasksInProgress: 1,
+        tasksOverdue: 0,
+      },
     })),
     getProgress: jest.fn(() => Promise.resolve({ data: {} })),
     completeTask: jest.fn(),
@@ -129,17 +139,27 @@ describe('Dashboard Page Integration', () => {
     }, { timeout: 3000 })
   })
 
-  test('Dashboard shows Today tab content by default', async () => {
+  test('Dashboard shows hero grid with schedule and alerts rail', async () => {
     renderDashboard()
 
     await waitFor(() => {
       expect(screen.queryByText(/loading dashboard/i)).not.toBeInTheDocument()
     })
 
-    expect(screen.getByText(/Today's State/i)).toBeInTheDocument()
+    expect(screen.getByTestId('dashboard-hero-grid')).toBeInTheDocument()
+    expect(screen.getByTestId('dashboard-alerts-rail')).toBeInTheDocument()
+    expect(screen.getByTestId('today-schedule-panel')).toBeInTheDocument()
   })
 
-  test('ScheduleNowNextCard is rendered on the Today tab', async () => {
+  test('Dashboard shows task summary cards', async () => {
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('today-task-summary-cards')).toBeInTheDocument()
+    })
+  })
+
+  test('ScheduleNowNextCard is rendered inside the schedule panel', async () => {
     renderDashboard()
 
     await waitFor(() => {
@@ -149,16 +169,23 @@ describe('Dashboard Page Integration', () => {
     expect(screen.getByTestId('schedule-now-next-card')).toBeInTheDocument()
   })
 
-  test('child selector bar uses measured app header offset for sticky positioning', async () => {
+  test('child selector lives in the dashboard header', async () => {
     renderDashboard()
 
     await waitFor(() => {
       expect(screen.queryByText(/loading dashboard/i)).not.toBeInTheDocument()
     })
 
-    const stickyBar = document.querySelector('.top-app-header')
-    expect(stickyBar).toBeInTheDocument()
-    expect(stickyBar).toHaveClass('sticky')
+    expect(screen.getByTestId('dashboard-header')).toBeInTheDocument()
+    expect(screen.getByTestId('child-selector')).toBeInTheDocument()
+  })
+
+  test('more insights section keeps legacy widgets below the fold', async () => {
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dashboard-more-insights')).toBeInTheDocument()
+    })
   })
 
   test('DashboardProvider does not auto-select first child on load', async () => {

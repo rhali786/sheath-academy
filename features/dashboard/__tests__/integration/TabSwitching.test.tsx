@@ -13,6 +13,13 @@ jest.mock('next-auth/react', () => ({
   signOut: jest.fn(),
 }))
 
+jest.mock('next-auth/react', () => ({
+  useSession: jest.fn(() => ({
+    data: { user: { name: 'Aisha Parent', email: 'aisha@example.com' } },
+    status: 'authenticated',
+  })),
+}))
+
 jest.mock('next/navigation', () => ({
   usePathname: jest.fn(() => '/'),
   useRouter: jest.fn(() => ({ push: jest.fn() })),
@@ -63,6 +70,9 @@ jest.mock('@/features/dashboard/front/services/api', () => ({
         needsAttention: 2,
         quranLogged: '1 session',
         portfolioItems: 1,
+        tasksCompleted: 2,
+        tasksInProgress: 0,
+        tasksOverdue: 1,
       },
     })),
     getProgress: jest.fn(() => Promise.resolve({ data: {} })),
@@ -138,6 +148,6 @@ describe('Sidebar + Dashboard shell', () => {
   test('dashboard content renders on home route', async () => {
     renderWithShell()
     await waitForDashboard()
-    expect(screen.getByText("Today's State")).toBeInTheDocument()
+    expect(screen.getByTestId('dashboard-header')).toBeInTheDocument()
   })
 })

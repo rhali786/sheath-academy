@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { TodayState } from '../components/TodayState'
-import { TodayStatusSummary } from '../components/TodayStatusSummary'
 import { SchoolYearProgressCard } from '../components/SchoolYearProgressCard'
 import { DoToday } from '../components/DoToday'
 import { NeedsAttention } from '../components/NeedsAttention'
@@ -14,15 +12,16 @@ import { RecordsProof } from '../components/RecordsProof'
 import { IslamicCalendarCard } from '@/features/islamic-calendar/front/components/IslamicCalendarCard'
 import { getIslamicCalendarCountdowns } from '@/features/islamic-calendar/front/lib/countdowns'
 import { useIslamicReminderSettings } from '@/features/islamic-calendar/front/lib/useIslamicReminderSettings'
-import { ScheduleNowNextCard } from '@/features/schedule/front/components/ScheduleNowNextCard'
 import { buildDailySchedule } from '@/features/schedule/server/service'
 import { useContext_Dashboard } from '../context'
 import { useHousehold } from '@/features/household/front/context'
 import { HouseholdSetup } from '@/features/household/front/components/HouseholdSetup'
-import { ChildSelector } from '../components/ChildSelector'
 import { NextSetupStrip } from '@/features/setup/front/components/NextSetupStrip'
 import { plannerApi } from '@/features/plan/front/services/api'
 import { subjectsApi } from '@/features/subjects/front/services/api'
+import { DashboardHeader } from '../components/DashboardHeader'
+import { TodayTaskSummaryCards } from '../components/TodayTaskSummaryCards'
+import { TodaySchedulePanel } from '../components/TodaySchedulePanel'
 import type { LessonTask } from '@/features/plan/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import type { DaySchedule } from '@/features/schedule/types'
@@ -48,14 +47,10 @@ export default function Dashboard() {
   const [allLessons, setAllLessons] = useState<LessonTask[]>([])
   const [subjects, setSubjects] = useState<SubjectCourse[]>([])
 
-  // Compute Islamic calendar countdowns client-side (pure calculation, no API needed)
   const islamicCountdowns = useMemo(() => getIslamicCalendarCountdowns(getTodayStr()), [])
   const topCountdowns = islamicCountdowns.slice(0, 3)
-
-  // Reminder settings persisted in localStorage
   const { enabled: reminderEnabled } = useIslamicReminderSettings()
 
-  // Completed lessons this week — for WeeklyActivity and SubjectActivity
   const weeklyLessons = useMemo(() => {
     const today = new Date()
     const sunday = new Date(today)
@@ -71,7 +66,6 @@ export default function Dashboard() {
     })
   }, [allLessons])
 
-  // Today's schedule — for ScheduleNowNextCard
   const todaySchedule = useMemo((): DaySchedule => {
     const todayStr = getTodayStr()
     const todayLessons = allLessons
@@ -84,12 +78,10 @@ export default function Dashboard() {
     })
   }, [allLessons])
 
-  // Fetch subjects once
   useEffect(() => {
     subjectsApi.getSubjects().then(res => setSubjects(res.data)).catch(() => {})
   }, [])
 
-  // Fetch all lessons; derive weeklyLessons and todaySchedule via useMemo
   useEffect(() => {
     plannerApi.getLessons(undefined, selectedChildId ? [selectedChildId] : undefined)
       .then(lessons => setAllLessons(lessons))
@@ -131,71 +123,65 @@ export default function Dashboard() {
   return (
     <div className="bg-slate-50 min-h-screen">
       <NextSetupStrip />
+      <DashboardHeader />
+      <TodayTaskSummaryCards metrics={metrics} />
 
-          {/* Sticky child selector — stays visible while scrolling */}
-          <div className="sticky top-app-header z-40 bg-white border-b border-slate-100 shadow-sm">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex justify-end">
-              <ChildSelector />
-            </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3" data-testid="dashboard-hero-grid">
+          <div className="lg:col-span-2">
+            <TodaySchedulePanel schedule={todaySchedule} currentTime={getCurrentTime()} />
           </div>
-
-          <TodayStatusSummary metrics={metrics} />
-          <TodayState metrics={metrics} selectedChildId={selectedChildId} />
-
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <aside data-testid="dashboard-alerts-rail">
             <NeedsAttention alerts={alerts} />
-          </div>
+          </aside>
+        </div>
+      </div>
 
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-              {/* Left column: Do Today + Subject Activity */}
-              <div className="lg:col-span-2 space-y-6">
-                <DoToday />
-                <SubjectActivity
-                  lessons={weeklyLessons}
-                  subjects={subjects}
-                  children={studentProfiles}
-                  selectedChildId={selectedChildId}
-                />
-              </div>
-              {/* Right column: Schedule → School Year → Quran Streak → Islamic countdowns */}
-              <div className="space-y-6">
-                <ScheduleNowNextCard schedule={todaySchedule} currentTime={getCurrentTime()} />
-                <SchoolYearProgressCard />
-                <QuranStreak
-                  quranSessions={quranSessions}
-                  children={studentProfiles}
-                  selectedChildId={selectedChildId}
-                  onAddSession={addQuranSession}
-                />
-                {topCountdowns.filter(c => reminderEnabled[c.name]).map(c => (
-                  <IslamicCalendarCard
-                    key={c.id}
-                    event={c.name}
-                    daysUntil={c.daysUntil}
-                    description={c.description}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-            <WeeklyActivity
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6" data-testid="dashboard-more-insights">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
+            <DoToday />
+            <SubjectActivity
               lessons={weeklyLessons}
-              quranSessions={quranSessions}
+              subjects={subjects}
               children={studentProfiles}
               selectedChildId={selectedChildId}
             />
           </div>
-
-          <RecordsProof records={records} selectedChildId={selectedChildId} />
-
-          <div className="pb-6 text-center">
-            <Link href="/worklog" className="text-xs text-slate-300 hover:text-slate-400 transition-colors">
-              worklog
-            </Link>
+          <div className="space-y-6">
+            <SchoolYearProgressCard />
+            <QuranStreak
+              quranSessions={quranSessions}
+              children={studentProfiles}
+              selectedChildId={selectedChildId}
+              onAddSession={addQuranSession}
+            />
+            {topCountdowns.filter(c => reminderEnabled[c.name]).map(c => (
+              <IslamicCalendarCard
+                key={c.id}
+                event={c.name}
+                daysUntil={c.daysUntil}
+                description={c.description}
+              />
+            ))}
           </div>
+        </div>
+
+        <WeeklyActivity
+          lessons={weeklyLessons}
+          quranSessions={quranSessions}
+          children={studentProfiles}
+          selectedChildId={selectedChildId}
+        />
+
+        <RecordsProof records={records} selectedChildId={selectedChildId} />
+      </section>
+
+      <div className="pb-6 text-center">
+        <Link href="/worklog" className="text-xs text-slate-300 hover:text-slate-400 transition-colors">
+          worklog
+        </Link>
+      </div>
     </div>
   )
 }

@@ -106,6 +106,9 @@ export const mockMetrics: DashboardMetrics = {
   needsAttention: 3,
   quranLogged: '58 sessions',
   portfolioItems: 8,
+  tasksCompleted: 8,
+  tasksInProgress: 1,
+  tasksOverdue: 2,
 }
 
 export const mockProgressData = {

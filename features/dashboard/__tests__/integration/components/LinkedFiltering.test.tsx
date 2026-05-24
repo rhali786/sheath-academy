@@ -16,6 +16,9 @@ const mockMetrics: DashboardMetrics = {
   needsAttention: 3,
   quranLogged: '10 sessions',
   portfolioItems: 8,
+  tasksCompleted: 5,
+  tasksInProgress: 1,
+  tasksOverdue: 2,
 }
 
 const mockRecords: DashboardRecord[] = [

@@ -68,6 +68,9 @@ export interface DashboardMetrics {
   needsAttention: number
   quranLogged: string
   portfolioItems: number
+  tasksCompleted: number
+  tasksInProgress: number
+  tasksOverdue: number
 }
 
 export interface ApiResponse<T> {
