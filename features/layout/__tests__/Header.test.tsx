@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { Header } from '@/features/layout/front/components/Header'
 
 jest.mock('next-auth/react', () => ({
@@ -16,6 +16,8 @@ jest.mock('@/features/household/front/context', () => ({
   useHousehold: jest.fn(() => ({
     familyName: '',
     householdProfile: null,
+    studentProfiles: [],
+    allSubjects: [],
     needsSetup: false,
     loading: false,
     error: null,
@@ -44,6 +46,8 @@ const mockUseNavigation = useNavigation as jest.Mock
 const defaultHousehold = () => ({
   familyName: '',
   householdProfile: null,
+  studentProfiles: [],
+  allSubjects: [],
   needsSetup: false,
   loading: false,
   error: null,
@@ -280,6 +284,43 @@ describe('Header — Plan nav link', () => {
     expect(growthLinks.length).toBeGreaterThan(0)
     growthLinks.forEach((link) => {
       expect(link).toHaveAttribute('href', '/growth')
+    })
+  })
+})
+
+describe('Header — app header height sync', () => {
+  let resizeObserverCallback: ResizeObserverCallback | null = null
+
+  beforeEach(() => {
+    resizeObserverCallback = null
+    document.documentElement.style.removeProperty('--app-header-height')
+    class MockResizeObserver {
+      observe = jest.fn()
+      disconnect = jest.fn()
+      constructor(cb: ResizeObserverCallback) {
+        resizeObserverCallback = cb
+      }
+    }
+    global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
+  })
+
+  afterEach(() => {
+    document.documentElement.style.removeProperty('--app-header-height')
+  })
+
+  test('sets --app-header-height from the rendered header element', async () => {
+    render(<Header />)
+    const header = document.querySelector('header') as HTMLElement
+    Object.defineProperty(header, 'offsetHeight', {
+      configurable: true,
+      value: 118,
+    })
+    resizeObserverCallback?.([], {} as ResizeObserver)
+    await waitFor(() => {
+      expect(
+        document.documentElement.style.getPropertyValue('--app-header-height')
+      ).toBe('118px')
     })
   })
 })

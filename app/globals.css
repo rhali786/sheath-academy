@@ -8,6 +8,10 @@
   @apply box-border;
 }
 
+:root {
+  --app-header-height: 6.875rem;
+}
+
 html {
   @apply scroll-smooth;
   height: 100%;
@@ -25,6 +29,12 @@ a {
 
 button {
   @apply transition-colors duration-200;
+}
+
+@layer utilities {
+  .top-app-header {
+    top: var(--app-header-height);
+  }
 }
 
 /* ── Page titles — consistent h1 across all content pages ── */

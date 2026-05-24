@@ -152,6 +152,18 @@ describe('Dashboard Page Integration', () => {
     expect(screen.getByTestId('schedule-now-next-card')).toBeInTheDocument()
   })
 
+  test('child selector bar uses measured app header offset for sticky positioning', async () => {
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading dashboard/i)).not.toBeInTheDocument()
+    })
+
+    const stickyBar = document.querySelector('.top-app-header')
+    expect(stickyBar).toBeInTheDocument()
+    expect(stickyBar).toHaveClass('sticky')
+  })
+
   test('DashboardProvider does not auto-select first child on load', async () => {
     // DashboardProvider should NOT auto-select the first child when children load.
     // selectedChildId must remain null ("All children") after load.

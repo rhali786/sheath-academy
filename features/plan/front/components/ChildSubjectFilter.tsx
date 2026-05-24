@@ -39,7 +39,7 @@ export function ChildSubjectFilter() {
   const selectedSubjectCount = selectedSubjectIds.length
 
   return (
-    <div className="sticky top-[65px] z-20 bg-white border-b border-slate-200 shadow-sm">
+    <div className="sticky top-app-header z-20 bg-white border-b border-slate-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center gap-2 py-4">
           {/* Children filter */}
