@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect, FormEvent } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { signIn, getProviders } from 'next-auth/react'
+import { SheathLogo } from '@/features/layout/front/components/SheathLogo'
 
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === 'true'
 
@@ -95,9 +96,7 @@ function LoginForm() {
       <div className="w-full max-w-sm">
 
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-forest-900 flex items-center justify-center shadow-sm">
-            <span className="text-white text-lg font-bold leading-none" aria-hidden="true">ش</span>
-          </div>
+          <SheathLogo size={40} data-testid="sheath-logo" />
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Sheath Academy</h1>
         </div>
 

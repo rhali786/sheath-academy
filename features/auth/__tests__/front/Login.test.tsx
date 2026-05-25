@@ -22,6 +22,7 @@ describe('Login page — layout', () => {
   test('renders brand logo and Sheath Academy name', () => {
     render(<Login />)
     expect(screen.getByText('Sheath Academy')).toBeInTheDocument()
+    expect(screen.getByTestId('sheath-logo')).toBeInTheDocument()
   })
 
   test('renders email input field', () => {

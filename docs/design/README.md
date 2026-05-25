@@ -1,5 +1,13 @@
 # Design references
 
+## Brand mark (canonical)
+
+**Single source:** [`features/layout/front/components/SheathLogo.tsx`](../../features/layout/front/components/SheathLogo.tsx)
+
+All UI must import `SheathLogo` from that file. Static favicon: [`public/favicon.svg`](../../public/favicon.svg) — keep paths in sync (see comment in SVG).
+
+**Mockup reference:** [`dashboard-mockup-20260524.png`](./dashboard-mockup-20260524.png)
+
 ## Dashboard mockup (Waves 1–4)
 
 **File:** [`dashboard-mockup-20260524.png`](./dashboard-mockup-20260524.png)

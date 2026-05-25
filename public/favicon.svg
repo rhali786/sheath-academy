@@ -1,16 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
-  <!-- Background -->
-  <rect width="180" height="180" rx="40" fill="#3b82f6"/>
-
-  <!-- Book/Learning symbol -->
-  <g transform="translate(45, 45)">
-    <!-- Book pages -->
-    <path d="M 20 10 L 20 80 Q 20 90 30 90 L 70 90 Q 80 90 80 80 L 80 10"
-          fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-
-    <!-- Page lines -->
-    <line x1="35" y1="30" x2="65" y2="30" stroke="white" stroke-width="3" stroke-linecap="round"/>
-    <line x1="35" y1="45" x2="65" y2="45" stroke="white" stroke-width="3" stroke-linecap="round"/>
-    <line x1="35" y1="60" x2="55" y2="60" stroke="white" stroke-width="3" stroke-linecap="round"/>
-  </g>
+<!-- Canonical source: features/layout/front/components/SheathLogo.tsx -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <path d="M16 2.75L7.25 6.75V14.25C7.25 20.5 11.15 26.1 16 28.25C20.85 26.1 24.75 20.5 24.75 14.25V6.75L16 2.75Z" fill="#1a5c3a"/>
+  <path d="M16 9.25C13.4 10.85 12.35 13.35 12.6 16.1C12.85 18.35 14.25 20.75 16 22.35C17.75 20.75 19.15 18.35 19.4 16.1C19.65 13.35 18.6 10.85 16 9.25Z" fill="#ffffff"/>
+  <path d="M16 10.5V21.5" stroke="#ffffff" stroke-opacity="0.75" stroke-width="1.1" stroke-linecap="round"/>
 </svg>
