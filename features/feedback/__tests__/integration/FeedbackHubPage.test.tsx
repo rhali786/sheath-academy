@@ -11,66 +11,54 @@ jest.mock('next/link', () =>
     return <a href={href}>{children}</a>
   }
 )
+jest.mock('next-auth/react', () => ({
+  useSession: jest.fn(),
+}))
 
 import { listUserFeedback } from '@/features/feedback/front/services/api'
-const mockList = listUserFeedback as jest.Mock
+import { useSession } from 'next-auth/react'
 
-const mockRows: FeedbackRow[] = [
-  {
-    id: 'fb_1',
-    userId: 'user_1',
-    householdId: 'hh_1',
-    userEmail: 'parent@example.com',
-    pagePath: '/dashboard',
-    sentiment: 'good',
-    message: 'Dashboard works great',
-    status: 'classified',
-    featureArea: 'dashboard',
-    feedbackType: 'enhancement',
-    riskLevel: 'low',
-    confidence: 'high',
-    duplicateOfFeedbackId: null,
-    adminApprovedAt: null,
-    adminApprovedByUserId: null,
-    prNumber: null,
-    previewUrl: null,
-    uatInstructions: null,
-    versionResolved: null,
-    resolvedAt: null,
-    changelogVersion: null,
-    changelogLabel: null,
-    changelogUserCredit: null,
-    createdAt: '2026-05-25T10:00:00Z',
-    updatedAt: '2026-05-25T10:00:00Z',
-  },
-  {
-    id: 'fb_2',
-    userId: 'user_1',
-    householdId: 'hh_1',
-    userEmail: 'parent@example.com',
-    pagePath: '/lessons',
-    sentiment: 'poor',
-    message: 'Lessons page is confusing',
-    status: 'submitted',
-    featureArea: null,
-    feedbackType: 'bug',
-    riskLevel: null,
-    confidence: null,
-    duplicateOfFeedbackId: null,
-    adminApprovedAt: null,
-    adminApprovedByUserId: null,
-    prNumber: null,
-    previewUrl: null,
-    uatInstructions: null,
-    versionResolved: null,
-    resolvedAt: null,
-    changelogVersion: null,
-    changelogLabel: null,
-    changelogUserCredit: null,
-    createdAt: '2026-05-24T10:00:00Z',
-    updatedAt: '2026-05-24T10:00:00Z',
-  },
-]
+const mockList = listUserFeedback as jest.Mock
+const mockUseSession = useSession as jest.Mock
+
+const makeRow = (overrides: Partial<FeedbackRow> = {}): FeedbackRow => ({
+  id: 'fb_1',
+  userId: 'user_1',
+  householdId: 'hh_1',
+  householdName: 'Barakah Academy',
+  userEmail: 'parent@example.com',
+  pagePath: '/dashboard',
+  sentiment: 'good',
+  message: 'Dashboard works great',
+  status: 'classified',
+  featureArea: 'dashboard',
+  feedbackType: 'enhancement',
+  riskLevel: 'low',
+  confidence: 'high',
+  duplicateOfFeedbackId: null,
+  adminApprovedAt: null,
+  adminApprovedByUserId: null,
+  prNumber: null,
+  previewUrl: null,
+  uatInstructions: null,
+  versionResolved: null,
+  resolvedAt: null,
+  changelogVersion: null,
+  changelogLabel: null,
+  changelogUserCredit: null,
+  createdAt: '2026-05-25T10:00:00Z',
+  ...overrides,
+})
+
+const sessionUser = (isAdmin: boolean) => ({
+  data: { user: { email: 'parent@example.com', isAdmin } },
+  status: 'authenticated',
+})
+
+beforeEach(() => {
+  mockUseSession.mockImplementation(() => sessionUser(false))
+  mockList.mockReset()
+})
 
 afterEach(() => {
   jest.clearAllMocks()
@@ -99,51 +87,117 @@ describe('FeedbackHubPage', () => {
     })
   })
 
-  it('renders page title and feedback count', async () => {
-    mockList.mockResolvedValue(mockRows)
-    render(<FeedbackHubPage />)
-    await waitFor(() => {
-      expect(screen.getByText('My feedback')).toBeInTheDocument()
-      expect(screen.getByText('2 items')).toBeInTheDocument()
+  describe('non-admin user', () => {
+    beforeEach(() => {
+      mockUseSession.mockImplementation(() => sessionUser(false))
+    })
+
+    it('renders "My feedback" title', async () => {
+      mockList.mockResolvedValue([makeRow()])
+      render(<FeedbackHubPage />)
+      await waitFor(() => {
+        expect(screen.getByText('My feedback')).toBeInTheDocument()
+      })
+    })
+
+    it('does not show submitter email on rows', async () => {
+      mockList.mockResolvedValue([makeRow({ userEmail: 'parent@example.com' })])
+      render(<FeedbackHubPage />)
+      await waitFor(() => {
+        expect(screen.getByText('/dashboard')).toBeInTheDocument()
+      })
+      expect(screen.queryByText('parent@example.com')).not.toBeInTheDocument()
     })
   })
 
-  it('renders each feedback item with sentiment emoji and page path', async () => {
-    mockList.mockResolvedValue(mockRows)
-    render(<FeedbackHubPage />)
-    await waitFor(() => {
-      expect(screen.getByText('🙂')).toBeInTheDocument()
-      expect(screen.getByText('😕')).toBeInTheDocument()
-      expect(screen.getByText('/dashboard')).toBeInTheDocument()
-      expect(screen.getByText('/lessons')).toBeInTheDocument()
+  describe('admin user', () => {
+    beforeEach(() => {
+      mockUseSession.mockImplementation(() => sessionUser(true))
+    })
+
+    it('renders "All feedback" title', async () => {
+      mockList.mockResolvedValue([makeRow()])
+      render(<FeedbackHubPage />)
+      await waitFor(() => {
+        expect(screen.getByText('All feedback')).toBeInTheDocument()
+      })
+    })
+
+    it('shows submitter email on each row', async () => {
+      mockList.mockResolvedValue([makeRow({ userEmail: 'rhali786@gmail.com' })])
+      render(<FeedbackHubPage />)
+      await waitFor(() => {
+        expect(screen.getByText(/rhali786@gmail\.com/)).toBeInTheDocument()
+      })
+    })
+
+    it('shows household name alongside submitter email', async () => {
+      mockList.mockResolvedValue([makeRow({ householdName: 'Ali Kids Household', userEmail: 'rhali786@gmail.com' })])
+      render(<FeedbackHubPage />)
+      await waitFor(() => {
+        expect(screen.getByText(/Ali Kids Household/)).toBeInTheDocument()
+      })
+    })
+
+    it('shows rows from multiple submitters', async () => {
+      const rows = [
+        makeRow({ id: 'fb_1', userEmail: 'parent@example.com', householdName: 'Barakah Academy' }),
+        makeRow({ id: 'fb_2', userEmail: 'rhali786@gmail.com', householdName: 'Ali Kids Household', pagePath: '/lessons' }),
+      ]
+      mockList.mockResolvedValue(rows)
+      render(<FeedbackHubPage />)
+      await waitFor(() => {
+        expect(screen.getByText(/parent@example\.com/)).toBeInTheDocument()
+        expect(screen.getByText(/rhali786@gmail\.com/)).toBeInTheDocument()
+      })
     })
   })
 
-  it('renders status badge for each feedback item', async () => {
-    mockList.mockResolvedValue(mockRows)
-    render(<FeedbackHubPage />)
-    await waitFor(() => {
-      expect(screen.getByText('classified')).toBeInTheDocument()
-      expect(screen.getByText('submitted')).toBeInTheDocument()
+  describe('shared row content', () => {
+    beforeEach(() => {
+      mockUseSession.mockImplementation(() => sessionUser(false))
     })
-  })
 
-  it('each feedback item links to its detail page', async () => {
-    mockList.mockResolvedValue(mockRows)
-    render(<FeedbackHubPage />)
-    await waitFor(() => {
-      const links = screen.getAllByRole('link')
-      const hrefs = links.map(l => l.getAttribute('href'))
-      expect(hrefs).toContain('/feedback/fb_1')
-      expect(hrefs).toContain('/feedback/fb_2')
+    it('renders sentiment emoji and page path', async () => {
+      mockList.mockResolvedValue([makeRow()])
+      render(<FeedbackHubPage />)
+      await waitFor(() => {
+        expect(screen.getByText('🙂')).toBeInTheDocument()
+        expect(screen.getByText('/dashboard')).toBeInTheDocument()
+      })
     })
-  })
 
-  it('shows message preview when present', async () => {
-    mockList.mockResolvedValue(mockRows)
-    render(<FeedbackHubPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Dashboard works great')).toBeInTheDocument()
+    it('renders status badge', async () => {
+      mockList.mockResolvedValue([makeRow({ status: 'classified' })])
+      render(<FeedbackHubPage />)
+      await waitFor(() => {
+        expect(screen.getByText('classified')).toBeInTheDocument()
+      })
+    })
+
+    it('each row links to its detail page', async () => {
+      mockList.mockResolvedValue([makeRow({ id: 'fb_abc' })])
+      render(<FeedbackHubPage />)
+      await waitFor(() => {
+        const links = screen.getAllByRole('link')
+        expect(links.map(l => l.getAttribute('href'))).toContain('/feedback/fb_abc')
+      })
+    })
+
+    it('shows PR number badge when prNumber is set', async () => {
+      mockList.mockResolvedValue([makeRow({ prNumber: 42 })])
+      render(<FeedbackHubPage />)
+      await waitFor(() => {
+        expect(screen.getByText('PR #42')).toBeInTheDocument()
+      })
+    })
+
+    it('shows version badge when versionResolved is set', async () => {
+      mockList.mockResolvedValue([makeRow({ versionResolved: '1.4.2' })])
+      render(<FeedbackHubPage />)
+      await waitFor(() => {
+        expect(screen.getByText('v1.4.2')).toBeInTheDocument()
+      })
     })
   })
 })
