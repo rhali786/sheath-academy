@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 import type { FeedbackRow } from '@/features/feedback/types'
-import { getUserFeedback } from '../services/api'
+import { getUserFeedback, approveAdminFeedback } from '../services/api'
+import { isAppAdmin } from '@/features/lib/server/appAdmin'
 
-const SENTIMENT_EMOJI: Record<string, string> = {
-  bad: '😣',
-  poor: '😕',
-  okay: '😐',
-  good: '🙂',
-  great: '😄',
+const SENTIMENT_LABEL: Record<string, string> = {
+  bad: 'Bad 😣',
+  poor: 'Poor 😕',
+  okay: 'Okay 😐',
+  good: 'Good 🙂',
+  great: 'Great 😄',
 }
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -23,10 +25,24 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   cancelled: { bg: 'bg-red-100', text: 'text-red-700' },
 }
 
+function KV({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-0.5">{label}</p>
+      <p className="text-sm text-slate-800">{value}</p>
+    </div>
+  )
+}
+
 export function FeedbackDetailPage({ id }: { id: string }) {
   const [row, setRow] = useState<FeedbackRow | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [approving, setApproving] = useState(false)
+
+  const session = useSession()
+  const userEmail = session.data?.user?.email
+  const isAdmin = userEmail ? isAppAdmin(userEmail) : false
 
   useEffect(() => {
     getUserFeedback(id)
@@ -38,12 +54,28 @@ export function FeedbackDetailPage({ id }: { id: string }) {
       .finally(() => setLoading(false))
   }, [id])
 
+  async function handleApprove() {
+    if (!row) return
+    setApproving(true)
+    try {
+      await approveAdminFeedback(row.id)
+      setRow(prev =>
+        prev ? { ...prev, status: 'classified', adminApprovedAt: new Date().toISOString() } : prev
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Approval failed')
+    } finally {
+      setApproving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="animate-pulse space-y-4">
           <div className="bg-slate-200 h-8 rounded w-32" />
           <div className="bg-slate-200 h-40 rounded-lg" />
+          <div className="bg-slate-200 h-24 rounded-lg" />
         </div>
       </div>
     )
@@ -63,62 +95,69 @@ export function FeedbackDetailPage({ id }: { id: string }) {
   }
 
   const statusColor = STATUS_COLORS[row.status] ?? STATUS_COLORS.submitted
-  const emoji = SENTIMENT_EMOJI[row.sentiment] ?? '😐'
+  const sentimentLabel = SENTIMENT_LABEL[row.sentiment] ?? row.sentiment
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-4">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5 py-4">
       <div>
         <Link href="/feedback" className="text-sm text-slate-500 hover:text-slate-700">
-          ← Back
+          ← Back to my feedback
         </Link>
-        <h1 className="page-title mt-2">Feedback detail</h1>
-      </div>
-
-      <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="text-2xl flex-shrink-0">{emoji}</span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-900">{row.pagePath}</p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {new Date(row.createdAt).toLocaleDateString()}
-              </p>
-            </div>
-          </div>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap flex-shrink-0 ${statusColor.bg} ${statusColor.text}`}>
+        <div className="flex items-start justify-between gap-4 mt-2">
+          <h1 className="page-title">Feedback detail</h1>
+          <span
+            className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap flex-shrink-0 ${statusColor.bg} ${statusColor.text}`}
+          >
             {row.status.replace(/_/g, ' ')}
           </span>
         </div>
+      </div>
 
-        {/* Message */}
+      {/* Core submission fields */}
+      <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <KV label="Page" value={row.pagePath} />
+          <KV label="Submitted" value={new Date(row.createdAt).toLocaleDateString()} />
+          <KV label="Sentiment" value={sentimentLabel} />
+        </div>
         {row.message && (
           <div>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Your message</p>
             <p className="text-sm text-slate-700 whitespace-pre-wrap">{row.message}</p>
           </div>
         )}
-
-        {/* Metadata */}
-        {(row.feedbackType || row.featureArea || row.confidence || row.riskLevel) && (
-          <div className="flex flex-wrap gap-2">
-            {row.feedbackType && (
-              <span className="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded">{row.feedbackType}</span>
-            )}
-            {row.featureArea && (
-              <span className="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded">{row.featureArea}</span>
-            )}
-            {row.confidence && (
-              <span className="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded">Confidence: {row.confidence}</span>
-            )}
-            {row.riskLevel && (
-              <span className="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded">Risk: {row.riskLevel}</span>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* PR info */}
+      {/* Classification */}
+      {(row.feedbackType || row.featureArea || row.confidence || row.riskLevel) && (
+        <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-3">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Classification</p>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {row.feedbackType && <KV label="Type" value={row.feedbackType} />}
+            {row.featureArea && <KV label="Feature area" value={row.featureArea} />}
+            {row.confidence && <KV label="Confidence" value={row.confidence} />}
+            {row.riskLevel && <KV label="Risk" value={row.riskLevel} />}
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate callout */}
+      {row.duplicateOfFeedbackId && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <p className="text-sm text-amber-800">
+            This feedback was merged into{' '}
+            <Link
+              href={`/feedback/${row.duplicateOfFeedbackId}`}
+              className="font-semibold underline hover:text-amber-900"
+            >
+              another submission
+            </Link>
+            .
+          </p>
+        </div>
+      )}
+
+      {/* In review / PR */}
       {row.prNumber && (
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-2">
           <p className="text-sm font-semibold text-purple-900">In review — PR #{row.prNumber}</p>
@@ -134,7 +173,7 @@ export function FeedbackDetailPage({ id }: { id: string }) {
           )}
           {row.uatInstructions && (
             <div className="pt-2 border-t border-purple-200">
-              <p className="text-xs font-semibold text-purple-700 mb-1">UAT Instructions</p>
+              <p className="text-xs font-semibold text-purple-700 mb-1">How to test</p>
               <p className="text-sm text-purple-800 whitespace-pre-wrap">{row.uatInstructions}</p>
             </div>
           )}
@@ -143,12 +182,51 @@ export function FeedbackDetailPage({ id }: { id: string }) {
 
       {/* Shipped */}
       {row.versionResolved && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <p className="text-sm font-semibold text-green-900">
-            Shipped in {row.versionResolved}
-          </p>
-          {row.changelogLabel && (
-            <p className="text-sm text-green-700 mt-1">{row.changelogLabel}</p>
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
+          <p className="text-sm font-semibold text-green-900">Shipped in {row.versionResolved}</p>
+          {row.changelogLabel && <p className="text-sm text-green-700">{row.changelogLabel}</p>}
+          {(row.changelogVersion || row.changelogUserCredit) && (
+            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-green-200">
+              {row.changelogVersion && <KV label="Changelog version" value={row.changelogVersion} />}
+              {row.changelogUserCredit && <KV label="Credit" value={row.changelogUserCredit} />}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Admin-only section */}
+      {isAdmin && (
+        <div className="bg-slate-50 border border-slate-300 rounded-lg p-5 space-y-4">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Admin details</p>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <KV label="User email" value={row.userEmail} />
+            {row.userId && <KV label="User ID" value={row.userId} />}
+            {row.householdId && <KV label="Household ID" value={row.householdId} />}
+          </div>
+
+          {(row.adminApprovedAt || row.adminApprovedByUserId) && (
+            <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-200">
+              {row.adminApprovedAt && (
+                <KV label="Approved at" value={new Date(row.adminApprovedAt).toLocaleString()} />
+              )}
+              {row.adminApprovedByUserId && (
+                <KV label="Approved by" value={row.adminApprovedByUserId} />
+              )}
+            </div>
+          )}
+
+          {row.status === 'awaiting_approval' && !row.adminApprovedAt && (
+            <div className="pt-3 border-t border-slate-200">
+              <button
+                onClick={handleApprove}
+                disabled={approving}
+                aria-label="Approve this feedback for planning"
+                className="px-4 py-2 bg-forest-700 text-white text-sm font-medium rounded-lg hover:bg-forest-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {approving ? 'Approving…' : 'Approve for planning'}
+              </button>
+            </div>
           )}
         </div>
       )}

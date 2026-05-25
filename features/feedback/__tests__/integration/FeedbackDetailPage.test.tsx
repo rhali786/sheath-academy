@@ -76,7 +76,7 @@ describe('FeedbackDetailPage', () => {
     mockGet.mockResolvedValue(mockRow)
     render(<FeedbackDetailPage id="fb_1" />)
     await waitFor(() => {
-      expect(screen.getByText('🙂')).toBeInTheDocument()
+      expect(screen.getByText('Good 🙂')).toBeInTheDocument()
       expect(screen.getByText('/dashboard')).toBeInTheDocument()
     })
   })

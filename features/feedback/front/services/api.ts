@@ -32,6 +32,14 @@ export async function getUserFeedback(id: string): Promise<FeedbackRow> {
   return (body as { data: FeedbackRow }).data
 }
 
+export async function approveAdminFeedback(id: string): Promise<void> {
+  const res = await fetch(`/api/admin/feedback/${id}/approve`, { method: 'POST' })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { message?: string }).message ?? 'Approval failed')
+  }
+}
+
 export async function listAdminFeedback(): Promise<FeedbackRow[]> {
   const res = await fetch('/api/admin/feedback')
   if (!res.ok) {

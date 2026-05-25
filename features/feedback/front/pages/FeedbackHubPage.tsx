@@ -95,9 +95,21 @@ export function FeedbackHubPage() {
                       </p>
                     </div>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${statusColor.bg} ${statusColor.text}`}>
-                    {row.status.replace(/_/g, ' ')}
-                  </span>
+                  <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${statusColor.bg} ${statusColor.text}`}>
+                      {row.status.replace(/_/g, ' ')}
+                    </span>
+                    {row.prNumber && (
+                      <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded font-medium">
+                        PR #{row.prNumber}
+                      </span>
+                    )}
+                    {row.versionResolved && (
+                      <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded font-medium">
+                        v{row.versionResolved}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </Link>
             )

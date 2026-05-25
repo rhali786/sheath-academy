@@ -16,6 +16,8 @@ import {
   Shield,
   Info,
   Layers3,
+  MessageCircle,
+  Inbox,
 } from 'lucide-react'
 
 export const NAV_ICONS: Record<string, LucideIcon> = {
@@ -35,6 +37,8 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   settings: Settings,
   admin: Shield,
   about: Info,
+  'my-feedback': MessageCircle,
+  'feedback-queue': Inbox,
 }
 
 export function getNavIcon(id: string): LucideIcon | undefined {
