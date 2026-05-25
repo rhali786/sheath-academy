@@ -1,7 +1,11 @@
 import { spawnSync } from 'child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import * as path from 'path'
-import { listEligibleFeedbackForDailyRun, type DailyRunEligibilityResult } from '@/features/feedback/server/service'
+import {
+  listEligibleFeedbackForDailyRun,
+  markFeedbackAttachedToPr,
+  type DailyRunEligibilityResult,
+} from '@/features/feedback/server/service'
 import type { FeedbackType, FeedbackRow } from '@/features/feedback/types'
 
 export interface DailyPlanWorkstream {
@@ -39,6 +43,25 @@ export interface RunDailyResult {
   plan: DailyPlanArtifact
   jsonArtifactPath: string
   markdownArtifactPath: string
+  execution?: ExecutePlanOutput
+}
+
+export interface ExecutePlanOutput {
+  status: 'success'
+  branchName: string
+  prNumber: number
+  prTitle: string
+  prBody: string
+  previewUrl: string | null
+  testsRun: string[]
+  feedbackUpdates: Record<
+    string,
+    {
+      uatInstructions: string
+      changelogLabel: string | null
+      changelogUserCredit: string | null
+    }
+  >
 }
 
 const DAILY_PLAN_OUTPUT_SCHEMA = {
@@ -142,6 +165,62 @@ function validateWorkstream(value: unknown): DailyPlanWorkstream | null {
   }
 }
 
+function validateExecutePlanOutput(value: unknown, feedbackIds: string[]): ExecutePlanOutput | null {
+  if (!isRecord(value)) return null
+  if (value.status !== 'success') return null
+  if (typeof value.branchName !== 'string' || value.branchName.trim().length === 0) return null
+  if (typeof value.prNumber !== 'number' || !Number.isInteger(value.prNumber) || value.prNumber <= 0) return null
+  if (typeof value.prTitle !== 'string' || value.prTitle.trim().length === 0) return null
+  if (typeof value.prBody !== 'string' || value.prBody.trim().length === 0) return null
+  if (!(value.previewUrl === null || (typeof value.previewUrl === 'string' && value.previewUrl.trim().length > 0))) return null
+  if (!isStringArray(value.testsRun, { minItems: 1 })) return null
+  if (!isRecord(value.feedbackUpdates)) return null
+
+  const feedbackUpdates: ExecutePlanOutput['feedbackUpdates'] = {}
+  for (const feedbackId of feedbackIds) {
+    const update = value.feedbackUpdates[feedbackId]
+    if (!isRecord(update)) return null
+    if (typeof update.uatInstructions !== 'string' || update.uatInstructions.trim().length === 0) return null
+    if (
+      !(
+        update.changelogLabel === null ||
+        update.changelogLabel === undefined ||
+        (typeof update.changelogLabel === 'string' && update.changelogLabel.trim().length > 0)
+      )
+    ) {
+      return null
+    }
+    if (
+      !(
+        update.changelogUserCredit === null ||
+        update.changelogUserCredit === undefined ||
+        (typeof update.changelogUserCredit === 'string' && update.changelogUserCredit.trim().length > 0)
+      )
+    ) {
+      return null
+    }
+
+    feedbackUpdates[feedbackId] = {
+      uatInstructions: update.uatInstructions.trim(),
+      changelogLabel:
+        typeof update.changelogLabel === 'string' ? update.changelogLabel.trim() : null,
+      changelogUserCredit:
+        typeof update.changelogUserCredit === 'string' ? update.changelogUserCredit.trim() : null,
+    }
+  }
+
+  return {
+    status: 'success',
+    branchName: value.branchName.trim(),
+    prNumber: value.prNumber,
+    prTitle: value.prTitle.trim(),
+    prBody: value.prBody.trim(),
+    previewUrl: typeof value.previewUrl === 'string' ? value.previewUrl.trim() : null,
+    testsRun: value.testsRun.map((entry) => entry.trim()),
+    feedbackUpdates,
+  }
+}
+
 function validateDailyPlanArtifact(value: unknown): DailyPlanArtifact | null {
   if (!isRecord(value)) return null
   if (value.version !== 1) return null
@@ -198,6 +277,32 @@ export function parseDailyPlanOutput(raw: string): DailyPlanArtifact | null {
   return null
 }
 
+function parseExecutePlanOutput(raw: string, feedbackIds: string[]): ExecutePlanOutput | null {
+  const parsed = tryParseJson(raw)
+  if (parsed === null) return null
+
+  const candidates: unknown[] = [parsed]
+
+  if (isRecord(parsed)) {
+    if (typeof parsed.text === 'string') {
+      candidates.push(tryParseJson(parsed.text))
+    }
+
+    if (typeof parsed.result === 'string') {
+      candidates.push(tryParseJson(parsed.result))
+    } else if (isRecord(parsed.result)) {
+      candidates.push(parsed.result)
+    }
+  }
+
+  for (const candidate of candidates) {
+    const execution = validateExecutePlanOutput(candidate, feedbackIds)
+    if (execution) return execution
+  }
+
+  return null
+}
+
 function getClaudeCommand(): string {
   return process.platform === 'win32' ? 'claude.cmd' : 'claude'
 }
@@ -228,6 +333,26 @@ function buildDailyPlanPrompt(eligibility: DailyRunEligibilityResult, generatedA
           approvedIds: eligibility.approvedIds,
         },
         rows: eligibility.rows,
+      },
+      null,
+      2,
+    ),
+  ].join('\n\n')
+}
+
+function buildExecutePrompt(
+  plan: DailyPlanArtifact,
+  jsonArtifactPath: string,
+  markdownArtifactPath: string,
+): string {
+  return [
+    'Execute this grouped feedback plan for Sheath Academy.',
+    'Write failing tests first where needed, then implement, run tests, and create or update a PR against dev.',
+    JSON.stringify(
+      {
+        jsonArtifactPath,
+        markdownArtifactPath,
+        plan,
       },
       null,
       2,
@@ -267,6 +392,43 @@ function generateDailyPlan(eligibility: DailyRunEligibilityResult, generatedAt: 
   const parsed = parseDailyPlanOutput(result.stdout)
   if (!parsed) {
     throw new Error('Invalid daily plan output')
+  }
+
+  return parsed
+}
+
+function executeDailyPlan(
+  plan: DailyPlanArtifact,
+  jsonArtifactPath: string,
+  markdownArtifactPath: string,
+): ExecutePlanOutput {
+  const skillPath = path.join(process.cwd(), '.claude', 'feedback-execute.md')
+  const skillPrompt = readFileSync(skillPath, 'utf8')
+
+  const result = spawnSync(
+    getClaudeCommand(),
+    [
+      '-p',
+      '--output-format',
+      'json',
+      '--append-system-prompt',
+      skillPrompt,
+      buildExecutePrompt(plan, jsonArtifactPath, markdownArtifactPath),
+    ],
+    { encoding: 'utf8', input: '', timeout: 300_000 },
+  )
+
+  if (result.error) {
+    throw result.error
+  }
+
+  if (typeof result.status === 'number' && result.status !== 0) {
+    throw new Error(result.stderr.trim() || `claude exited with status ${result.status}`)
+  }
+
+  const parsed = parseExecutePlanOutput(result.stdout, plan.feedbackIds)
+  if (!parsed) {
+    throw new Error('Invalid execute output')
   }
 
   return parsed
@@ -347,12 +509,18 @@ export async function runDaily(options: RunDailyOptions): Promise<RunDailyResult
 
   const dateStamp = toDateStamp(now)
   const timeStamp = toTimeStamp(now)
-  const jsonArtifactPath = path.join(process.cwd(), 'tmp', 'feedback-steward', `${generatedAt.replace(/[:.]/g, '-')}-plan.json`)
+  const artifactBaseName = `${dateStamp}-${timeStamp}-steward-grouped-plan`
+  const jsonArtifactPath = path.join(
+    process.cwd(),
+    'docs',
+    'bug_enhancement',
+    `${artifactBaseName}.json`,
+  )
   const markdownArtifactPath = path.join(
     process.cwd(),
     'docs',
     'bug_enhancement',
-    `${dateStamp}-${timeStamp}-steward-grouped-plan.md`,
+    `${artifactBaseName}.md`,
   )
 
   ensureParentDir(jsonArtifactPath)
@@ -362,7 +530,27 @@ export async function runDaily(options: RunDailyOptions): Promise<RunDailyResult
   writeFileSync(markdownArtifactPath, renderDailyPlanMarkdown(plan, eligibility), 'utf8')
 
   if (!options.dryRun) {
-    throw new Error('Live run-daily execution is not implemented yet; re-run with --dry-run')
+    const execution = executeDailyPlan(plan, jsonArtifactPath, markdownArtifactPath)
+
+    for (const feedbackId of plan.feedbackIds) {
+      const update = execution.feedbackUpdates[feedbackId]
+      await markFeedbackAttachedToPr(feedbackId, {
+        prNumber: execution.prNumber,
+        previewUrl: execution.previewUrl,
+        uatInstructions: update.uatInstructions,
+        changelogLabel: update.changelogLabel,
+        changelogUserCredit: update.changelogUserCredit,
+      })
+    }
+
+    return {
+      dryRun: false,
+      eligibility,
+      plan,
+      jsonArtifactPath,
+      markdownArtifactPath,
+      execution,
+    }
   }
 
   return {

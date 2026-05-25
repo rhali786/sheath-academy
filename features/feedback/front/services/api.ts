@@ -1,4 +1,4 @@
-import type { FeedbackSubmitInput, FeedbackRow } from '@/features/feedback/types'
+import type { AdminFeedbackFilters, FeedbackSubmitInput, FeedbackRow } from '@/features/feedback/types'
 
 export async function submitFeedback(input: FeedbackSubmitInput): Promise<void> {
   const res = await fetch('/api/feedback', {
@@ -40,8 +40,18 @@ export async function approveAdminFeedback(id: string): Promise<void> {
   }
 }
 
-export async function listAdminFeedback(): Promise<FeedbackRow[]> {
-  const res = await fetch('/api/admin/feedback')
+export async function listAdminFeedback(filters: Partial<AdminFeedbackFilters> = {}): Promise<FeedbackRow[]> {
+  const params = new URLSearchParams()
+  if (filters.status) params.set('status', filters.status)
+  if (filters.confidence) params.set('confidence', filters.confidence)
+  if (filters.riskLevel) params.set('riskLevel', filters.riskLevel)
+  if (filters.feedbackType) params.set('feedbackType', filters.feedbackType)
+  if (filters.featureArea) params.set('featureArea', filters.featureArea)
+  if (filters.prNumber !== undefined) params.set('prNumber', String(filters.prNumber))
+  if (filters.hasDuplicate === true) params.set('hasDuplicate', 'true')
+
+  const query = params.toString()
+  const res = await fetch(query ? `/api/admin/feedback?${query}` : '/api/admin/feedback')
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     const err = Object.assign(

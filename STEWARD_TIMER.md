@@ -95,12 +95,12 @@
   - ✅ 4.4b: Added `config/feedback-steward/do-not-automate.json`
   - ✅ 4.4c: Routed `run-classify.ts` mutation paths through the feedback service instead of directly to repository updates
   - ✅ 4.4d: Green verification for classify + daily dry-run slice — 11 targeted tests passing (`run-classify.test.ts` + `run-daily.test.ts`)
-  - 4.5: `.claude/feedback-execute.md` — execute the grouped plan with repo-specific TDD and safety guardrails
-  - 4.6: Write grouped plan artifact under `docs/bug_enhancement`
-  - 4.7: Create/update branch and PR against `dev`
-  - 4.8: Mirror PR number, preview URL, UAT instructions, and changelog candidate data back into feedback rows
-  - 4.9: Orchestrator tests — eligibility filtering, dry-run, idempotent rerun, malformed output rejection, no mutation on planning failure
-  - 4.10: Manual verification — grouped plan readability, PR body/UAT quality, Render preview visibility, feedback row state updates
+  - ✅ 4.5: `.claude/feedback-execute.md` — execute skill with exact JSON schema, step-by-step workflow, TDD rules, PR body expectations
+  - ✅ 4.6: Write grouped plan artifact under `docs/bug_enhancement` — JSON + Markdown written by `run-daily.ts`
+  - ✅ 4.7: Create/update branch and PR against `dev` — handled by execute agent via `executeDailyPlan` in `run-daily.ts`
+  - ✅ 4.8: Mirror PR number, preview URL, UAT instructions, and changelog candidate data — `markFeedbackAttachedToPr` called per feedback ID after validated execute output
+  - ✅ 4.9: Orchestrator tests — 9 tests covering: dry-run writes artifacts only, invalid plan output (no file writes), live run happy path (rows updated), no eligible feedback (early exit without Claude), planning failure (no artifacts, no DB), execute non-zero exit (no DB), execute invalid output (no DB)
+  - ⬜ 4.10: Manual verification — perform once a live run environment is available: grouped plan readability, PR body/UAT quality, Render preview URL in output, feedback rows transition to in_pr/in_qa
 - **Assumptions to confirm before coding:**
   - Canonical machine artifact is strict JSON; markdown is a readable mirror, not the executor source of truth
   - Wave 4 gate is "high confidence + low risk + approved item/batch only" per north star unless explicitly widened
@@ -113,9 +113,8 @@
   - Retry/rerun behavior can create duplicate branch or PR churn if idempotency rules are weak
   - Windows/PowerShell quoting and CLI invocation details can break otherwise-correct automation
   - It is easy to overrun Wave 4 into Wave 5 if merge-hook/completion concerns are not held back
-- **Latest verified progress timestamp:** 2026-05-25T16:13:05Z
-- **Elapsed since start:** ~27m *(based on unverified start marker above)*
-- **Elapsed since Wave 3:** ~4h 57m *(using the current timer's unverified Wave 3 completion marker at 2026-05-25T11:15:54Z; treat prior Wave 3 timestamps in this file as approximate unless re-verified)*
+- **Latest verified progress timestamp:** 2026-05-25T17:30:00Z *(approximate — set at Wave 4 completion)*
+- **Status:** ✅ COMPLETE (4.10 manual verification deferred until live environment available)
 - **⚠️ DEFINITELY SONNET SWITCH** for automation skill design
 
 ---

@@ -1,8 +1,10 @@
 import {
   getFeedbackById,
   listFeedbackForAdmin,
+  listUnclassifiedFeedback,
   recordFeedbackApproval,
   updateFeedbackTriage,
+  updateFeedbackWorkflow,
 } from '@/features/feedback/server/repository'
 import type {
   FeedbackConfidence,
@@ -10,6 +12,7 @@ import type {
   FeedbackRow,
   FeedbackTriageUpdate,
   FeedbackType,
+  FeedbackWorkflowUpdate,
 } from '@/features/feedback/types'
 
 export interface ClassifyDecision {
@@ -116,4 +119,32 @@ export async function listEligibleFeedbackForDailyRun(
     approvedIds: eligibleRows.filter((row) => !!row.adminApprovedAt).map((row) => row.id),
     rows: eligibleRows,
   }
+}
+
+export async function listSubmittedFeedbackForClassification(): Promise<FeedbackRow[]> {
+  return listUnclassifiedFeedback()
+}
+
+export interface FeedbackPrSyncInput {
+  prNumber: number
+  previewUrl?: string | null
+  uatInstructions?: string | null
+  changelogLabel?: string | null
+  changelogUserCredit?: string | null
+}
+
+export async function markFeedbackAttachedToPr(id: string, data: FeedbackPrSyncInput): Promise<void> {
+  const status =
+    data.previewUrl && data.uatInstructions && data.uatInstructions.trim().length > 0 ? 'in_qa' : 'in_pr'
+
+  const workflowUpdate: FeedbackWorkflowUpdate = {
+    status,
+    prNumber: data.prNumber,
+    previewUrl: data.previewUrl ?? null,
+    uatInstructions: data.uatInstructions ?? null,
+    changelogLabel: data.changelogLabel ?? null,
+    changelogUserCredit: data.changelogUserCredit ?? null,
+  }
+
+  await updateFeedbackWorkflow(id, workflowUpdate)
 }
