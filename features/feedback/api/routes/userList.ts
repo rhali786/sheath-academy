@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
+import { isAppAdmin } from '@/features/lib/server/appAdmin'
 import type { ApiResponse } from '@/features/lib/types'
 import type { FeedbackRow } from '@/features/feedback/types'
-import { listFeedbackByUserId } from '@/features/feedback/server/repository'
+import { listFeedbackByUserId, listFeedbackForAdmin } from '@/features/feedback/server/repository'
 
 export async function GET(request: Request): Promise<Response> {
-  const { userId } = getRequestAuthCtx()
+  const { userId, email } = getRequestAuthCtx()
   if (!userId) {
     return NextResponse.json(
       { status: 'error', data: null, message: 'Unauthorized', timestamp: new Date().toISOString() },
@@ -13,7 +14,9 @@ export async function GET(request: Request): Promise<Response> {
     )
   }
 
-  const rows = await listFeedbackByUserId(userId)
+  const rows = isAppAdmin(email)
+    ? await listFeedbackForAdmin()
+    : await listFeedbackByUserId(userId)
 
   return NextResponse.json({
     status: 'success',

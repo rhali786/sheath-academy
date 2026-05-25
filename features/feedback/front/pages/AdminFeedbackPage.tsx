@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import type { FeedbackRow } from '@/features/feedback/types'
 import { ApprovalModal } from '../components/ApprovalModal'
 
@@ -237,6 +238,22 @@ export function AdminFeedbackPage() {
                       Risk: {row.riskLevel}
                     </span>
                   )}
+                </div>
+
+                {/* Submitter info */}
+                <div className="flex items-center justify-between gap-4 pt-2 border-t border-slate-100">
+                  <div className="text-xs text-slate-500 min-w-0">
+                    <span className="font-medium text-slate-700">{row.userEmail}</span>
+                    {row.householdName && (
+                      <span className="ml-2 text-slate-400">· {row.householdName}</span>
+                    )}
+                  </div>
+                  <Link
+                    href={`/feedback/${row.id}`}
+                    className="text-xs text-forest-700 hover:underline whitespace-nowrap flex-shrink-0"
+                  >
+                    View detail →
+                  </Link>
                 </div>
 
                 {/* UAT instructions */}

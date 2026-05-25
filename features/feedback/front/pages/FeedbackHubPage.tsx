@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 import type { FeedbackRow } from '@/features/feedback/types'
 import { listUserFeedback } from '../services/api'
 
@@ -27,6 +28,8 @@ export function FeedbackHubPage() {
   const [rows, setRows] = useState<FeedbackRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const session = useSession()
+  const isAdmin = session.data?.user?.isAdmin === true
 
   useEffect(() => {
     listUserFeedback()
@@ -63,7 +66,7 @@ export function FeedbackHubPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-4">
       <div>
-        <h1 className="page-title">My feedback</h1>
+        <h1 className="page-title">{isAdmin ? 'All feedback' : 'My feedback'}</h1>
         <p className="text-sm text-slate-600 mt-1">{rows.length} items</p>
       </div>
 
@@ -93,6 +96,11 @@ export function FeedbackHubPage() {
                       <p className="text-xs text-slate-400 mt-0.5">
                         {new Date(row.createdAt).toLocaleString()}
                       </p>
+                      {isAdmin && (
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {row.userEmail}{row.householdName ? ` · ${row.householdName}` : ''}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
