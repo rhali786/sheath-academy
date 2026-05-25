@@ -1,9 +1,21 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import type { DaySchedule, ScheduleBlock } from '@/features/schedule/types'
 import type { LessonTask } from '@/features/plan/types'
 import { ScheduleNowNextCard } from '@/features/schedule/front/components/ScheduleNowNextCard'
 import { SchedulePage } from '@/features/schedule/front/pages/SchedulePage'
+
+jest.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+}))
+
+jest.mock('@/features/plan/front/services/api', () => ({
+  plannerApi: { getLessons: jest.fn() },
+}))
+
+jest.mock('@/features/household/front/context', () => ({
+  useHousehold: jest.fn(),
+}))
 
 jest.mock('@/features/schedule/front/components/ScheduleTimeline', () => ({
   ScheduleTimeline: ({ schedule }: { schedule: { blocks: { lesson: { title: string }; startTime: string }[] } }) => (
@@ -17,6 +29,12 @@ jest.mock('@/features/schedule/front/components/ScheduleTimeline', () => ({
     </div>
   ),
 }))
+
+import { plannerApi } from '@/features/plan/front/services/api'
+import { useHousehold } from '@/features/household/front/context'
+
+const mockGetLessons = plannerApi.getLessons as jest.Mock
+const mockUseHousehold = useHousehold as jest.Mock
 
 function makeLesson(id: string, title: string): LessonTask {
   return {
@@ -117,18 +135,40 @@ describe('ScheduleNowNextCard', () => {
 })
 
 describe('SchedulePage', () => {
-  it('renders schedule timeline with block start times', () => {
-    render(<SchedulePage schedule={threeBlockSchedule} />)
-    expect(screen.getByTestId('schedule-timeline')).toBeInTheDocument()
-    expect(screen.getByText('08:30')).toBeInTheDocument()
-    expect(screen.getByText('09:10')).toBeInTheDocument()
-    expect(screen.getByText('09:50')).toBeInTheDocument()
+  beforeEach(() => {
+    mockUseHousehold.mockImplementation(() => ({ allSubjects: [] }))
+    mockGetLessons.mockResolvedValue([])
   })
 
-  it('renders all 3 lesson titles', () => {
-    render(<SchedulePage schedule={threeBlockSchedule} />)
-    expect(screen.getByText(/Quran/i)).toBeInTheDocument()
-    expect(screen.getByText(/Math/i)).toBeInTheDocument()
-    expect(screen.getByText(/English Reading/i)).toBeInTheDocument()
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('shows loading state initially', () => {
+    mockGetLessons.mockReturnValue(new Promise(() => {}))
+    render(<SchedulePage />)
+    expect(screen.getByText(/loading/i)).toBeInTheDocument()
+  })
+
+  it('renders schedule timeline after lessons load', async () => {
+    mockGetLessons.mockResolvedValue([])
+    render(<SchedulePage />)
+    await waitFor(() => {
+      expect(screen.getByTestId('schedule-timeline')).toBeInTheDocument()
+    })
+  })
+
+  it('renders lesson titles in the timeline', async () => {
+    const today = new Date()
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    mockGetLessons.mockResolvedValue([
+      { id: 'l1', childId: 'c1', subjectId: 's1', householdId: 'h1', title: 'Quran', dueDate: todayStr, status: 'not_started', order: 1, estimatedDuration: '30min', createdAt: '', updatedAt: '' },
+      { id: 'l2', childId: 'c1', subjectId: 's1', householdId: 'h1', title: 'Math', dueDate: todayStr, status: 'not_started', order: 2, estimatedDuration: '30min', createdAt: '', updatedAt: '' },
+    ])
+    render(<SchedulePage />)
+    await waitFor(() => {
+      expect(screen.getByText(/Quran/i)).toBeInTheDocument()
+      expect(screen.getByText(/Math/i)).toBeInTheDocument()
+    })
   })
 })
