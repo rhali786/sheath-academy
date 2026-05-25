@@ -12,14 +12,17 @@ jest.mock('next-auth/react', () => ({
 }))
 
 import { usePathname, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
 const mockUsePathname = usePathname as jest.Mock
 const mockUseSearchParams = useSearchParams as jest.Mock
+const mockUseSession = useSession as jest.Mock
 
 describe('Sidebar', () => {
   beforeEach(() => {
     mockUsePathname.mockReturnValue('/')
     mockUseSearchParams.mockReturnValue(new URLSearchParams())
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
     process.env.NEXT_PUBLIC_APP_VERSION = '2.0.0'
   })
 
@@ -51,11 +54,25 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: 'Quran' })).toHaveAttribute('href', '/quran')
   })
 
-  test('renders footer nav links', () => {
+  test('renders footer nav links for non-admin', () => {
     render(<Sidebar />)
     expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings')
-    expect(screen.getByRole('link', { name: 'Admin' })).toHaveAttribute('href', '/admin/metrics')
     expect(screen.getByRole('link', { name: 'About' })).toHaveAttribute('href', '/about')
+    expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument()
+  })
+
+  test('hides Admin link from non-admin users', () => {
+    render(<Sidebar />)
+    expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument()
+  })
+
+  test('shows Admin link for admin users', () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { isAdmin: true } },
+      status: 'authenticated',
+    })
+    render(<Sidebar />)
+    expect(screen.getByRole('link', { name: 'Admin' })).toHaveAttribute('href', '/admin/metrics')
   })
 
   test('renders muted app version in the sidebar footer', () => {

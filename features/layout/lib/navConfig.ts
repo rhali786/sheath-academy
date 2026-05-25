@@ -73,7 +73,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { id: 'my-feedback', label: 'My feedback', href: '/feedback', section: 'main', activePrefixes: ['/feedback'] },
   { id: 'settings', label: 'Settings', href: '/settings', section: 'footer' },
-  { id: 'admin', label: 'Admin', href: '/admin/metrics', section: 'footer', activePrefixes: ['/admin'] },
+  { id: 'admin', label: 'Admin', href: '/admin/metrics', section: 'footer', adminOnly: true, activePrefixes: ['/admin'] },
   { id: 'feedback-queue', label: 'Feedback queue', href: '/admin/feedback', section: 'footer', adminOnly: true, activePrefixes: ['/admin/feedback'] },
   { id: 'about', label: 'About', href: '/about', section: 'footer' },
 ]
