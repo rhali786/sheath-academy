@@ -95,6 +95,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
 
+      const { isAppAdmin } = await import('@/features/lib/server/appAdmin')
+      token.isAdmin = isAppAdmin(typeof token.email === 'string' ? token.email : undefined)
+
       return token
     },
     session({ session, token }) {
@@ -103,6 +106,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (typeof token.userId === 'string') session.user.userId = token.userId
         if (typeof token.householdId === 'string') session.user.householdId = token.householdId
         if (typeof token.timezone === 'string') session.user.timezone = token.timezone
+        session.user.isAdmin = token.isAdmin === true
       }
       return session
     },
