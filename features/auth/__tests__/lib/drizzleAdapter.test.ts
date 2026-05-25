@@ -112,25 +112,25 @@ describe('drizzleAdapter — users', () => {
     expect(result).toBeNull()
   })
 
-  itDb('getUserByEmail returns user matching email', async () => {
-    const created = await drizzleAdapter.createUser!(newUser)
+  itDb('getUserByEmail returns null for orphaned user (no accounts, no password)', async () => {
+    // A user created via createUser but with no linked accounts and no password is
+    // considered orphaned — getUserByEmail returns null so NextAuth proceeds with
+    // the createUser → linkAccount path instead of throwing OAuthAccountNotLinked.
+    await drizzleAdapter.createUser!(newUser)
     const fetched = await drizzleAdapter.getUserByEmail!(newUser.email)
-    expect(fetched?.id).toBe(created.id)
+    expect(fetched).toBeNull()
   })
 
-  itDb('getUserByEmail returns seeded user by email when present', async () => {
-    const db = getDb()
-    const seeded = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, process.env.DEV_SEED_USER_EMAIL ?? 'dev@sheathacademy.ai'))
-      .limit(1)
-    if (seeded.length === 0) {
-      return
-    }
-
-    const fetched = await drizzleAdapter.getUserByEmail!(seeded[0].email)
-    expect(fetched?.id).toBe(seeded[0].id)
+  itDb('getUserByEmail returns user once an account is linked', async () => {
+    const created = await drizzleAdapter.createUser!(newUser)
+    await drizzleAdapter.linkAccount!({
+      userId: created.id,
+      type: 'oauth',
+      provider: 'google',
+      providerAccountId: `google_${TS}`,
+    })
+    const fetched = await drizzleAdapter.getUserByEmail!(newUser.email)
+    expect(fetched?.id).toBe(created.id)
   })
 
   itDb('getUserByEmail returns null when no match', async () => {
