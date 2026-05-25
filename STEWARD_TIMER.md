@@ -77,17 +77,24 @@
 
 ### Wave 4 — Daily Plan + Execute
 
-- **Start:** [After Wave 3]
+- **Start:** 2026-05-25T15:46:00Z *(unverified, from user turn timestamp)*
 - **Estimated duration:** 2–3 focused days
 - **AI agentic estimate:** 16–24 hours end-to-end for north-star Wave 4 scope
 - **AI agentic estimate (best case):** 12–16 hours if Wave 3 classify output contract is hardened first and the Claude/PR environment behaves cleanly
-- **Status:** Ready after Wave 3 contract hardening check
+- **Status:** IN PROGRESS
 - **North-star scope adjustment:** Follow `20260524-1230-feedback-steward-agent-idea.md` as the Wave 4 source of truth, not just the thinner implementation-plan wording
 - **Sub-tasks:**
-  - 4.1: Define the plan→execute contract first (schema-validated JSON artifact plus human-readable markdown mirror)
-  - 4.2: Confirm eligibility and idempotency policy (auto-eligible vs approval-required items, skip `in_pr`, do-not-automate policy)
-  - 4.3: `scripts/run-daily.ts` with `--dry-run`
-  - 4.4: `.claude/feedback-daily-plan.md` — generate one grouped plan for that morning's eligible feedback
+  - ✅ 4.0a: Introduced `features/feedback/server/service.ts` as the workflow-rule owner for approval/classification eligibility
+  - ✅ 4.0b: Added failing-first service tests for approval semantics, classification semantics, duplicate cancellation, and daily-run eligibility
+  - ✅ 4.0c: Updated `adminApprove` route to use the service layer instead of calling the repository directly
+  - ✅ 4.0d: Green verification for first Phase 0 slice — 10 targeted tests passing (`service.test.ts` + `adminApprove.test.ts`)
+  - ✅ 4.1: Defined the plan→execute contract first (schema-validated JSON artifact plus human-readable markdown mirror)
+  - ✅ 4.2: Confirmed and encoded eligibility/idempotency policy in the service layer (auto-eligible vs approval-derived classified rows, skip existing `prNumber`, do-not-automate policy)
+  - ✅ 4.3: Added `scripts/run-daily.ts` with `--dry-run` support
+  - ✅ 4.4: Added `.claude/feedback-daily-plan.md` for grouped morning-plan generation
+  - ✅ 4.4b: Added `config/feedback-steward/do-not-automate.json`
+  - ✅ 4.4c: Routed `run-classify.ts` mutation paths through the feedback service instead of directly to repository updates
+  - ✅ 4.4d: Green verification for classify + daily dry-run slice — 11 targeted tests passing (`run-classify.test.ts` + `run-daily.test.ts`)
   - 4.5: `.claude/feedback-execute.md` — execute the grouped plan with repo-specific TDD and safety guardrails
   - 4.6: Write grouped plan artifact under `docs/bug_enhancement`
   - 4.7: Create/update branch and PR against `dev`
@@ -106,8 +113,9 @@
   - Retry/rerun behavior can create duplicate branch or PR churn if idempotency rules are weak
   - Windows/PowerShell quoting and CLI invocation details can break otherwise-correct automation
   - It is easy to overrun Wave 4 into Wave 5 if merge-hook/completion concerns are not held back
-- **Elapsed since start:** [Will update]
-- **Elapsed since Wave 3:** [Will update]
+- **Latest verified progress timestamp:** 2026-05-25T16:13:05Z
+- **Elapsed since start:** ~27m *(based on unverified start marker above)*
+- **Elapsed since Wave 3:** ~4h 57m *(using the current timer's unverified Wave 3 completion marker at 2026-05-25T11:15:54Z; treat prior Wave 3 timestamps in this file as approximate unless re-verified)*
 - **⚠️ DEFINITELY SONNET SWITCH** for automation skill design
 
 ---

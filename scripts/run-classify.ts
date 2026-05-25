@@ -15,8 +15,8 @@ import { readFileSync } from 'fs'
 import * as path from 'path'
 import { getUnclassifiedFeedback, type FeedbackRequeueItem } from './feedback-requeue'
 import { detectDuplicate } from './feedback-dedupe'
-import { updateFeedbackTriage } from '@/features/feedback/server/repository'
-import type { FeedbackTriageUpdate, FeedbackType, FeedbackRiskLevel, FeedbackConfidence } from '@/features/feedback/types'
+import { applyClassification, markFeedbackDuplicate } from '@/features/feedback/server/service'
+import type { FeedbackType, FeedbackRiskLevel, FeedbackConfidence } from '@/features/feedback/types'
 
 const FEEDBACK_TYPES: readonly FeedbackType[] = ['bug', 'enhancement', 'ux', 'copy', 'performance', 'question']
 const RISK_LEVELS: readonly FeedbackRiskLevel[] = ['low', 'medium', 'high']
@@ -203,10 +203,7 @@ export async function classifyFeedback(): Promise<ClassificationSummary> {
     const dedupe = await detectDuplicate(item.id)
 
     if (dedupe.isDuplicate && dedupe.duplicateOfId) {
-      await updateFeedbackTriage(item.id, {
-        status: 'cancelled',
-        duplicateOfFeedbackId: dedupe.duplicateOfId,
-      })
+      await markFeedbackDuplicate(item.id, dedupe.duplicateOfId)
       process.stderr.write(`  → duplicate of ${dedupe.duplicateOfId} (${dedupe.reason}), cancelled\n`)
       duplicates++
       continue
@@ -219,15 +216,7 @@ export async function classifyFeedback(): Promise<ClassificationSummary> {
       continue
     }
 
-    const triage: FeedbackTriageUpdate = {
-      status: 'classified',
-      featureArea: result.featureArea ?? null,
-      feedbackType: (result.feedbackType ?? null) as FeedbackType | null,
-      riskLevel: (result.riskLevel ?? null) as FeedbackRiskLevel | null,
-      confidence: (result.confidence ?? null) as FeedbackConfidence | null,
-    }
-
-    await updateFeedbackTriage(item.id, triage)
+    await applyClassification(item.id, result)
     process.stderr.write(`  → classified: ${result.feedbackType}/${result.featureArea} confidence=${result.confidence}\n`)
     classified++
   }

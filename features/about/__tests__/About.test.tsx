@@ -31,9 +31,9 @@ describe('About page', () => {
     expect(link).toHaveAttribute('href', '/login')
   })
 
-  test('renders product feedback CTA linking to /feedback', () => {
+  test('renders product feedback CTA linking to /product-validation', () => {
     render(<AboutPage />)
     const cta = screen.getByTestId('about-feedback-cta')
-    expect(cta).toHaveAttribute('href', '/feedback')
+    expect(cta).toHaveAttribute('href', '/product-validation')
   })
 })

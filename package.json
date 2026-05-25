@@ -26,7 +26,8 @@
     "db:reset:demo": "dotenv -e .env.local -- tsx scripts/db-wipe.ts && dotenv -e .env.local -- tsx scripts/seed-demo-households.ts",
     "steward:requeue": "dotenv -e .env.local -- tsx scripts/feedback-requeue.ts",
     "steward:dedupe": "dotenv -e .env.local -- tsx scripts/feedback-dedupe.ts",
-    "steward:classify": "dotenv -e .env.local -- tsx scripts/run-classify.ts"
+    "steward:classify": "dotenv -e .env.local -- tsx scripts/run-classify.ts",
+    "steward:daily": "dotenv -e .env.local -- tsx scripts/run-daily.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

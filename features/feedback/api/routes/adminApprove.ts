@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAdminApi } from '@/features/lib/server/requireAdminApi'
 import type { ApiResponse } from '@/features/lib/types'
-import { approveFeedback } from '@/features/feedback/server/repository'
+import { approveFeedbackForPlanning, FeedbackWorkflowError } from '@/features/feedback/server/service'
 
 export async function POST(request: Request, id: string): Promise<Response> {
   const gate = await requireAdminApi(request)
@@ -14,7 +14,18 @@ export async function POST(request: Request, id: string): Promise<Response> {
     )
   }
 
-  await approveFeedback(id, gate.email)
+  try {
+    await approveFeedbackForPlanning(id, gate.email)
+  } catch (error) {
+    if (error instanceof FeedbackWorkflowError) {
+      return NextResponse.json(
+        { status: 'error', data: null, message: error.message, timestamp: new Date().toISOString() },
+        { status: error.statusCode },
+      )
+    }
+
+    throw error
+  }
 
   return NextResponse.json({
     status: 'success',

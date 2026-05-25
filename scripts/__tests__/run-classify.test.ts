@@ -16,22 +16,24 @@ jest.mock('../feedback-dedupe', () => ({
   detectDuplicate: jest.fn(),
 }))
 
-jest.mock('@/features/feedback/server/repository', () => ({
-  updateFeedbackTriage: jest.fn(),
+jest.mock('@/features/feedback/server/service', () => ({
+  applyClassification: jest.fn(),
+  markFeedbackDuplicate: jest.fn(),
 }))
 
 import { spawnSync } from 'child_process'
 import { readFileSync } from 'fs'
 import { getUnclassifiedFeedback } from '../feedback-requeue'
 import { detectDuplicate } from '../feedback-dedupe'
-import { updateFeedbackTriage } from '@/features/feedback/server/repository'
+import { applyClassification, markFeedbackDuplicate } from '@/features/feedback/server/service'
 import { classifyFeedback, parseClassifyOutput, runClassifySkill } from '../run-classify'
 
 const mockSpawnSync = spawnSync as jest.MockedFunction<typeof spawnSync>
 const mockReadFileSync = readFileSync as jest.MockedFunction<typeof readFileSync>
 const mockGetUnclassifiedFeedback = getUnclassifiedFeedback as jest.MockedFunction<typeof getUnclassifiedFeedback>
 const mockDetectDuplicate = detectDuplicate as jest.MockedFunction<typeof detectDuplicate>
-const mockUpdateFeedbackTriage = updateFeedbackTriage as jest.MockedFunction<typeof updateFeedbackTriage>
+const mockApplyClassification = applyClassification as jest.MockedFunction<typeof applyClassification>
+const mockMarkFeedbackDuplicate = markFeedbackDuplicate as jest.MockedFunction<typeof markFeedbackDuplicate>
 
 function makeItem(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -131,10 +133,7 @@ describe('classifyFeedback', () => {
 
     expect(summary).toEqual({ classified: 0, duplicates: 1, failed: 0 })
     expect(mockSpawnSync).not.toHaveBeenCalled()
-    expect(mockUpdateFeedbackTriage).toHaveBeenCalledWith('fb_1', {
-      status: 'cancelled',
-      duplicateOfFeedbackId: 'fb_existing',
-    })
+    expect(mockMarkFeedbackDuplicate).toHaveBeenCalledWith('fb_1', 'fb_existing')
   })
 
   it('fails malformed classify output instead of writing incomplete triage', async () => {
@@ -156,7 +155,7 @@ describe('classifyFeedback', () => {
     const summary = await classifyFeedback()
 
     expect(summary).toEqual({ classified: 0, duplicates: 0, failed: 1 })
-    expect(mockUpdateFeedbackTriage).not.toHaveBeenCalled()
+    expect(mockApplyClassification).not.toHaveBeenCalled()
   })
 
   it('writes triage only after valid classify output is returned', async () => {
@@ -180,12 +179,13 @@ describe('classifyFeedback', () => {
     const summary = await classifyFeedback()
 
     expect(summary).toEqual({ classified: 1, duplicates: 0, failed: 0 })
-    expect(mockUpdateFeedbackTriage).toHaveBeenCalledWith('fb_1', {
+    expect(mockApplyClassification).toHaveBeenCalledWith('fb_1', {
       status: 'classified',
       featureArea: 'dashboard',
       feedbackType: 'ux',
       riskLevel: 'low',
       confidence: 'high',
+      recommendation: 'Clarify the dashboard button label and styling.',
     })
   })
 })
