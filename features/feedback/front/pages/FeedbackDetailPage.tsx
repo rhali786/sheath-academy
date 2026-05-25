@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import type { FeedbackRow } from '@/features/feedback/types'
 import { getUserFeedback, approveAdminFeedback } from '../services/api'
-import { isAppAdmin } from '@/features/lib/server/appAdmin'
 
 const SENTIMENT_LABEL: Record<string, string> = {
   bad: 'Bad 😣',
@@ -41,8 +40,7 @@ export function FeedbackDetailPage({ id }: { id: string }) {
   const [approving, setApproving] = useState(false)
 
   const session = useSession()
-  const userEmail = session.data?.user?.email
-  const isAdmin = userEmail ? isAppAdmin(userEmail) : false
+  const isAdmin = session.data?.user?.isAdmin === true
 
   useEffect(() => {
     getUserFeedback(id)

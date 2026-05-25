@@ -11,7 +11,6 @@ import {
 } from '@/features/layout/lib/navConfig'
 import { getNavIcon } from '@/features/layout/lib/navIcons'
 import { formatHeaderDates, type HeaderDateDisplay } from '@/features/layout/lib/formatHeaderDates'
-import { isAppAdmin } from '@/features/lib/server/appAdmin'
 import { SheathLogo } from './SheathLogo'
 
 interface SidebarProps {
@@ -104,8 +103,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const [headerDates, setHeaderDates] = useState<HeaderDateDisplay | null>(null)
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION
   const session = useSession()
-  const userEmail = session.data?.user?.email
-  const isAdmin = userEmail ? isAppAdmin(userEmail) : false
+  const isAdmin = session.data?.user?.isAdmin === true
 
   useEffect(() => {
     setHeaderDates(formatHeaderDates(new Date()))
