@@ -12,6 +12,26 @@ export async function submitFeedback(input: FeedbackSubmitInput): Promise<void> 
   }
 }
 
+export async function listUserFeedback(): Promise<FeedbackRow[]> {
+  const res = await fetch('/api/feedback')
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { message?: string }).message ?? 'Failed to load feedback')
+  }
+  const body = await res.json()
+  return (body as { data: FeedbackRow[] }).data
+}
+
+export async function getUserFeedback(id: string): Promise<FeedbackRow> {
+  const res = await fetch(`/api/feedback/${id}`)
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { message?: string }).message ?? 'Not found')
+  }
+  const body = await res.json()
+  return (body as { data: FeedbackRow }).data
+}
+
 export async function listAdminFeedback(): Promise<FeedbackRow[]> {
   const res = await fetch('/api/admin/feedback')
   if (!res.ok) {

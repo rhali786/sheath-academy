@@ -23,7 +23,10 @@
     "db:studio": "dotenv -e .env.local -- drizzle-kit studio",
     "db:seed:demo": "dotenv -e .env.local -- tsx scripts/seed-demo-households.ts",
     "db:wipe": "dotenv -e .env.local -- tsx scripts/db-wipe.ts",
-    "db:reset:demo": "dotenv -e .env.local -- tsx scripts/db-wipe.ts && dotenv -e .env.local -- tsx scripts/seed-demo-households.ts"
+    "db:reset:demo": "dotenv -e .env.local -- tsx scripts/db-wipe.ts && dotenv -e .env.local -- tsx scripts/seed-demo-households.ts",
+    "steward:requeue": "dotenv -e .env.local -- tsx scripts/feedback-requeue.ts",
+    "steward:dedupe": "dotenv -e .env.local -- tsx scripts/feedback-dedupe.ts",
+    "steward:classify": "dotenv -e .env.local -- tsx scripts/run-classify.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

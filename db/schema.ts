@@ -424,6 +424,31 @@ export const userFeedback = pgTable(
     sentiment: text('sentiment').notNull(),
     message: text('message'),
     createdAt: timestamp('created_at').notNull(),
+
+    status: text('status').notNull().default('submitted'),
+    featureArea: text('feature_area'),
+    feedbackType: text('feedback_type'),
+    riskLevel: text('risk_level'),
+    confidence: text('confidence'),
+
+    duplicateOfFeedbackId: text('duplicate_of_feedback_id'),
+
+    adminApprovedAt: timestamp('admin_approved_at'),
+    adminApprovedByUserId: text('admin_approved_by_user_id'),
+
+    prNumber: integer('pr_number'),
+    previewUrl: text('preview_url'),
+    uatInstructions: text('uat_instructions'),
+
+    versionResolved: text('version_resolved'),
+    resolvedAt: timestamp('resolved_at'),
+
+    changelogVersion: text('changelog_version'),
+    changelogLabel: text('changelog_label'),
+    changelogUserCredit: text('changelog_user_credit'),
   },
-  (t) => [index('user_feedback_created_at_idx').on(t.createdAt)],
+  (t) => [
+    index('user_feedback_created_at_idx').on(t.createdAt),
+    index('user_feedback_user_status_idx').on(t.userId, t.status),
+  ],
 )

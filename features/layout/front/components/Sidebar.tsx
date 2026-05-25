@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import {
   getNavItemsBySection,
   isNavItemActive,
@@ -10,6 +11,7 @@ import {
 } from '@/features/layout/lib/navConfig'
 import { getNavIcon } from '@/features/layout/lib/navIcons'
 import { formatHeaderDates, type HeaderDateDisplay } from '@/features/layout/lib/formatHeaderDates'
+import { isAppAdmin } from '@/features/lib/server/appAdmin'
 import { SheathLogo } from './SheathLogo'
 
 interface SidebarProps {
@@ -101,13 +103,18 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const settingsTab = pathname.startsWith('/settings') ? searchParams.get('tab') : null
   const [headerDates, setHeaderDates] = useState<HeaderDateDisplay | null>(null)
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION
+  const session = useSession()
+  const userEmail = session.data?.user?.email
+  const isAdmin = userEmail ? isAppAdmin(userEmail) : false
 
   useEffect(() => {
     setHeaderDates(formatHeaderDates(new Date()))
   }, [])
 
-  const mainItems = getNavItemsBySection('main')
-  const footerItems = getNavItemsBySection('footer')
+  const filterByRole = (items: NavItem[]) => items.filter(item => !item.adminOnly || isAdmin)
+
+  const mainItems = filterByRole(getNavItemsBySection('main'))
+  const footerItems = filterByRole(getNavItemsBySection('footer'))
 
   const panel = (
     <aside

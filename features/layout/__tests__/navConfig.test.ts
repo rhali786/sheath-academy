@@ -24,7 +24,10 @@ describe('navConfig', () => {
     expect(mainLabels).toContain('Messages')
 
     const footerLabels = getNavItemsBySection('footer').map((i) => i.label)
-    expect(footerLabels).toEqual(['Settings', 'Admin', 'About'])
+    expect(footerLabels).toContain('Settings')
+    expect(footerLabels).toContain('Admin')
+    expect(footerLabels).toContain('About')
+    expect(footerLabels).toContain('Feedback queue')
   })
 
   test('disabled items include Messages and Finances', () => {
