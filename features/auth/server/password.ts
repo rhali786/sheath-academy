@@ -1,4 +1,7 @@
 import { scrypt, timingSafeEqual, randomBytes, type ScryptOptions } from 'crypto'
+import { checkPasswordStrength, isPasswordStrong } from '@/features/auth/shared/passwordValidation'
+export { checkPasswordStrength, isPasswordStrong } from '@/features/auth/shared/passwordValidation'
+export type { PasswordStrength } from '@/features/auth/shared/passwordValidation'
 
 function scryptAsync(password: string, salt: string, keylen: number, options: ScryptOptions): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -80,8 +83,8 @@ export function validateSignupInput(data: SignupInput): ValidationResult {
 
   if (!data.password) {
     errors.password = 'Password is required.'
-  } else if (data.password.length < 8) {
-    errors.password = 'Password must be at least 8 characters.'
+  } else if (!isPasswordStrong(data.password)) {
+    errors.password = 'Password does not meet the requirements below.'
   }
 
   if (!data.confirmPassword) {

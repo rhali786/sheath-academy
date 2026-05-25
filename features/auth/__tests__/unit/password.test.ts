@@ -5,6 +5,7 @@ import {
   normalizeUsername,
   validateSignupInput,
 } from '@/features/auth/server/password'
+import { checkPasswordStrength, isPasswordStrong } from '@/features/auth/shared/passwordValidation'
 
 describe('normalizeEmail', () => {
   test('lowercases and trims', () => {
@@ -40,13 +41,58 @@ describe('hashPassword / verifyPassword', () => {
   })
 }, 15000)
 
+describe('checkPasswordStrength', () => {
+  test('all criteria met for a strong password', () => {
+    const s = checkPasswordStrength('Str0ng!Pass')
+    expect(s).toEqual({ minLength: true, uppercase: true, lowercase: true, digit: true, special: true })
+  })
+
+  test('minLength false for short password', () => {
+    expect(checkPasswordStrength('Abc1!').minLength).toBe(false)
+  })
+
+  test('uppercase false when missing', () => {
+    expect(checkPasswordStrength('abc123!def').uppercase).toBe(false)
+  })
+
+  test('lowercase false when missing', () => {
+    expect(checkPasswordStrength('ABC123!DEF').lowercase).toBe(false)
+  })
+
+  test('digit false when missing', () => {
+    expect(checkPasswordStrength('AbcDef!ghi').digit).toBe(false)
+  })
+
+  test('special false when missing', () => {
+    expect(checkPasswordStrength('Abcdef1234').special).toBe(false)
+  })
+})
+
+describe('isPasswordStrong', () => {
+  test('returns true for strong password', () => {
+    expect(isPasswordStrong('Str0ng!Pass#1')).toBe(true)
+  })
+
+  test('rejects all-lowercase with digits', () => {
+    expect(isPasswordStrong('12345678ab')).toBe(false)
+  })
+
+  test('rejects password without special character', () => {
+    expect(isPasswordStrong('Password1234')).toBe(false)
+  })
+
+  test('rejects short password even if otherwise strong', () => {
+    expect(isPasswordStrong('Abc1!')).toBe(false)
+  })
+})
+
 describe('validateSignupInput', () => {
   const valid = {
     name: 'Ahmed Ali',
     email: 'ahmed@example.com',
     username: 'ahmed_ali',
-    password: 'password123',
-    confirmPassword: 'password123',
+    password: 'Secur3!Pass#',
+    confirmPassword: 'Secur3!Pass#',
   }
 
   test('passes for valid input', () => {
@@ -77,8 +123,14 @@ describe('validateSignupInput', () => {
     expect(r.errors.username).toBeDefined()
   })
 
-  test('requires password at least 8 chars', () => {
-    const r = validateSignupInput({ ...valid, password: 'short', confirmPassword: 'short' })
+  test('rejects weak password (no uppercase, no special char)', () => {
+    const r = validateSignupInput({ ...valid, password: 'password123', confirmPassword: 'password123' })
+    expect(r.valid).toBe(false)
+    expect(r.errors.password).toBeDefined()
+  })
+
+  test('rejects short password', () => {
+    const r = validateSignupInput({ ...valid, password: 'Abc1!', confirmPassword: 'Abc1!' })
     expect(r.valid).toBe(false)
     expect(r.errors.password).toBeDefined()
   })

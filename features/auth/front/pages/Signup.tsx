@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react'
 import Link from 'next/link'
+import { checkPasswordStrength } from '@/features/auth/shared/passwordValidation'
 
 interface FieldErrors {
   name?: string
@@ -10,6 +11,32 @@ interface FieldErrors {
   password?: string
   confirmPassword?: string
   _form?: string
+}
+
+function PasswordRequirements({ password }: { password: string }) {
+  const s = checkPasswordStrength(password)
+  const items: [boolean, string][] = [
+    [s.minLength, 'At least 10 characters'],
+    [s.uppercase, 'Uppercase letter'],
+    [s.lowercase, 'Lowercase letter'],
+    [s.digit, 'Number'],
+    [s.special, 'Special character (!@#$%…)'],
+  ]
+  return (
+    <ul className="mt-2 space-y-0.5" aria-label="Password requirements">
+      {items.map(([met, label]) => (
+        <li key={label} className={`flex items-center gap-1.5 text-xs ${met ? 'text-forest-700' : 'text-slate-400'}`}>
+          <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            {met
+              ? <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+              : <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth={1.5} />
+            }
+          </svg>
+          {label}
+        </li>
+      ))}
+    </ul>
+  )
 }
 
 export default function Signup() {
@@ -144,6 +171,7 @@ export default function Signup() {
                     autoComplete="new-password"
                     className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-forest-900/20 focus:border-forest-900 transition-colors"
                   />
+                  {fields.password && <PasswordRequirements password={fields.password} />}
                   {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
                 </div>
 
