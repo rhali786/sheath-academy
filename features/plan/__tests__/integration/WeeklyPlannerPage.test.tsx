@@ -7,6 +7,8 @@ import type { SubjectCourse } from '@/features/subjects/types'
 jest.mock('@/features/household/front/context', () => ({
   useHousehold: jest.fn(() => ({
     householdProfile: { id: 'hh_001', weekStartDay: 'Monday', familyName: 'Test' },
+    studentProfiles: mockChildren,
+    allSubjects: mockSubjects,
     loading: false,
     familyName: 'Test',
     needsSetup: false,
@@ -24,6 +26,10 @@ jest.mock('@/features/plan/front/services/api', () => ({
     completeLesson: jest.fn(),
   },
 }))
+
+import { useHousehold } from '@/features/household/front/context'
+
+const mockUseHousehold = useHousehold as jest.Mock
 
 const mockChildren: StudentProfile[] = [
   { id: 'child_001', householdId: 'hh_001', name: 'Adam', gradeLabel: '5th', isActive: true, username: 'adam', password: 'pwd', createdAt: '2026-01-01T00:00:00Z' },
@@ -63,6 +69,16 @@ function renderWithPlanner() {
 }
 
 beforeEach(() => {
+  mockUseHousehold.mockImplementation(() => ({
+    householdProfile: { id: 'hh_001', weekStartDay: 'Monday', familyName: 'Test' },
+    studentProfiles: mockChildren,
+    allSubjects: mockSubjects,
+    loading: false,
+    familyName: 'Test',
+    needsSetup: false,
+    error: null,
+    refetch: jest.fn(),
+  }))
   global.fetch = jest.fn((url: string) => {
     if (String(url).includes('/ingest/')) {
       return Promise.resolve({ ok: true, json: async () => ({}) })
@@ -79,7 +95,24 @@ afterEach(() => {
 })
 
 describe('WeeklyPlannerPage', () => {
-  it('shows loading spinner while initializing', async () => {
+  it('shows loading spinner while household context is initializing', async () => {
+    mockUseHousehold.mockImplementation(() => ({
+      householdProfile: { id: 'hh_001', weekStartDay: 'Monday', familyName: 'Test' },
+      studentProfiles: [],
+      allSubjects: [],
+      loading: true,
+      familyName: 'Test',
+      needsSetup: false,
+      error: null,
+      refetch: jest.fn(),
+    }))
+
+    renderWithPlanner()
+
+    expect(screen.getByText(/loading planner/i)).toBeInTheDocument()
+  })
+
+  it('shows lessons loading state while planner shell is visible', async () => {
     ;(global.fetch as jest.Mock).mockImplementation(
       () =>
         new Promise(resolve =>
@@ -89,22 +122,7 @@ describe('WeeklyPlannerPage', () => {
 
     renderWithPlanner()
 
-    expect(screen.getByText(/loading planner/i)).toBeInTheDocument()
-  })
-
-  it('shows error state when init fetch fails', async () => {
-    ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
-      if (String(url).includes('/ingest/')) {
-        return Promise.resolve({ ok: true, json: async () => ({}) })
-      }
-      return Promise.reject(new Error('Children fetch failed'))
-    })
-
-    renderWithPlanner()
-
-    await waitFor(() => {
-      expect(screen.getByText(/error loading planner/i)).toBeInTheDocument()
-    })
+    expect(screen.getByText(/loading lessons/i)).toBeInTheDocument()
   })
 
   it('shows error state when lessons fetch fails', async () => {

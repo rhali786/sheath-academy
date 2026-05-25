@@ -36,6 +36,8 @@ const mockProfileMonday: HouseholdProfile = {
 
 const baseCtx: HouseholdContextType = {
   householdProfile: mockProfileMonday,
+  studentProfiles: [],
+  allSubjects: [],
   familyName: 'Test Family',
   needsSetup: false,
   loading: false,

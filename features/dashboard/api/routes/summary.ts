@@ -49,11 +49,9 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Da
     const today = toDateString(now, tz)
     const currentTime = toTimeString(now, tz)
 
-    const activeLearners = await listLearners(householdId)
-    const totalChildren = childId ? 1 : activeLearners.length
-
-    const [todayAttendance, todayLessonRows, overdueLessonRows, todayQuran, portfolioRows, alerts] =
+    const [activeLearners, todayAttendance, todayLessonRows, overdueLessonRows, todayQuran, portfolioRows, alerts] =
       await Promise.all([
+        listLearners(householdId),
         listAttendanceEvents(householdId, { learnerId: childId, date: today }),
         listLessonTaskRows(householdId, { learnerId: childId, startDate: today, endDate: today }),
         listLessonTaskRows(householdId, { learnerId: childId, endDate: today }),
@@ -62,6 +60,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Da
         getAlerts(householdId, childId),
       ])
 
+    const totalChildren = childId ? 1 : activeLearners.length
     const readyCount = todayAttendance.filter(r => r.status === 'present' || r.status === 'partial').length
     const openAlerts = alerts.filter(a => a.status === 'open')
     const todayLessons = todayLessonRows.map(rowToLessonTask)

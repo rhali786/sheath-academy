@@ -69,7 +69,7 @@ export function PortfolioPage() {
     if (!targetChildId) { setLessons([]); return }
     const params = new URLSearchParams({ childId: targetChildId })
     if (subjectId) params.set('subjectId', subjectId)
-    fetch(`/api/planner/lessons?${params.toString()}`)
+    fetch(`/api/plan/lessons?${params.toString()}`)
       .then(r => r.json())
       .then(res => setLessons(Array.isArray(res.data) ? res.data : []))
       .catch(() => setLessons([]))

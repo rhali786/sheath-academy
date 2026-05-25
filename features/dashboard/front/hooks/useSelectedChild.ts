@@ -1,28 +1,24 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 
 const STORAGE_KEY = 'sheath.selectedChildId'
 
-export function useSelectedChild(): [string | null, (id: string | null) => void] {
-  const [selectedChildId, setState] = useState<string | null>(null)
+function readStorageSync(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY)
+    return raw || null
+  } catch {
+    return null
+  }
+}
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    try {
-      const raw = sessionStorage.getItem(STORAGE_KEY)
-      if (raw === null || raw === '') {
-        setState(null)
-      } else {
-        setState(raw)
-      }
-    } catch {
-      setState(null)
-    }
-  }, [])
+export function useSelectedChild(): [string | null, (id: string | null) => void] {
+  const [selectedChildId, setState] = useState<string | null>(readStorageSync)
 
   const setSelectedChildId = useCallback((id: string | null) => {
-    setState(id)
+    setState(id || null)
     if (typeof window === 'undefined') return
     try {
       if (id === null || id === '') {

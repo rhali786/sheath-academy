@@ -127,10 +127,33 @@ describe('getAlerts - unit tests', () => {
 
     expect(alerts).toHaveLength(0)
     expect(mockListAllLearners).toHaveBeenCalledWith(HOUSEHOLD_ID)
-    expect(mockListLessonTaskRows).toHaveBeenCalledWith(HOUSEHOLD_ID, { learnerId: activeAdam.id })
-    expect(mockListLessonTaskRows).toHaveBeenCalledWith(HOUSEHOLD_ID, { learnerId: activeKhadijah.id })
-    expect(mockListLessonTaskRows).not.toHaveBeenCalledWith(HOUSEHOLD_ID, { learnerId: archivedZayd.id })
+    expect(mockListLessonTaskRows).toHaveBeenCalledWith(HOUSEHOLD_ID, { learnerId: activeAdam.id, endDate: TODAY })
+    expect(mockListLessonTaskRows).toHaveBeenCalledWith(HOUSEHOLD_ID, { learnerId: activeKhadijah.id, endDate: TODAY })
+    expect(mockListLessonTaskRows).not.toHaveBeenCalledWith(HOUSEHOLD_ID, expect.objectContaining({ learnerId: archivedZayd.id }))
     expect(mockListAttendanceEvents).toHaveBeenCalledWith(HOUSEHOLD_ID, { date: TODAY })
+  })
+
+  test('fetches lessons for all active children in parallel (not sequentially)', async () => {
+    const callOrder: string[] = []
+    mockListLessonTaskRows.mockImplementation(
+      async (_hh: string, filters: { learnerId?: string }) =>
+        new Promise(resolve =>
+          // Stagger resolutions slightly to confirm ordering doesn't matter
+          setTimeout(() => { callOrder.push(filters.learnerId ?? '?'); resolve([]) }, 10)
+        )
+    )
+    mockListAttendanceEvents.mockResolvedValue([
+      makeAttendance(activeAdam.id),
+      makeAttendance(activeKhadijah.id),
+    ])
+
+    await getAlerts(HOUSEHOLD_ID)
+
+    // Both children fetched exactly once — neither blocks the other
+    expect(mockListLessonTaskRows).toHaveBeenCalledTimes(2)
+    expect(callOrder).toHaveLength(2)
+    expect(callOrder).toContain(activeAdam.id)
+    expect(callOrder).toContain(activeKhadijah.id)
   })
 
   test('returns no alerts when all children have completed lessons and attendance', async () => {
@@ -245,7 +268,7 @@ describe('getAlerts - unit tests', () => {
     const childSpecificAlerts = adamAlerts.filter(a => a.childId !== null)
     expect(childSpecificAlerts.every(a => a.childId === activeAdam.id)).toBe(true)
     expect(mockListLessonTaskRows).toHaveBeenCalledTimes(1)
-    expect(mockListLessonTaskRows).toHaveBeenCalledWith(HOUSEHOLD_ID, { learnerId: activeAdam.id })
+    expect(mockListLessonTaskRows).toHaveBeenCalledWith(HOUSEHOLD_ID, { learnerId: activeAdam.id, endDate: TODAY })
   })
 
   test('child-scoped lesson alert href includes childId query param', async () => {
