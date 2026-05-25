@@ -1,6 +1,6 @@
-import { desc, eq, and, isNotNull } from 'drizzle-orm'
+import { desc, eq, and, isNotNull, getTableColumns } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
-import { userFeedback } from '@/db/schema'
+import { userFeedback, households } from '@/db/schema'
 import type {
   FeedbackRow,
   FeedbackSubmitInput,
@@ -21,11 +21,12 @@ export interface InsertFeedbackInput extends FeedbackSubmitInput {
   userEmail: string
 }
 
-function rowToFeedbackRow(r: typeof userFeedback.$inferSelect): FeedbackRow {
+function rowToFeedbackRow(r: typeof userFeedback.$inferSelect, householdName: string | null = null): FeedbackRow {
   return {
     id: r.id,
     userId: r.userId,
     householdId: r.householdId,
+    householdName,
     userEmail: r.userEmail,
     pagePath: r.pagePath,
     sentiment: r.sentiment as FeedbackSentiment,
@@ -68,7 +69,7 @@ export async function insertFeedback(input: InsertFeedbackInput): Promise<void> 
 export async function listFeedback(): Promise<FeedbackRow[]> {
   const db = getDb()
   const rows = await db.select().from(userFeedback).orderBy(desc(userFeedback.createdAt))
-  return rows.map(rowToFeedbackRow)
+  return rows.map(r => rowToFeedbackRow(r))
 }
 
 export async function listFeedbackByUserId(userId: string): Promise<FeedbackRow[]> {
@@ -78,13 +79,20 @@ export async function listFeedbackByUserId(userId: string): Promise<FeedbackRow[
     .from(userFeedback)
     .where(eq(userFeedback.userId, userId))
     .orderBy(desc(userFeedback.createdAt))
-  return rows.map(rowToFeedbackRow)
+  return rows.map(r => rowToFeedbackRow(r))
 }
 
 export async function getFeedbackById(id: string): Promise<FeedbackRow | null> {
   const db = getDb()
-  const rows = await db.select().from(userFeedback).where(eq(userFeedback.id, id)).limit(1)
-  return rows[0] ? rowToFeedbackRow(rows[0]) : null
+  const rows = await db
+    .select({ ...getTableColumns(userFeedback), householdName: households.name })
+    .from(userFeedback)
+    .leftJoin(households, eq(userFeedback.householdId, households.id))
+    .where(eq(userFeedback.id, id))
+    .limit(1)
+  if (!rows[0]) return null
+  const { householdName, ...feedbackCols } = rows[0]
+  return rowToFeedbackRow(feedbackCols, householdName ?? null)
 }
 
 export async function listFeedbackForAdmin(filters: AdminFeedbackFilters = {}): Promise<FeedbackRow[]> {
@@ -105,7 +113,7 @@ export async function listFeedbackForAdmin(filters: AdminFeedbackFilters = {}): 
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(userFeedback.createdAt))
 
-  return rows.map(rowToFeedbackRow)
+  return rows.map(r => rowToFeedbackRow(r))
 }
 
 export async function updateFeedbackTriage(id: string, data: FeedbackTriageUpdate): Promise<void> {
@@ -149,5 +157,5 @@ export async function listUnclassifiedFeedback(): Promise<FeedbackRow[]> {
     .from(userFeedback)
     .where(eq(userFeedback.status, 'submitted'))
     .orderBy(desc(userFeedback.createdAt))
-  return rows.map(rowToFeedbackRow)
+  return rows.map(r => rowToFeedbackRow(r))
 }

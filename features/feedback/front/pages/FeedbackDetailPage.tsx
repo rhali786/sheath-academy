@@ -197,10 +197,9 @@ export function FeedbackDetailPage({ id }: { id: string }) {
         <div className="bg-slate-50 border border-slate-300 rounded-lg p-5 space-y-4">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Admin details</p>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <KV label="User email" value={row.userEmail} />
-            {row.userId && <KV label="User ID" value={row.userId} />}
-            {row.householdId && <KV label="Household ID" value={row.householdId} />}
+            {row.householdName && <KV label="Household" value={row.householdName} />}
           </div>
 
           {(row.adminApprovedAt || row.adminApprovedByUserId) && (

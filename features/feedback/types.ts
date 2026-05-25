@@ -31,6 +31,7 @@ export interface FeedbackRow {
   id: string
   userId: string | null
   householdId: string | null
+  householdName: string | null
   userEmail: string
   pagePath: string
   sentiment: FeedbackSentiment
