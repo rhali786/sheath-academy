@@ -20,6 +20,7 @@ describe('Sidebar', () => {
   beforeEach(() => {
     mockUsePathname.mockReturnValue('/')
     mockUseSearchParams.mockReturnValue(new URLSearchParams())
+    process.env.NEXT_PUBLIC_APP_VERSION = '2.0.0'
   })
 
   test('renders brand Sheath and tagline', () => {
@@ -55,6 +56,11 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings')
     expect(screen.getByRole('link', { name: 'Admin' })).toHaveAttribute('href', '/admin/metrics')
     expect(screen.getByRole('link', { name: 'About' })).toHaveAttribute('href', '/about')
+  })
+
+  test('renders muted app version in the sidebar footer', () => {
+    render(<Sidebar />)
+    expect(screen.getByTestId('sidebar-version')).toHaveTextContent('v2.0.0')
   })
 
   test('disabled Messages and Finances are not links', () => {

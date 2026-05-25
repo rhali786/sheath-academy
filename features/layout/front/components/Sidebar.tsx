@@ -100,6 +100,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const searchParams = useSearchParams()
   const settingsTab = pathname.startsWith('/settings') ? searchParams.get('tab') : null
   const [headerDates, setHeaderDates] = useState<HeaderDateDisplay | null>(null)
+  const appVersion = process.env.NEXT_PUBLIC_APP_VERSION
 
   useEffect(() => {
     setHeaderDates(formatHeaderDates(new Date()))
@@ -143,6 +144,11 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
           <NavRow key={item.id} item={item} pathname={pathname} settingsTab={settingsTab} onNavigate={onClose} />
         ))}
       </nav>
+      {appVersion && (
+        <div className="px-5 pb-4 text-[11px] text-slate-300" data-testid="sidebar-version">
+          v{appVersion}
+        </div>
+      )}
     </aside>
   )
 
