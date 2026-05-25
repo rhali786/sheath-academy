@@ -80,7 +80,11 @@ export function getNavItemsBySection(section: NavSection): NavItem[] {
   return NAV_ITEMS.filter((item) => item.section === section)
 }
 
-export function isNavItemActive(pathname: string, item: NavItem): boolean {
+export function isNavItemActive(
+  pathname: string,
+  item: NavItem,
+  settingsTab: string | null = null,
+): boolean {
   if (!item.href || item.disabled) return false
 
   const prefixes = item.activePrefixes ?? [item.href.split('?')[0]]
@@ -97,8 +101,14 @@ export function isNavItemActive(pathname: string, item: NavItem): boolean {
     return pathname.startsWith('/plan/schedule') || pathname.startsWith('/calendar')
   }
 
-  if (item.id === 'people') {
-    return pathname.startsWith('/settings')
+  if (pathname.startsWith('/settings')) {
+    const tab = settingsTab ?? 'household'
+    if (item.id === 'people') return tab === 'children'
+    if (item.id === 'compliance') return tab === 'records-compliance'
+    if (item.id === 'settings') {
+      return tab !== 'children' && tab !== 'records-compliance'
+    }
+    return false
   }
 
   return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))

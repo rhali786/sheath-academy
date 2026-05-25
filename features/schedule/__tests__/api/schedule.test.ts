@@ -67,6 +67,15 @@ describe('buildDailySchedule', () => {
     const schedule = buildDailySchedule([], DEFAULT_SETTINGS)
     expect(schedule.isPaused).toBe(false)
     expect(schedule.blocks).toHaveLength(0)
+    expect(schedule.entries).toHaveLength(0)
+  })
+
+  it('includes synthetic breaks when includeSyntheticBreaks is true', () => {
+    const lessons = [makeLesson('L1', 'Quran', '30min')]
+    const schedule = buildDailySchedule(lessons, { ...DEFAULT_SETTINGS, includeSyntheticBreaks: true })
+    expect(schedule.entries.length).toBeGreaterThan(schedule.blocks.length)
+    expect(schedule.entries.some(e => e.kind === 'break')).toBe(true)
+    expect(schedule.entries.some(e => e.kind === 'meal')).toBe(true)
   })
 })
 

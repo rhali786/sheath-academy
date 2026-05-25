@@ -91,7 +91,7 @@ const changelog = [
   {
     version: '0.1.17',
     label: 'Shell and navigation',
-    detail: 'AppShell architecture — header and household context in one shell shared by all pages. NavigationContext keeps tab state in sync. Tab buttons navigate back to dashboard from any page.',
+    detail: 'AppShell architecture — sidebar navigation and household context shared by all pages. Dashboard hero layout with schedule timeline and alerts rail.',
   },
   {
     version: '0.1.10',

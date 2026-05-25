@@ -22,9 +22,18 @@ function getWeekRange(weekStr: string): { start: string; end: string } | null {
   return { start: formatLocalDate(monday), end: formatLocalDate(sunday) }
 }
 
+function isValidDateParam(dateStr: string | null): dateStr is string {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const parsed = new Date(year, month - 1, day)
+  return formatLocalDate(parsed) === dateStr
+}
+
 export async function GET(request: Request): Promise<NextResponse<ApiResponse<LessonTask[] | null>>> {
   const url = new URL(request.url)
   const week = url.searchParams.get('week')
+  const startDate = url.searchParams.get('startDate')
+  const endDate = url.searchParams.get('endDate')
   const childIds = url.searchParams.get('childIds')
   const subjectIds = url.searchParams.get('subjectIds')
 
@@ -32,6 +41,10 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Le
   if (week) {
     weekRange = getWeekRange(week)
     if (!weekRange) return NextResponse.json({ status: 'error', data: null, message: 'Invalid week parameter — expected YYYY-MM-DD', timestamp: new Date().toISOString() }, { status: 400 })
+  }
+
+  if ((startDate && !isValidDateParam(startDate)) || (endDate && !isValidDateParam(endDate))) {
+    return NextResponse.json({ status: 'error', data: null, message: 'Invalid startDate or endDate parameter — expected YYYY-MM-DD', timestamp: new Date().toISOString() }, { status: 400 })
   }
 
   const childIdArray = childIds ? childIds.split(',').filter(Boolean) : undefined
@@ -42,7 +55,12 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Le
     const filters: Parameters<typeof listLessonTaskRows>[1] = {}
     if (childIdArray?.length === 1) filters.learnerId = childIdArray[0]
     if (subjectIdArray?.length === 1) filters.subjectId = subjectIdArray[0]
-    if (weekRange) { filters.startDate = weekRange.start; filters.endDate = weekRange.end }
+    if (startDate) filters.startDate = startDate
+    if (endDate) filters.endDate = endDate
+    if (weekRange && !startDate && !endDate) {
+      filters.startDate = weekRange.start
+      filters.endDate = weekRange.end
+    }
     let rows = await listLessonTaskRows(householdId, filters)
     if (childIdArray && childIdArray.length > 1) rows = rows.filter(r => childIdArray.includes(r.learnerId))
     if (subjectIdArray && subjectIdArray.length > 1) rows = rows.filter(r => r.subjectId && subjectIdArray.includes(r.subjectId))

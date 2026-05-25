@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import {
   getNavItemsBySection,
   isNavItemActive,
@@ -36,13 +36,15 @@ function NavIcon({ itemId, active }: { itemId: string; active: boolean }) {
 function NavRow({
   item,
   pathname,
+  settingsTab,
   onNavigate,
 }: {
   item: NavItem
   pathname: string
+  settingsTab: string | null
   onNavigate?: () => void
 }) {
-  const active = isNavItemActive(pathname, item)
+  const active = isNavItemActive(pathname, item, settingsTab)
 
   const baseClass =
     'flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl text-sm font-medium transition-colors'
@@ -95,6 +97,8 @@ function NavRow({
 
 export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const settingsTab = pathname.startsWith('/settings') ? searchParams.get('tab') : null
   const [headerDates, setHeaderDates] = useState<HeaderDateDisplay | null>(null)
 
   useEffect(() => {
@@ -130,13 +134,13 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
         {mainItems.map((item) => (
-          <NavRow key={item.id} item={item} pathname={pathname} onNavigate={onClose} />
+          <NavRow key={item.id} item={item} pathname={pathname} settingsTab={settingsTab} onNavigate={onClose} />
         ))}
       </nav>
 
       <nav className="px-3 py-4 border-t border-slate-100 space-y-0.5">
         {footerItems.map((item) => (
-          <NavRow key={item.id} item={item} pathname={pathname} onNavigate={onClose} />
+          <NavRow key={item.id} item={item} pathname={pathname} settingsTab={settingsTab} onNavigate={onClose} />
         ))}
       </nav>
     </aside>

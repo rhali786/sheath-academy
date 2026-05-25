@@ -160,7 +160,7 @@ export function HouseholdSetup({ onComplete }: HouseholdSetupProps = {}) {
       <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
         <div className="mb-6">
           <SheathLogo size={48} data-testid="sheath-logo" className="mb-4" />
-          <h1 className="text-xl font-bold text-slate-900">Welcome to Sheath Academy</h1>
+          <h1 className="text-xl font-bold text-slate-900">Welcome to Sheath</h1>
           <p className="text-sm text-slate-500 mt-1">
             What would you like to call your household? This appears throughout your dashboard.
             You can rename it any time in Settings.

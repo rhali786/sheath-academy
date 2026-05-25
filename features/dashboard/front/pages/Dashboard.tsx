@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { SchoolYearProgressCard } from '../components/SchoolYearProgressCard'
-import { DoToday } from '../components/DoToday'
 import { NeedsAttention } from '../components/NeedsAttention'
-import { WeeklyActivity } from '../components/WeeklyActivity'
-import { SubjectActivity } from '../components/SubjectActivity'
+import { PersonalAssistantPanel } from '../components/PersonalAssistantPanel'
 import { QuranStreak } from '../components/QuranStreak'
 import { RecordsProof } from '../components/RecordsProof'
 import { IslamicCalendarCard } from '@/features/islamic-calendar/front/components/IslamicCalendarCard'
@@ -20,20 +19,24 @@ import { NextSetupStrip } from '@/features/setup/front/components/NextSetupStrip
 import { plannerApi } from '@/features/plan/front/services/api'
 import { subjectsApi } from '@/features/subjects/front/services/api'
 import { DashboardHeader } from '../components/DashboardHeader'
+import { dashboardDateToStr } from '../components/DashboardDatePicker'
+import { getAssistantInsight } from '../lib/assistantRules'
 import { TodayTaskSummaryCards } from '../components/TodayTaskSummaryCards'
 import { TodaySchedulePanel } from '../components/TodaySchedulePanel'
 import type { LessonTask } from '@/features/plan/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import type { DaySchedule } from '@/features/schedule/types'
 
-function getTodayStr(): string {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-}
-
 function getCurrentTime(): string {
   const now = new Date()
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+}
+
+function isValidDateParam(dateStr: string | null): dateStr is string {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const parsed = new Date(year, month - 1, day)
+  return dashboardDateToStr(parsed) === dateStr
 }
 
 export default function Dashboard() {
@@ -43,50 +46,72 @@ export default function Dashboard() {
   } = useContext_Dashboard()
 
   const { needsSetup, loading: householdLoading } = useHousehold()
+  const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [allLessons, setAllLessons] = useState<LessonTask[]>([])
   const [subjects, setSubjects] = useState<SubjectCourse[]>([])
+  const today = useMemo(() => dashboardDateToStr(new Date()), [])
+  const dateParam = searchParams.get('date')
+  const selectedDate = isValidDateParam(dateParam) ? dateParam : today
 
-  const islamicCountdowns = useMemo(() => getIslamicCalendarCountdowns(getTodayStr()), [])
+  const islamicCountdowns = useMemo(() => getIslamicCalendarCountdowns(selectedDate), [selectedDate])
   const topCountdowns = islamicCountdowns.slice(0, 3)
   const { enabled: reminderEnabled } = useIslamicReminderSettings()
 
-  const weeklyLessons = useMemo(() => {
-    const today = new Date()
-    const sunday = new Date(today)
-    sunday.setDate(today.getDate() - today.getDay())
-    sunday.setHours(0, 0, 0, 0)
-    const saturday = new Date(sunday)
-    saturday.setDate(sunday.getDate() + 6)
-    saturday.setHours(23, 59, 59, 999)
-    return allLessons.filter(l => {
-      if (l.status !== 'completed') return false
-      const updated = new Date(l.updatedAt)
-      return updated >= sunday && updated <= saturday
-    })
-  }, [allLessons])
+  const dayLessons = useMemo(
+    () => allLessons.filter(l => l.dueDate === selectedDate).sort((a, b) => a.order - b.order),
+    [allLessons, selectedDate],
+  )
 
-  const todaySchedule = useMemo((): DaySchedule => {
-    const todayStr = getTodayStr()
-    const todayLessons = allLessons
-      .filter(l => l.dueDate === todayStr)
-      .sort((a, b) => a.order - b.order)
-    return buildDailySchedule(todayLessons, {
+  const assistantInsight = useMemo(
+    () => getAssistantInsight({
+      selectedDate,
+      selectedChildId,
+      lessons: dayLessons,
+      alerts,
+      subjects,
+    }),
+    [alerts, dayLessons, selectedChildId, selectedDate, subjects],
+  )
+
+  const daySchedule = useMemo((): DaySchedule => {
+    return { ...buildDailySchedule(dayLessons, {
       startTime: '08:30',
       transitionMinutes: 10,
       defaultDurationMinutes: 30,
-    })
-  }, [allLessons])
+      includeSyntheticBreaks: true,
+    }), date: selectedDate }
+  }, [allLessons, selectedDate])
 
   useEffect(() => {
     subjectsApi.getSubjects().then(res => setSubjects(res.data)).catch(() => {})
   }, [])
 
   useEffect(() => {
-    plannerApi.getLessons(undefined, selectedChildId ? [selectedChildId] : undefined)
+    plannerApi.getLessons(
+      undefined,
+      selectedChildId ? [selectedChildId] : undefined,
+      undefined,
+      selectedDate,
+      selectedDate,
+    )
       .then(lessons => setAllLessons(lessons))
       .catch(() => {})
-  }, [selectedChildId])
+  }, [selectedChildId, selectedDate])
+
+  useEffect(() => {
+    if (dateParam && !isValidDateParam(dateParam)) {
+      router.replace(`${pathname}?date=${today}`)
+    }
+  }, [dateParam, pathname, router, today])
+
+  function handleDateChange(nextDate: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('date', nextDate)
+    router.push(`${pathname}?${params.toString()}`)
+  }
 
   if (loading || householdLoading) {
     return (
@@ -123,15 +148,24 @@ export default function Dashboard() {
   return (
     <div className="bg-slate-50 min-h-screen">
       <NextSetupStrip />
-      <DashboardHeader />
+      <DashboardHeader
+        selectedDate={selectedDate}
+        onDateChange={handleDateChange}
+        alerts={alerts}
+      />
       <TodayTaskSummaryCards metrics={metrics} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3" data-testid="dashboard-hero-grid">
           <div className="lg:col-span-2">
-            <TodaySchedulePanel schedule={todaySchedule} currentTime={getCurrentTime()} />
+            <TodaySchedulePanel
+              schedule={daySchedule}
+              currentTime={getCurrentTime()}
+              subjects={subjects}
+            />
           </div>
           <aside data-testid="dashboard-alerts-rail">
+            <PersonalAssistantPanel insight={assistantInsight} />
             <NeedsAttention alerts={alerts} />
           </aside>
         </div>
@@ -139,14 +173,8 @@ export default function Dashboard() {
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6" data-testid="dashboard-more-insights">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-6">
-            <DoToday />
-            <SubjectActivity
-              lessons={weeklyLessons}
-              subjects={subjects}
-              children={studentProfiles}
-              selectedChildId={selectedChildId}
-            />
+          <div className="lg:col-span-2">
+            <RecordsProof records={records} selectedChildId={selectedChildId} />
           </div>
           <div className="space-y-6">
             <SchoolYearProgressCard />
@@ -166,15 +194,6 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
-
-        <WeeklyActivity
-          lessons={weeklyLessons}
-          quranSessions={quranSessions}
-          children={studentProfiles}
-          selectedChildId={selectedChildId}
-        />
-
-        <RecordsProof records={records} selectedChildId={selectedChildId} />
       </section>
 
       <div className="pb-6 text-center">

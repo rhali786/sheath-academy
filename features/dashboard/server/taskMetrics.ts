@@ -1,5 +1,6 @@
 import type { LessonTask } from '@/features/plan/types'
 import { buildDailySchedule } from '@/features/schedule/server/service'
+import { countInProgressLessons } from '@/features/schedule/lib/timelineStatus'
 
 export interface TaskMetricsInput {
   today: string
@@ -11,10 +12,6 @@ export interface TaskMetricsInput {
   scheduleStartTime?: string
 }
 
-function toMinutes(time: string): number {
-  const [h, m] = time.split(':').map(Number)
-  return h * 60 + m
-}
 
 export function computeTaskMetrics(input: TaskMetricsInput): {
   tasksCompleted: number
@@ -34,18 +31,10 @@ export function computeTaskMetrics(input: TaskMetricsInput): {
     startTime: input.scheduleStartTime ?? '08:30',
     transitionMinutes: 10,
     defaultDurationMinutes: 30,
+    includeSyntheticBreaks: true,
   })
 
-  const now = toMinutes(input.currentTime)
-  let tasksInProgress = 0
-  for (const block of schedule.blocks) {
-    const start = toMinutes(block.startTime)
-    const end = toMinutes(block.endTime)
-    if (start <= now && now < end && block.lesson.status !== 'completed') {
-      tasksInProgress = 1
-      break
-    }
-  }
+  const tasksInProgress = countInProgressLessons(schedule.entries, input.currentTime)
 
   return { tasksCompleted, tasksInProgress, tasksOverdue }
 }

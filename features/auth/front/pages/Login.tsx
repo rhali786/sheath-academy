@@ -97,7 +97,7 @@ function LoginForm() {
 
         <div className="flex items-center justify-center gap-3 mb-8">
           <SheathLogo size={40} data-testid="sheath-logo" />
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Sheath Academy</h1>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Sheath</h1>
         </div>
 
         <div className="card p-8">

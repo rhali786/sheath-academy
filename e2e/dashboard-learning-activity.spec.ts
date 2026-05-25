@@ -8,12 +8,12 @@ test.describe('Dashboard — learning activity cards', () => {
     await page.waitForTimeout(800)
   })
 
-  test('Weekly Activity card is visible', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /Weekly Activity/i })).toBeVisible()
+  test('schedule timeline panel is visible', async ({ page }) => {
+    await expect(page.getByTestId('today-schedule-panel')).toBeVisible()
   })
 
-  test('Subject Activity card is visible', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /Subject Activity/i })).toBeVisible()
+  test('Personal Assistant panel is visible in alerts rail', async ({ page }) => {
+    await expect(page.getByTestId('personal-assistant-panel')).toBeVisible()
   })
 
   test('Quran Streak card is visible', async ({ page }) => {
@@ -33,15 +33,13 @@ test.describe('Dashboard — learning activity cards', () => {
   })
 
   test('Quran Streak shows a circle for each active child in All Children mode', async ({ page }) => {
-    // All children is the default
     const streakCircles = page.locator('[data-testid="quran-streak-circle"]')
     const count = await streakCircles.count()
-    // Seed has 3 active children; at minimum 1 circle should be visible
     expect(count).toBeGreaterThanOrEqual(1)
   })
 
-  test('Today\'s State section is present with metric cards', async ({ page }) => {
-    await expect(page.getByText("Today's State")).toBeVisible()
+  test('task summary cards are present', async ({ page }) => {
+    await expect(page.getByTestId('today-task-summary-cards')).toBeVisible()
   })
 
   test('alerts do not display raw STUDENT_SEED_ IDs', async ({ page }) => {
@@ -71,7 +69,6 @@ test.describe('Dashboard — Quran session logging from streak card', () => {
     await page.getByRole('button', { name: /save session/i }).click()
     await page.waitForTimeout(600)
 
-    // Modal should close
     await expect(page.getByRole('heading', { name: /log quran session/i })).not.toBeVisible()
   })
 })

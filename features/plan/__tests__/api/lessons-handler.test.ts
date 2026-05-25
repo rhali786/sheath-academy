@@ -53,6 +53,22 @@ describe('GET /api/plan/lessons', () => {
     const res = await GET(new Request('http://localhost/api/plan/lessons?week=not-a-date'))
     expect(res.status).toBe(400)
   })
+
+  it('passes explicit startDate and endDate filters to the repository', async () => {
+    mockList.mockResolvedValue([makeRow()])
+
+    const res = await GET(new Request('http://localhost/api/plan/lessons?startDate=2026-05-23&endDate=2026-05-23'))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.data).toHaveLength(1)
+    expect(mockList).toHaveBeenCalledWith('hh_test', { startDate: '2026-05-23', endDate: '2026-05-23' })
+  })
+
+  it('returns 400 for invalid explicit date filters', async () => {
+    const res = await GET(new Request('http://localhost/api/plan/lessons?startDate=bad-date'))
+    expect(res.status).toBe(400)
+  })
 })
 
 describe('POST /api/plan/lessons', () => {

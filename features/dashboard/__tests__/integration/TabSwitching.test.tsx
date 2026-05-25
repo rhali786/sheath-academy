@@ -23,6 +23,7 @@ jest.mock('next-auth/react', () => ({
 jest.mock('next/navigation', () => ({
   usePathname: jest.fn(() => '/'),
   useRouter: jest.fn(() => ({ push: jest.fn() })),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
 }))
 
 jest.mock('@/features/dashboard/front/components/SchoolYearProgressCard', () => ({

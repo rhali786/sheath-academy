@@ -2,10 +2,21 @@ import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import type { DaySchedule, ScheduleBlock } from '@/features/schedule/types'
 import type { LessonTask } from '@/features/plan/types'
-
-// We import these after we create them
 import { ScheduleNowNextCard } from '@/features/schedule/front/components/ScheduleNowNextCard'
 import { SchedulePage } from '@/features/schedule/front/pages/SchedulePage'
+
+jest.mock('@/features/schedule/front/components/ScheduleTimeline', () => ({
+  ScheduleTimeline: ({ schedule }: { schedule: { blocks: { lesson: { title: string }; startTime: string }[] } }) => (
+    <div data-testid="schedule-timeline">
+      {schedule.blocks.map(b => (
+        <div key={b.lesson.title}>
+          <span>{b.startTime}</span>
+          <span>{b.lesson.title}</span>
+        </div>
+      ))}
+    </div>
+  ),
+}))
 
 function makeLesson(id: string, title: string): LessonTask {
   return {
@@ -37,8 +48,31 @@ const block1 = makeBlock('L1', 'Quran', '08:30', '09:00', { instructionMode: 'te
 const block2 = makeBlock('L2', 'Math', '09:10', '09:40', { instructionMode: 'independent', flexibilityState: 'flexible' })
 const block3 = makeBlock('L3', 'English Reading', '09:50', '10:20', { instructionMode: 'independent', flexibilityState: 'optional' })
 
-const twoBlockSchedule: DaySchedule = { date: '2026-01-01', blocks: [block1, block2], isPaused: false }
-const threeBlockSchedule: DaySchedule = { date: '2026-01-01', blocks: [block1, block2, block3], isPaused: false }
+function toEntries(blocks: ScheduleBlock[]) {
+  return blocks.map(b => ({
+    kind: 'lesson' as const,
+    id: b.id,
+    lesson: b.lesson,
+    startTime: b.startTime,
+    endTime: b.endTime,
+    durationMinutes: b.durationMinutes,
+    instructionMode: b.instructionMode,
+    flexibilityState: b.flexibilityState,
+  }))
+}
+
+const twoBlockSchedule: DaySchedule = {
+  date: '2026-01-01',
+  blocks: [block1, block2],
+  entries: toEntries([block1, block2]),
+  isPaused: false,
+}
+const threeBlockSchedule: DaySchedule = {
+  date: '2026-01-01',
+  blocks: [block1, block2, block3],
+  entries: toEntries([block1, block2, block3]),
+  isPaused: false,
+}
 
 describe('ScheduleNowNextCard', () => {
   it('shows current and next lesson titles', () => {
@@ -71,20 +105,21 @@ describe('ScheduleNowNextCard', () => {
     const schedule: DaySchedule = {
       date: '2026-01-01',
       blocks: [block1, teacherBlock, independentBlock],
+      entries: toEntries([block1, teacherBlock, independentBlock]),
       isPaused: false,
     }
     render(<ScheduleNowNextCard schedule={schedule} currentTime="09:05" />)
     fireEvent.click(screen.getByRole('button', { name: /pause day/i }))
     fireEvent.click(screen.getByRole('button', { name: /pull independent/i }))
-    // After reflow, Independent Reading should be shown as "next" before Teacher Math
     const nextTitle = screen.getByTestId('next-block-title')
     expect(nextTitle).toHaveTextContent('Independent Reading')
   })
 })
 
 describe('SchedulePage', () => {
-  it('renders all 3 block start times', () => {
+  it('renders schedule timeline with block start times', () => {
     render(<SchedulePage schedule={threeBlockSchedule} />)
+    expect(screen.getByTestId('schedule-timeline')).toBeInTheDocument()
     expect(screen.getByText('08:30')).toBeInTheDocument()
     expect(screen.getByText('09:10')).toBeInTheDocument()
     expect(screen.getByText('09:50')).toBeInTheDocument()

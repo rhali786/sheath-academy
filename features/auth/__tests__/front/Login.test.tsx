@@ -19,9 +19,9 @@ beforeEach(() => {
 })
 
 describe('Login page — layout', () => {
-  test('renders brand logo and Sheath Academy name', () => {
+  test('renders brand logo and Sheath name', () => {
     render(<Login />)
-    expect(screen.getByText('Sheath Academy')).toBeInTheDocument()
+    expect(screen.getByText('Sheath')).toBeInTheDocument()
     expect(screen.getByTestId('sheath-logo')).toBeInTheDocument()
   })
 

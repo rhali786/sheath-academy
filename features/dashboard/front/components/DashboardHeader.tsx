@@ -5,8 +5,10 @@ import Link from 'next/link'
 import { Sun, Plus, ListChecks } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useHousehold } from '@/features/household/front/context'
-import { formatHeaderDates } from '@/features/layout/lib/formatHeaderDates'
 import { ChildSelector } from './ChildSelector'
+import { DashboardDatePicker } from './DashboardDatePicker'
+import { NotificationBellDropdown } from './NotificationBellDropdown'
+import type { Alert } from '@/features/alerts/types'
 
 function greetingName(sessionName: string | null | undefined, familyName: string): string {
   if (sessionName?.trim()) {
@@ -16,25 +18,17 @@ function greetingName(sessionName: string | null | undefined, familyName: string
   return 'there'
 }
 
-function formatGregorianDate(d: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(d)
+interface DashboardHeaderProps {
+  selectedDate: string
+  onDateChange: (dateStr: string) => void
+  alerts: Alert[]
 }
 
-export function DashboardHeader() {
+export function DashboardHeader({ selectedDate, onDateChange, alerts }: DashboardHeaderProps) {
   const { data: session } = useSession()
   const { familyName } = useHousehold()
-  const [now] = useState(() => new Date())
-  const [dates, setDates] = useState(() => formatHeaderDates(now))
   const [quickAddOpen, setQuickAddOpen] = useState(false)
   const quickAddRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    setDates(formatHeaderDates(now))
-  }, [now])
 
   useEffect(() => {
     if (!quickAddOpen) return
@@ -63,17 +57,10 @@ export function DashboardHeader() {
             </p>
           </div>
 
-          <div className="text-left lg:text-center">
-            <p className="text-lg font-semibold text-slate-900" data-testid="dashboard-gregorian-date">
-              {formatGregorianDate(now)}
-            </p>
-            <p className="text-sm text-forest-900 mt-0.5" lang="ar" dir="rtl">
-              {dates.hijriDayMonthAr}
-            </p>
-            <p className="text-xs text-slate-400">{dates.hijriYearAndGregorian.split(' · ')[0]} AH</p>
-          </div>
+          <DashboardDatePicker selectedDate={selectedDate} onDateChange={onDateChange} />
 
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+            <NotificationBellDropdown alerts={alerts} />
             <div className="relative" ref={quickAddRef}>
               <button
                 type="button"
@@ -91,13 +78,31 @@ export function DashboardHeader() {
                   role="menu"
                   data-testid="quick-add-menu"
                 >
-                  <Link href="/quran" className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50" role="menuitem">
+                  <p className="px-3 py-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-100">
+                    Quick Add
+                  </p>
+                  <Link
+                    href="/quran"
+                    className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    role="menuitem"
+                    onClick={() => setQuickAddOpen(false)}
+                  >
                     Log Quran
                   </Link>
-                  <Link href="/attendance" className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50" role="menuitem">
+                  <Link
+                    href="/attendance"
+                    className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    role="menuitem"
+                    onClick={() => setQuickAddOpen(false)}
+                  >
                     Mark attendance
                   </Link>
-                  <Link href="/lessons" className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50" role="menuitem">
+                  <Link
+                    href="/lessons"
+                    className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    role="menuitem"
+                    onClick={() => setQuickAddOpen(false)}
+                  >
                     Add lesson
                   </Link>
                 </div>

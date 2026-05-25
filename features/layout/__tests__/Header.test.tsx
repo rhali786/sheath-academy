@@ -2,18 +2,25 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { Header } from '@/features/layout/front/components/Header'
 
+jest.mock('next/navigation', () => ({
+  usePathname: jest.fn(() => '/plan'),
+}))
+
 jest.mock('next-auth/react', () => ({
   useSession: jest.fn(),
   signOut: jest.fn(),
 }))
 
 import { useSession, signOut } from 'next-auth/react'
+import { usePathname } from 'next/navigation'
 
 const mockUseSession = useSession as jest.Mock
 const mockSignOut = signOut as jest.Mock
+const mockUsePathname = usePathname as jest.Mock
 
 describe('Header — unauthenticated', () => {
   beforeEach(() => {
+    mockUsePathname.mockReturnValue('/plan')
     mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
   })
 
@@ -30,6 +37,12 @@ describe('Header — unauthenticated', () => {
   test('renders notification bell stub', () => {
     render(<Header />)
     expect(screen.getByTestId('notification-bell-stub')).toBeInTheDocument()
+  })
+
+  test('hides notification bell on dashboard route', () => {
+    mockUsePathname.mockReturnValue('/')
+    render(<Header />)
+    expect(screen.queryByTestId('notification-bell-stub')).not.toBeInTheDocument()
   })
 })
 
@@ -58,6 +71,7 @@ describe('Header — authenticated', () => {
 
 describe('Header — mobile menu trigger', () => {
   beforeEach(() => {
+    mockUsePathname.mockReturnValue('/plan')
     mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
   })
 

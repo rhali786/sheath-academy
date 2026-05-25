@@ -15,10 +15,13 @@ import { render, screen, waitFor, act } from '@testing-library/react'
 import { DashboardProvider } from '@/features/dashboard/front/context'
 import { HouseholdProvider } from '@/features/household/front/context'
 import Dashboard from '@/features/dashboard/front/pages/Dashboard'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { plannerApi } from '@/features/plan/front/services/api'
 
 jest.mock('next/navigation', () => ({
   usePathname: jest.fn(() => '/'),
-  useRouter: jest.fn(() => ({ push: jest.fn() })),
+  useRouter: jest.fn(() => ({ push: jest.fn(), replace: jest.fn() })),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
 }))
 
 jest.mock('next-auth/react', () => ({
@@ -32,8 +35,12 @@ jest.mock('@/features/dashboard/front/components/SchoolYearProgressCard', () => 
   SchoolYearProgressCard: () => <div data-testid="school-year-progress-card" />,
 }))
 
-jest.mock('@/features/schedule/front/components/ScheduleNowNextCard', () => ({
-  ScheduleNowNextCard: () => <div data-testid="schedule-now-next-card" />,
+jest.mock('@/features/schedule/front/components/ScheduleTimeline', () => ({
+  ScheduleTimeline: () => <div data-testid="schedule-timeline" />,
+}))
+
+jest.mock('@/features/dashboard/front/components/PersonalAssistantPanel', () => ({
+  PersonalAssistantPanel: () => <div data-testid="personal-assistant-panel" />,
 }))
 
 jest.mock('@/features/alerts/front/services/api', () => ({
@@ -106,6 +113,17 @@ jest.mock('@/features/household/front/services/api', () => ({
   }
 }))
 
+const mockUseRouter = useRouter as jest.Mock
+const mockUseSearchParams = useSearchParams as jest.Mock
+const mockGetLessons = plannerApi.getLessons as jest.Mock
+const mockPush = jest.fn()
+const mockReplace = jest.fn()
+
+function todayStr(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
 function renderDashboard() {
   return render(
     <HouseholdProvider>
@@ -118,6 +136,11 @@ function renderDashboard() {
 
 describe('Dashboard Page Integration', () => {
   beforeEach(() => {
+    mockPush.mockReset()
+    mockReplace.mockReset()
+    mockGetLessons.mockClear()
+    mockUseRouter.mockReturnValue({ push: mockPush, replace: mockReplace })
+    mockUseSearchParams.mockReturnValue(new URLSearchParams())
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -159,14 +182,14 @@ describe('Dashboard Page Integration', () => {
     })
   })
 
-  test('ScheduleNowNextCard is rendered inside the schedule panel', async () => {
+  test('ScheduleTimeline is rendered inside the schedule panel', async () => {
     renderDashboard()
 
     await waitFor(() => {
       expect(screen.queryByText(/loading dashboard/i)).not.toBeInTheDocument()
     })
 
-    expect(screen.getByTestId('schedule-now-next-card')).toBeInTheDocument()
+    expect(screen.getByTestId('schedule-timeline')).toBeInTheDocument()
   })
 
   test('child selector lives in the dashboard header', async () => {
@@ -180,11 +203,70 @@ describe('Dashboard Page Integration', () => {
     expect(screen.getByTestId('child-selector')).toBeInTheDocument()
   })
 
-  test('more insights section keeps legacy widgets below the fold', async () => {
+  test('more insights section keeps compact footer widgets', async () => {
     renderDashboard()
 
     await waitFor(() => {
       expect(screen.getByTestId('dashboard-more-insights')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByText(/Do Today/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/Records Readiness/i)).toBeInTheDocument()
+  })
+
+  test('personal assistant panel renders in alerts rail', async () => {
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('personal-assistant-panel')).toBeInTheDocument()
+    })
+  })
+
+  test('Dashboard reads the selected date from the URL query', async () => {
+    mockUseSearchParams.mockReturnValue(new URLSearchParams('date=2026-05-23'))
+
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading dashboard/i)).not.toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('dashboard-selected-date')).toHaveTextContent('May 23, 2026')
+  })
+
+  test('Dashboard fetches the selected date from the planner API', async () => {
+    mockUseSearchParams.mockReturnValue(new URLSearchParams('date=2026-05-23'))
+
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(mockGetLessons).toHaveBeenLastCalledWith(undefined, undefined, undefined, '2026-05-23', '2026-05-23')
+    })
+  })
+
+  test('Dashboard date navigation pushes the next selected date into the URL', async () => {
+    mockUseSearchParams.mockReturnValue(new URLSearchParams('date=2026-05-24'))
+
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading dashboard/i)).not.toBeInTheDocument()
+    })
+
+    act(() => {
+      screen.getByLabelText('Next day').click()
+    })
+
+    expect(mockPush).toHaveBeenCalledWith('/?date=2026-05-25')
+  })
+
+  test('invalid date query is normalized back to today', async () => {
+    mockUseSearchParams.mockReturnValue(new URLSearchParams('date=not-a-date'))
+
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith(`/?date=${todayStr()}`)
     })
   })
 

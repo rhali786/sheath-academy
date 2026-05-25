@@ -4,19 +4,33 @@ import { listLessonTaskRows } from '@/features/plan/server/repository'
 import type { LessonTask } from '@/features/plan/types'
 import { getAuthCtx } from '@/features/auth/server/context'
 
+type ScheduleRouteProps = {
+  searchParams?: Promise<{ date?: string | string[] | undefined }>
+}
+
 function todayStr(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export default async function ScheduleRoute() {
-  const today = todayStr()
+function isValidDateParam(dateStr: string | undefined): dateStr is string {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const parsed = new Date(year, month - 1, day)
+  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}` === dateStr
+}
+
+export default async function ScheduleRoute({ searchParams }: ScheduleRouteProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined
+  const rawDate = resolvedSearchParams?.date
+  const requestedDate = Array.isArray(rawDate) ? rawDate[0] : rawDate
+  const selectedDate = isValidDateParam(requestedDate) ? requestedDate : todayStr()
 
   let todayLessons: LessonTask[] = []
   try {
     const ctx = await getAuthCtx()
     if (!ctx) throw new Error('Unauthenticated')
-    const rows = await listLessonTaskRows(ctx.householdId, { startDate: today, endDate: today })
+    const rows = await listLessonTaskRows(ctx.householdId, { startDate: selectedDate, endDate: selectedDate })
     todayLessons = rows
       .map(r => ({
         id: r.id, childId: r.learnerId, subjectId: r.subjectId ?? '', householdId: r.householdId,
@@ -34,7 +48,8 @@ export default async function ScheduleRoute() {
     startTime: '08:30',
     transitionMinutes: 10,
     defaultDurationMinutes: 30,
+    includeSyntheticBreaks: true,
   })
 
-  return <SchedulePage schedule={schedule} />
+  return <SchedulePage schedule={{ ...schedule, date: selectedDate }} />
 }

@@ -109,7 +109,7 @@ describe('household name card', () => {
   it('shows household name card when no household exists', () => {
     useHousehold.mockReturnValue(noHousehold)
     render(<HouseholdSetup />)
-    expect(screen.getByText('Welcome to Sheath Academy')).toBeInTheDocument()
+    expect(screen.getByText('Welcome to Sheath')).toBeInTheDocument()
   })
 
   it('does not show setup cards when no household exists', async () => {

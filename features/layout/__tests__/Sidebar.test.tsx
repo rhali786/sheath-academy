@@ -4,19 +4,22 @@ import { Sidebar } from '@/features/layout/front/components/Sidebar'
 
 jest.mock('next/navigation', () => ({
   usePathname: jest.fn(() => '/'),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
 }))
 
 jest.mock('next-auth/react', () => ({
   useSession: jest.fn(() => ({ data: null, status: 'unauthenticated' })),
 }))
 
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 
 const mockUsePathname = usePathname as jest.Mock
+const mockUseSearchParams = useSearchParams as jest.Mock
 
 describe('Sidebar', () => {
   beforeEach(() => {
     mockUsePathname.mockReturnValue('/')
+    mockUseSearchParams.mockReturnValue(new URLSearchParams())
   })
 
   test('renders brand Sheath and tagline', () => {
@@ -88,5 +91,13 @@ describe('Sidebar', () => {
     render(<Sidebar mobileOpen onClose={onClose} />)
     fireEvent.click(screen.getByTestId('sidebar-backdrop'))
     expect(onClose).toHaveBeenCalled()
+  })
+
+  test('highlights People when settings tab is children', () => {
+    mockUsePathname.mockReturnValue('/settings')
+    mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=children'))
+    render(<Sidebar />)
+    const people = screen.getByRole('link', { name: 'People' })
+    expect(people.className).toContain('bg-forest-100')
   })
 })
