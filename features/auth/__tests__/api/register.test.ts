@@ -24,8 +24,8 @@ const validBody = {
   name: 'Ahmed Ali',
   email: 'ahmed@example.com',
   username: 'ahmed_ali',
-  password: 'password123',
-  confirmPassword: 'password123',
+  password: 'Secur3!Pass#',
+  confirmPassword: 'Secur3!Pass#',
 }
 
 beforeEach(() => {
