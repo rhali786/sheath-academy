@@ -256,7 +256,7 @@ export function AdminMetricsDashboard() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {rows.map(row => (
-              <AdminMetricsFamilyCard key={row.workspaceId} row={row} formatLastActive={formatLastActive} />
+              <AdminMetricsFamilyCard key={row.workspaceId} row={row} formatLastActive={formatLastActive} formatLastLogin={formatLastActive} />
             ))}
           </div>
         )}

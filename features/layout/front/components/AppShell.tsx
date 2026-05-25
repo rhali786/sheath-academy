@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { HouseholdProvider } from '@/features/household/front/context'
+import { FeedbackButton } from '@/features/feedback/front/components/FeedbackButton'
 import { ShellAuthGuard } from './ShellAuthGuard'
 import { Header } from './Header'
 import { Sidebar } from './Sidebar'
@@ -17,6 +18,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
         <main id="main-content" className="flex-1">
           {children}
         </main>
+        <FeedbackButton />
       </div>
     </div>
   )

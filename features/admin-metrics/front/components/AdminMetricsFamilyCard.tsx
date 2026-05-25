@@ -27,6 +27,7 @@ function lessonsLine(row: AdminMetricsUserRow): string {
 export interface AdminMetricsFamilyCardProps {
   row: AdminMetricsUserRow
   formatLastActive: (iso?: string) => string
+  formatLastLogin: (iso?: string) => string
 }
 
 function MetricRow({ label, value, help }: { label: string; value: string | number; help?: string }) {
@@ -38,7 +39,7 @@ function MetricRow({ label, value, help }: { label: string; value: string | numb
   )
 }
 
-export function AdminMetricsFamilyCard({ row, formatLastActive }: AdminMetricsFamilyCardProps) {
+export function AdminMetricsFamilyCard({ row, formatLastActive, formatLastLogin }: AdminMetricsFamilyCardProps) {
   const displayUser = row.userEmail ?? row.userName ?? row.userId
   const isActive = row.isActiveInPeriod
 
@@ -58,7 +59,10 @@ export function AdminMetricsFamilyCard({ row, formatLastActive }: AdminMetricsFa
             {isActive ? 'Active' : 'Inactive'}
           </span>
         </div>
-        <p className="text-xs text-slate-400 mt-1">Last activity: {formatLastActive(row.lastActiveAt)}</p>
+        <div className="flex items-center gap-3 mt-1">
+          <p className="text-xs text-slate-400">Last activity: {formatLastActive(row.lastActiveAt)}</p>
+          <p className="text-xs text-slate-400">Last login: {formatLastLogin(row.lastLoginAt)}</p>
+        </div>
       </div>
 
       {/* Metric rows */}

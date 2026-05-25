@@ -7,6 +7,7 @@ declare module 'next-auth' {
       userId?: string
       householdId?: string
       timezone?: string
+      isAdmin?: boolean
     } & DefaultSession['user']
   }
 }
@@ -17,5 +18,6 @@ declare module 'next-auth/jwt' {
     userId?: string
     householdId?: string
     timezone?: string
+    isAdmin?: boolean
   }
 }

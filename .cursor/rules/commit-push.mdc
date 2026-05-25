@@ -1,0 +1,16 @@
+---
+description: Commit and push workflow — version bump, well-formed message, push to current branch
+globs: []
+alwaysApply: false
+---
+
+# commit-push
+
+When asked to commit and push, follow the steps defined in `.claude/commands/commit-push.md`.
+
+Key rules:
+- `feat(...):`/`feat:` → minor bump. Everything else → patch. **Major bumps are never automatic** — they mark milestone business releases and are triggered only when the user explicitly requests one.
+- Expand the commit message: first line as given, blank line, 2–4 sentence body explaining *why* the change was made.
+- Trailer: `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`
+- Run `node scripts/bump-version.cjs <minor|patch>`, stage `package.json`, commit all staged files, push to current branch.
+- Never use `--no-verify`. Never amend existing commits.

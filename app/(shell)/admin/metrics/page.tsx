@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { AdminValidationSummary } from '@/features/product-validation/front/components/AdminValidationSummary'
 import { AdminMetricsDashboard } from '@/features/admin-metrics/front/components/AdminMetricsDashboard'
 import { AdminPageGuard } from '@/features/admin-metrics/front/components/AdminPageGuard'
+import { AdminFeedbackSection } from '@/features/feedback/front/components/AdminFeedbackSection'
 
 export const metadata: Metadata = {
   title: 'Admin metrics — Sheath Academy',
@@ -25,6 +26,11 @@ export default function AdminMetricsPage() {
         <section>
           <h2 className="text-lg font-semibold text-slate-800 mb-4">Product validation</h2>
           <AdminValidationSummary />
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold text-slate-800 mb-4">User feedback</h2>
+          <AdminFeedbackSection />
         </section>
       </div>
     </AdminPageGuard>

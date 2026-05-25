@@ -1,9 +1,4 @@
-#!/bin/sh
-# Bumps the patch version in package.json and stages it so the bump lands in
-# the same commit. Must run in pre-commit — that is the only hook early enough
-# for `git add` to be included in the commit tree.
-#
-# Always bumps patch. Major/minor bumps must be done manually before committing.
-
-node scripts/bump-version.cjs patch
-git add package.json
+#!/usr/bin/env node
+'use strict'
+// Version bump is handled by commit-msg where the commit message is available.
+// This hook is kept as a placeholder for future pre-commit validations.
