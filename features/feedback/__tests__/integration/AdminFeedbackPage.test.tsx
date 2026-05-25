@@ -151,21 +151,38 @@ describe('AdminFeedbackPage', () => {
   })
 
   describe('approval flow', () => {
-    it('shows approve button only for classified rows without approval', async () => {
+    it('shows approve button only for awaiting_approval rows', async () => {
       const rows = [
-        makeRow({ id: 'fb_1', status: 'classified' }),
-        makeRow({ id: 'fb_2', status: 'submitted' }),
+        makeRow({ id: 'fb_waiting', status: 'awaiting_approval' }),
+        makeRow({ id: 'fb_classified', status: 'classified' }),
+        makeRow({ id: 'fb_submitted', status: 'submitted' }),
       ]
       mockFetch.mockResolvedValue(mockOk({ status: 'success', data: rows }))
       render(<AdminFeedbackPage />)
       await waitFor(() => {
-        expect(screen.getByTestId('approve-button-fb_1')).toBeInTheDocument()
-        expect(screen.queryByTestId('approve-button-fb_2')).not.toBeInTheDocument()
+        expect(screen.getByTestId('approve-button-fb_waiting')).toBeInTheDocument()
+        expect(screen.queryByTestId('approve-button-fb_classified')).not.toBeInTheDocument()
+        expect(screen.queryByTestId('approve-button-fb_submitted')).not.toBeInTheDocument()
+      })
+    })
+
+    it('does not show approve button for shipped, in_pr, or in_qa rows', async () => {
+      const rows = [
+        makeRow({ id: 'fb_shipped', status: 'shipped' }),
+        makeRow({ id: 'fb_in_pr', status: 'in_pr' }),
+        makeRow({ id: 'fb_in_qa', status: 'in_qa' }),
+      ]
+      mockFetch.mockResolvedValue(mockOk({ status: 'success', data: rows }))
+      render(<AdminFeedbackPage />)
+      await waitFor(() => {
+        expect(screen.queryByTestId('approve-button-fb_shipped')).not.toBeInTheDocument()
+        expect(screen.queryByTestId('approve-button-fb_in_pr')).not.toBeInTheDocument()
+        expect(screen.queryByTestId('approve-button-fb_in_qa')).not.toBeInTheDocument()
       })
     })
 
     it('opens approval modal when approve clicked', async () => {
-      mockFetch.mockResolvedValue(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'classified' })] }))
+      mockFetch.mockResolvedValue(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'awaiting_approval' })] }))
       render(<AdminFeedbackPage />)
       await waitFor(() => screen.getByTestId('approve-button-fb_1'))
       fireEvent.click(screen.getByTestId('approve-button-fb_1'))
@@ -175,7 +192,7 @@ describe('AdminFeedbackPage', () => {
     })
 
     it('closes modal on cancel', async () => {
-      mockFetch.mockResolvedValue(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'classified' })] }))
+      mockFetch.mockResolvedValue(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'awaiting_approval' })] }))
       render(<AdminFeedbackPage />)
       await waitFor(() => screen.getByTestId('approve-button-fb_1'))
       fireEvent.click(screen.getByTestId('approve-button-fb_1'))
@@ -188,7 +205,7 @@ describe('AdminFeedbackPage', () => {
 
     it('calls approve endpoint and closes modal on confirm', async () => {
       mockFetch
-        .mockResolvedValueOnce(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'classified' })] }))
+        .mockResolvedValueOnce(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'awaiting_approval' })] }))
         .mockResolvedValueOnce(mockOk({ status: 'success', data: null }))
       render(<AdminFeedbackPage />)
       await waitFor(() => screen.getByTestId('approve-button-fb_1'))
@@ -198,6 +215,45 @@ describe('AdminFeedbackPage', () => {
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith('/api/admin/feedback/fb_1/approve', { method: 'POST' })
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      })
+    })
+
+    it('optimistic update shows classified badge after approval', async () => {
+      mockFetch
+        .mockResolvedValueOnce(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'awaiting_approval' })] }))
+        .mockResolvedValueOnce(mockOk({ status: 'success', data: null }))
+      render(<AdminFeedbackPage />)
+      await waitFor(() => screen.getByTestId('approve-button-fb_1'))
+      fireEvent.click(screen.getByTestId('approve-button-fb_1'))
+      await waitFor(() => screen.getByRole('dialog'))
+      fireEvent.click(screen.getByRole('button', { name: /^Approve$/i }))
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        expect(screen.getByText('classified')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('shipped rows', () => {
+    it('shows versionResolved badge on shipped cards', async () => {
+      mockFetch.mockResolvedValue(mockOk({
+        status: 'success',
+        data: [makeRow({ id: 'fb_1', status: 'shipped', versionResolved: '2.1.0' })],
+      }))
+      render(<AdminFeedbackPage />)
+      await waitFor(() => {
+        expect(screen.getByText('v2.1.0')).toBeInTheDocument()
+      })
+    })
+
+    it('does not show versionResolved badge when absent', async () => {
+      mockFetch.mockResolvedValue(mockOk({
+        status: 'success',
+        data: [makeRow({ id: 'fb_1', status: 'classified', versionResolved: null })],
+      }))
+      render(<AdminFeedbackPage />)
+      await waitFor(() => {
+        expect(screen.queryByText(/^v\d/)).not.toBeInTheDocument()
       })
     })
   })

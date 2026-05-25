@@ -121,17 +121,20 @@
 
 ### Wave 5 — Shipping and Completion Workflow
 
-- **Start:** [After Wave 4]
+- **Start:** 2026-05-25T18:00:00Z (approximate)
 - **Estimated duration:** 1–2 focused days
 - **North-star scope:** Close the loop after PR execution succeeds
-- **Likely sub-tasks:**
-  - 5.1: PR-hook-driven merged-to-`dev` update
-  - 5.2: `shipped` status + `versionResolved`
-  - 5.3: Submitter-visible progress/completion update
-  - 5.4: Admin-visible completion evidence
-  - 5.5: Notification / final sync cleanup
-- **Elapsed since start:** [Will update]
-- **Elapsed since Wave 5:** [Will update]
+- **Sub-tasks:**
+  - ✅ 5.0 (pre-condition): Fixed Wave 4 bug — `updateFeedbackWorkflow` was silently dropping the `status` field; rows were never transitioning from `classified` to `in_pr`/`in_qa` after PR attachment
+  - ✅ 5.1: `scripts/merge-hook.ts` — verifies PR merged into `dev` via `gh pr view`, then calls `markFeedbackShippedByPr`; npm script `steward:merge-hook`
+  - ✅ 5.2: `markFeedbackShippedByPr(prNumber, { versionResolved, changelogVersion })` in feedback service — finds all `in_pr`/`in_qa` rows for the PR, writes `shipped` + `versionResolved` + `resolvedAt` + `changelogVersion`; `listFeedbackByPrNumber` added to repository
+  - ✅ 5.2b: Tests — 5 merge-hook tests + 4 service tests for ship/attach semantics (18 total in the wave, all passing)
+  - ✅ 5.3: FeedbackDetailPage — confirmed shipped section already renders changelog label/version/credit; added 2 missing test cases covering those fields
+  - ✅ 5.4: AdminFeedbackPage — fixed approve button to `awaiting_approval` (was `classified`); fixed optimistic update to set `classified` after approval (was `awaiting_approval`); added `versionResolved` badge on shipped cards; updated all affected tests
+  - ✅ 5.5: `scripts/feedback-notify.ts` — queries shipped rows, filters by `sinceHours`, writes JSON summary to `tmp/feedback-steward/notifications/`; npm script `steward:notify`; 4 tests
+  - ⬜ 5.6: Manual verification — run merge-hook against a real PR, confirm rows flip to shipped, run notify and confirm artifact
+- **Tests added in Wave 5:** 23 new tests across service, merge-hook, notify, and integration suites
+- **Build status:** ✅ Tests passing (5.1–5.5 complete)
 
 ---
 

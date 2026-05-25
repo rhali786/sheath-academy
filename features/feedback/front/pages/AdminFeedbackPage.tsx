@@ -67,17 +67,13 @@ export function AdminFeedbackPage() {
   }, [fetchFeedback])
 
   const handleApprove = async (id: string) => {
-    try {
-      const response = await fetch(`/api/admin/feedback/${id}/approve`, { method: 'POST' })
-      const data = await response.json()
-      if (data.status === 'success') {
-        setRows(rows.map(r => (r.id === id ? { ...r, status: 'awaiting_approval', adminApprovedAt: new Date().toISOString() } : r)))
-        setSelectedId(null)
-      } else {
-        throw new Error(data.message)
-      }
-    } catch (err) {
-      throw err
+    const response = await fetch(`/api/admin/feedback/${id}/approve`, { method: 'POST' })
+    const data = await response.json()
+    if (data.status === 'success') {
+      setRows(rows.map(r => (r.id === id ? { ...r, status: 'classified', adminApprovedAt: new Date().toISOString() } : r)))
+      setSelectedId(null)
+    } else {
+      throw new Error(data.message)
     }
   }
 
@@ -280,14 +276,24 @@ export function AdminFeedbackPage() {
                   </div>
                 )}
 
+                {/* Shipped version */}
+                {row.versionResolved && (
+                  <div className="text-sm bg-green-50 border border-green-200 p-3 rounded">
+                    <span className="font-medium text-green-800">Shipped</span>
+                    <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded font-medium">
+                      v{row.versionResolved}
+                    </span>
+                  </div>
+                )}
+
                 {/* Action button */}
-                {row.status === 'classified' && !row.adminApprovedAt && (
+                {row.status === 'awaiting_approval' && (
                   <button
                     onClick={() => setSelectedId(row.id)}
                     className="mt-2 px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800 transition-colors"
                     data-testid={`approve-button-${row.id}`}
                   >
-                    Approve for processing
+                    Approve for planning
                   </button>
                 )}
               </div>

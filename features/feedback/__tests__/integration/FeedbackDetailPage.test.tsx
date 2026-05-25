@@ -40,7 +40,6 @@ const mockRow: FeedbackRow = {
   changelogLabel: null,
   changelogUserCredit: null,
   createdAt: '2026-05-24T10:00:00Z',
-  updatedAt: '2026-05-25T10:00:00Z',
 }
 
 afterEach(() => {
@@ -120,6 +119,35 @@ describe('FeedbackDetailPage', () => {
     render(<FeedbackDetailPage id="fb_1" />)
     await waitFor(() => {
       expect(screen.getByText(/2\.1\.0/)).toBeInTheDocument()
+    })
+  })
+
+  it('shows changelog label when present on a shipped row', async () => {
+    mockGet.mockResolvedValue({
+      ...mockRow,
+      status: 'shipped' as const,
+      versionResolved: '2.1.0',
+      changelogLabel: 'Dashboard copy polish',
+    })
+    render(<FeedbackDetailPage id="fb_1" />)
+    await waitFor(() => {
+      expect(screen.getByText('Dashboard copy polish')).toBeInTheDocument()
+    })
+  })
+
+  it('shows changelog version and user credit when present', async () => {
+    mockGet.mockResolvedValue({
+      ...mockRow,
+      status: 'shipped' as const,
+      versionResolved: '2.1.0',
+      changelogVersion: '2.1.0',
+      changelogUserCredit: 'parent@example.com',
+    })
+    render(<FeedbackDetailPage id="fb_1" />)
+    await waitFor(() => {
+      expect(screen.getByText('Changelog version')).toBeInTheDocument()
+      expect(screen.getByText('Credit')).toBeInTheDocument()
+      expect(screen.getByText('parent@example.com')).toBeInTheDocument()
     })
   })
 

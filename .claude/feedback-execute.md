@@ -76,7 +76,7 @@ Rules:
 - Tests run section
 - **How To Test** section: numbered click-by-click UAT steps drawn from `uatByFeedbackId`
 - Render preview URL (if available): `Preview: <url>`
-- `Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>` trailer
+- `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>` trailer
 
 ## UAT instructions per feedback row
 

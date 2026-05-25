@@ -1,4 +1,4 @@
-import { desc, eq, and, isNotNull, getTableColumns } from 'drizzle-orm'
+import { desc, eq, and, isNotNull, getTableColumns, inArray } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
 import { userFeedback, households } from '@/db/schema'
 import type {
@@ -124,6 +124,7 @@ export async function updateFeedbackTriage(id: string, data: FeedbackTriageUpdat
 export async function updateFeedbackWorkflow(id: string, data: FeedbackWorkflowUpdate): Promise<void> {
   const db = getDb()
   const update = {} as Partial<typeof userFeedback.$inferInsert>
+  if (data.status !== undefined) update.status = data.status
   if (data.prNumber !== undefined) update.prNumber = data.prNumber
   if (data.previewUrl !== undefined) update.previewUrl = data.previewUrl
   if (data.uatInstructions !== undefined) update.uatInstructions = data.uatInstructions
@@ -133,6 +134,16 @@ export async function updateFeedbackWorkflow(id: string, data: FeedbackWorkflowU
   if (data.changelogLabel !== undefined) update.changelogLabel = data.changelogLabel
   if (data.changelogUserCredit !== undefined) update.changelogUserCredit = data.changelogUserCredit
   await db.update(userFeedback).set(update).where(eq(userFeedback.id, id))
+}
+
+export async function listFeedbackByPrNumber(prNumber: number): Promise<FeedbackRow[]> {
+  const db = getDb()
+  const rows = await db
+    .select()
+    .from(userFeedback)
+    .where(eq(userFeedback.prNumber, prNumber))
+    .orderBy(desc(userFeedback.createdAt))
+  return rows.map(r => rowToFeedbackRow(r))
 }
 
 export async function recordFeedbackApproval(id: string, adminEmail: string): Promise<void> {

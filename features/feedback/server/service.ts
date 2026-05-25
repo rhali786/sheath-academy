@@ -1,5 +1,6 @@
 import {
   getFeedbackById,
+  listFeedbackByPrNumber,
   listFeedbackForAdmin,
   listUnclassifiedFeedback,
   recordFeedbackApproval,
@@ -107,10 +108,10 @@ export async function listEligibleFeedbackForDailyRun(
   const eligibleRows = rows.filter((row) => {
     if (row.status !== 'classified') return false
     if (row.prNumber !== null) return false
-    if (row.confidence !== 'high') return false
-    if (row.riskLevel !== 'low') return false
     if (isBlockedByPolicy(row, config)) return false
-    return true
+    // Admin-approved rows bypass the confidence/risk gate — that's why they were approved
+    if (row.adminApprovedAt) return true
+    return row.confidence === 'high' && row.riskLevel === 'low'
   })
 
   return {
@@ -147,4 +148,34 @@ export async function markFeedbackAttachedToPr(id: string, data: FeedbackPrSyncI
   }
 
   await updateFeedbackWorkflow(id, workflowUpdate)
+}
+
+export interface FeedbackShipInput {
+  versionResolved: string
+  changelogVersion?: string | null
+}
+
+export async function markFeedbackShippedByPr(prNumber: number, data: FeedbackShipInput): Promise<void> {
+  const rows = await listFeedbackByPrNumber(prNumber)
+  const shippable = rows.filter((row) => row.status === 'in_pr' || row.status === 'in_qa')
+
+  if (shippable.length === 0) {
+    throw new FeedbackWorkflowError(
+      `No shippable rows found for PR #${prNumber}`,
+      404,
+      'no_shippable_rows',
+    )
+  }
+
+  const resolvedAt = new Date().toISOString()
+  await Promise.all(
+    shippable.map((row) =>
+      updateFeedbackWorkflow(row.id, {
+        status: 'shipped',
+        versionResolved: data.versionResolved,
+        resolvedAt,
+        changelogVersion: data.changelogVersion ?? null,
+      }),
+    ),
+  )
 }
