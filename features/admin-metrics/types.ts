@@ -85,6 +85,7 @@ export interface AdminMetricsUserRow {
   workspaceType?: 'family' | 'program'
   isActiveInPeriod: boolean
   lastActiveAt?: string
+  lastLoginAt?: string
   learnerCount: number
   learnerNames: string[]
   lessonTasksInPeriod: number

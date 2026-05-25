@@ -35,6 +35,7 @@ export async function getAdminMetricsUsers(query: AdminMetricsQuery): Promise<Ad
       userId: households.userId,
       userEmail: users.email,
       userName: users.name,
+      userLastLoginAt: users.lastLoginAt,
     })
     .from(households)
     .innerJoin(users, eq(households.userId, users.id))
@@ -94,6 +95,7 @@ export async function getAdminMetricsUsers(query: AdminMetricsQuery): Promise<Ad
       userId: hh.userId,
       userName: hh.userName ?? undefined,
       userEmail: hh.userEmail ?? undefined,
+      lastLoginAt: hh.userLastLoginAt?.toISOString(),
       workspaceId: hh.householdId,
       workspaceName: hh.householdName,
       workspaceType: 'family' as const,

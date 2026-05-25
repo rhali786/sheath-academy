@@ -62,6 +62,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // Postgres optional during migration; JWT sign-in still succeeds.
         }
       }
+      if (user.email && process.env.DATABASE_URL) {
+        try {
+          const { updateUserLastLogin } = await import('@/features/auth/server/repository')
+          await updateUserLastLogin(user.email)
+        } catch {
+          // Non-fatal — login proceeds even if the timestamp can't be written.
+        }
+      }
       return true
     },
     async jwt({ token, user, trigger, session }) {

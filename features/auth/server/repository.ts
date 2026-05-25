@@ -80,3 +80,11 @@ export async function updateUserPassword(userId: string, passwordHash: string): 
     .set({ passwordHash, passwordUpdatedAt: new Date(), updatedAt: new Date() })
     .where(eq(users.id, userId))
 }
+
+/** Stamps lastLoginAt for the given email. No-op if the user doesn't exist yet. */
+export async function updateUserLastLogin(email: string): Promise<void> {
+  await getDb()
+    .update(users)
+    .set({ lastLoginAt: new Date() })
+    .where(eq(users.email, email.trim().toLowerCase()))
+}

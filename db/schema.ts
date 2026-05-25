@@ -26,6 +26,7 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash'),
   passwordUpdatedAt: timestamp('password_updated_at'),
   createdVia: text('created_via'),
+  lastLoginAt: timestamp('last_login_at'),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
 })
