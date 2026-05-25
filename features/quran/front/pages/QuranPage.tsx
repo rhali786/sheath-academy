@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Pencil, Trash2, X, Check } from 'lucide-react'
 import { quranApi } from '@/features/quran/front/services/api'
-import { childrenApi } from '@/features/children/front/services/api'
+import { useHousehold } from '@/features/household/front/context'
 import type { QuranSession } from '@/features/lib/types'
 import type { StudentProfile } from '@/features/lib/types'
 
@@ -45,9 +45,9 @@ function emptyAdd(defaultChildId = ''): AddState {
 }
 
 export default function QuranPage() {
+  const { studentProfiles: children } = useHousehold()
   const searchParams = useSearchParams()
   const [sessions, setSessions] = useState<QuranSession[]>([])
-  const [children, setChildren] = useState<StudentProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
   const [addForm, setAddForm] = useState<AddState>(emptyAdd())
@@ -63,15 +63,10 @@ export default function QuranPage() {
   const [dateSort, setDateSort] = useState<DateSort>('desc')
 
   useEffect(() => {
-    childrenApi.getAllChildren()
-      .then(res => {
-        setChildren(res.data)
-        if (res.data.length > 0) {
-          setAddForm(prev => ({ ...prev, childId: prev.childId || res.data[0].id }))
-        }
-      })
-      .catch(() => {})
-  }, [])
+    if (children.length > 0) {
+      setAddForm(prev => ({ ...prev, childId: prev.childId || children[0].id }))
+    }
+  }, [children])
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()

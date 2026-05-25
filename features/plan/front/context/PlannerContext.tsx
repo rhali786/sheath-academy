@@ -7,7 +7,6 @@ import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { getWeekStartDate } from '../utils/weekDate'
 import { useHousehold } from '@/features/household/front/context'
-import { latencyTrace } from '@/features/lib/debug/latencyTrace'
 
 export { getWeekStartDate }
 
@@ -66,7 +65,6 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   // Lessons: fires after household (and therefore children+subjects) have loaded
   useEffect(() => {
     if (householdLoading) {
-      latencyTrace('PlannerContext.tsx:lessons', 'lessons_blocked', { householdLoading }, 'C')
       return
     }
     if (selectedChildIds.length === 0 || selectedSubjectIds.length === 0) {
@@ -75,8 +73,6 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     }
     let cancelled = false
     ;(async () => {
-      const lessonsT0 = performance.now()
-      latencyTrace('PlannerContext.tsx:lessons', 'lessons_start', { childCount: selectedChildIds.length }, 'C')
       setIsLessonsLoading(true)
       setError(null)
       try {
@@ -87,12 +83,6 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
           selectedSubjectIds,
         )
         if (!cancelled) setLessons(lessonsList)
-        latencyTrace(
-          'PlannerContext.tsx:lessons',
-          'lessons_end',
-          { ms: Math.round(performance.now() - lessonsT0), count: lessonsList.length },
-          'C',
-        )
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load lessons')
       } finally {

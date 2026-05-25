@@ -8,8 +8,6 @@ import { LessonTaskList } from '@/features/plan/front/components/LessonTaskList'
 import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
-import { childrenApi } from '@/features/children/front/services/api'
-import { subjectsApi } from '@/features/subjects/front/services/api'
 import { useHousehold } from '@/features/household/front/context'
 import { TodayLessonCard } from '@/features/plan/front/components/TodayLessonCard'
 
@@ -24,10 +22,8 @@ function todayLocal(): string {
 type DateSort = 'asc' | 'desc'
 
 export function LessonsPage() {
-  const { householdProfile } = useHousehold()
+  const { householdProfile, studentProfiles: children, allSubjects: subjects } = useHousehold()
   const searchParams = useSearchParams()
-  const [children, setChildren] = useState<StudentProfile[]>([])
-  const [subjects, setSubjects] = useState<SubjectCourse[]>([])
   const [lessons, setLessons] = useState<LessonTask[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -38,21 +34,6 @@ export function LessonsPage() {
   const [dateSort, setDateSort] = useState<DateSort>('desc')
   const [showForm, setShowForm] = useState(false)
 
-  useEffect(() => {
-    const init = async () => {
-      try {
-        const [kidsRes, subsRes] = await Promise.all([
-          childrenApi.getAllChildren(),
-          subjectsApi.getSubjects(),
-        ])
-        setChildren(kidsRes.data)
-        setSubjects(subsRes.data)
-      } catch {
-        setError('Failed to load setup data')
-      }
-    }
-    init()
-  }, [])
 
   // Sync URL childId → filterChildId after children load and on URL changes
   useEffect(() => {

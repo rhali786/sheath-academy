@@ -17,14 +17,12 @@ import { useHousehold } from '@/features/household/front/context'
 import { HouseholdSetup } from '@/features/household/front/components/HouseholdSetup'
 import { NextSetupStrip } from '@/features/setup/front/components/NextSetupStrip'
 import { plannerApi } from '@/features/plan/front/services/api'
-import { subjectsApi } from '@/features/subjects/front/services/api'
 import { DashboardHeader } from '../components/DashboardHeader'
 import { dashboardDateToStr } from '../components/DashboardDatePicker'
 import { getAssistantInsight } from '../lib/assistantRules'
 import { TodayTaskSummaryCards } from '../components/TodayTaskSummaryCards'
 import { TodaySchedulePanel } from '../components/TodaySchedulePanel'
 import type { LessonTask } from '@/features/plan/types'
-import type { SubjectCourse } from '@/features/subjects/types'
 import type { DaySchedule } from '@/features/schedule/types'
 
 function getCurrentTime(): string {
@@ -45,13 +43,12 @@ export default function Dashboard() {
     loading, error, addQuranSession, selectedChildId,
   } = useContext_Dashboard()
 
-  const { needsSetup, loading: householdLoading } = useHousehold()
+  const { needsSetup, loading: householdLoading, allSubjects } = useHousehold()
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()
 
   const [allLessons, setAllLessons] = useState<LessonTask[]>([])
-  const [subjects, setSubjects] = useState<SubjectCourse[]>([])
   const today = useMemo(() => dashboardDateToStr(new Date()), [])
   const dateParam = searchParams.get('date')
   const selectedDate = isValidDateParam(dateParam) ? dateParam : today
@@ -71,9 +68,9 @@ export default function Dashboard() {
       selectedChildId,
       lessons: dayLessons,
       alerts,
-      subjects,
+      subjects: allSubjects,
     }),
-    [alerts, dayLessons, selectedChildId, selectedDate, subjects],
+    [alerts, allSubjects, dayLessons, selectedChildId, selectedDate],
   )
 
   const daySchedule = useMemo((): DaySchedule => {
@@ -85,9 +82,6 @@ export default function Dashboard() {
     }), date: selectedDate }
   }, [allLessons, selectedDate])
 
-  useEffect(() => {
-    subjectsApi.getSubjects().then(res => setSubjects(res.data)).catch(() => {})
-  }, [])
 
   useEffect(() => {
     plannerApi.getLessons(
@@ -161,7 +155,7 @@ export default function Dashboard() {
             <TodaySchedulePanel
               schedule={daySchedule}
               currentTime={getCurrentTime()}
-              subjects={subjects}
+              subjects={allSubjects}
             />
           </div>
           <aside data-testid="dashboard-alerts-rail">

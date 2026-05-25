@@ -16,8 +16,7 @@ const DATE_DISPLAYS: DateDisplayPreference[] = ['gregorian', 'gregorian-hijri-en
 
 type HouseholdRow = typeof households.$inferSelect
 
-async function profileFromRow(row: HouseholdRow): Promise<HouseholdProfile> {
-  const settings = await getAllHouseholdSettings(row.id)
+function profileFromRowAndSettings(row: HouseholdRow, settings: Record<string, unknown>): HouseholdProfile {
   return {
     id: row.id,
     workspaceId: row.id,
@@ -38,11 +37,14 @@ export async function GET(): Promise<NextResponse<ApiResponse<HouseholdProfile |
   try {
     const { householdId } = getRequestAuthCtx()
     const db = getDb()
-    const rows = await db.select().from(households).where(eq(households.id, householdId)).limit(1)
+    const [rows, settings] = await Promise.all([
+      db.select().from(households).where(eq(households.id, householdId)).limit(1),
+      getAllHouseholdSettings(householdId),
+    ])
     if (!rows[0]) {
       return NextResponse.json({ status: 'success', data: null, message: 'No household profile', timestamp: new Date().toISOString() })
     }
-    const profile = await profileFromRow(rows[0])
+    const profile = profileFromRowAndSettings(rows[0], settings)
     return NextResponse.json({ status: 'success', data: profile, message: 'Household profile retrieved', timestamp: new Date().toISOString() })
   } catch {
     return NextResponse.json({ status: 'success', data: null, message: 'No household profile', timestamp: new Date().toISOString() })
@@ -68,7 +70,8 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<H
         { status: 500 },
       )
     }
-    const profile = await profileFromRow(updated)
+    const settings = await getAllHouseholdSettings(householdId)
+    const profile = profileFromRowAndSettings(updated, settings)
     return NextResponse.json(
       { status: 'success', data: profile, message: 'Household created', timestamp: new Date().toISOString() },
       { status: 201 },

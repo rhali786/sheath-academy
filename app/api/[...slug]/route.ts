@@ -19,7 +19,6 @@ import { handleProductValidationRoute } from '@/features/product-validation/api/
 import { handleAdminMetricsRoute } from '@/features/admin-metrics/api/router'
 import { handleFeedbackRoute } from '@/features/feedback/api/router'
 import { handleAdminFeedbackRoute } from '@/features/feedback/api/adminRouter'
-import { latencyTrace } from '@/features/lib/debug/latencyTrace'
 
 async function handleRoute(slug: string[], request: Request): Promise<NextResponse | null> {
   if (slug[0] === 'dashboard') {
@@ -100,23 +99,11 @@ async function dispatch(
   request: Request,
   params: Promise<{ slug: string[] }>,
 ): Promise<NextResponse | Response> {
-  const routeT0 = Date.now()
-  const authT0 = Date.now()
   const authResult = await requireAuthCtx(request as NextRequest)
-  const authMs = Date.now() - authT0
   if (authResult instanceof Response) return authResult
 
   const { slug } = await params
-  const path = `/api/${slug.join('/')}`
-  const handlerT0 = Date.now()
   const response = await runWithAuthCtx(authResult, () => handleRoute(slug, request))
-  const handlerMs = Date.now() - handlerT0
-  latencyTrace(
-    'route.ts:dispatch',
-    'api_request',
-    { path, authMs, handlerMs, totalMs: Date.now() - routeT0 },
-    'E',
-  )
   if (response) return response
 
   return NextResponse.json(

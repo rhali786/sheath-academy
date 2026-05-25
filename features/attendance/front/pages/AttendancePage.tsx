@@ -11,7 +11,6 @@ import type { AttendanceRecord, AttendanceStatus, AttendanceSummary as SummaryTy
 import { emptyAttendanceSummary } from '@/features/attendance/types'
 import { STATUS_LABELS } from '@/features/attendance/types'
 import type { StudentProfile } from '@/features/lib/types'
-import { childrenApi } from '@/features/children/front/services/api'
 import { useHousehold } from '@/features/household/front/context'
 
 type DateSort = 'desc' | 'asc'
@@ -29,9 +28,8 @@ function todayLocal(): string {
 const DEFAULT_SUMMARY: SummaryType = emptyAttendanceSummary('')
 
 export function AttendancePage() {
-  const { householdProfile } = useHousehold()
+  const { householdProfile, studentProfiles: children } = useHousehold()
   const searchParams = useSearchParams()
-  const [children, setChildren] = useState<StudentProfile[]>([])
   const [selectedChildId, setSelectedChildId] = useState<string>('')
   const [date, setDate] = useState<string>(todayLocal())
   const [notes, setNotes] = useState<string>('')
@@ -48,11 +46,6 @@ export function AttendancePage() {
   const [batchLoading, setBatchLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
 
-  useEffect(() => {
-    childrenApi.getAllChildren()
-      .then(res => setChildren(res.data))
-      .catch(() => setError('Failed to load learners'))
-  }, [])
 
   // Sync URL childId → selectedChildId after children load and on URL changes
   useEffect(() => {
