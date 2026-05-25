@@ -184,6 +184,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         ]
       : []),
 
+    // Production credentials provider — email or username + password.
+    Credentials({
+      id: 'credentials',
+      name: 'Password',
+      credentials: {
+        identifier: { label: 'Email or username', type: 'text' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.identifier || !credentials?.password) return null
+        if (!process.env.DATABASE_URL) return null
+        try {
+          const { getUserByIdentifier } = await import('@/features/auth/server/repository')
+          const { verifyPassword } = await import('@/features/auth/server/password')
+          const user = await getUserByIdentifier(String(credentials.identifier))
+          if (!user?.passwordHash) return null
+          const valid = await verifyPassword(String(credentials.password), user.passwordHash)
+          if (!valid) return null
+          return { id: user.id, email: user.email, name: user.name }
+        } catch {
+          return null
+        }
+      },
+    }),
+
     // OAuth — only registered when client id + secret are set (Auth.js reads AUTH_* env vars).
     ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET ? [Google] : []),
     ...(process.env.AUTH_FACEBOOK_ID && process.env.AUTH_FACEBOOK_SECRET ? [Facebook] : []),

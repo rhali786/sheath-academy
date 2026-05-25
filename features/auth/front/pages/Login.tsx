@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect, FormEvent } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { signIn, getProviders } from 'next-auth/react'
+import Link from 'next/link'
 
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === 'true'
 
@@ -34,6 +35,9 @@ function LoginForm() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [oauth, setOauth] = useState({ google: false, facebook: false })
   const [oauthLoading, setOauthLoading] = useState<string | null>(null)
+  const [credIdentifier, setCredIdentifier] = useState('')
+  const [credPassword, setCredPassword] = useState('')
+  const [credStatus, setCredStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const authError = searchParams.get('error')
 
   useEffect(() => {
@@ -87,6 +91,23 @@ function LoginForm() {
     } else {
       setErrorMessage(magicLinkErrorMessage(result?.error))
       setStatus('error')
+    }
+  }
+
+  async function handleCredSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!credIdentifier.trim() || !credPassword) return
+    setCredStatus('loading')
+    const result = await signIn('credentials', {
+      identifier: credIdentifier.trim(),
+      password: credPassword,
+      redirect: false,
+      callbackUrl,
+    })
+    if (result?.ok && !result?.error) {
+      window.location.href = callbackUrl
+    } else {
+      setCredStatus('error')
     }
   }
 
@@ -152,6 +173,62 @@ function LoginForm() {
                   {status === 'loading' ? 'Sending…' : 'Send magic link'}
                 </button>
               </form>
+
+              <div className="flex items-center gap-3 my-5">
+                <div className="flex-1 h-px bg-slate-100" />
+                <span className="text-xs text-slate-400">or sign in with password</span>
+                <div className="flex-1 h-px bg-slate-100" />
+              </div>
+
+              {credStatus === 'error' && (
+                <div role="alert" className="mb-4 px-3 py-2 rounded-lg bg-red-50 border border-red-100 text-sm text-red-700">
+                  Incorrect email, username, or password.
+                </div>
+              )}
+
+              <form onSubmit={handleCredSubmit} noValidate>
+                <label htmlFor="cred-identifier" className="block text-xs font-medium text-slate-600 mb-1.5">
+                  Email or username
+                </label>
+                <input
+                  id="cred-identifier"
+                  type="text"
+                  value={credIdentifier}
+                  onChange={(e) => { setCredIdentifier(e.target.value); setCredStatus('idle') }}
+                  autoComplete="username"
+                  className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-forest-900/20 focus:border-forest-900 transition-colors mb-3"
+                />
+                <label htmlFor="cred-password" className="block text-xs font-medium text-slate-600 mb-1.5">
+                  Password
+                </label>
+                <input
+                  id="cred-password"
+                  type="password"
+                  value={credPassword}
+                  onChange={(e) => { setCredPassword(e.target.value); setCredStatus('idle') }}
+                  autoComplete="current-password"
+                  className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-forest-900/20 focus:border-forest-900 transition-colors mb-1"
+                />
+                <div className="flex justify-end mb-4">
+                  <Link href="/forgot-password" className="text-xs text-slate-400 hover:text-slate-600">
+                    Forgot password?
+                  </Link>
+                </div>
+                <button
+                  type="submit"
+                  disabled={credStatus === 'loading'}
+                  className="w-full py-2.5 rounded-lg border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 disabled:opacity-60 transition-colors"
+                >
+                  {credStatus === 'loading' ? 'Signing in…' : 'Sign in with password'}
+                </button>
+              </form>
+
+              <p className="mt-5 text-center text-xs text-slate-400">
+                New here?{' '}
+                <Link href="/signup" className="text-forest-900 font-medium hover:underline">
+                  Create account
+                </Link>
+              </p>
 
               {(oauth.google || oauth.facebook) && (
                 <>

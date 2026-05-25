@@ -26,7 +26,7 @@ describe('Login page — layout', () => {
 
   test('renders email input field', () => {
     render(<Login />)
-    expect(screen.getByRole('textbox', { name: /email/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument()
   })
 
   test('renders Send magic link button', () => {
@@ -46,7 +46,7 @@ describe('Login page — magic link flow', () => {
     mockSignIn.mockResolvedValue({ ok: true })
     render(<Login />)
 
-    fireEvent.change(screen.getByRole('textbox', { name: /email/i }), {
+    fireEvent.change(screen.getByLabelText(/^email$/i), {
       target: { value: 'parent@example.com' },
     })
     fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
@@ -64,7 +64,7 @@ describe('Login page — magic link flow', () => {
     mockSignIn.mockResolvedValue({ ok: true })
     render(<Login />)
 
-    fireEvent.change(screen.getByRole('textbox', { name: /email/i }), {
+    fireEvent.change(screen.getByLabelText(/^email$/i), {
       target: { value: 'parent@example.com' },
     })
     fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
@@ -78,7 +78,7 @@ describe('Login page — magic link flow', () => {
     mockSignIn.mockResolvedValue({ ok: false, error: 'EmailSignin' })
     render(<Login />)
 
-    fireEvent.change(screen.getByRole('textbox', { name: /email/i }), {
+    fireEvent.change(screen.getByLabelText(/^email$/i), {
       target: { value: 'parent@example.com' },
     })
     fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
@@ -92,7 +92,7 @@ describe('Login page — magic link flow', () => {
     mockSignIn.mockResolvedValue({ ok: true, error: 'Configuration', status: 200 })
     render(<Login />)
 
-    fireEvent.change(screen.getByRole('textbox', { name: /email/i }), {
+    fireEvent.change(screen.getByLabelText(/^email$/i), {
       target: { value: 'parent@example.com' },
     })
     fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
@@ -114,7 +114,7 @@ describe('Login page — magic link flow', () => {
     mockSignIn.mockReturnValue(new Promise((r) => { resolve = r }))
     render(<Login />)
 
-    fireEvent.change(screen.getByRole('textbox', { name: /email/i }), {
+    fireEvent.change(screen.getByLabelText(/^email$/i), {
       target: { value: 'parent@example.com' },
     })
     fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
