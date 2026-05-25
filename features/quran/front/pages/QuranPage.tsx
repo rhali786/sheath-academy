@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { Pencil, Trash2, X, Check } from 'lucide-react'
 import { quranApi } from '@/features/quran/front/services/api'
 import { useHousehold } from '@/features/household/front/context'
+import { SURAHS } from '@/features/quran/front/constants/surahs'
 import type { QuranSession } from '@/features/lib/types'
 import type { StudentProfile } from '@/features/lib/types'
 
@@ -219,13 +220,18 @@ export default function QuranPage() {
               </div>
               <div className="flex-1 min-w-36">
                 <label className="block text-xs font-medium text-slate-600 mb-1.5">Surah</label>
-                <input
-                  type="text"
+                <select
                   value={addForm.surah}
                   onChange={e => setAddForm(f => ({ ...f, surah: e.target.value }))}
-                  placeholder="e.g. Al-Fatiha"
                   className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-900"
-                />
+                >
+                  <option value="">Select a Surah…</option>
+                  {SURAHS.map(s => (
+                    <option key={s.number} value={s.name}>
+                      {s.number} - {s.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="w-24">
                 <label className="block text-xs font-medium text-slate-600 mb-1.5">From ayah</label>
@@ -337,12 +343,18 @@ export default function QuranPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-500 mb-1">Surah</label>
-                    <input
-                      type="text"
+                    <select
                       value={editForm.surah}
                       onChange={e => setEditForm(f => f ? { ...f, surah: e.target.value } : f)}
                       className="w-full text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-forest-500"
-                    />
+                    >
+                      <option value="">Select a Surah…</option>
+                      {SURAHS.map(s => (
+                        <option key={s.number} value={s.name}>
+                          {s.number} - {s.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="flex gap-3">
                     <div className="flex-1">
