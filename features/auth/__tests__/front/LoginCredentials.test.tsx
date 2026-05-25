@@ -25,9 +25,9 @@ describe('Login page — credentials form', () => {
     expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument()
   })
 
-  test('renders sign in with password button', () => {
+  test('renders sign in button', () => {
     render(<Login />)
-    expect(screen.getByRole('button', { name: /sign in with password/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^sign in$/i })).toBeInTheDocument()
   })
 
   test('renders forgot password link', () => {
@@ -48,7 +48,7 @@ describe('Login page — credentials form', () => {
     render(<Login />)
     fireEvent.change(screen.getByLabelText(/email or username/i), { target: { value: 'parent@example.com' } })
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'password123' } })
-    fireEvent.click(screen.getByRole('button', { name: /sign in with password/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }))
 
     await waitFor(() => {
       expect(mockSignIn).toHaveBeenCalledWith('credentials', expect.objectContaining({
@@ -66,7 +66,7 @@ describe('Login page — credentials form', () => {
     render(<Login />)
     fireEvent.change(screen.getByLabelText(/email or username/i), { target: { value: 'bad@example.com' } })
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'wrongpass' } })
-    fireEvent.click(screen.getByRole('button', { name: /sign in with password/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }))
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(/incorrect email, username, or password/i)
@@ -76,7 +76,7 @@ describe('Login page — credentials form', () => {
   test('does not call signIn when identifier is empty', () => {
     render(<Login />)
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'password123' } })
-    fireEvent.click(screen.getByRole('button', { name: /sign in with password/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }))
     expect(mockSignIn).not.toHaveBeenCalled()
   })
 })

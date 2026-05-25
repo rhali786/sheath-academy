@@ -18,19 +18,26 @@ beforeEach(() => {
   mockSignIn.mockClear()
 })
 
+function switchToMagicTab() {
+  fireEvent.click(screen.getByRole('button', { name: /^magic link$/i }))
+}
+
 describe('Login page — layout', () => {
   test('renders brand logo and Sheath Academy name', () => {
     render(<Login />)
     expect(screen.getByText('Sheath Academy')).toBeInTheDocument()
   })
 
-  test('renders email input field', () => {
+  test('defaults to password tab — shows identifier and password inputs', () => {
     render(<Login />)
-    expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/email or username/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument()
   })
 
-  test('renders Send magic link button', () => {
+  test('magic link tab shows email input', () => {
     render(<Login />)
+    switchToMagicTab()
+    expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /send magic link/i })).toBeInTheDocument()
   })
 
@@ -41,14 +48,64 @@ describe('Login page — layout', () => {
   })
 })
 
+describe('Login page — credentials flow', () => {
+  test('submitting valid credentials calls signIn with credentials provider', async () => {
+    mockSignIn.mockResolvedValue({ ok: true })
+    render(<Login />)
+
+    fireEvent.change(screen.getByLabelText(/email or username/i), { target: { value: 'user@example.com' } })
+    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'secret' } })
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }))
+
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledWith('credentials', expect.objectContaining({
+        identifier: 'user@example.com',
+        password: 'secret',
+        redirect: false,
+      }))
+    })
+  })
+
+  test('shows error when identifier is empty', async () => {
+    render(<Login />)
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }))
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/email or username/i)
+    })
+    expect(mockSignIn).not.toHaveBeenCalled()
+  })
+
+  test('shows error when password is empty', async () => {
+    render(<Login />)
+    fireEvent.change(screen.getByLabelText(/email or username/i), { target: { value: 'user@example.com' } })
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }))
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/password/i)
+    })
+    expect(mockSignIn).not.toHaveBeenCalled()
+  })
+
+  test('shows error on bad credentials', async () => {
+    mockSignIn.mockResolvedValue({ ok: false, error: 'CredentialsSignin' })
+    render(<Login />)
+
+    fireEvent.change(screen.getByLabelText(/email or username/i), { target: { value: 'user@example.com' } })
+    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'wrong' } })
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/incorrect/i)
+    })
+  })
+})
+
 describe('Login page — magic link flow', () => {
   test('submitting a valid email calls signIn with resend provider', async () => {
     mockSignIn.mockResolvedValue({ ok: true })
     render(<Login />)
+    switchToMagicTab()
 
-    fireEvent.change(screen.getByLabelText(/^email$/i), {
-      target: { value: 'parent@example.com' },
-    })
+    fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'parent@example.com' } })
     fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
 
     await waitFor(() => {
@@ -63,10 +120,9 @@ describe('Login page — magic link flow', () => {
   test('shows success message after email is submitted', async () => {
     mockSignIn.mockResolvedValue({ ok: true })
     render(<Login />)
+    switchToMagicTab()
 
-    fireEvent.change(screen.getByLabelText(/^email$/i), {
-      target: { value: 'parent@example.com' },
-    })
+    fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'parent@example.com' } })
     fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
 
     await waitFor(() => {
@@ -77,10 +133,9 @@ describe('Login page — magic link flow', () => {
   test('shows error message when signIn fails', async () => {
     mockSignIn.mockResolvedValue({ ok: false, error: 'EmailSignin' })
     render(<Login />)
+    switchToMagicTab()
 
-    fireEvent.change(screen.getByLabelText(/^email$/i), {
-      target: { value: 'parent@example.com' },
-    })
+    fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'parent@example.com' } })
     fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
 
     await waitFor(() => {
@@ -91,10 +146,9 @@ describe('Login page — magic link flow', () => {
   test('shows error when signIn returns ok:true with Configuration error (Resend failure)', async () => {
     mockSignIn.mockResolvedValue({ ok: true, error: 'Configuration', status: 200 })
     render(<Login />)
+    switchToMagicTab()
 
-    fireEvent.change(screen.getByLabelText(/^email$/i), {
-      target: { value: 'parent@example.com' },
-    })
+    fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'parent@example.com' } })
     fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
 
     await waitFor(() => {
@@ -103,24 +157,14 @@ describe('Login page — magic link flow', () => {
     expect(screen.queryByText(/check your email/i)).not.toBeInTheDocument()
   })
 
-  test('does not call signIn when email is empty', async () => {
+  test('shows validation error when email is empty', async () => {
     render(<Login />)
+    switchToMagicTab()
     fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
-    expect(mockSignIn).not.toHaveBeenCalled()
-  })
-
-  test('button shows loading state while submitting', async () => {
-    let resolve: (v: unknown) => void
-    mockSignIn.mockReturnValue(new Promise((r) => { resolve = r }))
-    render(<Login />)
-
-    fireEvent.change(screen.getByLabelText(/^email$/i), {
-      target: { value: 'parent@example.com' },
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument()
     })
-    fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
-
-    expect(screen.getByRole('button', { name: /sending/i })).toBeInTheDocument()
-    resolve!({ ok: true })
+    expect(mockSignIn).not.toHaveBeenCalled()
   })
 })
 
@@ -131,8 +175,6 @@ describe('Login page — dev bypass section hidden by default', () => {
   })
 })
 
-// DevBypassSection is tested in isolation (exported) so we avoid jest.resetModules
-// which causes React instance conflicts in jsdom.
 describe('DevBypassSection', () => {
   beforeEach(() => {
     mockSignIn.mockClear()

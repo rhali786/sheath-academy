@@ -19,6 +19,6 @@ export default auth((req) => {
 export const config = {
   // Pages only — feature APIs use app/api/[...slug]/route.ts (401 JSON), not login redirect.
   matcher: [
-    '/((?!api|login|about|feedback|worklog|_next/static|_next/image|favicon\\.ico).*)',
+    '/((?!api|login|signup|forgot-password|reset-password|about|feedback|worklog|_next/static|_next/image|favicon\\.ico).*)',
   ],
 }
