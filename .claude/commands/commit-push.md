@@ -13,9 +13,9 @@ Bumps the version in package.json, commits with a well-formed message, and pushe
 ## Steps
 
 1. **Determine bump type** from the first word of `$ARGUMENTS`:
-   - Starts with `feat!` or body contains `BREAKING CHANGE` → `major`
    - Starts with `feat` → `minor`
    - Anything else (`fix`, `chore`, `docs`, `test`, `refactor`, `perf`, `style`) → `patch`
+   - **Major bumps are never automatic.** They mark milestone business releases and must be triggered manually by the user (`npm run bump:major` or explicitly requesting a major bump).
 
 2. **Run the version bump:**
    ```

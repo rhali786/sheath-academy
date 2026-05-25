@@ -18,11 +18,10 @@ const msg = fs.readFileSync(msgFile, 'utf8').trim()
 const firstLine = msg.split('\n')[0]
 
 let bumpType = 'patch'
-if (/^feat!/.test(firstLine) || /^BREAKING CHANGE/m.test(msg)) {
-  bumpType = 'major'
-} else if (/^feat(\(|!|:)/.test(firstLine)) {
+if (/^feat(\(|:)/.test(firstLine)) {
   bumpType = 'minor'
 }
+// Major bumps are milestone business releases — triggered manually, never by commit message.
 
 const root = process.cwd()
 execFileSync(
