@@ -1,20 +1,4 @@
 #!/usr/bin/env node
 'use strict'
-// Bumps the patch version in package.json and stages it so the bump lands in
-// the same commit. Must run in pre-commit — only hook where `git add` is
-// included in the commit tree.
-//
-// Always bumps patch. Major/minor bumps must be done manually before committing.
-
-const { execFileSync } = require('child_process')
-const path = require('path')
-
-const root = process.cwd()
-
-execFileSync(
-  process.execPath,
-  [path.join(root, 'scripts', 'bump-version.cjs'), 'patch'],
-  { stdio: 'inherit' },
-)
-
-execFileSync('git', ['add', 'package.json'], { stdio: 'inherit' })
+// Version bump is handled by commit-msg where the commit message is available.
+// This hook is kept as a placeholder for future pre-commit validations.
