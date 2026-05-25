@@ -54,8 +54,20 @@ export const drizzleAdapter: Adapter = {
   },
 
   async getUserByEmail(email) {
-    const row = await getDb().select().from(users).where(eq(users.email, email)).limit(1)
-    return row[0] ? toAdapterUser(row[0]) : null
+    const db = getDb()
+    const row = await db.select().from(users).where(eq(users.email, email)).limit(1)
+    if (!row[0]) return null
+
+    // If the user exists but has no linked auth accounts and no password hash,
+    // they're in an orphaned state (e.g. a prior OAuth attempt created the user row
+    // but linkAccount never ran). Return null so NextAuth falls through to
+    // createUser → linkAccount instead of throwing OAuthAccountNotLinked.
+    if (!row[0].passwordHash) {
+      const linked = await db.select().from(accounts).where(eq(accounts.userId, row[0].id)).limit(1)
+      if (linked.length === 0) return null
+    }
+
+    return toAdapterUser(row[0])
   },
 
   async updateUser(data) {
