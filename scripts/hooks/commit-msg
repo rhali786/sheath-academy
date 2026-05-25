@@ -1,3 +1,32 @@
-#!/bin/sh
-# Version bumping is handled by the pre-commit hook.
-# pre-commit is the only hook where `git add` lands in the same commit.
+#!/usr/bin/env node
+'use strict'
+// Reads the commit message and bumps the version accordingly:
+//   feat!: ... or BREAKING CHANGE in body → major
+//   feat: ... or feat(...): ...           → minor
+//   anything else                         → patch
+//
+// Stages package.json so the bump lands in the same commit.
+
+const fs = require('fs')
+const path = require('path')
+const { execFileSync } = require('child_process')
+
+const msgFile = process.argv[2]
+if (!msgFile) process.exit(0)
+
+const msg = fs.readFileSync(msgFile, 'utf8').trim()
+const firstLine = msg.split('\n')[0]
+
+let bumpType = 'patch'
+if (/^feat(\(|:)/.test(firstLine)) {
+  bumpType = 'minor'
+}
+// Major bumps are milestone business releases — triggered manually, never by commit message.
+
+const root = process.cwd()
+execFileSync(
+  process.execPath,
+  [path.join(root, 'scripts', 'bump-version.cjs'), bumpType],
+  { stdio: 'inherit' },
+)
+execFileSync('git', ['add', 'package.json'], { stdio: 'inherit' })

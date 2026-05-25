@@ -62,6 +62,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // Postgres optional during migration; JWT sign-in still succeeds.
         }
       }
+      if (user.email && process.env.DATABASE_URL) {
+        try {
+          const { updateUserLastLogin } = await import('@/features/auth/server/repository')
+          await updateUserLastLogin(user.email)
+        } catch {
+          // Non-fatal — login proceeds even if the timestamp can't be written.
+        }
+      }
       return true
     },
     async jwt({ token, user, trigger, session }) {
@@ -95,6 +103,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
 
+      const { isAppAdmin } = await import('@/features/lib/server/appAdmin')
+      token.isAdmin = isAppAdmin(typeof token.email === 'string' ? token.email : undefined)
+
       return token
     },
     session({ session, token }) {
@@ -103,6 +114,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (typeof token.userId === 'string') session.user.userId = token.userId
         if (typeof token.householdId === 'string') session.user.householdId = token.householdId
         if (typeof token.timezone === 'string') session.user.timezone = token.timezone
+        session.user.isAdmin = token.isAdmin === true
       }
       return session
     },
@@ -183,6 +195,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }),
         ]
       : []),
+
+    // Production credentials provider — email or username + password.
+    Credentials({
+      id: 'credentials',
+      name: 'Password',
+      credentials: {
+        identifier: { label: 'Email or username', type: 'text' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.identifier || !credentials?.password) return null
+        if (!process.env.DATABASE_URL) return null
+        try {
+          const { getUserByIdentifier } = await import('@/features/auth/server/repository')
+          const { verifyPassword } = await import('@/features/auth/server/password')
+          const user = await getUserByIdentifier(String(credentials.identifier))
+          if (!user?.passwordHash) return null
+          const valid = await verifyPassword(String(credentials.password), user.passwordHash)
+          if (!valid) return null
+          return { id: user.id, email: user.email, name: user.name }
+        } catch {
+          return null
+        }
+      },
+    }),
 
     // OAuth — only registered when client id + secret are set (Auth.js reads AUTH_* env vars).
     ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET ? [Google] : []),

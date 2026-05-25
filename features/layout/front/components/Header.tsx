@@ -200,16 +200,18 @@ export function Header() {
           >
             Settings
           </Link>
-          <Link
-            href="/admin/metrics"
-            className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
-              pathname.startsWith('/admin')
-                ? 'bg-forest-900 text-white'
-                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-            }`}
-          >
-            Admin
-          </Link>
+          {session?.user?.isAdmin && (
+            <Link
+              href="/admin/metrics"
+              className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
+                pathname.startsWith('/admin')
+                  ? 'bg-forest-900 text-white'
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              Admin
+            </Link>
+          )}
           <Link
             href="/about"
             className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
@@ -337,17 +339,19 @@ export function Header() {
             >
               Settings
             </Link>
-            <Link
-              href="/admin/metrics"
-              onClick={() => setMenuOpen(false)}
-              className={`block px-4 py-3 text-sm font-medium transition-colors ${
-                pathname.startsWith('/admin')
-                  ? 'bg-forest-50 text-forest-900'
-                  : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-            >
-              Admin
-            </Link>
+            {session?.user?.isAdmin && (
+              <Link
+                href="/admin/metrics"
+                onClick={() => setMenuOpen(false)}
+                className={`block px-4 py-3 text-sm font-medium transition-colors ${
+                  pathname.startsWith('/admin')
+                    ? 'bg-forest-50 text-forest-900'
+                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+              >
+                Admin
+              </Link>
+            )}
             <Link
               href="/about"
               onClick={() => setMenuOpen(false)}

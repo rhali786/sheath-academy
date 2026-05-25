@@ -2,6 +2,7 @@ import { NavigationProvider } from '@/features/layout/front/context/NavigationCo
 import { HouseholdProvider } from '@/features/household/front/context'
 import { ShellAuthGuard } from './ShellAuthGuard'
 import { Header } from './Header'
+import { FeedbackButton } from '@/features/feedback/front/components/FeedbackButton'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -18,6 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main id="main-content">
         {children}
       </main>
+      <FeedbackButton />
     </HouseholdProvider>
     </NavigationProvider>
     </ShellAuthGuard>

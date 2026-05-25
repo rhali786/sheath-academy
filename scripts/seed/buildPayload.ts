@@ -502,6 +502,7 @@ export function buildDemoSeedPayload(
     email: cfg.email,
     name: cfg.userName,
     role: cfg.isAdmin ? 'admin' : 'user',
+    createdVia: 'seed',
     createdAt: seedNow,
     updatedAt: seedNow,
   }))

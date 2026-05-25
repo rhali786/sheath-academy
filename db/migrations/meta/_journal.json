@@ -64,6 +64,20 @@
       "when": 1779647379160,
       "tag": "0008_orange_toad",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1779670061457,
+      "tag": "0009_happy_revanche",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1779679535750,
+      "tag": "0010_nosy_monster_badoon",
+      "breakpoints": true
     }
   ]
 }

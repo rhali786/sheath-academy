@@ -21,6 +21,12 @@ export const users = pgTable('users', {
   emailVerified: timestamp('email_verified', { mode: 'date' }),
   image: text('image'),
   role: text('role').default('user'),
+  username: text('username'),
+  usernameNormalized: text('username_normalized').unique(),
+  passwordHash: text('password_hash'),
+  passwordUpdatedAt: timestamp('password_updated_at'),
+  createdVia: text('created_via'),
+  lastLoginAt: timestamp('last_login_at'),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
 })
@@ -332,6 +338,21 @@ export const productValidationResponses = pgTable('product_validation_responses'
   updatedAt: timestamp('updated_at').notNull(),
 })
 
+// ─── Password Reset Tokens ────────────────────────────────────────────────────
+
+export const passwordResetTokens = pgTable(
+  'password_reset_tokens',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: timestamp('expires_at').notNull(),
+    usedAt: timestamp('used_at'),
+    createdAt: timestamp('created_at').notNull(),
+  },
+  (t) => [index('password_reset_tokens_user_idx').on(t.userId)],
+)
+
 // ─── Resources Catalog ────────────────────────────────────────────────────
 
 export const resources = pgTable(
@@ -389,3 +410,20 @@ export const resourceCommunityNotes = pgTable('resource_community_notes', {
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
 })
+
+// ─── User Feedback ────────────────────────────────────────────────────────────
+
+export const userFeedback = pgTable(
+  'user_feedback',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').references(() => users.id),
+    householdId: text('household_id').references(() => households.id),
+    userEmail: text('user_email').notNull(),
+    pagePath: text('page_path').notNull(),
+    sentiment: text('sentiment').notNull(),
+    message: text('message'),
+    createdAt: timestamp('created_at').notNull(),
+  },
+  (t) => [index('user_feedback_created_at_idx').on(t.createdAt)],
+)

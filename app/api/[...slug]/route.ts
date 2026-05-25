@@ -17,6 +17,8 @@ import { handleScheduleRoute } from '@/features/schedule/api/router'
 import { handleResourcesRoute } from '@/features/resources/api/router'
 import { handleProductValidationRoute } from '@/features/product-validation/api/router'
 import { handleAdminMetricsRoute } from '@/features/admin-metrics/api/router'
+import { handleFeedbackRoute } from '@/features/feedback/api/router'
+import { handleAdminFeedbackRoute } from '@/features/feedback/api/adminRouter'
 import { latencyTrace } from '@/features/lib/debug/latencyTrace'
 
 async function handleRoute(slug: string[], request: Request): Promise<NextResponse | null> {
@@ -80,8 +82,15 @@ async function handleRoute(slug: string[], request: Request): Promise<NextRespon
     return await handleProductValidationRoute(slug.slice(1), request)
   }
 
+  if (slug[0] === 'feedback') {
+    return await handleFeedbackRoute(slug.slice(1), request)
+  }
+
   if (slug[0] === 'admin') {
-    return await handleAdminMetricsRoute(slug.slice(1), request)
+    return (
+      await handleAdminMetricsRoute(slug.slice(1), request) ??
+      await handleAdminFeedbackRoute(slug.slice(1), request)
+    )
   }
 
   return null
