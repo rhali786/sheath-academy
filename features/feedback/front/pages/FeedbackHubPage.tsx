@@ -91,7 +91,7 @@ export function FeedbackHubPage() {
                         <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{row.message}</p>
                       )}
                       <p className="text-xs text-slate-400 mt-0.5">
-                        {new Date(row.createdAt).toLocaleDateString()}
+                        {new Date(row.createdAt).toLocaleString()}
                       </p>
                     </div>
                   </div>
