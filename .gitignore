@@ -8,6 +8,8 @@ build/
 *.log
 .next/
 *.tsbuildinfo
+e2e/results/
+test-results/
 package-lock.json
 features/dashboard/frontend/node_modules
 features/dashboard/frontend/dist
