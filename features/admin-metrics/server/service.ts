@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
 import { households, users } from '@/db/schema'
-import { listLearners } from '@/features/children/server/repository'
+import { listLearners, getAdminLearnerCounts } from '@/features/children/server/repository'
 import { getAdminLessonCounts } from '@/features/plan/server/service'
 import { getAdminAttendanceCounts } from '@/features/attendance/server/service'
 import { getAdminQuranCounts } from '@/features/quran/server/service'
@@ -40,11 +40,12 @@ export async function getAdminMetricsUsers(query: AdminMetricsQuery): Promise<Ad
     .innerJoin(users, eq(households.userId, users.id))
 
   // 2. Domain aggregates in parallel
-  const [lessonCounts, attendanceCounts, quranCounts, evidenceCounts] = await Promise.all([
+  const [lessonCounts, attendanceCounts, quranCounts, evidenceCounts, learnerCounts] = await Promise.all([
     getAdminLessonCounts(periodStart, periodEnd),
     getAdminAttendanceCounts(periodStart, periodEnd),
     getAdminQuranCounts(periodStart, periodEnd),
     getAdminEvidenceCounts(periodStart, periodEnd),
+    getAdminLearnerCounts(periodStart, periodEnd),
   ])
 
   // Index by householdId for O(1) lookup
@@ -52,6 +53,7 @@ export async function getAdminMetricsUsers(query: AdminMetricsQuery): Promise<Ad
   const attMap = new Map(attendanceCounts.map(r => [r.householdId, r]))
   const quranMap = new Map(quranCounts.map(r => [r.householdId, r]))
   const evidenceMap = new Map(evidenceCounts.map(r => [r.householdId, r]))
+  const learnerCreatedMap = new Map(learnerCounts.map(r => [r.householdId, r]))
 
   // 3. Learner info per household
   const learnersByHousehold = new Map<string, { count: number; names: string[] }>()
@@ -71,6 +73,7 @@ export async function getAdminMetricsUsers(query: AdminMetricsQuery): Promise<Ad
     const att = attMap.get(hh.householdId)
     const quran = quranMap.get(hh.householdId)
     const evidence = evidenceMap.get(hh.householdId)
+    const learnerCreated = learnerCreatedMap.get(hh.householdId)
     const learners = learnersByHousehold.get(hh.householdId) ?? { count: 0, names: [] }
 
     const lessonCount = lessons?.count ?? 0
@@ -78,9 +81,10 @@ export async function getAdminMetricsUsers(query: AdminMetricsQuery): Promise<Ad
     const attCount = att?.count ?? 0
     const quranCount = quran?.count ?? 0
     const evidenceCount = evidence?.count ?? 0
+    const learnerCreatedCount = learnerCreated?.count ?? 0
 
-    const isActiveInPeriod = lessonCount > 0 || attCount > 0 || quranCount > 0 || evidenceCount > 0
-    const lastActiveAt = latestDate(lessons?.lastDueDate ?? null, att?.lastDate ?? null, quran?.lastDate ?? null, evidence?.lastDate ?? null)
+    const isActiveInPeriod = lessonCount > 0 || attCount > 0 || quranCount > 0 || evidenceCount > 0 || learnerCreatedCount > 0
+    const lastActiveAt = latestDate(lessons?.lastDueDate ?? null, att?.lastDate ?? null, quran?.lastDate ?? null, evidence?.lastDate ?? null, learnerCreated?.lastDate ?? null)
 
     // Drop-off signal: learners exist but zero activity
     const dropOffSignals: import('@/features/admin-metrics/types').DropOffSignal[] =

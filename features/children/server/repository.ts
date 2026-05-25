@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, gte, lte, sql } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
 import { learners } from '@/db/schema'
 
@@ -126,6 +126,34 @@ export async function archiveLearner(
     .where(and(eq(learners.id, id), eq(learners.householdId, householdId)))
     .returning()
   return result[0] ?? null
+}
+
+export interface AdminLearnerCount {
+  householdId: string
+  count: number
+  lastDate: string | null
+}
+
+/** Cross-household aggregate for admin metrics: learners created within a period. */
+export async function getAdminLearnerCounts(
+  periodStart: string,
+  periodEnd: string,
+): Promise<AdminLearnerCount[]> {
+  const db = getDb()
+  return db
+    .select({
+      householdId: learners.householdId,
+      count: sql<number>`count(*)::int`,
+      lastDate: sql<string | null>`max(${learners.createdAt})::date::text`,
+    })
+    .from(learners)
+    .where(
+      and(
+        gte(learners.createdAt, new Date(`${periodStart}T00:00:00Z`)),
+        lte(learners.createdAt, new Date(`${periodEnd}T23:59:59Z`)),
+      ),
+    )
+    .groupBy(learners.householdId)
 }
 
 export async function restoreLearner(
