@@ -7,6 +7,7 @@ import {
   updateFeedbackTriage,
   updateFeedbackWorkflow,
 } from '@/features/feedback/server/repository'
+import { getChangelogEntryByPrNumber } from '@/features/about/server/repository'
 import type {
   FeedbackConfidence,
   FeedbackRiskLevel,
@@ -88,6 +89,7 @@ export async function applyClassification(id: string, decision: ClassifyDecision
     feedbackType: decision.feedbackType,
     riskLevel: decision.riskLevel,
     confidence: decision.confidence,
+    recommendation: decision.recommendation,
   }
 
   await updateFeedbackTriage(id, triage)
@@ -130,8 +132,6 @@ export interface FeedbackPrSyncInput {
   prNumber: number
   previewUrl?: string | null
   uatInstructions?: string | null
-  changelogLabel?: string | null
-  changelogUserCredit?: string | null
 }
 
 export async function markFeedbackAttachedToPr(id: string, data: FeedbackPrSyncInput): Promise<void> {
@@ -143,16 +143,40 @@ export async function markFeedbackAttachedToPr(id: string, data: FeedbackPrSyncI
     prNumber: data.prNumber,
     previewUrl: data.previewUrl ?? null,
     uatInstructions: data.uatInstructions ?? null,
-    changelogLabel: data.changelogLabel ?? null,
-    changelogUserCredit: data.changelogUserCredit ?? null,
   }
 
   await updateFeedbackWorkflow(id, workflowUpdate)
 }
 
+export async function rollbackFeedbackAttachedToPr(prNumber: number): Promise<void> {
+  const rows = await listFeedbackByPrNumber(prNumber)
+  const rollbackable = rows.filter((row) => row.status === 'in_pr' || row.status === 'in_qa')
+
+  if (rollbackable.length === 0) {
+    throw new FeedbackWorkflowError(
+      `No rollbackable rows found for PR #${prNumber}`,
+      404,
+      'no_rollbackable_rows',
+    )
+  }
+
+  await Promise.all(
+    rollbackable.map((row) =>
+      updateFeedbackWorkflow(row.id, {
+        status: 'classified',
+        prNumber: null,
+        previewUrl: null,
+        uatInstructions: null,
+        versionResolved: null,
+        resolvedAt: null,
+        changelogEntryId: null,
+      }),
+    ),
+  )
+}
+
 export interface FeedbackShipInput {
   versionResolved: string
-  changelogVersion?: string | null
 }
 
 export async function markFeedbackShippedByPr(prNumber: number, data: FeedbackShipInput): Promise<void> {
@@ -167,6 +191,8 @@ export async function markFeedbackShippedByPr(prNumber: number, data: FeedbackSh
     )
   }
 
+  const changelogEntry = await getChangelogEntryByPrNumber(prNumber)
+
   const resolvedAt = new Date().toISOString()
   await Promise.all(
     shippable.map((row) =>
@@ -174,7 +200,7 @@ export async function markFeedbackShippedByPr(prNumber: number, data: FeedbackSh
         status: 'shipped',
         versionResolved: data.versionResolved,
         resolvedAt,
-        changelogVersion: data.changelogVersion ?? null,
+        ...(changelogEntry ? { changelogEntryId: changelogEntry.id } : {}),
       }),
     ),
   )

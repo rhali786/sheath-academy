@@ -182,11 +182,10 @@ export function FeedbackDetailPage({ id }: { id: string }) {
       {row.versionResolved && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
           <p className="text-sm font-semibold text-green-900">Shipped in {row.versionResolved}</p>
-          {row.changelogLabel && <p className="text-sm text-green-700">{row.changelogLabel}</p>}
-          {(row.changelogVersion || row.changelogUserCredit) && (
+          {row.changelogEntryLabel && <p className="text-sm text-green-700">{row.changelogEntryLabel}</p>}
+          {row.changelogEntryUserCredit && (
             <div className="grid grid-cols-2 gap-3 pt-2 border-t border-green-200">
-              {row.changelogVersion && <KV label="Changelog version" value={row.changelogVersion} />}
-              {row.changelogUserCredit && <KV label="Credit" value={row.changelogUserCredit} />}
+              <KV label="Credit" value={row.changelogEntryUserCredit} />
             </div>
           )}
         </div>
@@ -201,6 +200,13 @@ export function FeedbackDetailPage({ id }: { id: string }) {
             <KV label="User email" value={row.userEmail} />
             {row.householdName && <KV label="Household" value={row.householdName} />}
           </div>
+
+          {row.recommendation && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Claude recommendation</p>
+              <p className="mt-2 text-sm text-blue-900 whitespace-pre-wrap">{row.recommendation}</p>
+            </div>
+          )}
 
           {(row.adminApprovedAt || row.adminApprovedByUserId) && (
             <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-200">

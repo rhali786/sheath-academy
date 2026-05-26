@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import type { ChangelogEntry } from '@/features/about/types'
 
 const pains = [
   {
@@ -115,7 +116,7 @@ const changelog = [
   },
 ]
 
-export function AboutPage() {
+export function AboutPage({ changelogEntries = [] }: { changelogEntries?: ChangelogEntry[] }) {
   return (
     <div className="bg-slate-50 min-h-screen">
 
@@ -232,6 +233,29 @@ export function AboutPage() {
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Changelog</p>
           <p className="text-sm text-slate-500 mb-6">One entry per meaningful milestone. Version shown is where that milestone landed.</p>
           <div className="space-y-2">
+            {changelogEntries.map((entry) => (
+              <div key={entry.id} className="bg-white rounded-xl px-5 py-4 shadow-sm flex items-start gap-4">
+                <span className="text-xs font-bold text-forest-900 tabular-nums mt-0.5 w-16 flex-shrink-0">{entry.version}</span>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-slate-900">{entry.label}</p>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                        entry.status === 'pending'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}
+                    >
+                      {entry.status === 'pending' ? 'Pending' : 'Shipped'}
+                    </span>
+                  </div>
+                  {entry.detail && <p className="text-xs text-slate-500 mt-0.5">{entry.detail}</p>}
+                  {entry.userCredit && (
+                    <p className="text-xs text-slate-400 mt-1">Suggested by {entry.userCredit}</p>
+                  )}
+                </div>
+              </div>
+            ))}
             {changelog.map((entry) => (
               <div key={entry.version} className="bg-white rounded-xl px-5 py-4 shadow-sm flex items-start gap-4">
                 <span className="text-xs font-bold text-forest-900 tabular-nums mt-0.5 w-16 flex-shrink-0">{entry.version}</span>

@@ -11,9 +11,14 @@ jest.mock('next/link', () =>
     return <a href={href}>{children}</a>
   }
 )
+jest.mock('next-auth/react', () => ({
+  useSession: jest.fn(),
+}))
 
 import { getUserFeedback } from '@/features/feedback/front/services/api'
+import { useSession } from 'next-auth/react'
 const mockGet = getUserFeedback as jest.Mock
+const mockUseSession = useSession as jest.Mock
 
 const mockRow: FeedbackRow = {
   id: 'fb_1',
@@ -28,6 +33,7 @@ const mockRow: FeedbackRow = {
   feedbackType: 'enhancement',
   riskLevel: 'low',
   confidence: 'high',
+  recommendation: 'Clarify the dashboard button label.',
   duplicateOfFeedbackId: null,
   adminApprovedAt: '2026-05-25T10:00:00Z',
   adminApprovedByUserId: 'admin@example.com',
@@ -36,14 +42,19 @@ const mockRow: FeedbackRow = {
   uatInstructions: 'Test in staging environment',
   versionResolved: null,
   resolvedAt: null,
-  changelogVersion: null,
-  changelogLabel: null,
-  changelogUserCredit: null,
+  changelogEntryId: null,
   createdAt: '2026-05-24T10:00:00Z',
 }
 
 afterEach(() => {
   jest.clearAllMocks()
+})
+
+beforeEach(() => {
+  mockUseSession.mockReturnValue({
+    data: { user: { email: 'parent@example.com', isAdmin: false } },
+    status: 'authenticated',
+  })
 })
 
 describe('FeedbackDetailPage', () => {
@@ -114,6 +125,23 @@ describe('FeedbackDetailPage', () => {
     })
   })
 
+  it('shows Claude recommendation to admins reviewing the row', async () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { email: 'admin@example.com', isAdmin: true } },
+      status: 'authenticated',
+    })
+    mockGet.mockResolvedValue({
+      ...mockRow,
+      status: 'awaiting_approval',
+      recommendation: 'Break this into a lower-risk dashboard copy change before planning.',
+    })
+    render(<FeedbackDetailPage id="fb_1" />)
+    await waitFor(() => {
+      expect(screen.getByText('Claude recommendation')).toBeInTheDocument()
+      expect(screen.getByText('Break this into a lower-risk dashboard copy change before planning.')).toBeInTheDocument()
+    })
+  })
+
   it('shows shipped state when versionResolved is set', async () => {
     mockGet.mockResolvedValue({ ...mockRow, versionResolved: '2.1.0', status: 'shipped' as const })
     render(<FeedbackDetailPage id="fb_1" />)
@@ -127,7 +155,8 @@ describe('FeedbackDetailPage', () => {
       ...mockRow,
       status: 'shipped' as const,
       versionResolved: '2.1.0',
-      changelogLabel: 'Dashboard copy polish',
+      changelogEntryId: 'cl_1',
+      changelogEntryLabel: 'Dashboard copy polish',
     })
     render(<FeedbackDetailPage id="fb_1" />)
     await waitFor(() => {
@@ -135,17 +164,17 @@ describe('FeedbackDetailPage', () => {
     })
   })
 
-  it('shows changelog version and user credit when present', async () => {
+  it('shows changelog user credit when present', async () => {
     mockGet.mockResolvedValue({
       ...mockRow,
       status: 'shipped' as const,
       versionResolved: '2.1.0',
-      changelogVersion: '2.1.0',
-      changelogUserCredit: 'parent@example.com',
+      changelogEntryId: 'cl_1',
+      changelogEntryLabel: 'Dashboard copy polish',
+      changelogEntryUserCredit: 'parent@example.com',
     })
     render(<FeedbackDetailPage id="fb_1" />)
     await waitFor(() => {
-      expect(screen.getByText('Changelog version')).toBeInTheDocument()
       expect(screen.getByText('Credit')).toBeInTheDocument()
       expect(screen.getByText('parent@example.com')).toBeInTheDocument()
     })

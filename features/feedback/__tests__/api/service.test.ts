@@ -9,6 +9,10 @@ jest.mock('@/features/feedback/server/repository', () => ({
   updateFeedbackWorkflow: jest.fn(),
 }))
 
+jest.mock('@/features/about/server/repository', () => ({
+  getChangelogEntryByPrNumber: jest.fn(),
+}))
+
 import {
   getFeedbackById,
   listFeedbackForAdmin,
@@ -17,12 +21,14 @@ import {
   updateFeedbackTriage,
   updateFeedbackWorkflow,
 } from '@/features/feedback/server/repository'
+import { getChangelogEntryByPrNumber } from '@/features/about/server/repository'
 import {
   approveFeedbackForPlanning,
   applyClassification,
   listEligibleFeedbackForDailyRun,
   markFeedbackDuplicate,
   markFeedbackAttachedToPr,
+  rollbackFeedbackAttachedToPr,
   markFeedbackShippedByPr,
   type ClassifyDecision,
 } from '@/features/feedback/server/service'
@@ -34,12 +40,14 @@ const mockListFeedbackByPrNumber = listFeedbackByPrNumber as jest.Mock
 const mockRecordFeedbackApproval = recordFeedbackApproval as jest.Mock
 const mockUpdateFeedbackTriage = updateFeedbackTriage as jest.Mock
 const mockUpdateFeedbackWorkflow = updateFeedbackWorkflow as jest.Mock
+const mockGetChangelogEntryByPrNumber = getChangelogEntryByPrNumber as jest.Mock
 
 function makeRow(overrides: Partial<FeedbackRow> = {}): FeedbackRow {
   return {
     id: 'fb_1',
     userId: 'user_1',
     householdId: 'hh_1',
+    householdName: null,
     userEmail: 'user@example.com',
     pagePath: '/dashboard',
     sentiment: 'good',
@@ -58,9 +66,7 @@ function makeRow(overrides: Partial<FeedbackRow> = {}): FeedbackRow {
     uatInstructions: null,
     versionResolved: null,
     resolvedAt: null,
-    changelogVersion: null,
-    changelogLabel: null,
-    changelogUserCredit: null,
+    changelogEntryId: null,
     ...overrides,
   }
 }
@@ -84,6 +90,7 @@ beforeEach(() => {
   mockRecordFeedbackApproval.mockReset()
   mockUpdateFeedbackTriage.mockReset()
   mockUpdateFeedbackWorkflow.mockReset()
+  mockGetChangelogEntryByPrNumber.mockReset()
 })
 
 describe('feedback service workflow rules', () => {
@@ -121,6 +128,7 @@ describe('feedback service workflow rules', () => {
       feedbackType: 'ux',
       riskLevel: 'low',
       confidence: 'high',
+      recommendation: 'Clarify dashboard copy.',
     })
   })
 
@@ -135,6 +143,7 @@ describe('feedback service workflow rules', () => {
       feedbackType: 'ux',
       riskLevel: 'medium',
       confidence: 'high',
+      recommendation: 'Clarify dashboard copy.',
     })
   })
 
@@ -219,6 +228,94 @@ describe('markFeedbackAttachedToPr', () => {
       previewUrl: 'https://sheathacademy-pr-42.onrender.com',
     }))
   })
+
+  it('does not store per-row changelog fields — only workflow state and UAT', async () => {
+    mockUpdateFeedbackWorkflow.mockResolvedValue(undefined)
+
+    await markFeedbackAttachedToPr('fb_1', {
+      prNumber: 42,
+      previewUrl: null,
+      uatInstructions: 'Open PR preview and verify',
+    })
+
+    const call = mockUpdateFeedbackWorkflow.mock.calls[0][1]
+    expect(call).not.toHaveProperty('changelogLabel')
+    expect(call).not.toHaveProperty('changelogUserCredit')
+    expect(call).not.toHaveProperty('changelogVersion')
+  })
+})
+
+describe('rollbackFeedbackAttachedToPr', () => {
+  it('moves in_pr and in_qa rows back to classified and clears PR metadata', async () => {
+    mockListFeedbackByPrNumber.mockResolvedValue([
+      makeRow({
+        id: 'fb_1',
+        prNumber: 42,
+        status: 'in_pr',
+        previewUrl: null,
+        uatInstructions: 'Check PR copy',
+      }),
+      makeRow({
+        id: 'fb_2',
+        prNumber: 42,
+        status: 'in_qa',
+        previewUrl: 'https://sheathacademy-pr-42.onrender.com',
+        uatInstructions: 'Open preview and verify',
+      }),
+    ])
+    mockUpdateFeedbackWorkflow.mockResolvedValue(undefined)
+
+    await rollbackFeedbackAttachedToPr(42)
+
+    expect(mockListFeedbackByPrNumber).toHaveBeenCalledWith(42)
+    expect(mockUpdateFeedbackWorkflow).toHaveBeenCalledTimes(2)
+    expect(mockUpdateFeedbackWorkflow).toHaveBeenCalledWith('fb_1', {
+      status: 'classified',
+      prNumber: null,
+      previewUrl: null,
+      uatInstructions: null,
+      versionResolved: null,
+      resolvedAt: null,
+      changelogEntryId: null,
+    })
+    expect(mockUpdateFeedbackWorkflow).toHaveBeenCalledWith('fb_2', {
+      status: 'classified',
+      prNumber: null,
+      previewUrl: null,
+      uatInstructions: null,
+      versionResolved: null,
+      resolvedAt: null,
+      changelogEntryId: null,
+    })
+  })
+
+  it('skips rows that are not attached to an active PR workflow state', async () => {
+    mockListFeedbackByPrNumber.mockResolvedValue([
+      makeRow({ id: 'fb_classified', prNumber: 42, status: 'classified' }),
+      makeRow({ id: 'fb_shipped', prNumber: 42, status: 'shipped' }),
+      makeRow({ id: 'fb_eligible', prNumber: 42, status: 'in_pr' }),
+    ])
+    mockUpdateFeedbackWorkflow.mockResolvedValue(undefined)
+
+    await rollbackFeedbackAttachedToPr(42)
+
+    expect(mockUpdateFeedbackWorkflow).toHaveBeenCalledTimes(1)
+    expect(mockUpdateFeedbackWorkflow).toHaveBeenCalledWith('fb_eligible', expect.anything())
+    expect(mockUpdateFeedbackWorkflow).not.toHaveBeenCalledWith('fb_classified', expect.anything())
+    expect(mockUpdateFeedbackWorkflow).not.toHaveBeenCalledWith('fb_shipped', expect.anything())
+  })
+
+  it('throws when no rollbackable rows exist for the PR', async () => {
+    mockListFeedbackByPrNumber.mockResolvedValue([
+      makeRow({ id: 'fb_1', prNumber: 42, status: 'classified' }),
+    ])
+
+    await expect(rollbackFeedbackAttachedToPr(42)).rejects.toMatchObject({
+      code: 'no_rollbackable_rows',
+    })
+
+    expect(mockUpdateFeedbackWorkflow).not.toHaveBeenCalled()
+  })
 })
 
 describe('markFeedbackShippedByPr', () => {
@@ -228,21 +325,99 @@ describe('markFeedbackShippedByPr', () => {
       makeRow({ id: 'fb_2', prNumber: 42, status: 'in_qa' }),
     ])
     mockUpdateFeedbackWorkflow.mockResolvedValue(undefined)
+    mockGetChangelogEntryByPrNumber.mockResolvedValue(null)
 
-    await markFeedbackShippedByPr(42, { versionResolved: '2.1.0', changelogVersion: '2.1.0' })
+    await markFeedbackShippedByPr(42, { versionResolved: '2.1.0' })
 
     expect(mockListFeedbackByPrNumber).toHaveBeenCalledWith(42)
     expect(mockUpdateFeedbackWorkflow).toHaveBeenCalledTimes(2)
     expect(mockUpdateFeedbackWorkflow).toHaveBeenCalledWith('fb_1', expect.objectContaining({
       status: 'shipped',
       versionResolved: '2.1.0',
-      changelogVersion: '2.1.0',
     }))
     expect(mockUpdateFeedbackWorkflow).toHaveBeenCalledWith('fb_2', expect.objectContaining({
       status: 'shipped',
       versionResolved: '2.1.0',
-      changelogVersion: '2.1.0',
     }))
+  })
+
+  it('looks up existing changelog entry by PR number to link rows', async () => {
+    mockListFeedbackByPrNumber.mockResolvedValue([
+      makeRow({ id: 'fb_1', prNumber: 42, status: 'in_pr' }),
+    ])
+    mockUpdateFeedbackWorkflow.mockResolvedValue(undefined)
+    mockGetChangelogEntryByPrNumber.mockResolvedValue({
+      id: 'cl_existing',
+      version: '2.1.0',
+      label: 'Dashboard fix',
+      detail: '',
+      source: 'steward',
+      prNumber: 42,
+      userCredit: null,
+      status: 'pending',
+      createdAt: '2026-05-25T15:58:00.000Z',
+    })
+
+    await markFeedbackShippedByPr(42, { versionResolved: '2.1.0' })
+
+    expect(mockGetChangelogEntryByPrNumber).toHaveBeenCalledWith(42)
+    expect(mockUpdateFeedbackWorkflow).toHaveBeenCalledWith('fb_1', expect.objectContaining({
+      changelogEntryId: 'cl_existing',
+    }))
+  })
+
+  it('ships rows without changelogEntryId when no changelog entry exists for the PR', async () => {
+    mockListFeedbackByPrNumber.mockResolvedValue([
+      makeRow({ id: 'fb_1', prNumber: 42, status: 'in_pr' }),
+    ])
+    mockUpdateFeedbackWorkflow.mockResolvedValue(undefined)
+    mockGetChangelogEntryByPrNumber.mockResolvedValue(null)
+
+    await markFeedbackShippedByPr(42, { versionResolved: '2.1.0' })
+
+    expect(mockUpdateFeedbackWorkflow).toHaveBeenCalledWith('fb_1', expect.not.objectContaining({
+      changelogEntryId: expect.any(String),
+    }))
+  })
+
+  it('both rows get the same changelogEntryId backlink', async () => {
+    mockListFeedbackByPrNumber.mockResolvedValue([
+      makeRow({ id: 'fb_1', prNumber: 42, status: 'in_pr' }),
+      makeRow({ id: 'fb_2', prNumber: 42, status: 'in_qa' }),
+    ])
+    mockUpdateFeedbackWorkflow.mockResolvedValue(undefined)
+    mockGetChangelogEntryByPrNumber.mockResolvedValue({
+      id: 'cl_existing',
+      version: '2.1.0',
+      label: 'Dashboard fix',
+      detail: '',
+      source: 'steward',
+      prNumber: 42,
+      userCredit: null,
+      status: 'pending',
+      createdAt: '2026-05-25T15:58:00.000Z',
+    })
+
+    await markFeedbackShippedByPr(42, { versionResolved: '2.1.0' })
+
+    const call1EntryId = mockUpdateFeedbackWorkflow.mock.calls.find(c => c[0] === 'fb_1')?.[1].changelogEntryId
+    const call2EntryId = mockUpdateFeedbackWorkflow.mock.calls.find(c => c[0] === 'fb_2')?.[1].changelogEntryId
+    expect(call1EntryId).toBe('cl_existing')
+    expect(call1EntryId).toEqual(call2EntryId)
+  })
+
+  it('does not call insertChangelogEntry — changelog creation is run-daily\'s job', async () => {
+    mockListFeedbackByPrNumber.mockResolvedValue([
+      makeRow({ id: 'fb_1', prNumber: 42, status: 'in_pr' }),
+    ])
+    mockUpdateFeedbackWorkflow.mockResolvedValue(undefined)
+    mockGetChangelogEntryByPrNumber.mockResolvedValue(null)
+
+    await markFeedbackShippedByPr(42, { versionResolved: '2.1.0' })
+
+    // insertChangelogEntry is not even imported — this test confirms the service
+    // doesn't call it by checking the about/repository mock has no unexpected calls
+    expect(mockGetChangelogEntryByPrNumber).toHaveBeenCalledTimes(1)
   })
 
   it('skips rows that are not in_pr or in_qa', async () => {
@@ -251,6 +426,7 @@ describe('markFeedbackShippedByPr', () => {
       makeRow({ id: 'fb_eligible', prNumber: 42, status: 'in_qa' }),
     ])
     mockUpdateFeedbackWorkflow.mockResolvedValue(undefined)
+    mockGetChangelogEntryByPrNumber.mockResolvedValue(null)
 
     await markFeedbackShippedByPr(42, { versionResolved: '2.1.0' })
 

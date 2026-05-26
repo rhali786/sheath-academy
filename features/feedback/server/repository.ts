@@ -1,6 +1,6 @@
 import { desc, eq, and, isNotNull, getTableColumns, inArray } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
-import { userFeedback, households } from '@/db/schema'
+import { userFeedback, households, changelogEntries } from '@/db/schema'
 import type {
   FeedbackRow,
   FeedbackSubmitInput,
@@ -37,6 +37,7 @@ function rowToFeedbackRow(r: typeof userFeedback.$inferSelect, householdName: st
     feedbackType: (r.feedbackType ?? null) as FeedbackType | null,
     riskLevel: (r.riskLevel ?? null) as FeedbackRiskLevel | null,
     confidence: (r.confidence ?? null) as FeedbackConfidence | null,
+    recommendation: r.recommendation ?? null,
     duplicateOfFeedbackId: r.duplicateOfFeedbackId ?? null,
     adminApprovedAt: r.adminApprovedAt ? r.adminApprovedAt.toISOString() : null,
     adminApprovedByUserId: r.adminApprovedByUserId ?? null,
@@ -45,9 +46,7 @@ function rowToFeedbackRow(r: typeof userFeedback.$inferSelect, householdName: st
     uatInstructions: r.uatInstructions ?? null,
     versionResolved: r.versionResolved ?? null,
     resolvedAt: r.resolvedAt ? r.resolvedAt.toISOString() : null,
-    changelogVersion: r.changelogVersion ?? null,
-    changelogLabel: r.changelogLabel ?? null,
-    changelogUserCredit: r.changelogUserCredit ?? null,
+    changelogEntryId: r.changelogEntryId ?? null,
   }
 }
 
@@ -85,14 +84,26 @@ export async function listFeedbackByUserId(userId: string): Promise<FeedbackRow[
 export async function getFeedbackById(id: string): Promise<FeedbackRow | null> {
   const db = getDb()
   const rows = await db
-    .select({ ...getTableColumns(userFeedback), householdName: households.name })
+    .select({
+      ...getTableColumns(userFeedback),
+      householdName: households.name,
+      changelogEntryLabel: changelogEntries.label,
+      changelogEntryUserCredit: changelogEntries.userCredit,
+    })
     .from(userFeedback)
     .leftJoin(households, eq(userFeedback.householdId, households.id))
+    .leftJoin(changelogEntries, eq(userFeedback.changelogEntryId, changelogEntries.id))
     .where(eq(userFeedback.id, id))
     .limit(1)
+
   if (!rows[0]) return null
-  const { householdName, ...feedbackCols } = rows[0]
-  return rowToFeedbackRow(feedbackCols, householdName ?? null)
+  const { householdName, changelogEntryLabel, changelogEntryUserCredit, ...feedbackCols } = rows[0]
+  const base = rowToFeedbackRow(feedbackCols, householdName ?? null)
+  return {
+    ...base,
+    changelogEntryLabel: changelogEntryLabel ?? null,
+    changelogEntryUserCredit: changelogEntryUserCredit ?? null,
+  }
 }
 
 export async function listFeedbackForAdmin(filters: AdminFeedbackFilters = {}): Promise<FeedbackRow[]> {
@@ -118,7 +129,15 @@ export async function listFeedbackForAdmin(filters: AdminFeedbackFilters = {}): 
 
 export async function updateFeedbackTriage(id: string, data: FeedbackTriageUpdate): Promise<void> {
   const db = getDb()
-  await db.update(userFeedback).set(data).where(eq(userFeedback.id, id))
+  const update = {} as Partial<typeof userFeedback.$inferInsert>
+  if (data.status !== undefined) update.status = data.status
+  if (data.featureArea !== undefined) update.featureArea = data.featureArea
+  if (data.feedbackType !== undefined) update.feedbackType = data.feedbackType
+  if (data.riskLevel !== undefined) update.riskLevel = data.riskLevel
+  if (data.confidence !== undefined) update.confidence = data.confidence
+  if (data.recommendation !== undefined) update.recommendation = data.recommendation
+  if (data.duplicateOfFeedbackId !== undefined) update.duplicateOfFeedbackId = data.duplicateOfFeedbackId
+  await db.update(userFeedback).set(update).where(eq(userFeedback.id, id))
 }
 
 export async function updateFeedbackWorkflow(id: string, data: FeedbackWorkflowUpdate): Promise<void> {
@@ -130,9 +149,7 @@ export async function updateFeedbackWorkflow(id: string, data: FeedbackWorkflowU
   if (data.uatInstructions !== undefined) update.uatInstructions = data.uatInstructions
   if (data.versionResolved !== undefined) update.versionResolved = data.versionResolved
   if (data.resolvedAt) update.resolvedAt = new Date(data.resolvedAt)
-  if (data.changelogVersion !== undefined) update.changelogVersion = data.changelogVersion
-  if (data.changelogLabel !== undefined) update.changelogLabel = data.changelogLabel
-  if (data.changelogUserCredit !== undefined) update.changelogUserCredit = data.changelogUserCredit
+  if (data.changelogEntryId !== undefined) update.changelogEntryId = data.changelogEntryId
   await db.update(userFeedback).set(update).where(eq(userFeedback.id, id))
 }
 

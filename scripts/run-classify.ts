@@ -10,17 +10,19 @@
  * Requires DATABASE_URL in .env.local and `claude` CLI available in PATH.
  */
 
-import { spawnSync } from 'child_process'
 import { readFileSync } from 'fs'
 import * as path from 'path'
 import { getUnclassifiedFeedback, type FeedbackRequeueItem } from './feedback-requeue'
 import { detectDuplicate } from './feedback-dedupe'
+import { runClaudePrompt } from './claude-integration'
+import { runClaudePreflight } from './claude-preflight'
 import { applyClassification, markFeedbackDuplicate } from '@/features/feedback/server/service'
 import type { FeedbackType, FeedbackRiskLevel, FeedbackConfidence } from '@/features/feedback/types'
 
 const FEEDBACK_TYPES: readonly FeedbackType[] = ['bug', 'enhancement', 'ux', 'copy', 'performance', 'question']
 const RISK_LEVELS: readonly FeedbackRiskLevel[] = ['low', 'medium', 'high']
 const CONFIDENCE_LEVELS: readonly FeedbackConfidence[] = ['high', 'medium', 'low']
+const CLASSIFY_TIMEOUT_MS = 180_000
 
 const CLASSIFY_OUTPUT_SCHEMA = {
   type: 'object',
@@ -49,6 +51,29 @@ export interface ClassificationSummary {
   classified: number
   duplicates: number
   failed: number
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(1)}s`
+}
+
+function formatIndentedBlock(label: string, value: string): string {
+  const normalized = value.replace(/\r/g, '').trim()
+  if (!normalized) return `  ${label}: <empty>`
+  return [`  ${label}:`, ...normalized.split('\n').map((line) => `    ${line}`)].join('\n')
+}
+
+function formatClaudeClassifyOutput(output: ClassifyOutput): string {
+  return [
+    '  Claude said:',
+    `    status: ${output.status}`,
+    `    featureArea: ${output.featureArea}`,
+    `    feedbackType: ${output.feedbackType}`,
+    `    riskLevel: ${output.riskLevel}`,
+    `    confidence: ${output.confidence}`,
+    `    recommendation: ${output.recommendation}`,
+  ].join('\n')
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -101,6 +126,10 @@ export function parseClassifyOutput(raw: string): ClassifyOutput | null {
   const candidates: unknown[] = [parsed]
 
   if (isRecord(parsed)) {
+    if (isRecord(parsed.structured_output)) {
+      candidates.push(parsed.structured_output)
+    }
+
     if (typeof parsed.text === 'string') {
       candidates.push(tryParseJson(parsed.text))
     }
@@ -122,9 +151,6 @@ export function parseClassifyOutput(raw: string): ClassifyOutput | null {
   return null
 }
 
-function getClaudeCommand(): string {
-  return process.platform === 'win32' ? 'claude.cmd' : 'claude'
-}
 
 function buildClassifyPrompt(item: Pick<FeedbackRequeueItem, 'id' | 'message' | 'pagePath' | 'sentiment'>): string {
   return [
@@ -148,76 +174,85 @@ export function runClassifySkill(
 ): ClassifyOutput | null {
   const skillPath = path.join(process.cwd(), '.claude', 'feedback-classify.md')
   const skillPrompt = readFileSync(skillPath, 'utf8')
+  const classifyPrompt = buildClassifyPrompt(item)
+  const result = runClaudePrompt({
+    stageLabel: `classify feedback ${item.id}`,
+    args: [
+      '-p',
+      '--output-format',
+      'json',
+      '--json-schema',
+      JSON.stringify(CLASSIFY_OUTPUT_SCHEMA),
+      '--append-system-prompt',
+      skillPrompt,
+      classifyPrompt,
+    ],
+    timeoutMs: CLASSIFY_TIMEOUT_MS,
+  })
 
-  try {
-    const result = spawnSync(
-      getClaudeCommand(),
-      [
-        '-p',
-        '--output-format',
-        'json',
-        '--json-schema',
-        JSON.stringify(CLASSIFY_OUTPUT_SCHEMA),
-        '--append-system-prompt',
-        skillPrompt,
-        '--tools',
-        '',
-        buildClassifyPrompt(item),
-      ],
-      { encoding: 'utf8', input: '', timeout: 60_000 }
-    )
-
-    if (result.error) {
-      throw result.error
-    }
-
-    if (typeof result.status === 'number' && result.status !== 0) {
-      throw new Error(result.stderr.trim() || `claude exited with status ${result.status}`)
-    }
-
-    const parsed = parseClassifyOutput(result.stdout)
-    if (!parsed) {
-      process.stderr.write(`classify skill produced invalid output for ${item.id}\n`)
-      return null
-    }
-
-    return parsed
-  } catch (err) {
-    const e = err as Error
-    process.stderr.write(`classify skill failed for ${item.id}: ${e.message}\n`)
+  const parsed = parseClassifyOutput(result.stdout)
+  if (!parsed) {
+    process.stderr.write(`classify skill produced invalid output for ${item.id}\n`)
+    process.stderr.write(`${formatIndentedBlock('Claude stdout', result.stdout)}\n`)
+    process.stderr.write(`${formatIndentedBlock('Claude stderr', result.stderr)}\n`)
     return null
   }
+
+  process.stderr.write(`${formatClaudeClassifyOutput(parsed)}\n`)
+
+  return parsed
 }
 
 export async function classifyFeedback(): Promise<ClassificationSummary> {
   const items = await getUnclassifiedFeedback()
   process.stderr.write(`Found ${items.length} unclassified feedback items\n`)
+  const preflight = runClaudePreflight()
+  process.stderr.write(
+    `Claude preflight ok at ${preflight.checkedAt}; completed in ${formatDuration(preflight.elapsedMs)} (timeout ${preflight.timeoutMs}ms)\n`
+  )
 
   let classified = 0
   let duplicates = 0
   let failed = 0
 
-  for (const item of items) {
-    process.stderr.write(`Processing ${item.id}...\n`)
+  for (const [index, item] of items.entries()) {
+    const itemStartedAt = Date.now()
+    process.stderr.write(
+      `Processing ${item.id} (${index + 1}/${items.length}) started at ${new Date(itemStartedAt).toISOString()}...\n`
+    )
 
     const dedupe = await detectDuplicate(item.id)
 
     if (dedupe.isDuplicate && dedupe.duplicateOfId) {
       await markFeedbackDuplicate(item.id, dedupe.duplicateOfId)
-      process.stderr.write(`  → duplicate of ${dedupe.duplicateOfId} (${dedupe.reason}), cancelled\n`)
+      process.stderr.write(
+        `  → duplicate of ${dedupe.duplicateOfId} (${dedupe.reason}), cancelled; completed in ${formatDuration(Date.now() - itemStartedAt)}\n`
+      )
       duplicates++
       continue
     }
 
-    const result = runClassifySkill(item)
+    let result: ClassifyOutput | null
+    try {
+      result = runClassifySkill(item)
+    } catch (err) {
+      const e = err as Error
+      process.stderr.write(
+        `  → Claude unavailable; aborting after ${formatDuration(Date.now() - itemStartedAt)}: ${e.message}\n`
+      )
+      throw e
+    }
 
     if (!result) {
+      process.stderr.write(`  → failed; completed in ${formatDuration(Date.now() - itemStartedAt)}\n`)
       failed++
       continue
     }
 
     await applyClassification(item.id, result)
-    process.stderr.write(`  → classified: ${result.feedbackType}/${result.featureArea} confidence=${result.confidence}\n`)
+    process.stderr.write(
+      `  → classified: ${result.feedbackType}/${result.featureArea} confidence=${result.confidence}; completed in ${formatDuration(Date.now() - itemStartedAt)}\n`
+    )
     classified++
   }
 

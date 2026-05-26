@@ -29,6 +29,7 @@ const makeRow = (overrides: Partial<FeedbackRow> = {}): FeedbackRow => ({
   feedbackType: 'enhancement',
   riskLevel: 'low',
   confidence: 'high',
+  recommendation: 'Clarify the dashboard button label.',
   duplicateOfFeedbackId: null,
   adminApprovedAt: null,
   adminApprovedByUserId: null,
@@ -79,6 +80,23 @@ describe('AdminFeedbackPage', () => {
     render(<AdminFeedbackPage />)
     await waitFor(() => {
       expect(screen.getByText('2 feedback items')).toBeInTheDocument()
+    })
+  })
+
+  it('shows a status summary for the current queue', async () => {
+    const rows = [
+      makeRow({ id: 'fb_1', status: 'classified' }),
+      makeRow({ id: 'fb_2', status: 'awaiting_approval' }),
+      makeRow({ id: 'fb_3', status: 'awaiting_approval' }),
+      makeRow({ id: 'fb_4', status: 'submitted' }),
+    ]
+    mockFetch.mockResolvedValue(mockOk({ status: 'success', data: rows }))
+    render(<AdminFeedbackPage />)
+    await waitFor(() => {
+      expect(screen.getByText('Needs approval')).toBeInTheDocument()
+      expect(screen.getByText('2 awaiting approval')).toBeInTheDocument()
+      expect(screen.getByText('1 classified')).toBeInTheDocument()
+      expect(screen.getByText('1 submitted')).toBeInTheDocument()
     })
   })
 
@@ -146,6 +164,22 @@ describe('AdminFeedbackPage', () => {
         const summary = screen.getByText('UAT Instructions')
         fireEvent.click(summary)
         expect(screen.getByText('Test in staging')).toBeInTheDocument()
+      })
+    })
+
+    it('shows Claude recommendation text for classified and awaiting approval rows', async () => {
+      mockFetch.mockResolvedValue(mockOk({
+        status: 'success',
+        data: [
+          makeRow({ id: 'fb_classified', status: 'classified', recommendation: 'Clarify the dashboard button label.' }),
+          makeRow({ id: 'fb_waiting', status: 'awaiting_approval', recommendation: 'Split the riskier change into a smaller admin-safe patch.' }),
+        ],
+      }))
+      render(<AdminFeedbackPage />)
+      await waitFor(() => {
+        expect(screen.getAllByText('Claude recommendation')).toHaveLength(2)
+        expect(screen.getByText('Clarify the dashboard button label.')).toBeInTheDocument()
+        expect(screen.getByText('Split the riskier change into a smaller admin-safe patch.')).toBeInTheDocument()
       })
     })
   })

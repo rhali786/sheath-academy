@@ -192,7 +192,7 @@ describe('Dashboard Page Integration', () => {
     expect(screen.getByTestId('schedule-timeline')).toBeInTheDocument()
   })
 
-  test('child selector lives in the dashboard header', async () => {
+  test('dashboard header renders without child selector when household has fewer than two children', async () => {
     renderDashboard()
 
     await waitFor(() => {
@@ -200,7 +200,7 @@ describe('Dashboard Page Integration', () => {
     })
 
     expect(screen.getByTestId('dashboard-header')).toBeInTheDocument()
-    expect(screen.getByTestId('child-selector')).toBeInTheDocument()
+    expect(screen.queryByTestId('child-selector')).not.toBeInTheDocument()
   })
 
   test('more insights section keeps compact footer widgets', async () => {

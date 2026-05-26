@@ -411,6 +411,24 @@ export const resourceCommunityNotes = pgTable('resource_community_notes', {
   updatedAt: timestamp('updated_at').notNull(),
 })
 
+// ─── Changelog Entries ───────────────────────────────────────────────────────
+// Canonical source of truth for the About-page changelog.
+// One row per PR/version milestone. Created by run-daily when the steward PR
+// is opened, then flipped from pending -> shipped after merge into dev.
+// Feedback rows link back via changelogEntryId.
+
+export const changelogEntries = pgTable('changelog_entries', {
+  id: text('id').primaryKey(),
+  version: text('version').notNull(),
+  label: text('label').notNull(),
+  detail: text('detail').notNull().default(''),
+  source: text('source').notNull().default('steward'),
+  prNumber: integer('pr_number'),
+  userCredit: text('user_credit'),
+  status: text('status').notNull().default('pending'),
+  createdAt: timestamp('created_at').notNull(),
+})
+
 // ─── User Feedback ────────────────────────────────────────────────────────────
 
 export const userFeedback = pgTable(
@@ -430,6 +448,7 @@ export const userFeedback = pgTable(
     feedbackType: text('feedback_type'),
     riskLevel: text('risk_level'),
     confidence: text('confidence'),
+    recommendation: text('recommendation'),
 
     duplicateOfFeedbackId: text('duplicate_of_feedback_id'),
 
@@ -443,9 +462,10 @@ export const userFeedback = pgTable(
     versionResolved: text('version_resolved'),
     resolvedAt: timestamp('resolved_at'),
 
-    changelogVersion: text('changelog_version'),
-    changelogLabel: text('changelog_label'),
-    changelogUserCredit: text('changelog_user_credit'),
+    // Traceability backlink to changelog_entries (canonical changelog owner).
+    // changelog_version/label/user_credit columns remain in the DB for
+    // backward compat but are no longer written to by the steward.
+    changelogEntryId: text('changelog_entry_id').references(() => changelogEntries.id),
   },
   (t) => [
     index('user_feedback_created_at_idx').on(t.createdAt),

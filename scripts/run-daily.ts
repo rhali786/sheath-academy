@@ -1,4 +1,4 @@
-import { spawnSync } from 'child_process'
+import { randomUUID } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import * as path from 'path'
 import {
@@ -6,7 +6,10 @@ import {
   markFeedbackAttachedToPr,
   type DailyRunEligibilityResult,
 } from '@/features/feedback/server/service'
+import { insertChangelogEntry } from '@/features/about/server/repository'
 import type { FeedbackType, FeedbackRow } from '@/features/feedback/types'
+import { runClaudePrompt } from './claude-integration'
+import { classifyFeedback } from './run-classify'
 
 export interface DailyPlanWorkstream {
   featureArea: string
@@ -46,6 +49,18 @@ export interface RunDailyResult {
   execution?: ExecutePlanOutput
 }
 
+export interface ExecuteSavedDailyPlanInput {
+  plan: DailyPlanArtifact
+  jsonArtifactPath: string
+  markdownArtifactPath: string
+}
+
+export interface ChangelogCandidate {
+  label: string
+  detail: string
+  userCredit: string | null
+}
+
 export interface ExecutePlanOutput {
   status: 'success'
   branchName: string
@@ -54,14 +69,33 @@ export interface ExecutePlanOutput {
   prBody: string
   previewUrl: string | null
   testsRun: string[]
+  // One changelog candidate per PR/version — NOT per feedback row.
+  changelogCandidate: ChangelogCandidate | null
   feedbackUpdates: Record<
     string,
     {
       uatInstructions: string
-      changelogLabel: string | null
-      changelogUserCredit: string | null
     }
   >
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(1)}s`
+}
+
+function getPlanTimeoutMs(): number {
+  const raw = process.env.STEWARD_CLAUDE_PLAN_TIMEOUT_MS ?? process.env.STEWARD_PLAN_TIMEOUT_MS
+  if (!raw) return 30_000
+  const parsed = parseInt(raw, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 30_000
+}
+
+function getExecuteTimeoutMs(): number {
+  const raw = process.env.STEWARD_CLAUDE_EXECUTE_TIMEOUT_MS ?? process.env.STEWARD_EXECUTE_TIMEOUT_MS
+  if (!raw) return 120_000
+  const parsed = parseInt(raw, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 120_000
 }
 
 const DAILY_PLAN_OUTPUT_SCHEMA = {
@@ -165,6 +199,21 @@ function validateWorkstream(value: unknown): DailyPlanWorkstream | null {
   }
 }
 
+function validateChangelogCandidate(value: unknown): ChangelogCandidate | null {
+  if (value === null || value === undefined) return null
+  if (!isRecord(value)) return null
+  if (typeof value.label !== 'string' || value.label.trim().length === 0) return null
+  if (typeof value.detail !== 'string') return null
+  if (!(value.userCredit === null || value.userCredit === undefined ||
+    (typeof value.userCredit === 'string' && value.userCredit.trim().length > 0))) return null
+
+  return {
+    label: value.label.trim(),
+    detail: value.detail.trim(),
+    userCredit: typeof value.userCredit === 'string' ? value.userCredit.trim() : null,
+  }
+}
+
 function validateExecutePlanOutput(value: unknown, feedbackIds: string[]): ExecutePlanOutput | null {
   if (!isRecord(value)) return null
   if (value.status !== 'success') return null
@@ -176,36 +225,23 @@ function validateExecutePlanOutput(value: unknown, feedbackIds: string[]): Execu
   if (!isStringArray(value.testsRun, { minItems: 1 })) return null
   if (!isRecord(value.feedbackUpdates)) return null
 
+  // changelogCandidate is optional and PR-scoped (null is valid)
+  const changelogCandidate = value.changelogCandidate !== undefined
+    ? validateChangelogCandidate(value.changelogCandidate)
+    : null
+  // If explicitly set to a non-null object but validation fails, reject
+  if (value.changelogCandidate !== null && value.changelogCandidate !== undefined && changelogCandidate === null) {
+    return null
+  }
+
   const feedbackUpdates: ExecutePlanOutput['feedbackUpdates'] = {}
   for (const feedbackId of feedbackIds) {
     const update = value.feedbackUpdates[feedbackId]
     if (!isRecord(update)) return null
     if (typeof update.uatInstructions !== 'string' || update.uatInstructions.trim().length === 0) return null
-    if (
-      !(
-        update.changelogLabel === null ||
-        update.changelogLabel === undefined ||
-        (typeof update.changelogLabel === 'string' && update.changelogLabel.trim().length > 0)
-      )
-    ) {
-      return null
-    }
-    if (
-      !(
-        update.changelogUserCredit === null ||
-        update.changelogUserCredit === undefined ||
-        (typeof update.changelogUserCredit === 'string' && update.changelogUserCredit.trim().length > 0)
-      )
-    ) {
-      return null
-    }
 
     feedbackUpdates[feedbackId] = {
       uatInstructions: update.uatInstructions.trim(),
-      changelogLabel:
-        typeof update.changelogLabel === 'string' ? update.changelogLabel.trim() : null,
-      changelogUserCredit:
-        typeof update.changelogUserCredit === 'string' ? update.changelogUserCredit.trim() : null,
     }
   }
 
@@ -217,6 +253,7 @@ function validateExecutePlanOutput(value: unknown, feedbackIds: string[]): Execu
     prBody: value.prBody.trim(),
     previewUrl: typeof value.previewUrl === 'string' ? value.previewUrl.trim() : null,
     testsRun: value.testsRun.map((entry) => entry.trim()),
+    changelogCandidate,
     feedbackUpdates,
   }
 }
@@ -258,6 +295,10 @@ export function parseDailyPlanOutput(raw: string): DailyPlanArtifact | null {
   const candidates: unknown[] = [parsed]
 
   if (isRecord(parsed)) {
+    if (isRecord(parsed.structured_output)) {
+      candidates.push(parsed.structured_output)
+    }
+
     if (typeof parsed.text === 'string') {
       candidates.push(tryParseJson(parsed.text))
     }
@@ -284,6 +325,10 @@ function parseExecutePlanOutput(raw: string, feedbackIds: string[]): ExecutePlan
   const candidates: unknown[] = [parsed]
 
   if (isRecord(parsed)) {
+    if (isRecord(parsed.structured_output)) {
+      candidates.push(parsed.structured_output)
+    }
+
     if (typeof parsed.text === 'string') {
       candidates.push(tryParseJson(parsed.text))
     }
@@ -303,10 +348,6 @@ function parseExecutePlanOutput(raw: string, feedbackIds: string[]): ExecutePlan
   return null
 }
 
-function getClaudeCommand(): string {
-  return process.platform === 'win32' ? 'claude.cmd' : 'claude'
-}
-
 function loadDoNotAutomateConfig(): DoNotAutomateConfig {
   const configPath = path.join(process.cwd(), 'config', 'feedback-steward', 'do-not-automate.json')
   if (!existsSync(configPath)) return {}
@@ -318,6 +359,16 @@ function loadDoNotAutomateConfig(): DoNotAutomateConfig {
     featureAreas: isStringArray(parsed.featureAreas) ? parsed.featureAreas : [],
     feedbackTypes: isStringArray(parsed.feedbackTypes) ? (parsed.feedbackTypes as FeedbackType[]) : [],
   }
+}
+
+function getCurrentAppVersion(): string {
+  const packagePath = path.join(process.cwd(), 'package.json')
+  const parsed = tryParseJson(readFileSync(packagePath, 'utf8'))
+  if (!isRecord(parsed) || typeof parsed.version !== 'string' || parsed.version.trim().length === 0) {
+    throw new Error('Could not determine current app version from package.json')
+  }
+
+  return parsed.version.trim()
 }
 
 function buildDailyPlanPrompt(eligibility: DailyRunEligibilityResult, generatedAt: string): string {
@@ -363,10 +414,14 @@ function buildExecutePrompt(
 function generateDailyPlan(eligibility: DailyRunEligibilityResult, generatedAt: string): DailyPlanArtifact {
   const skillPath = path.join(process.cwd(), '.claude', 'feedback-daily-plan.md')
   const skillPrompt = readFileSync(skillPath, 'utf8')
+  const planTimeoutMs = getPlanTimeoutMs()
+  process.stderr.write(
+    `Generating daily plan with Claude for ${eligibility.feedbackIds.length} feedback items at ${new Date().toISOString()} (timeout ${formatDuration(planTimeoutMs)})...\n`,
+  )
 
-  const result = spawnSync(
-    getClaudeCommand(),
-    [
+  const result = runClaudePrompt({
+    stageLabel: 'daily planning',
+    args: [
       '-p',
       '--output-format',
       'json',
@@ -374,25 +429,17 @@ function generateDailyPlan(eligibility: DailyRunEligibilityResult, generatedAt: 
       JSON.stringify(DAILY_PLAN_OUTPUT_SCHEMA),
       '--append-system-prompt',
       skillPrompt,
-      '--tools',
-      '',
       buildDailyPlanPrompt(eligibility, generatedAt),
     ],
-    { encoding: 'utf8', input: '', timeout: 60_000 },
-  )
-
-  if (result.error) {
-    throw result.error
-  }
-
-  if (typeof result.status === 'number' && result.status !== 0) {
-    throw new Error(result.stderr.trim() || `claude exited with status ${result.status}`)
-  }
+    timeoutMs: planTimeoutMs,
+  })
 
   const parsed = parseDailyPlanOutput(result.stdout)
   if (!parsed) {
     throw new Error('Invalid daily plan output')
   }
+
+  process.stderr.write(`Daily plan generated in ${formatDuration(result.elapsedMs)}\n`)
 
   return parsed
 }
@@ -404,10 +451,12 @@ function executeDailyPlan(
 ): ExecutePlanOutput {
   const skillPath = path.join(process.cwd(), '.claude', 'feedback-execute.md')
   const skillPrompt = readFileSync(skillPath, 'utf8')
+  const executeTimeoutMs = getExecuteTimeoutMs()
+  process.stderr.write(`Executing reviewed plan with Claude at ${new Date().toISOString()} (timeout ${formatDuration(executeTimeoutMs)})...\n`)
 
-  const result = spawnSync(
-    getClaudeCommand(),
-    [
+  const result = runClaudePrompt({
+    stageLabel: 'daily execution',
+    args: [
       '-p',
       '--output-format',
       'json',
@@ -415,23 +464,45 @@ function executeDailyPlan(
       skillPrompt,
       buildExecutePrompt(plan, jsonArtifactPath, markdownArtifactPath),
     ],
-    { encoding: 'utf8', input: '', timeout: 300_000 },
-  )
-
-  if (result.error) {
-    throw result.error
-  }
-
-  if (typeof result.status === 'number' && result.status !== 0) {
-    throw new Error(result.stderr.trim() || `claude exited with status ${result.status}`)
-  }
+    timeoutMs: executeTimeoutMs,
+  })
 
   const parsed = parseExecutePlanOutput(result.stdout, plan.feedbackIds)
   if (!parsed) {
     throw new Error('Invalid execute output')
   }
 
+  process.stderr.write(`Daily execution completed in ${formatDuration(result.elapsedMs)}\n`)
+
   return parsed
+}
+
+export async function executeSavedDailyPlan(input: ExecuteSavedDailyPlanInput): Promise<ExecutePlanOutput> {
+  const execution = executeDailyPlan(input.plan, input.jsonArtifactPath, input.markdownArtifactPath)
+
+  if (execution.changelogCandidate) {
+    await insertChangelogEntry({
+      id: randomUUID(),
+      version: getCurrentAppVersion(),
+      label: execution.changelogCandidate.label,
+      detail: execution.changelogCandidate.detail,
+      source: 'steward',
+      prNumber: execution.prNumber,
+      userCredit: execution.changelogCandidate.userCredit,
+      status: 'pending',
+    })
+  }
+
+  for (const feedbackId of input.plan.feedbackIds) {
+    const update = execution.feedbackUpdates[feedbackId]
+    await markFeedbackAttachedToPr(feedbackId, {
+      prNumber: execution.prNumber,
+      previewUrl: execution.previewUrl,
+      uatInstructions: update.uatInstructions,
+    })
+  }
+
+  return execution
 }
 
 function toDateStamp(date: Date): string {
@@ -499,6 +570,9 @@ export async function runDaily(options: RunDailyOptions): Promise<RunDailyResult
   const now = options.now ?? new Date()
   const generatedAt = now.toISOString()
   const config = loadDoNotAutomateConfig()
+
+  await classifyFeedback()
+
   const eligibility = await listEligibleFeedbackForDailyRun(config)
 
   if (eligibility.feedbackIds.length === 0) {
@@ -530,18 +604,11 @@ export async function runDaily(options: RunDailyOptions): Promise<RunDailyResult
   writeFileSync(markdownArtifactPath, renderDailyPlanMarkdown(plan, eligibility), 'utf8')
 
   if (!options.dryRun) {
-    const execution = executeDailyPlan(plan, jsonArtifactPath, markdownArtifactPath)
-
-    for (const feedbackId of plan.feedbackIds) {
-      const update = execution.feedbackUpdates[feedbackId]
-      await markFeedbackAttachedToPr(feedbackId, {
-        prNumber: execution.prNumber,
-        previewUrl: execution.previewUrl,
-        uatInstructions: update.uatInstructions,
-        changelogLabel: update.changelogLabel,
-        changelogUserCredit: update.changelogUserCredit,
-      })
-    }
+    const execution = await executeSavedDailyPlan({
+      plan,
+      jsonArtifactPath,
+      markdownArtifactPath,
+    })
 
     return {
       dryRun: false,
@@ -562,10 +629,15 @@ export async function runDaily(options: RunDailyOptions): Promise<RunDailyResult
   }
 }
 
+export function parseDailyCliArgs(args: string[]): RunDailyOptions {
+  return {
+    dryRun: args.includes('--dry-run') || args.includes('--plan-only'),
+  }
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2)
-  const dryRun = args.includes('--dry-run')
-  const result = await runDaily({ dryRun })
+  const result = await runDaily(parseDailyCliArgs(args))
 
   process.stderr.write(
     `Generated plan artifacts:\n- JSON: ${result.jsonArtifactPath}\n- Markdown: ${result.markdownArtifactPath}\n`

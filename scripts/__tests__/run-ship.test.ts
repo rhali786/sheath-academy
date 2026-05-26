@@ -8,12 +8,19 @@ jest.mock('@/features/feedback/server/service', () => ({
   markFeedbackShippedByPr: jest.fn(),
 }))
 
+jest.mock('@/features/about/server/repository', () => ({
+  shipChangelogEntryByPrNumber: jest.fn(),
+}))
+
 import { spawnSync } from 'child_process'
 import { markFeedbackShippedByPr } from '@/features/feedback/server/service'
-import { runMergeHook } from '../merge-hook'
+import { shipChangelogEntryByPrNumber } from '@/features/about/server/repository'
+import { runShip } from '../run-ship'
 
 const mockSpawnSync = spawnSync as jest.MockedFunction<typeof spawnSync>
 const mockMarkFeedbackShippedByPr = markFeedbackShippedByPr as jest.MockedFunction<typeof markFeedbackShippedByPr>
+const mockShipChangelogEntryByPrNumber =
+  shipChangelogEntryByPrNumber as jest.MockedFunction<typeof shipChangelogEntryByPrNumber>
 
 function makeGhPrJson(overrides: Record<string, unknown> = {}) {
   return JSON.stringify({
@@ -29,10 +36,11 @@ function makeGhPrJson(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   jest.clearAllMocks()
   mockMarkFeedbackShippedByPr.mockResolvedValue(undefined)
+  mockShipChangelogEntryByPrNumber.mockResolvedValue(undefined)
 })
 
-describe('runMergeHook', () => {
-  it('marks feedback rows shipped when PR is merged into dev', async () => {
+describe('runShip', () => {
+  it('marks feedback rows shipped and flips changelog status when PR is merged into dev', async () => {
     mockSpawnSync.mockReturnValue({
       status: 0,
       stdout: makeGhPrJson(),
@@ -42,7 +50,7 @@ describe('runMergeHook', () => {
       signal: null,
     } as never)
 
-    await runMergeHook({ prNumber: 42, versionResolved: '2.1.0', changelogVersion: '2.1.0' })
+    await runShip({ prNumber: 42, versionResolved: '2.1.0' })
 
     expect(mockSpawnSync).toHaveBeenCalledWith(
       expect.stringMatching(/^gh(\.exe)?$/),
@@ -51,8 +59,8 @@ describe('runMergeHook', () => {
     )
     expect(mockMarkFeedbackShippedByPr).toHaveBeenCalledWith(42, {
       versionResolved: '2.1.0',
-      changelogVersion: '2.1.0',
     })
+    expect(mockShipChangelogEntryByPrNumber).toHaveBeenCalledWith(42)
   })
 
   it('throws when the PR is not merged into dev', async () => {
@@ -60,16 +68,15 @@ describe('runMergeHook', () => {
       status: 0,
       stdout: makeGhPrJson({ state: 'OPEN', baseRefName: 'dev' }),
       stderr: '',
-      output: ['', makeGhPrJson({ state: 'OPEN' }), ''],
+      output: ['', makeGhPrJson({ state: 'OPEN', baseRefName: 'dev' }), ''],
       pid: 100,
       signal: null,
     } as never)
 
-    await expect(runMergeHook({ prNumber: 42, versionResolved: '2.1.0' })).rejects.toThrow(
-      /not merged/i
-    )
+    await expect(runShip({ prNumber: 42, versionResolved: '2.1.0' })).rejects.toThrow(/not merged/i)
 
     expect(mockMarkFeedbackShippedByPr).not.toHaveBeenCalled()
+    expect(mockShipChangelogEntryByPrNumber).not.toHaveBeenCalled()
   })
 
   it('throws when the PR is merged into a branch other than dev', async () => {
@@ -82,11 +89,10 @@ describe('runMergeHook', () => {
       signal: null,
     } as never)
 
-    await expect(runMergeHook({ prNumber: 42, versionResolved: '2.1.0' })).rejects.toThrow(
-      /not merged into dev/i
-    )
+    await expect(runShip({ prNumber: 42, versionResolved: '2.1.0' })).rejects.toThrow(/not merged into dev/i)
 
     expect(mockMarkFeedbackShippedByPr).not.toHaveBeenCalled()
+    expect(mockShipChangelogEntryByPrNumber).not.toHaveBeenCalled()
   })
 
   it('throws when gh CLI returns non-zero exit code', async () => {
@@ -99,11 +105,10 @@ describe('runMergeHook', () => {
       signal: null,
     } as never)
 
-    await expect(runMergeHook({ prNumber: 99, versionResolved: '2.1.0' })).rejects.toThrow(
-      /Could not resolve/i
-    )
+    await expect(runShip({ prNumber: 99, versionResolved: '2.1.0' })).rejects.toThrow(/Could not resolve/i)
 
     expect(mockMarkFeedbackShippedByPr).not.toHaveBeenCalled()
+    expect(mockShipChangelogEntryByPrNumber).not.toHaveBeenCalled()
   })
 
   it('propagates service error when marking rows shipped fails', async () => {
@@ -116,11 +121,25 @@ describe('runMergeHook', () => {
       signal: null,
     } as never)
     mockMarkFeedbackShippedByPr.mockRejectedValue(
-      Object.assign(new Error('no shippable rows'), { code: 'no_shippable_rows' })
+      Object.assign(new Error('no shippable rows'), { code: 'no_shippable_rows' }),
     )
 
-    await expect(runMergeHook({ prNumber: 42, versionResolved: '2.1.0' })).rejects.toThrow(
-      /no shippable rows/i
-    )
+    await expect(runShip({ prNumber: 42, versionResolved: '2.1.0' })).rejects.toThrow(/no shippable rows/i)
+
+    expect(mockShipChangelogEntryByPrNumber).not.toHaveBeenCalled()
+  })
+
+  it('propagates repository error when shipping the changelog entry fails', async () => {
+    mockSpawnSync.mockReturnValue({
+      status: 0,
+      stdout: makeGhPrJson(),
+      stderr: '',
+      output: ['', makeGhPrJson(), ''],
+      pid: 100,
+      signal: null,
+    } as never)
+    mockShipChangelogEntryByPrNumber.mockRejectedValue(new Error('changelog update failed'))
+
+    await expect(runShip({ prNumber: 42, versionResolved: '2.1.0' })).rejects.toThrow(/changelog update failed/i)
   })
 })

@@ -43,6 +43,7 @@ export interface FeedbackRow {
   feedbackType: FeedbackType | null
   riskLevel: FeedbackRiskLevel | null
   confidence: FeedbackConfidence | null
+  recommendation?: string | null
 
   duplicateOfFeedbackId: string | null
 
@@ -56,9 +57,11 @@ export interface FeedbackRow {
   versionResolved: string | null
   resolvedAt: string | null
 
-  changelogVersion: string | null
-  changelogLabel: string | null
-  changelogUserCredit: string | null
+  // Traceability backlink to changelog_entries (canonical changelog owner).
+  // The joined display fields below are populated only by getFeedbackById.
+  changelogEntryId: string | null
+  changelogEntryLabel?: string | null
+  changelogEntryUserCredit?: string | null
 }
 
 export interface FeedbackTriageUpdate {
@@ -67,6 +70,7 @@ export interface FeedbackTriageUpdate {
   feedbackType?: FeedbackType | null
   riskLevel?: FeedbackRiskLevel | null
   confidence?: FeedbackConfidence | null
+  recommendation?: string | null
   duplicateOfFeedbackId?: string | null
 }
 
@@ -76,9 +80,7 @@ export interface FeedbackWorkflowUpdate {
   uatInstructions?: string | null
   versionResolved?: string | null
   resolvedAt?: string | null
-  changelogVersion?: string | null
-  changelogLabel?: string | null
-  changelogUserCredit?: string | null
+  changelogEntryId?: string | null
   status?: FeedbackStatus
 }
 

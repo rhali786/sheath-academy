@@ -78,6 +78,18 @@ export function AdminFeedbackPage() {
   }
 
   const selectedFeedback = selectedId ? rows.find(r => r.id === selectedId) : null
+  const statusCounts = rows.reduce<Record<string, number>>((counts, row) => {
+    counts[row.status] = (counts[row.status] ?? 0) + 1
+    return counts
+  }, {})
+  const queueSummary = [
+    { label: 'Needs approval', detail: `${statusCounts.awaiting_approval ?? 0} awaiting approval` },
+    { label: 'Classified', detail: `${statusCounts.classified ?? 0} classified` },
+    { label: 'Submitted', detail: `${statusCounts.submitted ?? 0} submitted` },
+    { label: 'In review', detail: `${(statusCounts.in_pr ?? 0) + (statusCounts.in_qa ?? 0)} in review` },
+    { label: 'Shipped', detail: `${statusCounts.shipped ?? 0} shipped` },
+    { label: 'Cancelled', detail: `${statusCounts.cancelled ?? 0} cancelled` },
+  ]
 
   if (loading) {
     return (
@@ -106,6 +118,15 @@ export function AdminFeedbackPage() {
       <div>
         <h1 className="page-title">Feedback queue</h1>
         <p className="text-sm text-slate-600 mt-1">{rows.length} feedback items</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
+        {queueSummary.map((item) => (
+          <div key={item.label} className="rounded-lg border border-slate-200 bg-white px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{item.label}</p>
+            <p className="mt-1 text-sm text-slate-700">{item.detail}</p>
+          </div>
+        ))}
       </div>
 
       {/* Filters */}
@@ -210,6 +231,13 @@ export function AdminFeedbackPage() {
                 {/* Message */}
                 {row.message && (
                   <p className="text-sm text-slate-700 line-clamp-2">{row.message}</p>
+                )}
+
+                {(row.status === 'classified' || row.status === 'awaiting_approval') && row.recommendation && (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Claude recommendation</p>
+                    <p className="mt-1 text-sm text-blue-900 whitespace-pre-wrap">{row.recommendation}</p>
+                  </div>
                 )}
 
                 {/* Metadata badges */}
