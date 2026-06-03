@@ -1,6 +1,7 @@
 import {
   users,
   households,
+  householdMembers,
   schoolYears,
   learners,
   subjects,
@@ -30,6 +31,7 @@ export async function loadDemoSeedPayload(payload: DemoSeedPayload): Promise<voi
   await db.transaction(async tx => {
     await bulkInsertRows(tx, users, payload.users, 'users')
     await bulkInsertRows(tx, households, payload.households, 'households')
+    await bulkInsertRows(tx, householdMembers, payload.householdMembers, 'household_members')
     await bulkInsertRows(tx, schoolYears, payload.schoolYears, 'school_years')
     await bulkInsertRows(tx, learners, payload.learners, 'learners')
     await bulkInsertRows(tx, subjects, payload.subjects, 'subjects')

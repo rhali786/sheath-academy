@@ -1,6 +1,7 @@
 import {
   users,
   households,
+  householdMembers,
   schoolYears,
   learners,
   subjects,
@@ -35,6 +36,7 @@ const SESSION_TYPES = ['memorization', 'revision', 'recitation']
 export type DemoSeedPayload = {
   users: (typeof users.$inferInsert)[]
   households: (typeof households.$inferInsert)[]
+  householdMembers: (typeof householdMembers.$inferInsert)[]
   schoolYears: (typeof schoolYears.$inferInsert)[]
   learners: (typeof learners.$inferInsert)[]
   subjects: (typeof subjects.$inferInsert)[]
@@ -296,7 +298,7 @@ function buildHouseholdRows(
   cfg: HouseholdSeedConfig,
   endDate: string,
   seedNow: Date,
-): Omit<DemoSeedPayload, 'users'> {
+): Omit<DemoSeedPayload, 'users' | 'householdMembers'> {
   const householdId = cfg.householdId
   const profile = getHouseholdProfile(cfg.hhKey)
 
@@ -510,6 +512,7 @@ export function buildDemoSeedPayload(
   const payload: DemoSeedPayload = {
     users: usersRows,
     households: [],
+    householdMembers: [],
     schoolYears: [],
     learners: [],
     subjects: [],
@@ -526,6 +529,14 @@ export function buildDemoSeedPayload(
   for (const cfg of configs) {
     const householdRows = buildHouseholdRows(cfg, endDate, seedNow)
     payload.households.push(...householdRows.households)
+    payload.householdMembers.push({
+      id: `hm_seed_${cfg.householdId}`,
+      householdId: cfg.householdId,
+      userId: cfg.userId,
+      role: 'owner',
+      createdAt: seedNow,
+      updatedAt: seedNow,
+    })
     payload.schoolYears.push(...householdRows.schoolYears)
     payload.learners.push(...householdRows.learners)
     payload.subjects.push(...householdRows.subjects)
@@ -546,6 +557,7 @@ export function summarizePayload(payload: DemoSeedPayload): Record<string, numbe
   return {
     users: payload.users.length,
     households: payload.households.length,
+    householdMembers: payload.householdMembers.length,
     schoolYears: payload.schoolYears.length,
     learners: payload.learners.length,
     subjects: payload.subjects.length,
