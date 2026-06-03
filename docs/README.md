@@ -12,11 +12,11 @@ docs/
   archive/
 ```
 
-### `planning-quality-rule.md`
+### Planning rules → the `plan-builder` skill
 
-Use `docs/planning-quality-rule.md` before creating any implementation plan.
+Use the **`plan-builder`** skill (`/plan-builder`) before creating any implementation plan. (The old `docs/planning-quality-rule.md` is now a pointer stub to that skill.)
 
-Every non-trivial bug fix, enhancement, dashboard change, records/report change, cross-feature change, or architecture migration plan should follow that rule.
+Every non-trivial bug fix, enhancement, dashboard change, records/report change, cross-feature change, or architecture migration plan should follow that skill.
 
 Plans must be grounded in the actual code path, not memory or assumptions.
 
@@ -51,7 +51,7 @@ If a plan is replaced by a newer plan, move the old one to archive and create th
 
 ## Plan lifecycle
 
-1. Read `docs/planning-quality-rule.md`.
+1. Use the `plan-builder` skill (`/plan-builder`).
 2. Audit the affected code paths.
 3. Create the plan in `docs/bug_enhancement/` using a datetime-prefixed filename.
 4. Keep the plan active while implementation is ongoing.
