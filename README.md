@@ -76,65 +76,6 @@ This is the design failure we are explicitly built to avoid. Quantifying spiritu
 
 ---
 
-## The features — Wave 1 (Homeschool MVP)
-
-Built in dependency order. Each wave is a working, usable product before the next begins.
-
-### Wave 1A — Foundation
-*The skeleton everything else attaches to.*
-
-- Parent account and household workspace
-- Child profiles — name, grade, active status
-- Subject and course setup per child
-- School year with start date, end date, active year
-- Dashboard shell with guided setup prompts
-- Child selector that persists across the session
-
-### Wave 1B — Planning spine
-*The plan that survives real life.*
-
-- Weekly planner with forward and backward navigation
-- Lesson and task creation — child, subject, date, notes, resource link
-- Daily and weekly lesson list views
-- Lesson status — not started, completed, skipped, moved — with timestamps
-- Move and reschedule a lesson, with original position in history
-- Recurring weekly pattern by weekday and subject
-- Today's lessons card on the dashboard
-
-### Wave 1C — Records spine
-*Proof that school happened.*
-
-- Attendance by child and date — present, absent, partial
-- Optional hours and minutes per attendance entry
-- Attendance summary with missing-day detection
-- Progress by subject — completed, planned, and skipped counts
-- Completed lesson history with date and subject filters
-- Progress and attendance cards on the dashboard
-
-### Wave 1D — Proof and export
-*The confidence layer.*
-
-- Portfolio evidence — title, child, subject, date, type, parent reflection
-- Add evidence and attach it to the lesson it came from
-- Text, URL, and file or photo evidence capture
-- Portfolio list with filters by child, subject, and date
-- Records report — attendance, lessons, and portfolio count in one view
-- Export and print records summary
-- Records review checklist — flags missing attendance, uncovered subjects, and evidence gaps
-
----
-
-## What Wave 1 does not yet address
-
-**Child-fit planning** — The planner organizes by child and subject. It does not yet respond to the child's pace, level, or needs. Every child gets the same structure with different labels. This is the most significant gap, and the most likely reason a parent eventually wants more. Wave 2 addresses it.
-
-**Native Quran data structure** — Wave 1 attendance covers Quran sessions as a record. Native fields — surah, ayah range, session type, revision cycle — are Wave 2B. This is the primary differentiation and should follow Wave 1 closely.
-
-**Student-facing experience** — The Wave 1 lesson list is parent-operated. Students cannot see their own task list or mark their own work. The student portal is Wave 2A.
-
-**Alerts and notifications** — Intentionally absent. Alerts built before the core records are trusted become noise before they become useful.
-
----
 
 ## What this is not
 
@@ -148,16 +89,51 @@ Built in dependency order. Each wave is a working, usable product before the nex
 
 ---
 
+## What's built
+
+**Foundation**  
+Household workspace, child profiles, subject and course setup per child, school year with breaks, authenticated sign-in (magic-link, Google, Facebook), household settings.
+
+**Planning**  
+Weekly planner with forward/backward navigation, lesson and task creation, daily and weekly lesson list views, lesson status (not started, completed, skipped), reschedule and move, recurring weekly patterns, today's lessons card on the dashboard.
+
+**Records**  
+Attendance by child and date (present, absent, partial, with optional hours), attendance summary with missing-day detection, progress by subject, completed lesson history with filters.
+
+**Portfolio and proof**  
+Evidence items — title, child, subject, date, type (text, URL, file/photo), parent reflection. Evidence linked to lessons. Portfolio list with filters. Records report combining attendance, lessons, and portfolio counts. Records review checklist.
+
+**Quran sessions**  
+Quran session log with surah, ayah range (from/to), session type, and date. Dashboard chart of weekly Quran activity. Session history per child.
+
+**Alerts and Islamic calendar**  
+Alert rules engine — surfaces slippage, attendance gaps, and overdue Quran. Islamic calendar overlay with Hijri dates and Ramadan awareness.
+
+**Dashboard**  
+Composable widget dashboard — today's lessons, attendance summary, progress by subject, Quran activity chart, active alerts. Child selector persists across the session.
+
+---
+
+## Known gaps
+
+- No email allow-list — any address can sign in; user-to-household invite flow not yet built
+- No student portal — students cannot see their own task list or mark their own work
+- Limited validation and error boundaries throughout
+- No accessibility audit
+
+---
+
 ## Architecture
 
-**Stack:** Next.js · TypeScript · Tailwind CSS · Postgres  
-**Deployment:** Render
+**Stack:** Next.js 15 (App Router) · TypeScript · Tailwind CSS · Postgres (Drizzle ORM)  
+**Deployment:** Render  
+**Auth:** Auth.js (NextAuth v5) with Drizzle adapter — magic-link, Google, Facebook
 
-**Data chain:** `user_account` → `workspace` → `household_profile` → `student_profile` → `subject_course` → `lesson_task` → `attendance_record` → `evidence_item`
+**Data chain:** `user` → `workspace` → `household_profile` → `student_profile` → `subject_course` → `lesson_task` / `attendance_record` / `evidence_item` / `quran_session`
 
-**Feature structure:** Each domain owns its own API router, context provider, and data table. The dashboard composes widgets from features — it does not own data.
+**Feature structure:** Each domain owns its API router, server service, repository, context provider, and tests. The dashboard composes widgets from feature contexts — it does not own data.
 
-> **Technical deep dive:** conventions, testing rules, local dev gotchas, and the full troubleshooting guide live in [`CLAUDE.md`](./CLAUDE.md).
+> **Developer guide:** conventions, TDD rules, testing patterns, architecture rules, and the full troubleshooting reference live in [`CLAUDE.md`](./CLAUDE.md) and [`docs/`](./docs/).
 
 ---
 
@@ -165,33 +141,25 @@ Built in dependency order. Each wave is a working, usable product before the nex
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000
-npm run dev:clean    # if /_next/static/* 404s: wipes .next then restarts
-npm test             # Jest (API + UI integration)
-npm run build && npm run start   # production locally
+npm run setup-hooks          # installs pre-commit version bump hook
+cp .env.example .env.local   # fill in AUTH_SECRET, DATABASE_URL, RESEND_API_KEY
+npm run db:migrate           # apply schema to your Postgres instance
+npm run db:seed:demo         # optional: two demo households with 150 days of history
+npm run dev                  # http://localhost:3000
 ```
 
-Smoke check: `GET /api/health` → `200` and `status: "healthy"`.
+```bash
+npm test                     # Jest unit + integration
+npm run test:e2e             # Playwright e2e (requires built app + DATABASE_URL)
+npm run build && npm run start
+```
+
+Smoke check: `GET /api/health` → `200 { status: "healthy" }`.
 
 ---
 
 ## Status
 
-Wave 1A–1D: **In progress**  
 Live: [sheathacademy.onrender.com](https://sheathacademy.onrender.com)
 
 The family on the dashboard is real. The pains are real. The build is one feature at a time.
-
----
-
-## Feature 01 — Login (in progress)
-
-Magic-link email sign-in is built and deployed on branch `claude/login-feature-pKzOt`. Remaining before this feature is closed:
-
-- [ ] **Provision env vars on Render** — `AUTH_SECRET` (generate: `openssl rand -base64 32`) and `RESEND_API_KEY` (resend.com free tier). Without these the app starts but auth is broken.
-- [ ] **Verify sending domain in Resend** — magic-link emails send from `no-reply@sheathacademy.com`; domain must be verified in the Resend dashboard first.
-- [ ] **Remove dev bypass before public launch** — delete `DEV_BYPASS_SECRET` and `NEXT_PUBLIC_DEV_MODE` from Render environment when real sign-in is working.
-- [ ] **Add email allow-list** — currently any email address can sign in. Add a `signIn` callback in `features/auth/auth.ts` that checks against an allowed list before the session is granted.
-- [ ] **Wire OAuth providers** — Google and Facebook buttons are on the login page but disabled. Set `AUTH_GOOGLE_ID` + `AUTH_GOOGLE_SECRET` (and/or Facebook equivalents) in Render to activate them. See `.env.example` for redirect URI setup.
-- [ ] **Tie identity to household data** — the dashboard currently shows hardcoded Naeem Family data regardless of who signs in. Once Feature 02 (household workspace) lands, session user must map to their own household record.
-- [ ] **User persistence** — auth users are stored in-memory and reset on every deploy. Needs a database adapter (Render Postgres) before this is production-safe for real families.

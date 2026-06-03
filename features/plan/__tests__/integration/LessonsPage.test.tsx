@@ -21,38 +21,15 @@ jest.mock('@/features/plan/front/services/api', () => ({
   },
 }))
 
-jest.mock('@/features/children/front/services/api', () => ({
-  childrenApi: {
-    getAllChildren: jest.fn(),
-  },
-}))
-
-jest.mock('@/features/subjects/front/services/api', () => ({
-  subjectsApi: {
-    getSubjects: jest.fn(),
-  },
-}))
-
 jest.mock('@/features/household/front/context', () => ({
-  useHousehold: jest.fn(() => ({
-    householdProfile: { id: 'hh_001' },
-    studentProfiles: [],
-    allSubjects: [],
-    loading: false,
-    needsSetup: false,
-    familyName: '',
-    error: null,
-    refetch: jest.fn(),
-  })),
+  useHousehold: jest.fn(),
 }))
 
 import { plannerApi } from '@/features/plan/front/services/api'
-import { childrenApi } from '@/features/children/front/services/api'
-import { subjectsApi } from '@/features/subjects/front/services/api'
+import { useHousehold } from '@/features/household/front/context'
 
 const mockGetLessons = plannerApi.getLessons as jest.Mock
-const mockGetAllChildren = (childrenApi as any).getAllChildren as jest.Mock
-const mockGetSubjects = (subjectsApi as any).getSubjects as jest.Mock
+const mockUseHousehold = useHousehold as jest.Mock
 
 const mockChildren: StudentProfile[] = [
   { id: 'child_001', householdId: 'hh_001', name: 'Adam', gradeLabel: '5th', isActive: true, username: 'adam', password: 'pw', createdAt: '2026-01-01T00:00:00Z' },
@@ -85,8 +62,16 @@ function ok<T>(data: T): ApiResponse<T> {
 }
 
 beforeEach(() => {
-  mockGetAllChildren.mockResolvedValue(ok(mockChildren))
-  mockGetSubjects.mockResolvedValue(ok(mockSubjects))
+  mockUseHousehold.mockImplementation(() => ({
+    householdProfile: { id: 'hh_001' },
+    studentProfiles: mockChildren,
+    allSubjects: mockSubjects,
+    loading: false,
+    needsSetup: false,
+    familyName: '',
+    error: null,
+    refetch: jest.fn(),
+  }))
   mockGetLessons.mockResolvedValue([])
   mockSearchParams = new URLSearchParams()
 })
@@ -95,14 +80,17 @@ afterEach(() => {
   jest.clearAllMocks()
 })
 
+async function openAddLessonForm() {
+  fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
+  await waitFor(() => {
+    expect(screen.getByRole('heading', { name: /add lesson/i })).toBeInTheDocument()
+  })
+}
+
 describe('LessonsPage', () => {
-  it('shows the Add lesson form heading after clicking the toggle button', async () => {
+  it('renders the Add lesson form heading when the form is expanded', async () => {
     render(<LessonsPage />)
-    // Form is hidden by default — toggle it open
-    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /add lesson/i })).toBeInTheDocument()
-    })
+    await openAddLessonForm()
   })
 
   it('renders Today section when children have loaded', async () => {
@@ -156,28 +144,29 @@ describe('LessonsPage', () => {
     })
   })
 
-  it('form heading says Add lesson (not Edit lesson) — inline edit is per-card only', async () => {
+  it('shows the Add lesson form heading when expanded (inline edit is per-card, not top form)', async () => {
     const editLesson = makeLesson({ id: 'edit_001', title: 'Lesson To Edit' })
     mockGetLessons.mockResolvedValue([editLesson])
 
     render(<LessonsPage />)
-    // Open the form
-    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
-
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /add lesson/i })).toBeInTheDocument()
-    })
-    // Top form is always "Add lesson" — edit is inline per card
+    await openAddLessonForm()
     expect(screen.queryByRole('heading', { name: /edit lesson/i })).not.toBeInTheDocument()
   })
 
   it('sets child filter from ?childId query param after children load', async () => {
+    const child002 = { id: 'child_002', householdId: 'hh_001', name: 'Khadijah', gradeLabel: '3rd', isActive: true, username: 'k', password: 'pw', createdAt: '2026-01-01T00:00:00Z' }
+    mockUseHousehold.mockImplementation(() => ({
+      householdProfile: { id: 'hh_001' },
+      studentProfiles: [mockChildren[0], child002],
+      allSubjects: mockSubjects,
+      loading: false,
+      needsSetup: false,
+      familyName: '',
+      error: null,
+      refetch: jest.fn(),
+    }))
     const laythLesson  = makeLesson({ id: 'l1', title: 'Layth lesson',  childId: 'child_001' })
     const khadijahLesson = makeLesson({ id: 'l2', title: 'Khadijah lesson', childId: 'child_002' })
-    mockGetAllChildren.mockResolvedValue(ok([
-      mockChildren[0],
-      { id: 'child_002', householdId: 'hh_001', name: 'Khadijah', gradeLabel: '3rd', isActive: true, username: 'k', password: 'pw', createdAt: '2026-01-01T00:00:00Z' },
-    ]))
     mockGetLessons.mockResolvedValue([laythLesson, khadijahLesson])
     mockSearchParams = new URLSearchParams('childId=child_002')
 
@@ -207,7 +196,16 @@ describe('LessonsPage', () => {
 
   it('updates child filter when URL childId changes while component stays mounted', async () => {
     const child002 = { id: 'child_002', householdId: 'hh_001', name: 'Khadijah', gradeLabel: '3rd', isActive: true, username: 'k', password: 'pw', createdAt: '2026-01-01T00:00:00Z' }
-    mockGetAllChildren.mockResolvedValue(ok([mockChildren[0], child002]))
+    mockUseHousehold.mockImplementation(() => ({
+      householdProfile: { id: 'hh_001' },
+      studentProfiles: [mockChildren[0], child002],
+      allSubjects: mockSubjects,
+      loading: false,
+      needsSetup: false,
+      familyName: '',
+      error: null,
+      refetch: jest.fn(),
+    }))
     mockSearchParams = new URLSearchParams()
 
     const { rerender } = render(<LessonsPage />)

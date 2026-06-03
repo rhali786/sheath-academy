@@ -10,3 +10,15 @@ export function toDateString(date: Date, timezone: string): string {
 export function getHouseholdLocalDate(timezone: string): string {
   return toDateString(new Date(), timezone)
 }
+
+export function toTimeString(date: Date, timezone: string): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date)
+  const hour = parts.find(p => p.type === 'hour')?.value ?? '00'
+  const minute = parts.find(p => p.type === 'minute')?.value ?? '00'
+  return `${hour}:${minute}`
+}

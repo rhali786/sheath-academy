@@ -3,6 +3,7 @@
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import type { StudentProfile } from '@/features/lib/types'
 import { childrenApi } from '../services/api'
+import { useHousehold } from '@/features/household/front/context'
 
 export interface ChildrenContextType {
   children: StudentProfile[]
@@ -35,6 +36,7 @@ export interface ChildrenProviderProps {
 }
 
 export function ChildrenProvider({ children, householdId }: ChildrenProviderProps) {
+  const { refetch: refetchHousehold } = useHousehold()
   const [allChildren, setAllChildren] = useState<StudentProfile[]>([])
   const [showArchived, setShowArchived] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -74,6 +76,7 @@ export function ChildrenProvider({ children, householdId }: ChildrenProviderProp
       const res = await childrenApi.createChild(data)
       if (res.data) {
         setAllChildren(prev => [...prev, res.data!])
+        refetchHousehold()
         return res.data
       }
       throw new Error(res.message || 'Failed to create child')
@@ -82,6 +85,7 @@ export function ChildrenProvider({ children, householdId }: ChildrenProviderProp
       const res = await childrenApi.updateChild(id, data)
       if (res.data) {
         setAllChildren(prev => prev.map(c => c.id === id ? res.data! : c))
+        refetchHousehold()
         return res.data
       }
       throw new Error(res.message || 'Failed to update child')
@@ -90,6 +94,7 @@ export function ChildrenProvider({ children, householdId }: ChildrenProviderProp
       const res = await childrenApi.archiveChild(id)
       if (res.data) {
         setAllChildren(prev => prev.map(c => c.id === id ? res.data! : c))
+        refetchHousehold()
         return res.data
       }
       throw new Error(res.message || 'Failed to archive child')
@@ -98,6 +103,7 @@ export function ChildrenProvider({ children, householdId }: ChildrenProviderProp
       const res = await childrenApi.restoreChild(id)
       if (res.data) {
         setAllChildren(prev => prev.map(c => c.id === id ? res.data! : c))
+        refetchHousehold()
         return res.data
       }
       throw new Error(res.message || 'Failed to restore child')

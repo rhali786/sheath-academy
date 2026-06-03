@@ -1,9 +1,10 @@
 'use client'
 
 import { Suspense, useState, useEffect, FormEvent } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { signIn, getProviders } from 'next-auth/react'
-import Link from 'next/link'
+import { SheathLogo } from '@/features/layout/front/components/SheathLogo'
 
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === 'true'
 
@@ -43,17 +44,6 @@ function oauthErrorMessage(code: string | null): string | null {
     return 'That account is already linked to another sign-in method. Use the same method you signed up with.'
   }
   return 'Sign-in failed. Please try again.'
-}
-
-function Logo() {
-  return (
-    <div className="flex items-center justify-center gap-3 mb-8">
-      <div className="w-10 h-10 rounded-xl bg-forest-900 flex items-center justify-center shadow-sm">
-        <span className="text-white text-lg font-bold leading-none" aria-hidden="true">ش</span>
-      </div>
-      <h1 className="text-xl font-bold text-slate-900 tracking-tight">Sheath Academy</h1>
-    </div>
-  )
 }
 
 function TabBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
@@ -162,7 +152,10 @@ function LoginForm() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <Logo />
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <SheathLogo size={40} data-testid="sheath-logo" />
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Sheath</h1>
+        </div>
 
         <div className="card p-8">
 

@@ -69,12 +69,12 @@ describe('GET /api/dashboard/summary', () => {
     expect(body.data.needsAttention).toBe(0)
   })
 
-  test('all six repository calls are made for each request', async () => {
+  test('all repository calls are made for each request, including overdue lesson lookup', async () => {
     await GET(makeRequest())
 
     expect(mockListLearners).toHaveBeenCalledTimes(1)
     expect(mockListAttendanceEvents).toHaveBeenCalledTimes(1)
-    expect(mockListLessonTaskRows).toHaveBeenCalledTimes(1)
+    expect(mockListLessonTaskRows).toHaveBeenCalledTimes(2)
     expect(mockListQuranSessionRows).toHaveBeenCalledTimes(1)
     expect(mockListEvidenceRows).toHaveBeenCalledTimes(1)
     expect(mockGetAlerts).toHaveBeenCalledTimes(1)

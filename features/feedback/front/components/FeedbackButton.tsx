@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { submitFeedback } from '@/features/feedback/front/services/api'
 import type { FeedbackSentiment } from '@/features/feedback/types'
 
@@ -92,11 +93,16 @@ export function FeedbackButton() {
 
             {status === 'success' ? (
               <div
-                className="flex flex-col items-center justify-center gap-2 py-10 text-center"
+                className="flex flex-col items-center justify-center gap-3 py-8 px-4 text-center"
                 data-testid="feedback-success"
               >
                 <span className="text-3xl">✓</span>
-                <p className="text-sm text-slate-600">Thanks for the feedback!</p>
+                <div>
+                  <p className="text-sm text-slate-600 mb-3">Submitted!</p>
+                  <Link href="/feedback" className="text-sm text-forest-600 underline hover:text-forest-700">
+                    View your feedback →
+                  </Link>
+                </div>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="p-4 space-y-4">
@@ -153,6 +159,15 @@ export function FeedbackButton() {
                   >
                     {status === 'submitting' ? 'Sending…' : 'Send'}
                   </button>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100">
+                  <p className="text-[10px] text-slate-400">
+                    Want structured feedback?{' '}
+                    <Link href="/product-validation" className="text-slate-500 underline hover:text-slate-600">
+                      Share here →
+                    </Link>
+                  </p>
                 </div>
               </form>
             )}

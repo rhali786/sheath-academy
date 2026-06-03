@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { X } from 'lucide-react'
 import { childColors } from '../theme'
 import { childScopedHref } from '@/features/lib/front/navigation'
+import { SURAHS } from '@/features/quran/front/constants/surahs'
 import type { QuranSession } from '../types'
 import type { StudentProfile } from '@/features/lib/types'
 
@@ -162,14 +163,19 @@ export function QuranStreak({ quranSessions, children, selectedChildId, onAddSes
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Surah</label>
-                <input
-                  type="text"
+                <select
                   value={formData.surah}
                   onChange={e => setFormData(f => ({ ...f, surah: e.target.value }))}
                   className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-forest-900"
                   required
-                  autoComplete="off"
-                />
+                >
+                  <option value="">Select a Surah…</option>
+                  {SURAHS.map(s => (
+                    <option key={s.number} value={s.name}>
+                      {s.number} - {s.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

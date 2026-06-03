@@ -7,6 +7,7 @@ import { SetupCard_SchoolYear } from './SetupCard_SchoolYear'
 import { SetupCard_Children } from './SetupCard_Children'
 import { SetupCard_Subjects } from './SetupCard_Subjects'
 import { SetupCard_Lessons } from './SetupCard_Lessons'
+import { SheathLogo } from '@/features/layout/front/components/SheathLogo'
 import { SetupCard_Portfolio } from './SetupCard_Portfolio'
 
 interface SetupStatus {
@@ -120,9 +121,7 @@ export function HouseholdSetup({ onComplete }: HouseholdSetupProps = {}) {
       <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
         <div className="w-full max-w-lg my-8">
           <div className="mb-8">
-            <div className="w-12 h-12 rounded-xl bg-forest-900 flex items-center justify-center mb-4">
-              <span className="text-white text-xl font-bold leading-none" aria-hidden="true">ش</span>
-            </div>
+            <SheathLogo size={48} data-testid="sheath-logo" className="mb-4" />
             <h1 className="text-xl font-bold text-slate-900">Complete your setup</h1>
             <p className="text-sm text-slate-500 mt-1">
               A few more steps to get your dashboard ready.
@@ -160,10 +159,8 @@ export function HouseholdSetup({ onComplete }: HouseholdSetupProps = {}) {
     <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
         <div className="mb-6">
-          <div className="w-12 h-12 rounded-xl bg-forest-900 flex items-center justify-center mb-4">
-            <span className="text-white text-xl font-bold leading-none" aria-hidden="true">ش</span>
-          </div>
-          <h1 className="text-xl font-bold text-slate-900">Welcome to Sheath Academy</h1>
+          <SheathLogo size={48} data-testid="sheath-logo" className="mb-4" />
+          <h1 className="text-xl font-bold text-slate-900">Welcome to Sheath</h1>
           <p className="text-sm text-slate-500 mt-1">
             What would you like to call your household? This appears throughout your dashboard.
             You can rename it any time in Settings.

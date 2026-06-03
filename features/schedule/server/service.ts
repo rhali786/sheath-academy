@@ -5,6 +5,9 @@ import type {
   ScheduleSettings,
   ScheduleTemplate,
   ReflowAction,
+  ScheduleEntry,
+  LessonScheduleEntry,
+  BreakScheduleEntry,
 } from '../types'
 
 // ── Time helpers ──────────────────────────────────────────────────────────────
@@ -30,6 +33,40 @@ function parseDurationMinutes(duration: LessonDuration | undefined, fallback: nu
   }
 }
 
+function blockToLessonEntry(block: ScheduleBlock): LessonScheduleEntry {
+  return {
+    kind: 'lesson',
+    id: block.id,
+    lesson: block.lesson,
+    startTime: block.startTime,
+    endTime: block.endTime,
+    durationMinutes: block.durationMinutes,
+    instructionMode: block.instructionMode,
+    flexibilityState: block.flexibilityState,
+  }
+}
+
+const SYNTHETIC_BREAKS: Omit<BreakScheduleEntry, 'durationMinutes'>[] = [
+  { kind: 'break', id: 'break_morning', title: 'Break', startTime: '10:30', endTime: '10:45' },
+  { kind: 'meal', id: 'break_lunch', title: 'Lunch & Dhuhr Prayer', startTime: '12:00', endTime: '13:00' },
+]
+
+function withDuration(entry: Omit<BreakScheduleEntry, 'durationMinutes'>): BreakScheduleEntry {
+  const durationMinutes = toMinutes(entry.endTime) - toMinutes(entry.startTime)
+  return { ...entry, durationMinutes }
+}
+
+function buildSyntheticBreaks(): BreakScheduleEntry[] {
+  return SYNTHETIC_BREAKS.map(withDuration)
+}
+
+function mergeTimelineEntries(lessonEntries: LessonScheduleEntry[], includeBreaks: boolean): ScheduleEntry[] {
+  const breaks = includeBreaks && lessonEntries.length > 0 ? buildSyntheticBreaks() : []
+  return [...lessonEntries, ...breaks].sort(
+    (a, b) => toMinutes(a.startTime) - toMinutes(b.startTime),
+  )
+}
+
 // ── Build schedule ─────────────────────────────────────────────────────────────
 
 /**
@@ -40,7 +77,7 @@ export function buildDailySchedule(
   lessons: LessonTask[],
   settings: ScheduleSettings,
 ): DaySchedule {
-  const { startTime, transitionMinutes, defaultDurationMinutes = 30 } = settings
+  const { startTime, transitionMinutes, defaultDurationMinutes = 30, includeSyntheticBreaks = false } = settings
   let cursor = toMinutes(startTime)
   const blocks: ScheduleBlock[] = []
 
@@ -60,10 +97,15 @@ export function buildDailySchedule(
     cursor = blockEnd + transitionMinutes
   }
 
+  const lessonEntries = blocks.map(blockToLessonEntry)
+  const entries = mergeTimelineEntries(lessonEntries, includeSyntheticBreaks)
+
   return {
     date: new Date().toISOString().slice(0, 10),
+    entries,
     blocks,
     isPaused: false,
+    includeSyntheticBreaks,
   }
 }
 
@@ -106,7 +148,12 @@ export function reflow(
       cursor = cursor + duration
     }
 
-    return { ...schedule, blocks, isPaused: true }
+    return {
+      ...schedule,
+      blocks,
+      entries: mergeTimelineEntries(blocks.map(blockToLessonEntry), schedule.includeSyntheticBreaks ?? false),
+      isPaused: true,
+    }
   }
 
   if (action === 'pull-independent-forward') {
@@ -151,7 +198,12 @@ export function reflow(
       cursor += block.durationMinutes + 0 // no extra transition in reflow
     }
 
-    return { ...schedule, blocks, isPaused: true }
+    return {
+      ...schedule,
+      blocks,
+      entries: mergeTimelineEntries(blocks.map(blockToLessonEntry), schedule.includeSyntheticBreaks ?? false),
+      isPaused: true,
+    }
   }
 
   return { ...schedule, isPaused: true }

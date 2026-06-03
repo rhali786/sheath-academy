@@ -22,27 +22,12 @@ jest.mock('@/features/attendance/front/services/api', () => ({
   },
 }))
 
-jest.mock('@/features/children/front/services/api', () => ({
-  childrenApi: {
-    getAllChildren: jest.fn(),
-  },
-}))
-
 jest.mock('@/features/household/front/context', () => ({
-  useHousehold: jest.fn(() => ({
-    householdProfile: { id: 'hh_001' },
-    studentProfiles: [],
-    allSubjects: [],
-    loading: false,
-    needsSetup: false,
-    familyName: '',
-    error: null,
-    refetch: jest.fn(),
-  })),
+  useHousehold: jest.fn(),
 }))
 
 import { attendanceApi } from '@/features/attendance/front/services/api'
-import { childrenApi } from '@/features/children/front/services/api'
+import { useHousehold } from '@/features/household/front/context'
 
 const mockGetRecords = attendanceApi.getRecords as jest.Mock
 const mockCreateRecord = attendanceApi.createRecord as jest.Mock
@@ -50,7 +35,7 @@ const mockUpdateRecord = attendanceApi.updateRecord as jest.Mock
 const mockArchiveRecord = attendanceApi.archiveRecord as jest.Mock
 const mockBatchRecord = attendanceApi.batchRecord as jest.Mock
 const mockGetSummary = attendanceApi.getSummary as jest.Mock
-const mockGetAllChildren = (childrenApi as any).getAllChildren as jest.Mock
+const mockUseHousehold = useHousehold as jest.Mock
 
 const mockChildren: StudentProfile[] = [
   { id: 'child_001', householdId: 'hh_001', name: 'Adam', gradeLabel: '5th', isActive: true, username: 'adam', password: 'pw', createdAt: '2026-01-01T00:00:00Z' },
@@ -88,7 +73,16 @@ async function openMarkForm() {
 
 beforeEach(() => {
   mockSearchParams = new URLSearchParams()
-  mockGetAllChildren.mockResolvedValue(ok(mockChildren))
+  mockUseHousehold.mockImplementation(() => ({
+    householdProfile: { id: 'hh_001' },
+    studentProfiles: mockChildren,
+    allSubjects: [],
+    loading: false,
+    needsSetup: false,
+    familyName: '',
+    error: null,
+    refetch: jest.fn(),
+  }))
   mockGetRecords.mockResolvedValue(ok([]))
   mockCreateRecord.mockResolvedValue(ok(makeRecord()))
   mockUpdateRecord.mockResolvedValue(ok(makeRecord()))

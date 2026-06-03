@@ -48,11 +48,19 @@ async function patch<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
 }
 
 export const plannerApi = {
-  getLessons: async (week?: string, childIds?: string[], subjectIds?: string[]): Promise<LessonTask[]> => {
+  getLessons: async (
+    week?: string,
+    childIds?: string[],
+    subjectIds?: string[],
+    startDate?: string,
+    endDate?: string,
+  ): Promise<LessonTask[]> => {
     const params = new URLSearchParams()
     if (week) params.set('week', week)
     if (childIds && childIds.length > 0) params.append('childIds', childIds.join(','))
     if (subjectIds && subjectIds.length > 0) params.append('subjectIds', subjectIds.join(','))
+    if (startDate) params.set('startDate', startDate)
+    if (endDate) params.set('endDate', endDate)
     const paramStr = params.toString()
     const response = await get<LessonTask[]>(`/api/plan/lessons${paramStr ? `?${paramStr}` : ''}`)
     return response.data

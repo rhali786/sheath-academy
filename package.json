@@ -1,6 +1,6 @@
 {
   "name": "sheath-academy",
-  "version": "1.3.1",
+  "version": "2.9.0",
   "private": true,
   "engines": {
     "node": ">=22.22.2"
@@ -16,14 +16,20 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "smoke": "node scripts/smoke.cjs",
-    "setup-hooks": "node scripts/setup-hooks.js",
-    "prepare": "node scripts/setup-hooks.js",
+    "setup-hooks": "sh scripts/setup-hooks.sh",
+    "prepare": "sh scripts/setup-hooks.sh",
     "db:generate": "dotenv -e .env.local -- drizzle-kit generate",
     "db:migrate": "dotenv -e .env.local -- drizzle-kit migrate",
     "db:studio": "dotenv -e .env.local -- drizzle-kit studio",
     "db:seed:demo": "dotenv -e .env.local -- tsx scripts/seed-demo-households.ts",
     "db:wipe": "dotenv -e .env.local -- tsx scripts/db-wipe.ts",
-    "db:reset:demo": "dotenv -e .env.local -- tsx scripts/db-wipe.ts && dotenv -e .env.local -- tsx scripts/seed-demo-households.ts"
+    "db:reset:demo": "dotenv -e .env.local -- tsx scripts/db-wipe.ts && dotenv -e .env.local -- tsx scripts/seed-demo-households.ts",
+    "steward:preflight": "dotenv -e .env.local -- tsx scripts/steward-preflight.ts",
+    "steward:daily": "dotenv -e .env.local -- tsx scripts/run-daily.ts",
+    "steward:execute": "dotenv -e .env.local -- tsx scripts/run-execute.ts",
+    "steward:rollback": "dotenv -e .env.local -- tsx scripts/run-rollback.ts",
+    "steward:ship": "dotenv -e .env.local -- tsx scripts/run-ship.ts",
+    "steward:notify": "dotenv -e .env.local -- tsx scripts/feedback-notify.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -31,17 +37,14 @@
     "@nivo/core": "^0.83.0",
     "@nivo/line": "^0.83.0",
     "axios": "^1.6.0",
-    "clsx": "^2.0.0",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^0.294.0",
     "next": "^15.0.0",
     "next-auth": "^5.0.0-beta.31",
     "postgres": "^3.4.9",
-    "prop-types": "^15.8.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "resend": "^6.12.3",
-    "tailwind-merge": "^2.2.0"
+    "resend": "^6.12.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",

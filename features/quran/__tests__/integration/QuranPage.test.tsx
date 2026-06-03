@@ -19,19 +19,17 @@ jest.mock('@/features/quran/front/services/api', () => ({
   },
 }))
 
-jest.mock('@/features/children/front/services/api', () => ({
-  childrenApi: {
-    getAllChildren: jest.fn(),
-  },
+jest.mock('@/features/household/front/context', () => ({
+  useHousehold: jest.fn(),
 }))
 
 import { quranApi } from '@/features/quran/front/services/api'
-import { childrenApi } from '@/features/children/front/services/api'
+import { useHousehold } from '@/features/household/front/context'
 
 const mockGetSessions = (quranApi as any).getSessions as jest.Mock
 const mockUpdateSession = (quranApi as any).updateSession as jest.Mock
 const mockDeleteSession = (quranApi as any).deleteSession as jest.Mock
-const mockGetAllChildren = (childrenApi as any).getAllChildren as jest.Mock
+const mockUseHousehold = useHousehold as jest.Mock
 
 const mockChildren: StudentProfile[] = [
   { id: 'child_001', householdId: 'hh_001', name: 'Layth',   gradeLabel: '5th', isActive: true, username: 'layth',   password: 'pw', createdAt: '2026-01-01T00:00:00Z' },
@@ -62,7 +60,10 @@ function okSessions(sessions: QuranSession[]) {
 
 beforeEach(() => {
   mockSearchParams = new URLSearchParams()
-  mockGetAllChildren.mockResolvedValue(ok(mockChildren))
+  mockUseHousehold.mockImplementation(() => ({
+    studentProfiles: mockChildren,
+    loading: false,
+  }))
   mockGetSessions.mockResolvedValue(okSessions([]))
   mockUpdateSession.mockResolvedValue(ok(makeSession()))
   mockDeleteSession.mockResolvedValue(ok(null))

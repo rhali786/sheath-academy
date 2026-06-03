@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import type { ChangelogEntry } from '@/features/about/types'
 
 const pains = [
   {
@@ -91,7 +92,7 @@ const changelog = [
   {
     version: '0.1.17',
     label: 'Shell and navigation',
-    detail: 'AppShell architecture — header and household context in one shell shared by all pages. NavigationContext keeps tab state in sync. Tab buttons navigate back to dashboard from any page.',
+    detail: 'AppShell architecture — sidebar navigation and household context shared by all pages. Dashboard hero layout with schedule timeline and alerts rail.',
   },
   {
     version: '0.1.10',
@@ -115,7 +116,7 @@ const changelog = [
   },
 ]
 
-export function AboutPage() {
+export function AboutPage({ changelogEntries = [] }: { changelogEntries?: ChangelogEntry[] }) {
   return (
     <div className="bg-slate-50 min-h-screen">
 
@@ -148,7 +149,7 @@ export function AboutPage() {
           </p>
           <div className="mt-6">
             <Link
-              href="/feedback"
+              href="/product-validation"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-forest-900 text-sm font-medium text-white hover:bg-forest-800 transition-colors"
               data-testid="about-feedback-cta"
             >
@@ -232,6 +233,29 @@ export function AboutPage() {
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Changelog</p>
           <p className="text-sm text-slate-500 mb-6">One entry per meaningful milestone. Version shown is where that milestone landed.</p>
           <div className="space-y-2">
+            {changelogEntries.map((entry) => (
+              <div key={entry.id} className="bg-white rounded-xl px-5 py-4 shadow-sm flex items-start gap-4">
+                <span className="text-xs font-bold text-forest-900 tabular-nums mt-0.5 w-16 flex-shrink-0">{entry.version}</span>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-slate-900">{entry.label}</p>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                        entry.status === 'pending'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}
+                    >
+                      {entry.status === 'pending' ? 'Pending' : 'Shipped'}
+                    </span>
+                  </div>
+                  {entry.detail && <p className="text-xs text-slate-500 mt-0.5">{entry.detail}</p>}
+                  {entry.userCredit && (
+                    <p className="text-xs text-slate-400 mt-1">Suggested by {entry.userCredit}</p>
+                  )}
+                </div>
+              </div>
+            ))}
             {changelog.map((entry) => (
               <div key={entry.version} className="bg-white rounded-xl px-5 py-4 shadow-sm flex items-start gap-4">
                 <span className="text-xs font-bold text-forest-900 tabular-nums mt-0.5 w-16 flex-shrink-0">{entry.version}</span>
@@ -252,7 +276,7 @@ export function AboutPage() {
           <div className="flex gap-4 text-xs">
             <Link href="/login" className="text-slate-400 hover:text-forest-900 transition-colors">Sign in</Link>
             <a href="https://sheathacademy.onrender.com" className="text-slate-400 hover:text-forest-900 transition-colors">Live site</a>
-            <Link href="/feedback" className="text-slate-400 hover:text-forest-900 transition-colors">Feedback</Link>
+            <Link href="/product-validation" className="text-slate-400 hover:text-forest-900 transition-colors">Feedback</Link>
             <Link href="/worklog" className="text-slate-400 hover:text-forest-900 transition-colors">Worklog</Link>
           </div>
         </div>

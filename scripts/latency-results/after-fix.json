@@ -1,0 +1,642 @@
+{
+  "runAt": "2026-05-25T10:19:37.281Z",
+  "label": "after-fix",
+  "pages": [
+    {
+      "name": "Dashboard",
+      "path": "/",
+      "ttfb": 251,
+      "domContentLoaded": 272,
+      "load": 282,
+      "apiCalls": [
+        {
+          "path": "/api/children/children",
+          "ttfb": 1094,
+          "total": 1095
+        },
+        {
+          "path": "/api/dashboard/records",
+          "ttfb": 860,
+          "total": 861
+        },
+        {
+          "path": "/api/subjects",
+          "ttfb": 788,
+          "total": 789
+        },
+        {
+          "path": "/api/setup-status",
+          "ttfb": 758,
+          "total": 760
+        },
+        {
+          "path": "/api/alerts",
+          "ttfb": 726,
+          "total": 729
+        },
+        {
+          "path": "/api/household/profile",
+          "ttfb": 701,
+          "total": 702
+        },
+        {
+          "path": "/api/dashboard/records",
+          "ttfb": 701,
+          "total": 702
+        },
+        {
+          "path": "/api/dashboard/summary",
+          "ttfb": 691,
+          "total": 692
+        },
+        {
+          "path": "/api/plan/lessons",
+          "ttfb": 688,
+          "total": 689
+        },
+        {
+          "path": "/api/dashboard/summary",
+          "ttfb": 600,
+          "total": 601
+        },
+        {
+          "path": "/api/quran/sessions",
+          "ttfb": 582,
+          "total": 584
+        },
+        {
+          "path": "/api/alerts",
+          "ttfb": 527,
+          "total": 528
+        },
+        {
+          "path": "/api/quran/sessions",
+          "ttfb": 417,
+          "total": 418
+        },
+        {
+          "path": "/api/school-years/active",
+          "ttfb": 400,
+          "total": 402
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 163,
+          "total": 165
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 123,
+          "total": 125
+        }
+      ]
+    },
+    {
+      "name": "Calendar",
+      "path": "/plan/schedule",
+      "ttfb": 333,
+      "domContentLoaded": 481,
+      "load": 621,
+      "apiCalls": [
+        {
+          "path": "/api/children/children",
+          "ttfb": 718,
+          "total": 719
+        },
+        {
+          "path": "/api/subjects",
+          "ttfb": 709,
+          "total": 710
+        },
+        {
+          "path": "/api/household/profile",
+          "ttfb": 304,
+          "total": 305
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 125,
+          "total": 127
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 106,
+          "total": 107
+        }
+      ]
+    },
+    {
+      "name": "Planner",
+      "path": "/plan",
+      "ttfb": 115,
+      "domContentLoaded": 142,
+      "load": 142,
+      "apiCalls": [
+        {
+          "path": "/api/subjects",
+          "ttfb": 799,
+          "total": 800
+        },
+        {
+          "path": "/api/children/children",
+          "ttfb": 784,
+          "total": 787
+        },
+        {
+          "path": "/api/household/profile",
+          "ttfb": 779,
+          "total": 780
+        },
+        {
+          "path": "/api/plan/lessons",
+          "ttfb": 535,
+          "total": 535
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 294,
+          "total": 295
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 127,
+          "total": 128
+        }
+      ]
+    },
+    {
+      "name": "Courses",
+      "path": "/lessons",
+      "ttfb": 204,
+      "domContentLoaded": 238,
+      "load": 331,
+      "apiCalls": [
+        {
+          "path": "/api/plan/lessons",
+          "ttfb": 1876,
+          "total": 1878
+        },
+        {
+          "path": "/api/children/children",
+          "ttfb": 976,
+          "total": 977
+        },
+        {
+          "path": "/api/subjects",
+          "ttfb": 694,
+          "total": 695
+        },
+        {
+          "path": "/api/household/profile",
+          "ttfb": 684,
+          "total": 685
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 166,
+          "total": 168
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 104,
+          "total": 106
+        }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "path": "/attendance",
+      "ttfb": 177,
+      "domContentLoaded": 219,
+      "load": 310,
+      "apiCalls": [
+        {
+          "path": "/api/children/children",
+          "ttfb": 723,
+          "total": 724
+        },
+        {
+          "path": "/api/household/profile",
+          "ttfb": 623,
+          "total": 623
+        },
+        {
+          "path": "/api/subjects",
+          "ttfb": 623,
+          "total": 623
+        },
+        {
+          "path": "/api/attendance",
+          "ttfb": 524,
+          "total": 526
+        },
+        {
+          "path": "/api/attendance/summary",
+          "ttfb": 350,
+          "total": 351
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 134,
+          "total": 136
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 108,
+          "total": 110
+        }
+      ]
+    },
+    {
+      "name": "Grades",
+      "path": "/growth",
+      "ttfb": 123,
+      "domContentLoaded": 150,
+      "load": 150,
+      "apiCalls": [
+        {
+          "path": "/api/subjects",
+          "ttfb": 909,
+          "total": 910
+        },
+        {
+          "path": "/api/children/children",
+          "ttfb": 620,
+          "total": 620
+        },
+        {
+          "path": "/api/household/profile",
+          "ttfb": 617,
+          "total": 620
+        },
+        {
+          "path": "/api/portfolio/evidence",
+          "ttfb": 616,
+          "total": 619
+        },
+        {
+          "path": "/api/subjects",
+          "ttfb": 312,
+          "total": 313
+        },
+        {
+          "path": "/api/plan/lessons",
+          "ttfb": 311,
+          "total": 312
+        },
+        {
+          "path": "/api/portfolio/evidence",
+          "ttfb": 273,
+          "total": 274
+        },
+        {
+          "path": "/api/subjects",
+          "ttfb": 261,
+          "total": 262
+        },
+        {
+          "path": "/api/children/children",
+          "ttfb": 171,
+          "total": 172
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 115,
+          "total": 117
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 114,
+          "total": 116
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "path": "/records",
+      "ttfb": 110,
+      "domContentLoaded": 135,
+      "load": 135,
+      "apiCalls": [
+        {
+          "path": "/api/subjects",
+          "ttfb": 993,
+          "total": 994
+        },
+        {
+          "path": "/api/children/children",
+          "ttfb": 789,
+          "total": 790
+        },
+        {
+          "path": "/api/household/profile",
+          "ttfb": 694,
+          "total": 695
+        },
+        {
+          "path": "/api/records/summary",
+          "ttfb": 515,
+          "total": 519
+        },
+        {
+          "path": "/api/children/children",
+          "ttfb": 243,
+          "total": 245
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 125,
+          "total": 127
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 125,
+          "total": 126
+        }
+      ]
+    },
+    {
+      "name": "People",
+      "path": "/settings?tab=children",
+      "ttfb": 127,
+      "domContentLoaded": 156,
+      "load": 156,
+      "apiCalls": [
+        {
+          "path": "/api/subjects",
+          "ttfb": 620,
+          "total": 621
+        },
+        {
+          "path": "/api/children/children",
+          "ttfb": 603,
+          "total": 603
+        },
+        {
+          "path": "/api/children/children",
+          "ttfb": 469,
+          "total": 470
+        },
+        {
+          "path": "/api/household/profile",
+          "ttfb": 325,
+          "total": 326
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 118,
+          "total": 120
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 117,
+          "total": 118
+        }
+      ]
+    },
+    {
+      "name": "Resources",
+      "path": "/resources",
+      "ttfb": 118,
+      "domContentLoaded": 147,
+      "load": 252,
+      "apiCalls": [
+        {
+          "path": "/api/subjects",
+          "ttfb": 713,
+          "total": 714
+        },
+        {
+          "path": "/api/children/children",
+          "ttfb": 711,
+          "total": 712
+        },
+        {
+          "path": "/api/household/profile",
+          "ttfb": 709,
+          "total": 710
+        },
+        {
+          "path": "/api/resources",
+          "ttfb": 546,
+          "total": 547
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 115,
+          "total": 116
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 110,
+          "total": 111
+        }
+      ]
+    },
+    {
+      "name": "Quran",
+      "path": "/quran",
+      "ttfb": 116,
+      "domContentLoaded": 207,
+      "load": 240,
+      "apiCalls": [
+        {
+          "path": "/api/household/profile",
+          "ttfb": 1514,
+          "total": 1516
+        },
+        {
+          "path": "/api/subjects",
+          "ttfb": 1514,
+          "total": 1515
+        },
+        {
+          "path": "/api/children/children",
+          "ttfb": 1423,
+          "total": 1423
+        },
+        {
+          "path": "/api/quran/sessions",
+          "ttfb": 1336,
+          "total": 1338
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 115,
+          "total": 116
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 107,
+          "total": 108
+        }
+      ]
+    },
+    {
+      "name": "Compliance",
+      "path": "/settings?tab=records-compliance",
+      "ttfb": 115,
+      "domContentLoaded": 162,
+      "load": 162,
+      "apiCalls": [
+        {
+          "path": "/api/children/children",
+          "ttfb": 558,
+          "total": 559
+        },
+        {
+          "path": "/api/household/profile",
+          "ttfb": 557,
+          "total": 558
+        },
+        {
+          "path": "/api/subjects",
+          "ttfb": 554,
+          "total": 556
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 116,
+          "total": 117
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 110,
+          "total": 112
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "path": "/settings",
+      "ttfb": 126,
+      "domContentLoaded": 161,
+      "load": 161,
+      "apiCalls": [
+        {
+          "path": "/api/children/children",
+          "ttfb": 790,
+          "total": 791
+        },
+        {
+          "path": "/api/household/profile",
+          "ttfb": 566,
+          "total": 568
+        },
+        {
+          "path": "/api/subjects",
+          "ttfb": 563,
+          "total": 565
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 124,
+          "total": 126
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 122,
+          "total": 123
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "path": "/admin/metrics",
+      "ttfb": 118,
+      "domContentLoaded": 152,
+      "load": 152,
+      "apiCalls": [
+        {
+          "path": "/api/product-validation/responses",
+          "ttfb": 1137,
+          "total": 1137
+        },
+        {
+          "path": "/api/admin/metrics/users",
+          "ttfb": 1136,
+          "total": 1137
+        },
+        {
+          "path": "/api/product-validation/summary",
+          "ttfb": 1090,
+          "total": 1093
+        },
+        {
+          "path": "/api/admin/metrics/summary",
+          "ttfb": 1089,
+          "total": 1093
+        },
+        {
+          "path": "/api/admin/feedback",
+          "ttfb": 998,
+          "total": 999
+        },
+        {
+          "path": "/api/children/children",
+          "ttfb": 898,
+          "total": 899
+        },
+        {
+          "path": "/api/household/profile",
+          "ttfb": 786,
+          "total": 787
+        },
+        {
+          "path": "/api/subjects",
+          "ttfb": 786,
+          "total": 787
+        },
+        {
+          "path": "/api/admin/metrics/summary",
+          "ttfb": 597,
+          "total": 598
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 112,
+          "total": 113
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 110,
+          "total": 115
+        }
+      ]
+    },
+    {
+      "name": "About",
+      "path": "/about",
+      "ttfb": 106,
+      "domContentLoaded": 141,
+      "load": 141,
+      "apiCalls": [
+        {
+          "path": "/api/children/children",
+          "ttfb": 1167,
+          "total": 1168
+        },
+        {
+          "path": "/api/household/profile",
+          "ttfb": 683,
+          "total": 684
+        },
+        {
+          "path": "/api/subjects",
+          "ttfb": 481,
+          "total": 482
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 121,
+          "total": 122
+        },
+        {
+          "path": "/api/auth/session",
+          "ttfb": 115,
+          "total": 116
+        }
+      ]
+    }
+  ]
+}

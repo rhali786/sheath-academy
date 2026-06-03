@@ -1,22 +1,13 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
-import { TodayState } from '@/features/dashboard/front/components/TodayState'
 import { RecordsProof } from '@/features/dashboard/front/components/RecordsProof'
 import { QuranStreak } from '@/features/dashboard/front/components/QuranStreak'
 import { AlertItem } from '@/features/dashboard/front/components/shared/AlertItem'
-import type { DashboardMetrics, DashboardRecord, QuranSession } from '@/features/dashboard/front/types'
+import type { DashboardRecord, QuranSession } from '@/features/dashboard/front/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { Alert } from '@/features/alerts/types'
 
 const CHILD_ID = 'student_seed_layth_001'
-
-const mockMetrics: DashboardMetrics = {
-  attendanceReady: '4/4',
-  lessonsPlanned: 40,
-  needsAttention: 3,
-  quranLogged: '10 sessions',
-  portfolioItems: 8,
-}
 
 const mockRecords: DashboardRecord[] = [
   { id: 'record_attendance', title: 'Attendance', count: 16, maxCount: 20, icon: 'CheckCircle', viewButton: 'View records' },
@@ -32,40 +23,6 @@ const mockChildren: StudentProfile[] = [
 
 const mockSessions: QuranSession[] = []
 const mockAddSession = jest.fn()
-
-// ---- TodayState ----
-
-describe('TodayState — linked filter hrefs', () => {
-  it('uses plain paths when selectedChildId is null (All Children)', () => {
-    render(<TodayState metrics={mockMetrics} selectedChildId={null} />)
-    const attendanceLink = screen.getByRole('link', { name: /attendance ready/i })
-    expect(attendanceLink).toHaveAttribute('href', '/attendance')
-  })
-
-  it('appends childId to Attendance link when selectedChildId is provided', () => {
-    render(<TodayState metrics={mockMetrics} selectedChildId={CHILD_ID} />)
-    const attendanceLink = screen.getByRole('link', { name: /attendance ready/i })
-    expect(attendanceLink).toHaveAttribute('href', `/attendance?childId=${CHILD_ID}`)
-  })
-
-  it('appends childId to Lessons Planned link', () => {
-    render(<TodayState metrics={mockMetrics} selectedChildId={CHILD_ID} />)
-    const links = screen.getAllByRole('link', { name: /lessons planned/i })
-    expect(links[0]).toHaveAttribute('href', `/lessons?childId=${CHILD_ID}`)
-  })
-
-  it('appends childId to Quran Logged link', () => {
-    render(<TodayState metrics={mockMetrics} selectedChildId={CHILD_ID} />)
-    const quranLink = screen.getByRole('link', { name: /quran logged/i })
-    expect(quranLink).toHaveAttribute('href', `/quran?childId=${CHILD_ID}`)
-  })
-
-  it('omits childId from all links when selectedChildId is undefined', () => {
-    render(<TodayState metrics={mockMetrics} />)
-    const attendanceLink = screen.getByRole('link', { name: /attendance ready/i })
-    expect(attendanceLink).toHaveAttribute('href', '/attendance')
-  })
-})
 
 // ---- RecordsProof ----
 
