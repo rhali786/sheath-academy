@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
-import { households, users } from '@/db/schema'
+import { households, users, householdMembers } from '@/db/schema'
+import type { AdminMetricsMemberInfo } from '@/features/admin-metrics/types'
 import { listLearners, getAdminLearnerCounts } from '@/features/children/server/repository'
 import { getAdminLessonCounts } from '@/features/plan/server/service'
 import { getAdminAttendanceCounts } from '@/features/attendance/server/service'
@@ -27,18 +28,67 @@ export async function getAdminMetricsUsers(query: AdminMetricsQuery): Promise<Ad
 
   const db = getDb()
 
-  // 1. All households with their user info
-  const hhRows = await db
+  // 1. All households with all their members (via household_members → users)
+  const memberRows = await db
     .select({
       householdId: households.id,
       householdName: households.name,
-      userId: households.userId,
-      userEmail: users.email,
-      userName: users.name,
-      userLastLoginAt: users.lastLoginAt,
+      ownerUserId: households.userId,
+      memberId: householdMembers.userId,
+      memberRole: householdMembers.role,
+      memberEmail: users.email,
+      memberName: users.name,
+      memberLastLoginAt: users.lastLoginAt,
     })
     .from(households)
-    .innerJoin(users, eq(households.userId, users.id))
+    .leftJoin(householdMembers, eq(householdMembers.householdId, households.id))
+    .leftJoin(users, eq(householdMembers.userId, users.id))
+
+  // Group member rows by householdId
+  const hhMap = new Map<string, {
+    householdId: string
+    householdName: string
+    ownerUserId: string
+    members: AdminMetricsMemberInfo[]
+    ownerLastLoginAt: Date | null
+  }>()
+  for (const r of memberRows) {
+    if (!hhMap.has(r.householdId)) {
+      hhMap.set(r.householdId, {
+        householdId: r.householdId,
+        householdName: r.householdName,
+        ownerUserId: r.ownerUserId,
+        members: [],
+        ownerLastLoginAt: null,
+      })
+    }
+    const hh = hhMap.get(r.householdId)!
+    if (r.memberId && r.memberEmail) {
+      const role = (r.memberRole === 'owner' ? 'owner' : 'member') as 'owner' | 'member'
+      hh.members.push({
+        userId: r.memberId,
+        email: r.memberEmail,
+        name: r.memberName ?? undefined,
+        role,
+      })
+      if (role === 'owner') {
+        hh.ownerLastLoginAt = r.memberLastLoginAt
+      }
+    }
+  }
+
+  const hhRows = Array.from(hhMap.values()).map(hh => {
+    const owner = hh.members.find(m => m.role === 'owner') ?? hh.members[0]
+    return {
+      householdId: hh.householdId,
+      householdName: hh.householdName,
+      userId: owner?.userId ?? hh.ownerUserId,
+      userEmail: owner?.email,
+      userName: owner?.name,
+      userLastLoginAt: hh.ownerLastLoginAt,
+      members: hh.members,
+    }
+  })
 
   // 2. Domain aggregates in parallel
   const [lessonCounts, attendanceCounts, quranCounts, evidenceCounts, learnerCounts] = await Promise.all([
@@ -95,6 +145,7 @@ export async function getAdminMetricsUsers(query: AdminMetricsQuery): Promise<Ad
       userId: hh.userId,
       userName: hh.userName ?? undefined,
       userEmail: hh.userEmail ?? undefined,
+      members: hh.members,
       lastLoginAt: hh.userLastLoginAt?.toISOString(),
       workspaceId: hh.householdId,
       workspaceName: hh.householdName,
@@ -106,7 +157,6 @@ export async function getAdminMetricsUsers(query: AdminMetricsQuery): Promise<Ad
       lessonTasksInPeriod: lessonCount,
       lessonsCompletedInPeriod: completedCount,
       attendanceEventsInPeriod: attCount,
-      // Map domain counts to event-model fields for UI compatibility
       sessionsLogged: lessonCount + quranCount,
       completionEvents: completedCount,
       startedNotCompletedCount: Math.max(0, lessonCount - completedCount),

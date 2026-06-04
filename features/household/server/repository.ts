@@ -16,6 +16,21 @@ export interface HouseholdMembership {
   userId: string
 }
 
+/** Updates the display name for a user. Pass null to clear the name. */
+export async function updateUserName(userId: string, name: string | null): Promise<void> {
+  await getDb()
+    .update(users)
+    .set({ name, updatedAt: new Date() })
+    .where(eq(users.id, userId))
+}
+
+/** Returns a user row by id, or null. */
+export async function getUserById(userId: string): Promise<UserRow | null> {
+  const db = getDb()
+  const result = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+  return result[0] ?? null
+}
+
 /** Finds user by email or creates a new row. Idempotent. */
 export async function upsertUserByEmail(
   email: string,

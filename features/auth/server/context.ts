@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { isAppAdmin } from '@/features/lib/server/appAdmin'
 import { NotFoundError, isNotFoundError } from './errors'
+import { logger } from '@/features/lib/logger'
 
 export interface AuthCtx {
   userId: string
@@ -105,17 +106,26 @@ export async function requireAuthCtx(request: NextRequest): Promise<AuthCtx | Re
   const { tryGetRequestAuthCtx } = await import('@/features/auth/server/requestAuth')
   const requestCtx = tryGetRequestAuthCtx()
   if (requestCtx) {
-    if (!requestCtx.householdId) return setupRequiredResponse()
+    if (!requestCtx.householdId) {
+      logger.warn({ userId: requestCtx.userId }, 'requireAuthCtx: householdId missing on request ctx — 403')
+      return setupRequiredResponse()
+    }
     return requestCtx
   }
 
   const { auth } = await import('@/features/auth/auth')
   const session = await auth()
-  if (!session?.user?.email) return unauthorizedResponse()
+  if (!session?.user?.email) {
+    logger.warn('requireAuthCtx: no session email — 401')
+    return unauthorizedResponse()
+  }
 
   const userId = session.user.userId
   const householdId = session.user.householdId
-  if (!userId || !householdId) return setupRequiredResponse()
+  if (!userId || !householdId) {
+    logger.warn({ email: session.user.email, userId, householdId }, 'requireAuthCtx: missing userId or householdId — 403')
+    return setupRequiredResponse()
+  }
 
   return {
     userId,

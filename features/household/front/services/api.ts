@@ -44,6 +44,9 @@ export const householdApi = {
   setup: (familyName: string): Promise<ApiResponse<HouseholdProfile>> =>
     post('/api/household/profile', { familyName }),
 
+  updateUserProfile: (patch: { name: string | null }): Promise<ApiResponse<{ name: string | null }>> =>
+    put('/api/household/user-profile', patch),
+
   updateProfile: (
     patch: {
       familyName?: string

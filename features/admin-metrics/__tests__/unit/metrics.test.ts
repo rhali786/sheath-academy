@@ -146,4 +146,36 @@ describe('filterAndSortUserRows', () => {
     expect(byLearner).toHaveLength(1)
     expect(byLearner[0].learnerNames).toContain('Ada')
   })
+
+  test('searches non-owner member email and name', () => {
+    const ownerRow = {
+      ...buildUserRow(snapshot, [], [], '2026-05-01', '2026-05-31'),
+      members: [
+        { userId: 'user_1', email: 'parent@test.com', role: 'owner' as const },
+        { userId: 'user_2', email: 'spouse@test.com', name: 'Spouse Name', role: 'member' as const },
+      ],
+    }
+    const otherRow = {
+      ...buildUserRow({ ...snapshot, householdId: 'hh_2', householdName: 'Other Family', userEmail: 'other@test.com' }, [], [], '2026-05-01', '2026-05-31'),
+      members: [
+        { userId: 'user_3', email: 'other@test.com', role: 'owner' as const },
+      ],
+    }
+
+    const byMemberEmail = filterAndSortUserRows([ownerRow, otherRow], {
+      periodStart: '2026-05-01',
+      periodEnd: '2026-05-31',
+      search: 'spouse@test',
+    })
+    expect(byMemberEmail).toHaveLength(1)
+    expect(byMemberEmail[0].workspaceId).toBe('hh_1')
+
+    const byMemberName = filterAndSortUserRows([ownerRow, otherRow], {
+      periodStart: '2026-05-01',
+      periodEnd: '2026-05-31',
+      search: 'Spouse Name',
+    })
+    expect(byMemberName).toHaveLength(1)
+    expect(byMemberName[0].workspaceId).toBe('hh_1')
+  })
 })

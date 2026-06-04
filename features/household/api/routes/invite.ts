@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server'
 import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
-import { getMembership, createInvitation } from '@/features/household/server/repository'
+import {
+  getMembership,
+  createInvitation,
+  getHouseholdById,
+  getUserById,
+} from '@/features/household/server/repository'
 import { createInvitationToken } from '@/features/household/server/invitationTokens'
 import { sendInvitationEmail } from '@/features/auth/server/email'
+import { displayName } from '@/features/lib/displayName'
 
 export async function POST(request: Request): Promise<NextResponse> {
   const auth = getRequestAuthCtx()
@@ -30,7 +36,19 @@ export async function POST(request: Request): Promise<NextResponse> {
     invitedByUserId: auth.userId,
   })
 
-  await sendInvitationEmail({ to: email, rawToken: raw, householdName: auth.householdId })
+  // Resolve human-friendly labels so the email reads "You've been invited to
+  // join <Family Name>" rather than leaking the household id / a generic name.
+  const [household, inviter] = await Promise.all([
+    getHouseholdById(auth.householdId),
+    getUserById(auth.userId),
+  ])
+
+  await sendInvitationEmail({
+    to: email,
+    rawToken: raw,
+    householdName: household?.name ?? 'your household',
+    inviterName: inviter ? displayName(inviter) : undefined,
+  })
 
   return NextResponse.json({
     status: 'success',

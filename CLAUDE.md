@@ -113,6 +113,21 @@ New REST surface: extend the dynamic slug handler and the feature router consist
 
 ---
 
+## Logging
+
+**Stack: `consola` (interface) + `pino` (server file transport)**
+
+- **One import everywhere:** `import { logger } from '@/features/lib/logger'`
+- `features/lib/logger.ts` — exports the shared `consola` instance. Safe to import in server code, client components, and shared utilities. Do not create logger instances inline in individual files.
+- `instrumentation.ts` (project root) — Next.js 15 server startup hook. Registers the pino file reporter once. All logging behavior (level, output file, format) is controlled here, not at call sites.
+- **Server:** logs to both console and `logs/app.log` (JSON via pino). File is gitignored.
+- **Browser:** consola default pretty reporter (no file output).
+- **Tests:** mock `@/features/lib/logger` at the module level — do not let tests write to disk.
+- Use structured args: `logger.info({ userId, householdId }, 'tenant resolved')` not string interpolation.
+- Log levels: `logger.error` for caught exceptions, `logger.warn` for recoverable issues, `logger.info` for significant events, `logger.debug` for dev-only detail.
+
+---
+
 ## Conventions
 
 **TypeScript**

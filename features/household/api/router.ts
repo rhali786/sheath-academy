@@ -6,6 +6,7 @@ import * as acceptHandler from './routes/accept'
 import * as revokeHandler from './routes/revoke'
 import * as memberRemoveHandler from './routes/member-remove'
 import * as membersHandler from './routes/members'
+import * as userProfileHandler from './routes/user-profile'
 
 export async function handleHouseholdRoute(
   slug: string[],
@@ -61,6 +62,11 @@ export async function handleHouseholdRoute(
   // GET /household/invitations — list invitations for the household
   if (slug.length === 1 && slug[0] === 'invitations' && method === 'GET') {
     return membersHandler.getInvitations()
+  }
+
+  // PUT /household/user-profile — update the current user's display name
+  if (slug.length === 1 && slug[0] === 'user-profile' && method === 'PUT') {
+    return userProfileHandler.PUT(request)
   }
 
   return null

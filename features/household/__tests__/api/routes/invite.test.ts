@@ -8,6 +8,8 @@ jest.mock('@/features/auth/server/requestAuth', () => {
 jest.mock('@/features/household/server/repository', () => ({
   getMembership: jest.fn(),
   createInvitation: jest.fn(),
+  getHouseholdById: jest.fn(),
+  getUserById: jest.fn(),
 }))
 
 jest.mock('@/features/household/server/invitationTokens', () => ({
@@ -19,12 +21,19 @@ jest.mock('@/features/auth/server/email', () => ({
 }))
 
 import { POST } from '@/features/household/api/routes/invite'
-import { getMembership, createInvitation } from '@/features/household/server/repository'
+import {
+  getMembership,
+  createInvitation,
+  getHouseholdById,
+  getUserById,
+} from '@/features/household/server/repository'
 import { createInvitationToken } from '@/features/household/server/invitationTokens'
 import { sendInvitationEmail } from '@/features/auth/server/email'
 
 const mockGetMembership = jest.mocked(getMembership)
 const mockCreateInvitation = jest.mocked(createInvitation)
+const mockGetHouseholdById = jest.mocked(getHouseholdById)
+const mockGetUserById = jest.mocked(getUserById)
 const mockCreateInvitationToken = jest.mocked(createInvitationToken)
 const mockSendInvitationEmail = jest.mocked(sendInvitationEmail)
 
@@ -45,6 +54,8 @@ beforeEach(() => {
   mockGetMembership.mockResolvedValue(OWNER_MEMBERSHIP as any)
   mockCreateInvitationToken.mockReturnValue(TOKEN_FIXTURE)
   mockCreateInvitation.mockResolvedValue(INVITATION_ROW as any)
+  mockGetHouseholdById.mockResolvedValue({ id: 'hh_a', name: 'Barakah Academy' } as any)
+  mockGetUserById.mockResolvedValue({ id: 'user_owner', name: 'Rasheed Owner', email: 'owner@test.com' } as any)
   mockSendInvitationEmail.mockResolvedValue(undefined)
 })
 
@@ -88,6 +99,16 @@ describe('POST /api/household/invite', () => {
     await POST(makeRequest({ email: 'invitee@test.com' }))
     expect(mockSendInvitationEmail).toHaveBeenCalledWith(
       expect.objectContaining({ to: 'invitee@test.com', rawToken: 'raw_token_abc' }),
+    )
+  })
+
+  it('sends the email with the real household NAME and inviter display name (not ids)', async () => {
+    await POST(makeRequest({ email: 'invitee@test.com' }))
+    expect(mockSendInvitationEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        householdName: 'Barakah Academy',
+        inviterName: 'Rasheed Owner',
+      }),
     )
   })
 

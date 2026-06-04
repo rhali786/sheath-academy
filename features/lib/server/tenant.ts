@@ -7,6 +7,7 @@ import {
 } from '@/features/household/server/repository'
 import { getUserSetting } from '@/features/settings/server/repository'
 import { getDevSeedUserEmail } from '@/features/lib/server/devUserEmail'
+import { logger } from '@/features/lib/logger'
 import type { SessionMembership } from '@/types/next-auth'
 
 export interface TenantContext {
@@ -14,6 +15,7 @@ export interface TenantContext {
   householdId: string
   timezone: string
   memberships: SessionMembership[]
+  name?: string
 }
 
 /** Dev/test only — returns a deterministic context driven by env vars. */
@@ -41,19 +43,23 @@ export async function resolveTenant(
   }
 
   const { email, name } = session.user
+  logger.debug({ email }, 'resolveTenant: upsert user')
   const user = await upsertUserByEmail(email, name ?? undefined)
 
   // Accept any pending invitations for this email before listing memberships
   const pendingInvites = await getPendingInvitationsForEmail(email)
-  for (const invite of pendingInvites) {
-    await addMember(invite.householdId, user.id, invite.role as 'owner' | 'member')
-    // Invitation status update deferred to Wave 3 when the full invitation flow is built
+  if (pendingInvites.length > 0) {
+    logger.info({ email, count: pendingInvites.length }, 'resolveTenant: accepting pending invitations')
+    for (const invite of pendingInvites) {
+      await addMember(invite.householdId, user.id, invite.role as 'owner' | 'member')
+    }
   }
 
   let memberships = await listHouseholdsForUser(user.id)
 
   // Brand-new user with no memberships → create their own household
   if (memberships.length === 0) {
+    logger.info({ email, userId: user.id }, 'resolveTenant: new user — creating household')
     const hh = await upsertHouseholdForUser(user.id)
     memberships = [{ householdId: hh.id, householdName: hh.name, timezone: hh.timezone, role: 'owner', userId: user.id }]
   }
@@ -63,6 +69,8 @@ export async function resolveTenant(
   const activeMembership =
     (typeof savedActiveId === 'string' && memberships.find(m => m.householdId === savedActiveId)) ||
     memberships[0]
+
+  logger.debug({ email, userId: user.id, householdId: activeMembership.householdId }, 'resolveTenant: complete')
 
   const sessionMemberships: SessionMembership[] = memberships.map(m => ({
     householdId: m.householdId,
@@ -75,5 +83,6 @@ export async function resolveTenant(
     householdId: activeMembership.householdId,
     timezone: activeMembership.timezone ?? 'America/New_York',
     memberships: sessionMemberships,
+    name: user.name ?? undefined,
   }
 }

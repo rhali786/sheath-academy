@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SchoolYear } from '@/features/school-year/types'
 import { useHousehold } from '@/features/household/front/context'
@@ -43,6 +44,7 @@ export function SettingsPage() {
   const householdId = householdProfile?.id ?? ''
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { data: session, update: updateSession } = useSession()
 
   const activeTab = useMemo(
     () => parseSettingsTab(searchParams.get('tab')),
@@ -61,6 +63,15 @@ export function SettingsPage() {
   const [renaming, setRenaming] = useState(false)
   const [renameError, setRenameError] = useState<string | null>(null)
   const [renameSuccess, setRenameSuccess] = useState(false)
+
+  const [displayNameValue, setDisplayNameValue] = useState('')
+  const [savingDisplayName, setSavingDisplayName] = useState(false)
+  const [displayNameError, setDisplayNameError] = useState<string | null>(null)
+  const [displayNameSuccess, setDisplayNameSuccess] = useState(false)
+
+  useEffect(() => {
+    setDisplayNameValue(session?.user?.name ?? '')
+  }, [session?.user?.name])
 
   const [activeYear, setActiveYear] = useState<SchoolYear | null>(null)
   const [activeYearLoading, setActiveYearLoading] = useState(false)
@@ -134,6 +145,22 @@ export function SettingsPage() {
     }
   }
 
+  async function handleSaveDisplayName(e: React.FormEvent) {
+    e.preventDefault()
+    setSavingDisplayName(true)
+    setDisplayNameError(null)
+    setDisplayNameSuccess(false)
+    try {
+      await householdApi.updateUserProfile({ name: displayNameValue.trim() || null })
+      await updateSession({ name: displayNameValue.trim() || null })
+      setDisplayNameSuccess(true)
+    } catch {
+      setDisplayNameError('Could not save. Please try again.')
+    } finally {
+      setSavingDisplayName(false)
+    }
+  }
+
   if (householdLoading || !householdProfile) {
     return <div className="p-6 text-center text-slate-500">Loading...</div>
   }
@@ -174,37 +201,74 @@ export function SettingsPage() {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-            {/* Left column: Display name (shown in header) */}
-            <div>
-              <h3 className="text-sm font-semibold text-slate-800 mb-3">Household name</h3>
-              <p className="text-xs text-slate-500 mb-3">
-                This name appears in the header throughout the app.
-              </p>
-              <form onSubmit={handleRename} className="bg-white rounded-xl border border-slate-200 p-6">
-                <label htmlFor="rename-household" className="block text-xs font-medium text-slate-600 mb-1.5">
-                  Name
-                </label>
-                <input
-                  id="rename-household"
-                  type="text"
-                  value={renameName}
-                  onChange={(e) => {
-                    setRenameName(e.target.value)
-                    setRenameSuccess(false)
-                  }}
-                  className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900 mb-4"
-                  maxLength={80}
-                />
-                {renameError && <p className="text-red-500 text-xs mb-3">{renameError}</p>}
-                {renameSuccess && <p className="text-green-600 text-xs mb-3">Household name updated.</p>}
-                <button
-                  type="submit"
-                  disabled={!renameName.trim() || renameName.trim() === familyName || renaming}
-                  className="px-5 py-2.5 bg-forest-900 text-white rounded-lg text-sm font-medium hover:bg-forest-800 disabled:opacity-50 transition-colors"
-                >
-                  {renaming ? 'Saving…' : 'Save'}
-                </button>
-              </form>
+            {/* Left column: Household name + Your profile */}
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800 mb-3">Household name</h3>
+                <p className="text-xs text-slate-500 mb-3">
+                  This name appears in the header throughout the app.
+                </p>
+                <form onSubmit={handleRename} className="bg-white rounded-xl border border-slate-200 p-6">
+                  <label htmlFor="rename-household" className="block text-xs font-medium text-slate-600 mb-1.5">
+                    Name
+                  </label>
+                  <input
+                    id="rename-household"
+                    type="text"
+                    value={renameName}
+                    onChange={(e) => {
+                      setRenameName(e.target.value)
+                      setRenameSuccess(false)
+                    }}
+                    className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900 mb-4"
+                    maxLength={80}
+                  />
+                  {renameError && <p className="text-red-500 text-xs mb-3">{renameError}</p>}
+                  {renameSuccess && <p className="text-green-600 text-xs mb-3">Household name updated.</p>}
+                  <button
+                    type="submit"
+                    disabled={!renameName.trim() || renameName.trim() === familyName || renaming}
+                    className="px-5 py-2.5 bg-forest-900 text-white rounded-lg text-sm font-medium hover:bg-forest-800 disabled:opacity-50 transition-colors"
+                  >
+                    {renaming ? 'Saving…' : 'Save'}
+                  </button>
+                </form>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800 mb-3">Your profile</h3>
+                <p className="text-xs text-slate-500 mb-3">
+                  Your display name appears in the header and in household member lists.
+                </p>
+                <form onSubmit={handleSaveDisplayName} data-testid="display-name-form" className="bg-white rounded-xl border border-slate-200 p-6">
+                  <label htmlFor="display-name" className="block text-xs font-medium text-slate-600 mb-1.5">
+                    Display name
+                  </label>
+                  <input
+                    id="display-name"
+                    data-testid="display-name-input"
+                    type="text"
+                    value={displayNameValue}
+                    placeholder={session?.user?.email ?? ''}
+                    onChange={(e) => {
+                      setDisplayNameValue(e.target.value)
+                      setDisplayNameSuccess(false)
+                    }}
+                    className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900 mb-4"
+                    maxLength={80}
+                  />
+                  {displayNameError && <p className="text-red-500 text-xs mb-3">{displayNameError}</p>}
+                  {displayNameSuccess && <p className="text-green-600 text-xs mb-3" data-testid="display-name-success">Display name saved.</p>}
+                  <button
+                    type="submit"
+                    data-testid="display-name-save"
+                    disabled={savingDisplayName}
+                    className="px-5 py-2.5 bg-forest-900 text-white rounded-lg text-sm font-medium hover:bg-forest-800 disabled:opacity-50 transition-colors"
+                  >
+                    {savingDisplayName ? 'Saving…' : 'Save'}
+                  </button>
+                </form>
+              </div>
             </div>
 
             {/* Right column: Household Identity → Islamic Calendar → Weekly Rhythm + more */}

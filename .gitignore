@@ -13,3 +13,5 @@ test-results/
 package-lock.json
 features/dashboard/frontend/node_modules
 features/dashboard/frontend/dist
+auth-debug.log
+logs/

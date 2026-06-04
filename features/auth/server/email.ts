@@ -36,11 +36,12 @@ export async function sendInvitationEmail(params: {
   inviterName?: string
 }): Promise<void> {
   const acceptUrl = `${BASE_URL}/invite/accept?token=${encodeURIComponent(params.rawToken)}`
-  const inviter = params.inviterName ?? 'Someone'
+  // Only name the inviter when we actually have one — avoids "by undefined".
+  const byClause = params.inviterName ? ` by ${params.inviterName}` : ''
   await sendEmail({
     to: params.to,
-    subject: `${inviter} invited you to join ${params.householdName} on Sheath Academy`,
-    html: `<p>${inviter} has invited you to join <strong>${params.householdName}</strong> on Sheath Academy.</p><p><a href="${acceptUrl}">Accept invitation</a></p><p>This link expires in 7 days. If you did not expect this, you can ignore this email.</p>`,
-    text: `${inviter} has invited you to join ${params.householdName} on Sheath Academy.\n\nAccept invitation: ${acceptUrl}\n\nThis link expires in 7 days. If you did not expect this, you can ignore this email.`,
+    subject: `You've been invited to join ${params.householdName} on Sheath Academy`,
+    html: `<p>You've been invited${byClause} to join <strong>${params.householdName}</strong> on Sheath Academy.</p><p><a href="${acceptUrl}">Accept invitation</a></p><p>This link expires in 7 days. If you did not expect this, you can ignore this email.</p>`,
+    text: `You've been invited${byClause} to join ${params.householdName} on Sheath Academy.\n\nAccept invitation: ${acceptUrl}\n\nThis link expires in 7 days. If you did not expect this, you can ignore this email.`,
   })
 }

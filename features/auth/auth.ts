@@ -5,6 +5,7 @@ import Google from 'next-auth/providers/google'
 import Facebook from 'next-auth/providers/facebook'
 import Credentials from 'next-auth/providers/credentials'
 import { getDevSeedUserEmail } from '@/features/lib/server/devUserEmail'
+import { logger } from '@/features/lib/logger'
 
 /** Lazy-load Postgres adapter so middleware (Edge) does not bundle `postgres`. */
 function lazyDrizzleAdapter(): Adapter {
@@ -48,6 +49,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   callbacks: {
     async signIn({ user, account }) {
+      logger.debug({ email: user.email, provider: account?.provider }, 'signIn callback')
       if (
         account?.provider &&
         account.provider !== 'resend' &&
@@ -58,16 +60,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         try {
           const { upsertUserByEmail } = await import('@/features/household/server/repository')
           await upsertUserByEmail(user.email, user.name ?? undefined)
-        } catch {
-          // Postgres optional during migration; JWT sign-in still succeeds.
+        } catch (err) {
+          logger.warn({ email: user.email, err }, 'upsertUserByEmail failed during signIn — continuing')
         }
       }
       if (user.email && process.env.DATABASE_URL) {
         try {
           const { updateUserLastLogin } = await import('@/features/auth/server/repository')
           await updateUserLastLogin(user.email)
-        } catch {
-          // Non-fatal — login proceeds even if the timestamp can't be written.
+        } catch (err) {
+          logger.warn({ email: user.email, err }, 'updateUserLastLogin failed — non-fatal')
         }
       }
       return true
@@ -82,15 +84,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           userId?: string
           householdId?: string
           timezone?: string
+          name?: string | null
         }
         if (patch.userId) token.userId = patch.userId
         if (patch.householdId) token.householdId = patch.householdId
         if (patch.timezone) token.timezone = patch.timezone
+        if ('name' in patch) token.name = patch.name ?? undefined
       }
 
       const email = user?.email ?? (typeof token.email === 'string' ? token.email : undefined)
       if (email && !token.householdId && process.env.DATABASE_URL) {
         try {
+          logger.debug({ email }, 'resolving tenant')
           const { resolveTenant } = await import('@/features/lib/server/tenant')
           const tenant = await resolveTenant({
             user: { email, name: user?.name ?? undefined },
@@ -99,8 +104,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.householdId = tenant.householdId
           token.timezone = tenant.timezone
           token.memberships = tenant.memberships
-        } catch {
-          // Postgres optional during migration; session may lack tenant claims until DB is reachable.
+          if (tenant.name !== undefined) token.name = tenant.name
+          logger.info({ email, userId: tenant.userId, householdId: tenant.householdId }, 'tenant resolved')
+        } catch (err) {
+          logger.error({ email, err }, 'resolveTenant failed — session will lack tenant claims')
         }
       }
 
@@ -112,6 +119,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     session({ session, token }) {
       if (session.user) {
         if (typeof token.email === 'string') session.user.email = token.email
+        session.user.name = token.name ?? undefined
         if (typeof token.userId === 'string') session.user.userId = token.userId
         if (typeof token.householdId === 'string') session.user.householdId = token.householdId
         if (typeof token.timezone === 'string') session.user.timezone = token.timezone
