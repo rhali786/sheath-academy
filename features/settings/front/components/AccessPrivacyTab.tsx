@@ -1,5 +1,7 @@
 'use client'
 
+import { MemberManager } from '@/features/household/front/components/MemberManager'
+
 export function AccessPrivacyTab() {
   return (
     <section data-testid="settings-panel-access-privacy">
@@ -9,6 +11,11 @@ export function AccessPrivacyTab() {
       </p>
 
       <div className="space-y-6">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 max-w-md">
+          <h3 className="text-sm font-semibold text-slate-800 mb-3">Household members</h3>
+          <MemberManager />
+        </div>
+
         <div className="bg-white rounded-xl border border-slate-200 p-6 max-w-md">
           <h3 className="text-sm font-semibold text-slate-800 mb-3">Learner login management</h3>
           <p className="text-xs text-slate-500 mb-4">

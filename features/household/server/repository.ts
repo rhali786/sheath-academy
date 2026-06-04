@@ -214,3 +214,107 @@ export async function getPendingInvitationsForEmail(
       ),
     )
 }
+
+/** Creates a new invitation row. */
+export async function createInvitation(params: {
+  householdId: string
+  email: string
+  role: MembershipRole
+  tokenHash: string
+  expiresAt: Date
+  invitedByUserId: string
+}): Promise<HouseholdInvitationRow> {
+  const now = new Date()
+  const inserted = await getDb()
+    .insert(householdInvitations)
+    .values({
+      id: `inv_${Date.now()}_${params.householdId.slice(-6)}`,
+      householdId: params.householdId,
+      email: params.email.toLowerCase(),
+      role: params.role,
+      invitedByUserId: params.invitedByUserId,
+      tokenHash: params.tokenHash,
+      status: 'pending',
+      expiresAt: params.expiresAt,
+      createdAt: now,
+    })
+    .returning()
+  return inserted[0]
+}
+
+/** Looks up an invitation by its hashed token. */
+export async function getInvitationByTokenHash(
+  tokenHash: string,
+): Promise<HouseholdInvitationRow | null> {
+  const result = await getDb()
+    .select()
+    .from(householdInvitations)
+    .where(eq(householdInvitations.tokenHash, tokenHash))
+    .limit(1)
+  return result[0] ?? null
+}
+
+/** Looks up an invitation by its id. */
+export async function getInvitationById(
+  id: string,
+): Promise<HouseholdInvitationRow | null> {
+  const result = await getDb()
+    .select()
+    .from(householdInvitations)
+    .where(eq(householdInvitations.id, id))
+    .limit(1)
+  return result[0] ?? null
+}
+
+/** Marks an invitation as accepted. */
+export async function markInvitationAccepted(id: string): Promise<void> {
+  await getDb()
+    .update(householdInvitations)
+    .set({ status: 'accepted', acceptedAt: new Date() })
+    .where(eq(householdInvitations.id, id))
+}
+
+/** Marks an invitation as revoked. */
+export async function markInvitationRevoked(id: string): Promise<void> {
+  await getDb()
+    .update(householdInvitations)
+    .set({ status: 'revoked' })
+    .where(eq(householdInvitations.id, id))
+}
+
+/** Returns all invitations for a household. */
+export async function listInvitationsForHousehold(
+  householdId: string,
+): Promise<HouseholdInvitationRow[]> {
+  return getDb()
+    .select()
+    .from(householdInvitations)
+    .where(eq(householdInvitations.householdId, householdId))
+}
+
+export interface MemberWithUser {
+  memberId: string
+  userId: string
+  role: MembershipRole
+  email: string
+  name: string | null
+  createdAt: Date
+}
+
+/** Returns members of a household with their user identity fields. */
+export async function listMembersWithUsers(householdId: string): Promise<MemberWithUser[]> {
+  const rows = await getDb()
+    .select({
+      memberId: householdMembers.id,
+      userId: householdMembers.userId,
+      role: householdMembers.role,
+      email: users.email,
+      name: users.name,
+      createdAt: householdMembers.createdAt,
+    })
+    .from(householdMembers)
+    .innerJoin(users, eq(householdMembers.userId, users.id))
+    .where(eq(householdMembers.householdId, householdId))
+
+  return rows.map(r => ({ ...r, role: r.role as MembershipRole }))
+}
