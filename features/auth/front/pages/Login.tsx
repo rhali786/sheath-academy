@@ -11,7 +11,7 @@ const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === 'true'
 type Tab = 'password' | 'magic'
 
 function safeCallbackUrl(raw: string | null): string {
-  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/'
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/dashboard'
   return raw
 }
 
