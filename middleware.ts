@@ -6,6 +6,14 @@ export default auth((req) => {
     console.error('[middleware] AUTH_SECRET is not set — redirecting all requests to /login')
     return NextResponse.redirect(new URL('/login', req.url))
   }
+
+  const path = req.nextUrl.pathname
+
+  // Landing page is public — show it to everyone regardless of auth state.
+  if (path === '/') {
+    return NextResponse.next()
+  }
+
   if (!req.auth) {
     const login = new URL('/login', req.url)
     const returnPath = req.nextUrl.pathname + req.nextUrl.search

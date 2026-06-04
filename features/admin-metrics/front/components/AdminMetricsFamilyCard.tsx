@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import {
   DROP_OFF_LABELS,
   LESSONS_HELP,
@@ -9,6 +10,7 @@ import {
   ACTIVITY_HELP,
 } from '@/features/admin-metrics/front/constants'
 import type { AdminMetricsUserRow } from '@/features/admin-metrics/types'
+import { displayName } from '@/features/lib/displayName'
 
 function learnerLine(row: AdminMetricsUserRow): string {
   if (row.learnerNames && row.learnerNames.length > 0) {
@@ -40,8 +42,10 @@ function MetricRow({ label, value, help }: { label: string; value: string | numb
 }
 
 export function AdminMetricsFamilyCard({ row, formatLastActive, formatLastLogin }: AdminMetricsFamilyCardProps) {
-  const displayUser = row.userEmail ?? row.userName ?? row.userId
+  const [membersExpanded, setMembersExpanded] = useState(false)
+  const displayUser = displayName({ name: row.userName, email: row.userEmail }) || row.userId
   const isActive = row.isActiveInPeriod
+  const members = row.members ?? []
 
   return (
     <article
@@ -74,6 +78,45 @@ export function AdminMetricsFamilyCard({ row, formatLastActive, formatLastLogin 
         <MetricRow label="Portfolio evidence" value={row.evidenceItemsCreated} />
         <MetricRow label={ACTIVITY_LABEL} value={row.sessionsLogged} help={ACTIVITY_HELP} />
       </dl>
+
+      {/* Members expand/collapse */}
+      {members.length > 0 && (
+        <div className="px-4 pb-3 border-t border-slate-50 pt-3">
+          <button
+            type="button"
+            onClick={() => setMembersExpanded(v => !v)}
+            aria-expanded={membersExpanded}
+            aria-label={`Show members of ${row.workspaceName}`}
+            className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-700 min-h-[44px]"
+          >
+            <svg
+              aria-hidden="true"
+              className={`w-3.5 h-3.5 transition-transform ${membersExpanded ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+            {members.length} member{members.length === 1 ? '' : 's'}
+          </button>
+          {membersExpanded && (
+            <ul className="mt-2 space-y-1">
+              {members.map(m => (
+                <li key={m.userId} className="flex items-center justify-between text-xs text-slate-700">
+                  <span>{m.name ? `${m.name} (${m.email})` : m.email}</span>
+                  {m.role === 'owner' && (
+                    <span className="ml-2 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-violet-50 text-violet-700 border border-violet-100">
+                      Owner
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* Drop-off signals */}
       {row.dropOffSignals.length > 0 && (

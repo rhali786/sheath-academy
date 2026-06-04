@@ -76,10 +76,18 @@ export interface AdminMetricsSummary {
   }
 }
 
+export interface AdminMetricsMemberInfo {
+  userId: string
+  email: string
+  name?: string
+  role: 'owner' | 'member'
+}
+
 export interface AdminMetricsUserRow {
   userId: string
   userName?: string
   userEmail?: string
+  members?: AdminMetricsMemberInfo[]
   workspaceId: string
   workspaceName: string
   workspaceType?: 'family' | 'program'
