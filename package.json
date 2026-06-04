@@ -1,6 +1,6 @@
 {
   "name": "sheath-academy",
-  "version": "2.15.4",
+  "version": "2.15.6",
   "private": true,
   "engines": {
     "node": ">=22.22.2"
@@ -25,12 +25,14 @@
     "db:seed:demo": "dotenv -e .env.local -- tsx scripts/seed-demo-households.ts",
     "db:wipe": "dotenv -e .env.local -- tsx scripts/db-wipe.ts",
     "db:reset:demo": "dotenv -e .env.local -- tsx scripts/db-wipe.ts && dotenv -e .env.local -- tsx scripts/seed-demo-households.ts",
-    "steward:preflight": "dotenv -e .env.local -- tsx scripts/steward-preflight.ts",
-    "steward:daily": "dotenv -e .env.local -- tsx scripts/run-daily.ts",
-    "steward:execute": "dotenv -e .env.local -- tsx scripts/run-execute.ts",
-    "steward:rollback": "dotenv -e .env.local -- tsx scripts/run-rollback.ts",
-    "steward:ship": "dotenv -e .env.local -- tsx scripts/run-ship.ts",
-    "steward:notify": "dotenv -e .env.local -- tsx scripts/feedback-notify.ts"
+    "steward:preflight": "dotenv -e .env.local -- tsx scripts/feedback-steward/steward-preflight.ts",
+    "steward:daily": "dotenv -e .env.local -- tsx scripts/feedback-steward/run-daily.ts",
+    "steward:execute": "dotenv -e .env.local -- tsx scripts/feedback-steward/run-execute.ts",
+    "steward:rollback": "dotenv -e .env.local -- tsx scripts/feedback-steward/run-rollback.ts",
+    "steward:ship": "dotenv -e .env.local -- tsx scripts/feedback-steward/run-ship.ts",
+    "steward:notify": "dotenv -e .env.local -- tsx scripts/feedback-steward/feedback-notify.ts",
+    "steward:reset-classification": "dotenv -e .env.local -- tsx scripts/feedback-steward/run-reset-classification.ts",
+    "test:steward:integration": "dotenv -e .env.local -- jest --testPathPattern=\"feedback-steward/__tests__/integration\" --no-coverage --runInBand"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

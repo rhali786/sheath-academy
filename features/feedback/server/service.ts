@@ -18,7 +18,7 @@ import type {
 } from '@/features/feedback/types'
 
 export interface ClassifyDecision {
-  status: 'classified'
+  status: 'reviewed'
   featureArea: string
   feedbackType: FeedbackType
   riskLevel: FeedbackRiskLevel
@@ -79,12 +79,12 @@ export async function approveFeedbackForPlanning(id: string, adminEmail: string)
   }
 
   await recordFeedbackApproval(id, adminEmail)
-  await updateFeedbackTriage(id, { status: 'classified' })
+  await updateFeedbackTriage(id, { status: 'reviewed' })
 }
 
 export async function applyClassification(id: string, decision: ClassifyDecision): Promise<void> {
   const triage: FeedbackTriageUpdate = {
-    status: requiresApproval(decision) ? 'awaiting_approval' : 'classified',
+    status: requiresApproval(decision) ? 'awaiting_approval' : 'reviewed',
     featureArea: decision.featureArea,
     feedbackType: decision.feedbackType,
     riskLevel: decision.riskLevel,
@@ -102,13 +102,31 @@ export async function markFeedbackDuplicate(id: string, duplicateOfId: string): 
   })
 }
 
+export async function resetClassification(ids: string[]): Promise<void> {
+  await Promise.all(
+    ids.map((id) =>
+      updateFeedbackTriage(id, {
+        status: 'submitted',
+        featureArea: null,
+        feedbackType: null,
+        riskLevel: null,
+        confidence: null,
+        recommendation: null,
+        duplicateOfFeedbackId: null,
+      }),
+    ),
+  )
+}
+
 export async function listEligibleFeedbackForDailyRun(
   config: DoNotAutomateConfig = {},
+  scopeIds?: string[],
 ): Promise<DailyRunEligibilityResult> {
-  const rows = await listFeedbackForAdmin({ status: 'classified' })
+  const rows = await listFeedbackForAdmin({ status: 'reviewed' })
 
   const eligibleRows = rows.filter((row) => {
-    if (row.status !== 'classified') return false
+    if (scopeIds && scopeIds.length > 0 && !scopeIds.includes(row.id)) return false
+    if (row.status !== 'reviewed') return false
     if (row.prNumber !== null) return false
     if (isBlockedByPolicy(row, config)) return false
     // Admin-approved rows bypass the confidence/risk gate — that's why they were approved
@@ -163,7 +181,7 @@ export async function rollbackFeedbackAttachedToPr(prNumber: number): Promise<vo
   await Promise.all(
     rollbackable.map((row) =>
       updateFeedbackWorkflow(row.id, {
-        status: 'classified',
+        status: 'reviewed',
         prNumber: null,
         previewUrl: null,
         uatInstructions: null,

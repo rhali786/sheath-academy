@@ -30,6 +30,7 @@ import {
   markFeedbackAttachedToPr,
   rollbackFeedbackAttachedToPr,
   markFeedbackShippedByPr,
+  resetClassification,
   type ClassifyDecision,
 } from '@/features/feedback/server/service'
 import type { FeedbackRow } from '@/features/feedback/types'
@@ -73,7 +74,7 @@ function makeRow(overrides: Partial<FeedbackRow> = {}): FeedbackRow {
 
 function makeClassifyDecision(overrides: Partial<ClassifyDecision> = {}): ClassifyDecision {
   return {
-    status: 'classified',
+    status: 'reviewed',
     featureArea: 'dashboard',
     feedbackType: 'ux',
     riskLevel: 'low',
@@ -102,11 +103,11 @@ describe('feedback service workflow rules', () => {
     await approveFeedbackForPlanning('fb_1', 'admin@example.com')
 
     expect(mockRecordFeedbackApproval).toHaveBeenCalledWith('fb_1', 'admin@example.com')
-    expect(mockUpdateFeedbackTriage).toHaveBeenCalledWith('fb_1', { status: 'classified' })
+    expect(mockUpdateFeedbackTriage).toHaveBeenCalledWith('fb_1', { status: 'reviewed' })
   })
 
   it('approveFeedbackForPlanning rejects rows not awaiting approval', async () => {
-    mockGetFeedbackById.mockResolvedValue(makeRow({ status: 'classified' }))
+    mockGetFeedbackById.mockResolvedValue(makeRow({ status: 'reviewed' }))
 
     await expect(approveFeedbackForPlanning('fb_1', 'admin@example.com')).rejects.toMatchObject({
       statusCode: 409,
@@ -123,7 +124,7 @@ describe('feedback service workflow rules', () => {
     await applyClassification('fb_1', makeClassifyDecision())
 
     expect(mockUpdateFeedbackTriage).toHaveBeenCalledWith('fb_1', {
-      status: 'classified',
+      status: 'reviewed',
       featureArea: 'dashboard',
       feedbackType: 'ux',
       riskLevel: 'low',
@@ -160,27 +161,27 @@ describe('feedback service workflow rules', () => {
 
   it('daily-run eligibility respects status, approval metadata, confidence, risk, and do-not-automate config', async () => {
     mockListFeedbackForAdmin.mockResolvedValue([
-      makeRow({ id: 'fb_auto', status: 'classified', confidence: 'high', riskLevel: 'low' }),
+      makeRow({ id: 'fb_auto', status: 'reviewed', confidence: 'high', riskLevel: 'low' }),
       makeRow({
         id: 'fb_approved',
-        status: 'classified',
+        status: 'reviewed',
         confidence: 'high',
         riskLevel: 'low',
         adminApprovedAt: '2026-05-25T11:45:00.000Z',
         adminApprovedByUserId: 'admin@example.com',
       }),
-      makeRow({ id: 'fb_risky', status: 'classified', confidence: 'high', riskLevel: 'medium' }),
+      makeRow({ id: 'fb_risky', status: 'reviewed', confidence: 'high', riskLevel: 'medium' }),
       makeRow({
         id: 'fb_approved_risky',
-        status: 'classified',
+        status: 'reviewed',
         confidence: 'medium',
         riskLevel: 'medium',
         adminApprovedAt: '2026-05-25T12:00:00.000Z',
         adminApprovedByUserId: 'admin@example.com',
       }),
-      makeRow({ id: 'fb_in_pr', status: 'classified', confidence: 'high', riskLevel: 'low', prNumber: 42 }),
-      makeRow({ id: 'fb_blocked_feature', status: 'classified', featureArea: 'auth', confidence: 'high', riskLevel: 'low' }),
-      makeRow({ id: 'fb_blocked_type', status: 'classified', feedbackType: 'performance', confidence: 'high', riskLevel: 'low' }),
+      makeRow({ id: 'fb_in_pr', status: 'reviewed', confidence: 'high', riskLevel: 'low', prNumber: 42 }),
+      makeRow({ id: 'fb_blocked_feature', status: 'reviewed', featureArea: 'auth', confidence: 'high', riskLevel: 'low' }),
+      makeRow({ id: 'fb_blocked_type', status: 'reviewed', feedbackType: 'performance', confidence: 'high', riskLevel: 'low' }),
       makeRow({ id: 'fb_wrong_status', status: 'awaiting_approval', confidence: 'high', riskLevel: 'low' }),
     ])
 
@@ -189,7 +190,7 @@ describe('feedback service workflow rules', () => {
       feedbackTypes: ['performance'],
     })
 
-    expect(mockListFeedbackForAdmin).toHaveBeenCalledWith({ status: 'classified' })
+    expect(mockListFeedbackForAdmin).toHaveBeenCalledWith({ status: 'reviewed' })
     expect(result.feedbackIds).toEqual(['fb_auto', 'fb_approved', 'fb_approved_risky'])
     expect(result.autoEligibleIds).toEqual(['fb_auto'])
     expect(result.approvedIds).toEqual(['fb_approved', 'fb_approved_risky'])
@@ -270,7 +271,7 @@ describe('rollbackFeedbackAttachedToPr', () => {
     expect(mockListFeedbackByPrNumber).toHaveBeenCalledWith(42)
     expect(mockUpdateFeedbackWorkflow).toHaveBeenCalledTimes(2)
     expect(mockUpdateFeedbackWorkflow).toHaveBeenCalledWith('fb_1', {
-      status: 'classified',
+      status: 'reviewed',
       prNumber: null,
       previewUrl: null,
       uatInstructions: null,
@@ -279,7 +280,7 @@ describe('rollbackFeedbackAttachedToPr', () => {
       changelogEntryId: null,
     })
     expect(mockUpdateFeedbackWorkflow).toHaveBeenCalledWith('fb_2', {
-      status: 'classified',
+      status: 'reviewed',
       prNumber: null,
       previewUrl: null,
       uatInstructions: null,
@@ -291,7 +292,7 @@ describe('rollbackFeedbackAttachedToPr', () => {
 
   it('skips rows that are not attached to an active PR workflow state', async () => {
     mockListFeedbackByPrNumber.mockResolvedValue([
-      makeRow({ id: 'fb_classified', prNumber: 42, status: 'classified' }),
+      makeRow({ id: 'fb_classified', prNumber: 42, status: 'reviewed' }),
       makeRow({ id: 'fb_shipped', prNumber: 42, status: 'shipped' }),
       makeRow({ id: 'fb_eligible', prNumber: 42, status: 'in_pr' }),
     ])
@@ -307,7 +308,7 @@ describe('rollbackFeedbackAttachedToPr', () => {
 
   it('throws when no rollbackable rows exist for the PR', async () => {
     mockListFeedbackByPrNumber.mockResolvedValue([
-      makeRow({ id: 'fb_1', prNumber: 42, status: 'classified' }),
+      makeRow({ id: 'fb_1', prNumber: 42, status: 'reviewed' }),
     ])
 
     await expect(rollbackFeedbackAttachedToPr(42)).rejects.toMatchObject({
@@ -457,3 +458,37 @@ describe('markFeedbackShippedByPr', () => {
     expect(mockUpdateFeedbackWorkflow).not.toHaveBeenCalled()
   })
 })
+
+describe('resetClassification', () => {
+  it('resets each id back to submitted and clears all triage fields', async () => {
+    mockUpdateFeedbackTriage.mockResolvedValue(undefined)
+
+    await resetClassification(['fb_1', 'fb_2'])
+
+    expect(mockUpdateFeedbackTriage).toHaveBeenCalledTimes(2)
+    expect(mockUpdateFeedbackTriage).toHaveBeenCalledWith('fb_1', {
+      status: 'submitted',
+      featureArea: null,
+      feedbackType: null,
+      riskLevel: null,
+      confidence: null,
+      recommendation: null,
+      duplicateOfFeedbackId: null,
+    })
+    expect(mockUpdateFeedbackTriage).toHaveBeenCalledWith('fb_2', {
+      status: 'submitted',
+      featureArea: null,
+      feedbackType: null,
+      riskLevel: null,
+      confidence: null,
+      recommendation: null,
+      duplicateOfFeedbackId: null,
+    })
+  })
+
+  it('does nothing when given an empty list', async () => {
+    await resetClassification([])
+    expect(mockUpdateFeedbackTriage).not.toHaveBeenCalled()
+  })
+})
+

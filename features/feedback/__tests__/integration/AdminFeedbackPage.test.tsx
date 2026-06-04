@@ -24,7 +24,7 @@ const makeRow = (overrides: Partial<FeedbackRow> = {}): FeedbackRow => ({
   pagePath: '/dashboard',
   sentiment: 'good',
   message: 'Dashboard works great',
-  status: 'classified',
+  status: 'reviewed',
   featureArea: 'dashboard',
   feedbackType: 'enhancement',
   riskLevel: 'low',
@@ -85,7 +85,7 @@ describe('AdminFeedbackPage', () => {
 
   it('shows a status summary for the current queue', async () => {
     const rows = [
-      makeRow({ id: 'fb_1', status: 'classified' }),
+      makeRow({ id: 'fb_1', status: 'reviewed' }),
       makeRow({ id: 'fb_2', status: 'awaiting_approval' }),
       makeRow({ id: 'fb_3', status: 'awaiting_approval' }),
       makeRow({ id: 'fb_4', status: 'submitted' }),
@@ -95,7 +95,7 @@ describe('AdminFeedbackPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Needs approval')).toBeInTheDocument()
       expect(screen.getByText('2 awaiting approval')).toBeInTheDocument()
-      expect(screen.getByText('1 classified')).toBeInTheDocument()
+      expect(screen.getByText('1 reviewed')).toBeInTheDocument()
       expect(screen.getByText('1 submitted')).toBeInTheDocument()
     })
   })
@@ -171,7 +171,7 @@ describe('AdminFeedbackPage', () => {
       mockFetch.mockResolvedValue(mockOk({
         status: 'success',
         data: [
-          makeRow({ id: 'fb_classified', status: 'classified', recommendation: 'Clarify the dashboard button label.' }),
+          makeRow({ id: 'fb_classified', status: 'reviewed', recommendation: 'Clarify the dashboard button label.' }),
           makeRow({ id: 'fb_waiting', status: 'awaiting_approval', recommendation: 'Split the riskier change into a smaller admin-safe patch.' }),
         ],
       }))
@@ -188,7 +188,7 @@ describe('AdminFeedbackPage', () => {
     it('shows approve button only for awaiting_approval rows', async () => {
       const rows = [
         makeRow({ id: 'fb_waiting', status: 'awaiting_approval' }),
-        makeRow({ id: 'fb_classified', status: 'classified' }),
+        makeRow({ id: 'fb_classified', status: 'reviewed' }),
         makeRow({ id: 'fb_submitted', status: 'submitted' }),
       ]
       mockFetch.mockResolvedValue(mockOk({ status: 'success', data: rows }))
@@ -263,7 +263,7 @@ describe('AdminFeedbackPage', () => {
       fireEvent.click(screen.getByRole('button', { name: /^Approve$/i }))
       await waitFor(() => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-        expect(screen.getByText('classified')).toBeInTheDocument()
+        expect(screen.getByText('reviewed')).toBeInTheDocument()
       })
     })
   })
@@ -283,7 +283,7 @@ describe('AdminFeedbackPage', () => {
     it('does not show versionResolved badge when absent', async () => {
       mockFetch.mockResolvedValue(mockOk({
         status: 'success',
-        data: [makeRow({ id: 'fb_1', status: 'classified', versionResolved: null })],
+        data: [makeRow({ id: 'fb_1', status: 'reviewed', versionResolved: null })],
       }))
       render(<AdminFeedbackPage />)
       await waitFor(() => {
@@ -297,9 +297,9 @@ describe('AdminFeedbackPage', () => {
       mockFetch.mockResolvedValue(mockOk({ status: 'success', data: [] }))
       render(<AdminFeedbackPage />)
       await waitFor(() => screen.getByTestId('filter-status'))
-      fireEvent.change(screen.getByTestId('filter-status'), { target: { value: 'classified' } })
+      fireEvent.change(screen.getByTestId('filter-status'), { target: { value: 'reviewed' } })
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('status=classified'))
+        expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('status=reviewed'))
       })
     })
 

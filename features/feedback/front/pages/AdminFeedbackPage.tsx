@@ -15,7 +15,7 @@ const SENTIMENT_EMOJI: Record<string, string> = {
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   submitted: { bg: 'bg-slate-100', text: 'text-slate-700' },
-  classified: { bg: 'bg-blue-100', text: 'text-blue-700' },
+  reviewed: { bg: 'bg-blue-100', text: 'text-blue-700' },
   awaiting_approval: { bg: 'bg-amber-100', text: 'text-amber-700' },
   in_pr: { bg: 'bg-purple-100', text: 'text-purple-700' },
   in_qa: { bg: 'bg-orange-100', text: 'text-orange-700' },
@@ -70,7 +70,7 @@ export function AdminFeedbackPage() {
     const response = await fetch(`/api/admin/feedback/${id}/approve`, { method: 'POST' })
     const data = await response.json()
     if (data.status === 'success') {
-      setRows(rows.map(r => (r.id === id ? { ...r, status: 'classified', adminApprovedAt: new Date().toISOString() } : r)))
+      setRows(rows.map(r => (r.id === id ? { ...r, status: 'reviewed', adminApprovedAt: new Date().toISOString() } : r)))
       setSelectedId(null)
     } else {
       throw new Error(data.message)
@@ -84,7 +84,7 @@ export function AdminFeedbackPage() {
   }, {})
   const queueSummary = [
     { label: 'Needs approval', detail: `${statusCounts.awaiting_approval ?? 0} awaiting approval` },
-    { label: 'Classified', detail: `${statusCounts.classified ?? 0} classified` },
+    { label: 'Reviewed', detail: `${statusCounts.reviewed ?? 0} reviewed` },
     { label: 'Submitted', detail: `${statusCounts.submitted ?? 0} submitted` },
     { label: 'In review', detail: `${(statusCounts.in_pr ?? 0) + (statusCounts.in_qa ?? 0)} in review` },
     { label: 'Shipped', detail: `${statusCounts.shipped ?? 0} shipped` },
@@ -149,7 +149,7 @@ export function AdminFeedbackPage() {
           >
             <option value="">All statuses</option>
             <option value="submitted">Submitted</option>
-            <option value="classified">Classified</option>
+            <option value="reviewed">Reviewed</option>
             <option value="awaiting_approval">Awaiting approval</option>
             <option value="in_pr">In PR</option>
             <option value="shipped">Shipped</option>
@@ -233,7 +233,7 @@ export function AdminFeedbackPage() {
                   <p className="text-sm text-slate-700 line-clamp-2">{row.message}</p>
                 )}
 
-                {(row.status === 'classified' || row.status === 'awaiting_approval') && row.recommendation && (
+                {(row.status === 'reviewed' || row.status === 'awaiting_approval') && row.recommendation && (
                   <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Claude recommendation</p>
                     <p className="mt-1 text-sm text-blue-900 whitespace-pre-wrap">{row.recommendation}</p>

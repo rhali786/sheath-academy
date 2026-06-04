@@ -16,7 +16,7 @@ const SENTIMENT_LABEL: Record<string, string> = {
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   submitted: { bg: 'bg-slate-100', text: 'text-slate-700' },
-  classified: { bg: 'bg-blue-100', text: 'text-blue-700' },
+  reviewed: { bg: 'bg-blue-100', text: 'text-blue-700' },
   awaiting_approval: { bg: 'bg-amber-100', text: 'text-amber-700' },
   in_pr: { bg: 'bg-purple-100', text: 'text-purple-700' },
   in_qa: { bg: 'bg-orange-100', text: 'text-orange-700' },
@@ -58,7 +58,7 @@ export function FeedbackDetailPage({ id }: { id: string }) {
     try {
       await approveAdminFeedback(row.id)
       setRow(prev =>
-        prev ? { ...prev, status: 'classified', adminApprovedAt: new Date().toISOString() } : prev
+        prev ? { ...prev, status: 'reviewed', adminApprovedAt: new Date().toISOString() } : prev
       )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Approval failed')

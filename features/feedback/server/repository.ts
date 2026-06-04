@@ -178,12 +178,22 @@ export async function approveFeedback(id: string, adminEmail: string): Promise<v
   await recordFeedbackApproval(id, adminEmail)
 }
 
-export async function listUnclassifiedFeedback(): Promise<FeedbackRow[]> {
+export async function listUnclassifiedFeedback(options: { ids?: string[] } = {}): Promise<FeedbackRow[]> {
   const db = getDb()
+  const conditions = [eq(userFeedback.status, 'submitted')]
+  if (options.ids && options.ids.length > 0) {
+    conditions.push(inArray(userFeedback.id, options.ids))
+  }
   const rows = await db
     .select()
     .from(userFeedback)
-    .where(eq(userFeedback.status, 'submitted'))
+    .where(and(...conditions))
     .orderBy(desc(userFeedback.createdAt))
   return rows.map(r => rowToFeedbackRow(r))
+}
+
+export async function deleteFeedbackByIds(ids: string[]): Promise<void> {
+  if (ids.length === 0) return
+  const db = getDb()
+  await db.delete(userFeedback).where(inArray(userFeedback.id, ids))
 }

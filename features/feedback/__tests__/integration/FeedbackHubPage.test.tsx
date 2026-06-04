@@ -30,7 +30,7 @@ const makeRow = (overrides: Partial<FeedbackRow> = {}): FeedbackRow => ({
   pagePath: '/dashboard',
   sentiment: 'good',
   message: 'Dashboard works great',
-  status: 'classified',
+  status: 'reviewed',
   featureArea: 'dashboard',
   feedbackType: 'enhancement',
   riskLevel: 'low',
@@ -168,10 +168,10 @@ describe('FeedbackHubPage', () => {
     })
 
     it('renders status badge', async () => {
-      mockList.mockResolvedValue([makeRow({ status: 'classified' })])
+      mockList.mockResolvedValue([makeRow({ status: 'reviewed' })])
       render(<FeedbackHubPage />)
       await waitFor(() => {
-        expect(screen.getByText('classified')).toBeInTheDocument()
+        expect(screen.getByText('reviewed')).toBeInTheDocument()
       })
     })
 
