@@ -9,11 +9,8 @@ export default auth((req) => {
 
   const path = req.nextUrl.pathname
 
-  // Landing page is public; authenticated visitors are sent straight to their dashboard.
+  // Landing page is public — show it to everyone regardless of auth state.
   if (path === '/') {
-    if (req.auth) {
-      return NextResponse.redirect(new URL('/dashboard', req.url))
-    }
     return NextResponse.next()
   }
 
