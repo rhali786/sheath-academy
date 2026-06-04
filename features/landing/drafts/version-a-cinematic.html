@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sheath Academy — Version A (Cinematic)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', sans-serif; background: #070b1f; overflow-x: hidden; }
+    .disp { font-family: 'Cormorant Garamond', serif; }
+    .ayah { font-family: 'Amiri', serif; }
+
+    /* opening black flash */
+    @keyframes openFade { 0% { opacity:1; } 100% { opacity:0; } }
+    .open-veil { animation: openFade 1.6s ease-in forwards; }
+
+    @keyframes riseIn { from { opacity:0; transform: translateY(16px);} to { opacity:1; transform: translateY(0);} }
+    @keyframes glowIn { from { opacity:0; filter: blur(8px);} to { opacity:1; filter: blur(0);} }
+    @keyframes softPulse { 0%,100% { opacity:.5; } 50% { opacity:1; } }
+
+    .reveal { opacity:0; transform: translateY(24px); transition: opacity 1.3s ease, transform 1.3s ease; }
+    .reveal.in { opacity:1; transform: translateY(0); }
+
+    .breathe { animation: softPulse 4s ease-in-out infinite; }
+
+    /* constellation star line draw */
+    .star-line { stroke-dasharray: 1200; stroke-dashoffset: 1200; transition: stroke-dashoffset 2.6s ease-in-out; }
+    .star-line.draw { stroke-dashoffset: 0; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .open-veil { display:none; }
+      .reveal { opacity:1 !important; transform:none !important; transition:none; }
+      .star-line { stroke-dashoffset: 0 !important; transition:none; }
+      .breathe { animation:none; }
+    }
+  </style>
+</head>
+<body class="text-[#f4efe3]">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useEffect, useRef, useState } = React;
+
+    /* ---------- drifting starfield (three parallax layers) ---------- */
+    function Starfield({ dawn = false }) {
+      const ref = useRef(null);
+      useEffect(() => {
+        const c = ref.current, ctx = c.getContext('2d');
+        let raf, w, h;
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const layers = [
+          { n: 60, sp: 0.012, r: 0.6, a: 0.5 },
+          { n: 40, sp: 0.025, r: 1.0, a: 0.7 },
+          { n: 18, sp: 0.05,  r: 1.6, a: 1.0 },
+        ];
+        let stars = [];
+        function seed() {
+          w = c.width = window.innerWidth; h = c.height = window.innerHeight;
+          stars = [];
+          layers.forEach((L, li) => {
+            for (let i = 0; i < L.n; i++) stars.push({
+              x: Math.random()*w, y: Math.random()*h, r: L.r*(0.6+Math.random()*0.8),
+              sp: L.sp, a: L.a*(0.4+Math.random()*0.6), tw: Math.random()*Math.PI*2, li
+            });
+          });
+        }
+        seed(); window.addEventListener('resize', seed);
+        let t = 0;
+        function draw() {
+          t += 0.01;
+          ctx.clearRect(0,0,w,h);
+          stars.forEach(s => {
+            if (!reduce) s.y += s.sp;
+            if (s.y > h) s.y = 0;
+            const tw = 0.7 + 0.3*Math.sin(t + s.tw);
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+            ctx.fillStyle = `rgba(${dawn?255:226}, ${dawn?232:232}, ${dawn?220:240}, ${s.a*tw})`;
+            ctx.shadowBlur = s.li===2 ? 8 : 0;
+            ctx.shadowColor = 'rgba(212,175,55,0.6)';
+            ctx.fill();
+          });
+          raf = requestAnimationFrame(draw);
+        }
+        draw();
+        return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', seed); };
+      }, [dawn]);
+      return <canvas ref={ref} className="fixed inset-0 w-full h-full pointer-events-none" />;
+    }
+
+    /* ---------- scroll reveal hook ---------- */
+    function useReveal() {
+      useEffect(() => {
+        const io = new IntersectionObserver((es) => {
+          es.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+        }, { threshold: 0.25 });
+        document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+        return () => io.disconnect();
+      }, []);
+    }
+
+    /* ---------- eight-pointed star (khatam) that draws then pulses ---------- */
+    function Khatam() {
+      const ref = useRef(null);
+      const [pulse, setPulse] = useState(false);
+      useEffect(() => {
+        const io = new IntersectionObserver(([e]) => {
+          if (e.isIntersecting) {
+            ref.current.querySelectorAll('.star-line').forEach(l => l.classList.add('draw'));
+            setTimeout(() => setPulse(true), 2400);
+          }
+        }, { threshold: 0.4 });
+        if (ref.current) io.observe(ref.current);
+        return () => io.disconnect();
+      }, []);
+      // two overlapping squares = 8-pointed star
+      return (
+        <div ref={ref} className="relative mx-auto" style={{width:260, height:260}}>
+          <div className={"absolute inset-0 rounded-full transition-all duration-1000 " + (pulse ? "opacity-100" : "opacity-0")}
+               style={{boxShadow:'0 0 80px 20px rgba(212,175,55,0.25)'}} />
+          <svg viewBox="0 0 200 200" className="absolute inset-0 w-full h-full">
+            <rect className="star-line" x="40" y="40" width="120" height="120" fill="none" stroke="#d4af37" strokeWidth="1.2" />
+            <rect className="star-line" x="40" y="40" width="120" height="120" fill="none" stroke="#caa86a" strokeWidth="1.2"
+                  transform="rotate(45 100 100)" style={{transitionDelay:'0.4s'}} />
+            <circle className="star-line" cx="100" cy="100" r="58" fill="none" stroke="#d4af37" strokeWidth="0.6" opacity="0.5" style={{transitionDelay:'0.8s'}} />
+          </svg>
+        </div>
+      );
+    }
+
+    function MiniDash() {
+      // dashboard "emerging from geometry" — abstract cards
+      const cards = [
+        { t: "Today", b: "4 lessons · 2 done" },
+        { t: "Quran", b: "Al-Mulk · ayah 12–18" },
+        { t: "Attendance", b: "No missing days" },
+        { t: "Progress", b: "Arabic 72%" },
+      ];
+      return (
+        <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mt-10">
+          {cards.map((c,i) => (
+            <div key={i} className="reveal rounded-xl border border-[#d4af37]/20 bg-white/[0.04] backdrop-blur px-4 py-3 text-left"
+                 style={{transitionDelay: `${i*0.18}s`}}>
+              <p className="text-[10px] uppercase tracking-widest text-[#caa86a]">{c.t}</p>
+              <p className="text-sm text-[#f4efe3] mt-1">{c.b}</p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    function CTA() {
+      return (
+        <div className="flex flex-col items-center gap-3">
+          <a href="#" className="breathe inline-flex items-center px-8 py-3.5 rounded-full bg-[#d4af37] text-[#0c1430] font-medium tracking-wide hover:bg-[#e6c25a] transition-colors"
+             style={{boxShadow:'0 0 40px rgba(212,175,55,0.3)'}}>
+            Create your household
+          </a>
+          <a href="#" className="text-sm text-[#c3cbde] hover:text-[#f4efe3]">Already have an account? Sign in</a>
+        </div>
+      );
+    }
+
+    function App() {
+      useReveal();
+      return (
+        <div className="relative">
+          <div className="open-veil fixed inset-0 z-50 bg-black flex items-center justify-center">
+            <div className="w-1 h-1 rounded-full bg-white breathe" />
+          </div>
+
+          {/* deep sky gradient */}
+          <div className="fixed inset-0" style={{background:'radial-gradient(ellipse at 50% 40%, #16224a 0%, #0c1430 45%, #070b1f 100%)'}} />
+          <Starfield />
+
+          <main className="relative z-10">
+            {/* HERO */}
+            <section className="min-h-screen flex flex-col items-center justify-center text-center px-6">
+              <p className="ayah text-6xl sm:text-7xl text-[#d4af37] mb-4" dir="rtl"
+                 style={{animation:'glowIn 3s ease-out 1.2s both', textShadow:'0 0 30px rgba(212,175,55,0.35)'}}>
+                رَّبِّ زِدْنِي عِلْمًا
+              </p>
+              <p className="text-sm text-[#c3cbde] italic mb-16" style={{animation:'riseIn 1.5s ease-out 3.2s both'}}>
+                "My Lord, increase me in knowledge." — Qur'an 20:114
+              </p>
+              <h1 className="disp text-4xl sm:text-6xl leading-tight max-w-3xl mb-5" style={{animation:'riseIn 1.6s ease-out 4s both'}}>
+                The school they built at home.<br/>The record that proves it.
+              </h1>
+              <p className="text-[#c3cbde] max-w-xl leading-relaxed mb-10" style={{animation:'riseIn 1.6s ease-out 4.6s both'}}>
+                A homeschool dashboard built from the ground up for Muslim families — Quran, Arabic,
+                and an Islamic school year at its core. Not adapted. Built.
+              </p>
+              <div style={{animation:'riseIn 1.6s ease-out 5.2s both'}}><CTA /></div>
+              <div className="absolute bottom-10 text-[#caa86a] breathe text-2xl">⌄</div>
+            </section>
+
+            {/* CONSTELLATION */}
+            <section className="min-h-screen flex flex-col items-center justify-center text-center px-6 py-24">
+              <Khatam />
+              <p className="reveal disp text-3xl sm:text-4xl mt-12 text-[#f4efe3]">Every lesson. Every session. Every day. Visible.</p>
+              <MiniDash />
+              <p className="reveal text-sm text-[#c3cbde] mt-8 max-w-lg leading-relaxed">
+                Today's lessons. Attendance and the days you missed. Each child's Quran progress —
+                surah, ayah, and what's due for revision. A year that already knows to pause for Ramadan.
+              </p>
+            </section>
+
+            {/* THE SCENE */}
+            <section className="py-32 px-6 flex justify-center">
+              <div className="reveal max-w-2xl rounded-2xl border border-white/10 bg-black/30 backdrop-blur p-10">
+                <p className="disp italic text-xl text-[#9aa3c0] leading-relaxed mb-6">
+                  "A Quran teacher asks how Adam is progressing with Al-Mulk. The parent opens a notes
+                  app with three bullet points and a feeling."
+                </p>
+                <p className="text-[#f4efe3] leading-relaxed">
+                  A Quran session is not a note. It has a surah, an ayah range, a session type — new
+                  memorisation, revision, recitation — and a last-reviewed date that determines what
+                  comes next. That structure cannot live in a notes field. We built the field it
+                  actually needs.
+                </p>
+              </div>
+            </section>
+
+            {/* THREE PILLARS */}
+            <section className="py-24 px-6 max-w-3xl mx-auto space-y-12">
+              {[
+                ["Quran is not a folder.", "Surah, ayah range, session type, revision history. The data model knows the difference."],
+                ["Ramadan is on the calendar.", "Your school year pauses when your family does. Not the other way around."],
+                ["Arabic is not a renamed subject.", "Built as a first-class subject from the start. Not relabelled from someone else's gradebook."],
+              ].map(([h,b],i) => (
+                <div key={i} className="reveal flex items-start gap-5" style={{transitionDelay:`${i*0.1}s`}}>
+                  <div className="mt-1.5 w-3 h-3 rotate-45 border border-[#d4af37] flex-shrink-0 breathe" />
+                  <div>
+                    <h3 className="disp text-2xl text-[#d4af37] mb-1">{h}</h3>
+                    <p className="text-[#c3cbde] leading-relaxed">{b}</p>
+                  </div>
+                </div>
+              ))}
+            </section>
+
+            {/* THE PROOF */}
+            <section className="py-32 px-6 flex justify-center">
+              <div className="reveal max-w-2xl text-center">
+                <h2 className="disp text-3xl sm:text-4xl mb-6">When the review comes, you open one page.</h2>
+                <p className="text-[#c3cbde] leading-relaxed">
+                  Attendance, progress by subject, completed lessons, portfolio evidence, your own
+                  reflections — gathered into a single records report, ready to print. The
+                  midnight-before-the-review scramble is simply over.
+                </p>
+              </div>
+            </section>
+
+            {/* COMMITMENT — total stillness */}
+            <section className="py-40 px-6 flex justify-center bg-black/40">
+              <div className="max-w-xl text-center">
+                <p className="disp text-2xl sm:text-3xl text-[#f4efe3] leading-relaxed mb-6">
+                  No streak counters for prayer. No virtue points. No leaderboards.
+                </p>
+                <p className="text-[#9aa3c0] leading-relaxed">
+                  Quantifying spiritual practice creates comparison pressure and performative worship.
+                  This software does not do that. Not as an oversight — as a commitment.
+                </p>
+              </div>
+            </section>
+
+            {/* CLOSE — dawn */}
+            <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 overflow-hidden">
+              <div className="absolute inset-x-0 bottom-0 h-2/3" style={{background:'linear-gradient(to top, rgba(214,160,120,0.35), rgba(120,90,140,0.12) 40%, transparent 75%)'}} />
+              <div className="relative z-10">
+                <h2 className="reveal disp text-4xl sm:text-5xl mb-10">Built by a Muslim family. For yours.</h2>
+                <div className="reveal"><CTA /></div>
+                <p className="reveal text-sm text-[#c3cbde] mt-8">
+                  Want the full story? <a className="underline hover:text-[#d4af37]" href="#">Read about the project →</a>
+                </p>
+              </div>
+            </section>
+
+            <footer className="relative z-10 border-t border-white/10 py-8 text-center text-xs text-[#6b7390]">
+              © 2026 Sheath Academy · Version A (Cinematic) draft
+            </footer>
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

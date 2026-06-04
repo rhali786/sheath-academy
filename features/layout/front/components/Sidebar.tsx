@@ -121,7 +121,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
       aria-label="Main navigation"
     >
       <div className="px-4 pt-5 pb-4 border-b border-slate-100">
-        <Link href="/" className="block hover:opacity-80 transition-opacity" onClick={onClose}>
+        <Link href="/dashboard" className="block hover:opacity-80 transition-opacity" onClick={onClose}>
           <div className="flex items-center gap-2.5 mb-1">
             <SheathLogo size={34} data-testid="sheath-logo" />
             <span className="text-lg font-bold text-slate-900 tracking-tight">Sheath</span>
