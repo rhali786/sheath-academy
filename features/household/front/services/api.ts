@@ -38,6 +38,9 @@ export const householdApi = {
   getProfile: (): Promise<ApiResponse<HouseholdProfile | null>> =>
     get('/api/household/profile'),
 
+  switchHousehold: (householdId: string): Promise<ApiResponse<{ householdId: string; timezone: string }>> =>
+    post('/api/household/switch', { householdId }),
+
   setup: (familyName: string): Promise<ApiResponse<HouseholdProfile>> =>
     post('/api/household/profile', { familyName }),
 

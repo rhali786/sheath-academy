@@ -98,6 +98,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.userId = tenant.userId
           token.householdId = tenant.householdId
           token.timezone = tenant.timezone
+          token.memberships = tenant.memberships
         } catch {
           // Postgres optional during migration; session may lack tenant claims until DB is reachable.
         }
@@ -115,6 +116,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (typeof token.householdId === 'string') session.user.householdId = token.householdId
         if (typeof token.timezone === 'string') session.user.timezone = token.timezone
         session.user.isAdmin = token.isAdmin === true
+        if (Array.isArray(token.memberships)) session.user.memberships = token.memberships
       }
       return session
     },

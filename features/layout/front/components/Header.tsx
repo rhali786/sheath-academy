@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useSyncAppHeaderHeight } from '@/features/layout/front/hooks/useSyncAppHeaderHeight'
+import { HouseholdSwitcher } from '@/features/household/front/components/HouseholdSwitcher'
 
 interface HeaderProps {
   onMenuOpen?: () => void
@@ -57,8 +58,9 @@ export function Header({ onMenuOpen }: HeaderProps) {
 
           {session ? (
             <div className="flex items-center gap-2">
+              <HouseholdSwitcher />
               <span className="hidden sm:inline text-xs text-slate-500 max-w-[160px] truncate">
-                {session.user?.email}
+                {session.user?.name ?? session.user?.email}
               </span>
               <button
                 onClick={() => signOut({ callbackUrl: `${window.location.origin}/login` })}

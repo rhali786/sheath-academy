@@ -199,3 +199,18 @@ export async function getMembership(
     .limit(1)
   return result[0] ?? null
 }
+
+/** Returns all pending (non-expired) invitations for a given email address. */
+export async function getPendingInvitationsForEmail(
+  email: string,
+): Promise<HouseholdInvitationRow[]> {
+  return getDb()
+    .select()
+    .from(householdInvitations)
+    .where(
+      and(
+        eq(householdInvitations.email, email.toLowerCase()),
+        eq(householdInvitations.status, 'pending'),
+      ),
+    )
+}
