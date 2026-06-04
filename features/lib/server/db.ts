@@ -5,6 +5,7 @@ import * as schema from '@/db/schema'
 type DrizzleDb = ReturnType<typeof drizzle<typeof schema>>
 
 let _db: DrizzleDb | undefined
+let _client: ReturnType<typeof postgres> | undefined
 
 /**
  * Returns the shared Drizzle db instance (lazy — created on first call).
@@ -20,8 +21,21 @@ export function getDb(): DrizzleDb {
           'Add it in Render → Environment or .env.local (see .env.example).',
       )
     }
-    const client = postgres(url)
-    _db = drizzle(client, { schema })
+    _client = postgres(url)
+    _db = drizzle(_client, { schema })
   }
   return _db
+}
+
+/**
+ * Closes the shared Postgres connection and resets the memoized instance.
+ * Intended for test teardown (afterAll) and one-off scripts so the process can
+ * exit cleanly — production never calls this. No-op if no connection was opened.
+ */
+export async function closeDb(): Promise<void> {
+  if (_client) {
+    await _client.end({ timeout: 5 })
+    _client = undefined
+    _db = undefined
+  }
 }

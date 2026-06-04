@@ -236,7 +236,10 @@ export function filterAndSortUserRows(
       r =>
         r.workspaceName.toLowerCase().includes(q) ||
         (r.userEmail?.toLowerCase().includes(q) ?? false) ||
-        r.learnerNames.some(name => name.toLowerCase().includes(q)),
+        r.learnerNames.some(name => name.toLowerCase().includes(q)) ||
+        (r.members ?? []).some(
+          m => m.email.toLowerCase().includes(q) || (m.name?.toLowerCase().includes(q) ?? false),
+        ),
     )
   }
 

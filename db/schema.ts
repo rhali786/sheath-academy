@@ -71,13 +71,56 @@ export const verificationTokens = pgTable(
 
 export const households = pgTable('households', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull().unique().references(() => users.id),
+  // Denormalized owner pointer — kept for backfill safety. Unique constraint
+  // dropped to support multiple memberships. household_members is canonical.
+  userId: text('user_id').notNull().references(() => users.id),
   name: text('name').notNull(),
   timezone: text('timezone').notNull().default('America/New_York'),
   setupCompletedAt: timestamp('setup_completed_at'),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
 })
+
+// ─── Household Members ────────────────────────────────────────────────────────
+
+export const householdMembers = pgTable(
+  'household_members',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    role: text('role').notNull().default('member'), // 'owner' | 'member'
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    unique('household_members_hh_user_unique').on(t.householdId, t.userId),
+    index('household_members_user_idx').on(t.userId),
+    index('household_members_household_idx').on(t.householdId),
+  ],
+)
+
+// ─── Household Invitations ────────────────────────────────────────────────────
+
+export const householdInvitations = pgTable(
+  'household_invitations',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    role: text('role').notNull().default('member'),
+    invitedByUserId: text('invited_by_user_id').notNull().references(() => users.id),
+    tokenHash: text('token_hash').notNull().unique(),
+    status: text('status').notNull().default('pending'), // 'pending' | 'accepted' | 'revoked' | 'expired'
+    expiresAt: timestamp('expires_at').notNull(),
+    acceptedAt: timestamp('accepted_at'),
+    createdAt: timestamp('created_at').notNull(),
+  },
+  (t) => [
+    index('household_invitations_household_idx').on(t.householdId),
+    index('household_invitations_email_idx').on(t.email),
+  ],
+)
 
 // ─── Learners ─────────────────────────────────────────────────────────────────
 

@@ -21,7 +21,7 @@ Execute the grouped feedback plan safely through the repo workflow:
 - **Never touch feedback rows directly.** The orchestrator handles all DB writeback after it validates your output.
 - **Target PRs against `dev`**, not `master`.
 - **Never skip pre-commit hooks** (`--no-verify`).
-- Follow `CLAUDE.md`, `docs/testing-patterns.md`, and `docs/architecture-rules.md`.
+- Follow `CLAUDE.md` and the `testing-patterns` and `architecture-rules` skills.
 - Do not perform auth, security, billing, migration, deletion, privacy, or architecture-wide refactors unless the plan explicitly requires them.
 - If tests fail and you cannot fix them within scope, set `status: "failure"` and explain in `failureReason`.
 
@@ -29,7 +29,7 @@ Execute the grouped feedback plan safely through the repo workflow:
 
 1. Read the plan from `jsonArtifactPath` (passed in the prompt).
 2. For each workstream, check what behavior is new vs already tested.
-3. Write one failing test per new behavior unit (see `docs/testing-patterns.md`).
+3. Write one failing test per new behavior unit (see the `testing-patterns` skill).
 4. Implement until all tests in `testPlan` pass.
 5. Run `npm run build` — must pass.
 6. Checkout or create the branch named `enhancement/feedback-steward-<YYYYMMDD>-<HHMM>` (use current date/time).
@@ -94,6 +94,6 @@ Example:
 ## What to read before making changes
 
 - `CLAUDE.md` — obligatory rules, commands, conventions
-- `docs/testing-patterns.md` — test boilerplate per layer
-- `docs/architecture-rules.md` — type and import ownership rules
+- `testing-patterns` skill — test boilerplate per layer
+- `architecture-rules` skill — type and import ownership rules
 - The plan's `allowedFiles` — your file scope boundary

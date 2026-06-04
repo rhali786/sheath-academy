@@ -8,10 +8,18 @@ import type { HouseholdContextType } from '@/features/household/front/context/Ho
 
 let mockSearchParams = new URLSearchParams()
 const mockReplace = jest.fn()
+const mockUpdateSession = jest.fn()
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ replace: mockReplace }),
   useSearchParams: () => mockSearchParams,
+}))
+
+jest.mock('next-auth/react', () => ({
+  useSession: jest.fn(() => ({
+    data: { user: { name: 'Test User', email: 'test@example.com' } },
+    update: mockUpdateSession,
+  })),
 }))
 
 jest.mock('@/features/household/front/context', () => ({
@@ -22,7 +30,7 @@ jest.mock('@/features/household/front/services/api', () => ({
   householdApi: {
     getProfile: jest.fn(() => Promise.resolve({ data: null })),
     updateProfile: jest.fn(),
-    getProfile: jest.fn(() => Promise.resolve({ data: null })),
+    updateUserProfile: jest.fn(() => Promise.resolve({ status: 'success', data: { name: 'Test User' } })),
   },
 }))
 
@@ -61,6 +69,11 @@ const { childrenApi } = jest.requireMock('@/features/children/front/services/api
 const { schoolYearApi } = jest.requireMock('@/features/school-year/front/services/api') as {
   schoolYearApi: { getActiveSchoolYear: jest.Mock }
 }
+const { householdApi } = jest.requireMock('@/features/household/front/services/api') as {
+  householdApi: { updateUserProfile: jest.Mock; updateProfile: jest.Mock; getProfile: jest.Mock }
+}
+import { useSession } from 'next-auth/react'
+const mockUseSession = useSession as jest.Mock
 
 const loadedHousehold: HouseholdContextType = {
   householdProfile: {
@@ -259,5 +272,64 @@ describe('SettingsPage', () => {
       expect(screen.getByTestId('settings-subject-child-c1')).toBeInTheDocument()
     })
     expect(screen.getByTestId('settings-subject-child-c2')).toBeInTheDocument()
+  })
+})
+
+describe('Display name — Your profile section', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockSearchParams = new URLSearchParams()
+    useHousehold.mockReturnValue(loadedHousehold)
+    mockUpdateSession.mockResolvedValue(undefined)
+    householdApi.updateUserProfile.mockResolvedValue({ status: 'success', data: { name: 'Fatima Ali' } })
+  })
+
+  it('renders display name form in household tab', () => {
+    render(<SettingsPage />)
+    expect(screen.getByTestId('display-name-form')).toBeInTheDocument()
+    expect(screen.getByTestId('display-name-input')).toBeInTheDocument()
+  })
+
+  it('pre-fills input with current session name', () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { name: 'Existing Name', email: 'test@example.com' } },
+      update: mockUpdateSession,
+    })
+    render(<SettingsPage />)
+    expect(screen.getByTestId('display-name-input')).toHaveValue('Existing Name')
+  })
+
+  it('pre-fills empty when session has no name', () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { email: 'test@example.com' } },
+      update: mockUpdateSession,
+    })
+    render(<SettingsPage />)
+    expect(screen.getByTestId('display-name-input')).toHaveValue('')
+  })
+
+  it('saves display name and shows success message', async () => {
+    render(<SettingsPage />)
+    const input = screen.getByTestId('display-name-input')
+    await userEvent.clear(input)
+    await userEvent.type(input, 'Fatima Ali')
+    await userEvent.click(screen.getByTestId('display-name-save'))
+    await waitFor(() => {
+      expect(screen.getByTestId('display-name-success')).toBeInTheDocument()
+    })
+    expect(householdApi.updateUserProfile).toHaveBeenCalledWith({ name: 'Fatima Ali' })
+    expect(mockUpdateSession).toHaveBeenCalledWith({ name: 'Fatima Ali' })
+  })
+
+  it('shows error message when save fails', async () => {
+    householdApi.updateUserProfile.mockRejectedValue(new Error('Network error'))
+    render(<SettingsPage />)
+    const input = screen.getByTestId('display-name-input')
+    await userEvent.clear(input)
+    await userEvent.type(input, 'Fatima Ali')
+    await userEvent.click(screen.getByTestId('display-name-save'))
+    await waitFor(() => {
+      expect(screen.getByText(/could not save/i)).toBeInTheDocument()
+    })
   })
 })

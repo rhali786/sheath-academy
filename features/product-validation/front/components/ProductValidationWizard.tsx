@@ -97,7 +97,7 @@ export function ProductValidationWizard({ defaultEmail = '' }: ProductValidation
             Back to About
           </Link>
           <Link
-            href="/"
+            href="/dashboard"
             className="px-4 py-2.5 rounded-lg bg-forest-900 text-sm font-medium text-white hover:bg-forest-800"
           >
             Go to Dashboard

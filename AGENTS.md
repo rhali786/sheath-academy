@@ -11,7 +11,7 @@ Homeschool dashboard (Next.js 15 App Router, React, TypeScript). Business logic 
 - **`npm run setup-hooks`** — run once after cloning. Installs `scripts/hooks/pre-commit` into `.git/hooks/`. Without it the patch version in `package.json` (shown in the app header) will not increment on commit.
 - **`npm install`** — required before dev, build, or test.
 - **Check `.env.example`** before running locally. At minimum `AUTH_SECRET`, `DATABASE_URL`, and `RESEND_API_KEY` must be set in `.env.local` (or Render → Environment). Without `DATABASE_URL` the app throws on startup. Without `AUTH_SECRET` auth is silently broken.
-- **Seed demo data:** wipe first, then bulk seed. See [docs/database-seeding.md](docs/database-seeding.md).
+- **Seed demo data:** wipe first, then bulk seed. See the **`database-seeding`** skill (`/database-seeding`).
   - `npm run db:wipe` then `npm run db:seed:demo` — or `npm run db:reset:demo` for both.
   - Creates two households (Barakah Academy + Crescent Cove Learning) with 150 days of history.
   - **Never seed row-by-row** — demo data loads via chunked multi-row INSERTs only.
@@ -27,7 +27,7 @@ Homeschool dashboard (Next.js 15 App Router, React, TypeScript). Business logic 
 
 Every implementation plan must include these two checks before writing any code. Skipping them produces bugs that only surface during manual testing or in production. Merged code must also satisfy **TDD** and **integration-test** rules in **Obligatory** above.
 
-Also apply `docs/planning-quality-rule.md` to every feature, bug, enhancement, refactor, migration, and cross-feature repair plan. Plans must be grounded in the current code path, not memory or desired architecture. Pick the lightest valid planning mode, audit the affected UI/data/API/service/repository path, name the source-of-truth owner, write observable acceptance criteria, list failing tests first, and include click-by-click manual QA. Dashboard, records, reports, child selector, all-children aggregation, archived child behavior, and cross-feature counts default to Mode 3 unless proven smaller.
+Also apply the **`plan-builder`** skill (`/plan-builder`) to every feature, bug, enhancement, refactor, migration, and cross-feature repair plan. Plans must be grounded in the current code path, not memory or desired architecture. Pick the lightest valid planning mode, audit the affected UI/data/API/service/repository path, name the source-of-truth owner, write observable acceptance criteria, list failing tests first, and include click-by-click manual QA. Dashboard, records, reports, child selector, all-children aggregation, archived child behavior, and cross-feature counts default to Mode 3 unless proven smaller.
 
 Bug-fix plans must include reproduction steps, expected behavior, actual behavior, affected code-path audit, source-of-truth owner, smallest safe fix, failing regression test first, Playwright coverage for user-visible or cross-feature bugs, and manual QA. Do not fix bugs by adding seed data, hardcoded fallbacks, or duplicate dashboard-owned data.
 
@@ -278,7 +278,7 @@ When applying this section during feature work, include a short **"Architecture 
 | `npm run db:generate` | Generate Drizzle migration from schema diff |
 | `npm run db:migrate` | Apply pending migrations to the database |
 | `npm run db:studio` | Open Drizzle Studio (DB browser) |
-| `npm run db:seed:demo` | Bulk-seed two demo households (**after wipe** — see docs/database-seeding.md) |
+| `npm run db:seed:demo` | Bulk-seed two demo households (**after wipe** — see the `database-seeding` skill) |
 | `npm run db:wipe` | Truncate all application tables (keeps schema) |
 | `npm run db:reset:demo` | Wipe + bulk seed in one command |
 | `psql $DATABASE_URL < db/wipe_app_data.sql` | SQL equivalent of `db:wipe` |

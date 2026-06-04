@@ -169,4 +169,24 @@ describe('buildDemoSeedPayload', () => {
     expect(daysBeforeEnd(endDate, 0)).toBe(endDate)
     expect(daysBeforeEnd(endDate, HISTORY_DAYS)).not.toBe(endDate)
   })
+
+  it('includes one owner membership per household', () => {
+    const payload = buildDemoSeedPayload(configs, reference, endDate)
+
+    expect(payload.householdMembers).toHaveLength(2)
+
+    const barakahMembership = payload.householdMembers.find(
+      m => m.householdId === DEV_PG_SEED.householdId,
+    )
+    expect(barakahMembership).toBeDefined()
+    expect(barakahMembership!.userId).toBe(DEV_PG_SEED.userId)
+    expect(barakahMembership!.role).toBe('owner')
+
+    const crescentMembership = payload.householdMembers.find(
+      m => m.householdId === DEMO_B_PG_SEED.householdId,
+    )
+    expect(crescentMembership).toBeDefined()
+    expect(crescentMembership!.userId).toBe(DEMO_B_PG_SEED.userId)
+    expect(crescentMembership!.role).toBe('owner')
+  })
 })

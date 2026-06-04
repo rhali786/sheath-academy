@@ -11,11 +11,11 @@ Homeschool dashboard (Next.js 15 App Router, React, TypeScript). Business logic 
 - **`npm run setup-hooks`** — run once after cloning. Installs `scripts/hooks/pre-commit` into `.git/hooks/`. Without it the patch version in `package.json` (shown in the app header) will not increment on commit.
 - **`npm install`** — required before dev, build, or test.
 - **Check `.env.example`** before running locally. At minimum `AUTH_SECRET`, `DATABASE_URL`, and `RESEND_API_KEY` must be set in `.env.local` (or Render → Environment). Without `DATABASE_URL` the app throws on startup. Without `AUTH_SECRET` auth is silently broken.
-- **Seed demo data:** wipe first, then bulk seed. See [docs/database-seeding.md](docs/database-seeding.md).
+- **Seed demo data:** wipe first, then bulk seed. See the **`database-seeding`** skill (`/database-seeding`).
   - `npm run db:wipe` then `npm run db:seed:demo` — or `npm run db:reset:demo` for both.
   - Creates two households (Barakah Academy + Crescent Cove Learning) with 150 days of history.
   - **Never seed row-by-row** — demo data loads via chunked multi-row INSERTs only.
-- **Test-driven development (TDD):** Write a failing test first, implement until it passes, then refactor. Unit tests for API route handlers and repository functions; mock at the repository boundary, never mock `getDb()`. Do not merge implementation-only changes that should have been test-driven. See [docs/testing-patterns.md](docs/testing-patterns.md).
+- **Test-driven development (TDD):** Write a failing test first, implement until it passes, then refactor. Unit tests for API route handlers and repository functions; mock at the repository boundary, never mock `getDb()`. Do not merge implementation-only changes that should have been test-driven. See the **`testing-patterns`** skill (`/testing-patterns`).
 - **Integration tests:** New or materially changed UI must ship with integration tests under `features/<feature>/__tests__/integration/` covering loading, empty, error, and populated states plus all user interactions. Same for user-visible flows not adequately covered by lower-level tests.
 - **`npm run build` and `npm test` must pass before merging.** CI enforces this; don't skip it locally.
 - **Never commit secrets.** `.env.local`, deploy hook URLs, API keys. Rotate immediately if any were ever exposed.
@@ -33,7 +33,7 @@ Before writing any code, every plan must cover:
 
 If any layer boundary is unverified, do not proceed to implementation.
 
-See [docs/architecture-rules.md](docs/architecture-rules.md) for type ownership, data-access, and cross-feature import rules (required reading before every audit). See [docs/feature-waves.md](docs/feature-waves.md) for how to scope large feature work into waves.
+See the **`architecture-rules`** skill (`/architecture-rules`) for type ownership, data-access, and cross-feature import rules (required reading before every audit). See the **`plan-builder`** skill (`/plan-builder`) for planning modes, the code-path audit, and plan structure, and the **`ui-style-guide`** skill (`/ui-style-guide`) before any UI change. See [docs/feature-waves.md](docs/feature-waves.md) for how to scope large feature work into waves.
 
 ---
 
@@ -113,6 +113,21 @@ New REST surface: extend the dynamic slug handler and the feature router consist
 
 ---
 
+## Logging
+
+**Stack: `consola` (interface) + `pino` (server file transport)**
+
+- **One import everywhere:** `import { logger } from '@/features/lib/logger'`
+- `features/lib/logger.ts` — exports the shared `consola` instance. Safe to import in server code, client components, and shared utilities. Do not create logger instances inline in individual files.
+- `instrumentation.ts` (project root) — Next.js 15 server startup hook. Registers the pino file reporter once. All logging behavior (level, output file, format) is controlled here, not at call sites.
+- **Server:** logs to both console and `logs/app.log` (JSON via pino). File is gitignored.
+- **Browser:** consola default pretty reporter (no file output).
+- **Tests:** mock `@/features/lib/logger` at the module level — do not let tests write to disk.
+- Use structured args: `logger.info({ userId, householdId }, 'tenant resolved')` not string interpolation.
+- Log levels: `logger.error` for caught exceptions, `logger.warn` for recoverable issues, `logger.info` for significant events, `logger.debug` for dev-only detail.
+
+---
+
 ## Conventions
 
 **TypeScript**
@@ -141,7 +156,7 @@ New REST surface: extend the dynamic slug handler and the feature router consist
 
 ## Testing
 
-See **[docs/testing-patterns.md](docs/testing-patterns.md)** for boilerplate for each test type.
+See the **`testing-patterns`** skill (`/testing-patterns`) for boilerplate for each test type.
 
 - Tests live under `features/<feature>/__tests__/` (`api/`, `integration/`, etc.).
 - UI tests use `jsdom`. Use `@/features/dashboard/__tests__/utils/renderWithProvider` for components inside `DashboardProvider`.

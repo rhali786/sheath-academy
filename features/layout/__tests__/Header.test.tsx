@@ -57,7 +57,17 @@ describe('Header — authenticated', () => {
     mockSignOut.mockClear()
   })
 
-  test('renders user email when signed in', () => {
+  test('renders user name when signed in (falls back to email when no name)', () => {
+    render(<Header />)
+    // Session has name 'Naeem Parent' — name takes priority over email
+    expect(screen.getByText('Naeem Parent')).toBeInTheDocument()
+  })
+
+  test('renders email when user has no name', () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { email: 'parent@example.com', image: null }, expires: '9999-01-01' },
+      status: 'authenticated',
+    })
     render(<Header />)
     expect(screen.getByText('parent@example.com')).toBeInTheDocument()
   })
