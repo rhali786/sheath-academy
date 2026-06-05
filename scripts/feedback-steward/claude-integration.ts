@@ -12,7 +12,7 @@ export interface ClaudePromptResult {
   stdout: string
   stderr: string
   elapsedMs: number
-  timeoutMs: number
+  timeoutMs: number | undefined
 }
 
 function sanitizeClaudeMessage(text: string): string {
@@ -55,8 +55,9 @@ export function runClaudePrompt(input: ClaudePromptInput): ClaudePromptResult {
       throw new Error(`Claude unavailable for ${input.stageLabel}: ${meaningfulMessage}`)
     }
     if (error.code === 'ETIMEDOUT') {
+      const timeoutSec = input.timeoutMs !== undefined ? Math.round(input.timeoutMs / 1000) : '?'
       throw new Error(
-        `Claude ${input.stageLabel} timed out after ${Math.round(input.timeoutMs / 1000)}s. ` +
+        `Claude ${input.stageLabel} timed out after ${timeoutSec}s. ` +
         `Set STEWARD_CLAUDE_PLAN_TIMEOUT_MS or STEWARD_CLAUDE_EXECUTE_TIMEOUT_MS to override.`
       )
     }

@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "generatedAt": "2026-06-04T18:21:00Z",
+  "feedbackIds": [
+    "ad71a81f-6bc8-4463-9d1a-0f8f3c11951e",
+    "533ecbb1-bc49-4795-b8fe-3d579fc96076",
+    "1831c99f-8e92-43be-8274-6d1189d8bbe5",
+    "103eaba1-67d8-4fde-addc-86228a3860e0",
+    "3dc815ad-a973-4672-a4ee-39553008f324",
+    "a2a7a0b6-9751-4967-91f8-8daf9e8a5955"
+  ],
+  "eligibilitySnapshot": {
+    "autoEligibleIds": [
+      "ad71a81f-6bc8-4463-9d1a-0f8f3c11951e",
+      "533ecbb1-bc49-4795-b8fe-3d579fc96076",
+      "1831c99f-8e92-43be-8274-6d1189d8bbe5",
+      "103eaba1-67d8-4fde-addc-86228a3860e0",
+      "3dc815ad-a973-4672-a4ee-39553008f324",
+      "a2a7a0b6-9751-4967-91f8-8daf9e8a5955"
+    ],
+    "approvedIds": []
+  },
+  "workstreams": [
+    {
+      "featureArea": "feedback",
+      "summary": "Add reject action button to feedback admin workflow and update status labels to include 'Reviewed' and 'Implemented' states",
+      "allowedFiles": [
+        "features/feedback/front/components/**",
+        "features/feedback/front/pages/**",
+        "features/feedback/server/repository.ts",
+        "features/feedback/server/service.ts",
+        "features/feedback/lib/**"
+      ],
+      "testPlan": [
+        "npm test -- features/feedback/__tests__/api/repository.test.ts",
+        "npm test -- features/feedback/__tests__/api/service.test.ts",
+        "npm test -- features/feedback/__tests__/integration/ (add admin workflow tests)"
+      ],
+      "uatByFeedbackId": {
+        "ad71a81f-6bc8-4463-9d1a-0f8f3c11951e": [
+          "Navigate to /admin/feedback in Render preview",
+          "Verify reject button appears in feedback row actions",
+          "Click reject button on a feedback item",
+          "Verify feedback status changes to rejected in the table"
+        ],
+        "533ecbb1-bc49-4795-b8fe-3d579fc96076": [
+          "Navigate to /admin/feedback in Render preview",
+          "Verify status column shows 'Reviewed' option in dropdown",
+          "Verify status column shows 'Implemented' option in dropdown",
+          "Process feedback through daily workflow",
+          "Verify status updates to 'Reviewed' after processing"
+        ]
+      }
+    },
+    {
+      "featureArea": "layout",
+      "summary": "Update header greeting with rotating Arabic translations and user name, center version number in sidebar, and add collapsible sidebar toggle",
+      "allowedFiles": [
+        "features/layout/front/components/Header.tsx",
+        "features/layout/front/components/AppShell.tsx",
+        "app/globals.css"
+      ],
+      "testPlan": [
+        "npm test -- features/layout/__tests__/ (add Header Arabic greeting rotation tests)",
+        "npm test -- features/layout/__tests__/ (add AppShell sidebar collapse/expand tests)",
+        "npm run build && npm run smoke (verify no layout regressions)"
+      ],
+      "uatByFeedbackId": {
+        "a2a7a0b6-9751-4967-91f8-8daf9e8a5955": [
+          "Load dashboard home page in Render preview",
+          "Verify header displays Arabic greeting (e.g., 'Marhaban Rasheed') with user name",
+          "Verify user email appears in grey parentheses below the name",
+          "Refresh page multiple times",
+          "Verify greeting alternates between 5-8 different Arabic greetings"
+        ],
+        "103eaba1-67d8-4fde-addc-86228a3860e0": [
+          "View sidebar in both collapsed and expanded states in Render preview",
+          "Verify version number in sidebar footer is centered"
+        ],
+        "1831c99f-8e92-43be-8274-6d1189d8bbe5": [
+          "Navigate to dashboard in Render preview",
+          "Locate collapse/expand toggle icon in sidebar header",
+          "Click collapse icon",
+          "Verify sidebar collapses and content area expands",
+          "Click expand icon",
+          "Verify sidebar expands back to full width"
+        ]
+      }
+    },
+    {
+      "featureArea": "settings",
+      "summary": "Center-align Hijri calendar display under Faith.Learning.Purpose tagline",
+      "allowedFiles": [
+        "features/settings/front/components/**",
+        "features/settings/**/*.css"
+      ],
+      "testPlan": [
+        "npm test -- features/settings/__tests__/integration/ (add Hijri calendar centering tests)",
+        "npm run build && npm run smoke (verify settings page renders correctly)"
+      ],
+      "uatByFeedbackId": {
+        "3dc815ad-a973-4672-a4ee-39553008f324": [
+          "Navigate to /settings in Render preview",
+          "Locate Hijri calendar under 'Faith.Learning.Purpose' tagline",
+          "Verify calendar is center-aligned horizontally",
+          "Resize viewport to tablet width (768px)",
+          "Verify calendar remains centered",
+          "Resize viewport to mobile width (375px)",
+          "Verify calendar remains centered at mobile breakpoint"
+        ]
+      }
+    }
+  ]
+}

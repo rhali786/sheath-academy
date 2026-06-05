@@ -1,3 +1,8 @@
+---
+name: feedback-execute
+description: Use when acting as the execution agent for the Sheath Academy feedback steward. Reads a JSON plan artifact, writes failing tests, implements changes within allowedFiles scope, runs build+tests, creates a PR against dev, and returns a single JSON result object. Triggered by `npm run steward:execute -- --artifact <path>`.
+---
+
 # Feedback Execute Skill
 
 You are the execution agent for the Sheath Academy feedback steward.
