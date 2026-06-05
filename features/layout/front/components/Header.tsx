@@ -18,7 +18,7 @@ export function Header({ onMenuOpen }: HeaderProps) {
   const { data: session } = useSession()
   const isDashboard = pathname === '/'
   const greeting = useMemo(() => pickGreeting(), [])
-  const firstName = session?.user?.name?.split(' ')[0] ?? null
+  const displayName = session?.user?.name ?? null
 
   useSyncAppHeaderHeight(headerRef)
 
@@ -64,7 +64,7 @@ export function Header({ onMenuOpen }: HeaderProps) {
               <HouseholdSwitcher />
               <div className="hidden sm:flex flex-col items-end" data-testid="user-greeting-line">
                 <span className="text-xs font-medium text-slate-700">
-                  {greeting} {firstName ?? 'there'}
+                  {greeting} {displayName ?? 'there'}
                 </span>
                 <span className="text-xs text-slate-400">({session.user?.email})</span>
               </div>

@@ -57,11 +57,11 @@ describe('Header — authenticated', () => {
     mockSignOut.mockClear()
   })
 
-  test('renders Arabic greeting with first name and email when signed in', () => {
+  test('renders Arabic greeting with full name and email when signed in', () => {
     render(<Header />)
     const greetingLine = screen.getByTestId('user-greeting-line')
     expect(greetingLine).toBeInTheDocument()
-    expect(greetingLine.textContent).toContain('Naeem')
+    expect(greetingLine.textContent).toContain('Naeem Parent')
     expect(greetingLine.textContent).toContain('parent@example.com')
   })
 
