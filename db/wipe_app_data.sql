@@ -3,6 +3,10 @@
 -- This is NOT a drizzle migration — run directly via psql:
 --   psql $DATABASE_URL < db/wipe_app_data.sql
 TRUNCATE
+  message_attachments,
+  messages,
+  conversation_participants,
+  conversations,
   portfolio_evidence,
   lesson_tasks,
   attendance_events,

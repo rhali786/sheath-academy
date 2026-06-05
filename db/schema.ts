@@ -10,7 +10,15 @@ import {
   jsonb,
   numeric,
   primaryKey,
+  customType,
 } from 'drizzle-orm/pg-core'
+
+// Drizzle pg-core has no native bytea — define it via customType.
+const bytea = customType<{ data: Buffer; default: false }>({
+  dataType() {
+    return 'bytea'
+  },
+})
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 
@@ -514,4 +522,74 @@ export const userFeedback = pgTable(
     index('user_feedback_created_at_idx').on(t.createdAt),
     index('user_feedback_user_status_idx').on(t.userId, t.status),
   ],
+)
+
+// ─── Messaging ────────────────────────────────────────────────────────────────
+
+export const conversations = pgTable(
+  'conversations',
+  {
+    id: text('id').primaryKey(),
+    type: text('type').notNull(), // 'direct' | 'group'
+    title: text('title'),
+    createdByUserId: text('created_by_user_id').notNull().references(() => users.id),
+    lastMessageAt: timestamp('last_message_at'),
+    settings: jsonb('settings'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [index('conversations_last_message_at_idx').on(t.lastMessageAt)],
+)
+
+export const conversationParticipants = pgTable(
+  'conversation_participants',
+  {
+    id: text('id').primaryKey(),
+    conversationId: text('conversation_id')
+      .notNull()
+      .references(() => conversations.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    role: text('role').notNull().default('member'), // 'admin' | 'member'
+    lastReadAt: timestamp('last_read_at'),
+    joinedAt: timestamp('joined_at').notNull(),
+    leftAt: timestamp('left_at'),
+  },
+  (t) => [
+    unique('conv_participants_conv_user_unique').on(t.conversationId, t.userId),
+    index('conv_participants_user_idx').on(t.userId),
+    index('conv_participants_conv_idx').on(t.conversationId),
+  ],
+)
+
+export const messages = pgTable(
+  'messages',
+  {
+    id: text('id').primaryKey(),
+    conversationId: text('conversation_id')
+      .notNull()
+      .references(() => conversations.id, { onDelete: 'cascade' }),
+    senderUserId: text('sender_user_id').notNull().references(() => users.id),
+    body: text('body').notNull().default(''),
+    reactions: jsonb('reactions'),
+    createdAt: timestamp('created_at').notNull(),
+  },
+  (t) => [index('messages_conv_created_id_idx').on(t.conversationId, t.createdAt, t.id)],
+)
+
+export const messageAttachments = pgTable(
+  'message_attachments',
+  {
+    id: text('id').primaryKey(),
+    messageId: text('message_id')
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(), // 'image'
+    mimeType: text('mime_type').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    data: bytea('data').notNull(),
+    createdAt: timestamp('created_at').notNull(),
+  },
+  (t) => [index('message_attachments_message_idx').on(t.messageId)],
 )
