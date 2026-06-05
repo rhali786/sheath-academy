@@ -1,11 +1,12 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useMemo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useSyncAppHeaderHeight } from '@/features/layout/front/hooks/useSyncAppHeaderHeight'
 import { HouseholdSwitcher } from '@/features/household/front/components/HouseholdSwitcher'
+import { pickGreeting } from '@/features/layout/lib/greetings'
 
 interface HeaderProps {
   onMenuOpen?: () => void
@@ -16,6 +17,8 @@ export function Header({ onMenuOpen }: HeaderProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
   const isDashboard = pathname === '/'
+  const greeting = useMemo(() => pickGreeting(), [])
+  const firstName = session?.user?.name?.split(' ')[0] ?? null
 
   useSyncAppHeaderHeight(headerRef)
 
@@ -59,9 +62,12 @@ export function Header({ onMenuOpen }: HeaderProps) {
           {session ? (
             <div className="flex items-center gap-2">
               <HouseholdSwitcher />
-              <span className="hidden sm:inline text-xs text-slate-500 max-w-[160px] truncate">
-                {session.user?.name ?? session.user?.email}
-              </span>
+              <div className="hidden sm:flex flex-col items-end" data-testid="user-greeting-line">
+                <span className="text-xs font-medium text-slate-700">
+                  {greeting} {firstName ?? 'there'}
+                </span>
+                <span className="text-xs text-slate-400">({session.user?.email})</span>
+              </div>
               <button
                 onClick={() => signOut({ callbackUrl: `${window.location.origin}/login` })}
                 className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"

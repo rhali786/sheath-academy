@@ -5,6 +5,7 @@ import {
   createInvitation,
   getHouseholdById,
   getUserById,
+  type MembershipRole,
 } from '@/features/household/server/repository'
 import { createInvitationToken } from '@/features/household/server/invitationTokens'
 import { sendInvitationEmail } from '@/features/auth/server/email'
@@ -24,7 +25,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ status: 'error', message: 'Forbidden' }, { status: 403 })
   }
 
-  const resolvedRole = role === 'owner' ? 'owner' : 'member'
+  const VALID_ROLES = new Set<string>(['owner', 'member', 'teacher'])
+  const resolvedRole: MembershipRole = VALID_ROLES.has(role) ? (role as MembershipRole) : 'member'
   const { raw, hash, expiresAt } = createInvitationToken()
 
   const invitation = await createInvitation({

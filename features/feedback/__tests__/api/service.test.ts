@@ -27,6 +27,7 @@ import {
   applyClassification,
   listEligibleFeedbackForDailyRun,
   markFeedbackDuplicate,
+  rejectForPlanning,
   markFeedbackAttachedToPr,
   rollbackFeedbackAttachedToPr,
   markFeedbackShippedByPr,
@@ -194,6 +195,48 @@ describe('feedback service workflow rules', () => {
     expect(result.feedbackIds).toEqual(['fb_auto', 'fb_approved', 'fb_approved_risky'])
     expect(result.autoEligibleIds).toEqual(['fb_auto'])
     expect(result.approvedIds).toEqual(['fb_approved', 'fb_approved_risky'])
+  })
+})
+
+describe('rejectForPlanning', () => {
+  it('sets feedback to cancelled', async () => {
+    mockGetFeedbackById.mockResolvedValue(makeRow({ status: 'reviewed' }))
+    mockUpdateFeedbackTriage.mockResolvedValue(undefined)
+
+    await rejectForPlanning('fb_1')
+
+    expect(mockUpdateFeedbackTriage).toHaveBeenCalledWith('fb_1', { status: 'cancelled' })
+  })
+
+  it('also rejects awaiting_approval rows', async () => {
+    mockGetFeedbackById.mockResolvedValue(makeRow({ status: 'awaiting_approval' }))
+    mockUpdateFeedbackTriage.mockResolvedValue(undefined)
+
+    await rejectForPlanning('fb_1')
+
+    expect(mockUpdateFeedbackTriage).toHaveBeenCalledWith('fb_1', { status: 'cancelled' })
+  })
+
+  it('throws when the row is already shipped', async () => {
+    mockGetFeedbackById.mockResolvedValue(makeRow({ status: 'shipped' }))
+
+    await expect(rejectForPlanning('fb_1')).rejects.toMatchObject({
+      statusCode: 409,
+      code: 'invalid_feedback_state',
+    })
+
+    expect(mockUpdateFeedbackTriage).not.toHaveBeenCalled()
+  })
+
+  it('throws when the row is not found', async () => {
+    mockGetFeedbackById.mockResolvedValue(null)
+
+    await expect(rejectForPlanning('fb_nonexistent')).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'feedback_not_found',
+    })
+
+    expect(mockUpdateFeedbackTriage).not.toHaveBeenCalled()
   })
 })
 

@@ -57,19 +57,30 @@ describe('Header — authenticated', () => {
     mockSignOut.mockClear()
   })
 
-  test('renders user name when signed in (falls back to email when no name)', () => {
+  test('renders Arabic greeting with first name and email when signed in', () => {
     render(<Header />)
-    // Session has name 'Naeem Parent' — name takes priority over email
-    expect(screen.getByText('Naeem Parent')).toBeInTheDocument()
+    const greetingLine = screen.getByTestId('user-greeting-line')
+    expect(greetingLine).toBeInTheDocument()
+    expect(greetingLine.textContent).toContain('Naeem')
+    expect(greetingLine.textContent).toContain('parent@example.com')
   })
 
-  test('renders email when user has no name', () => {
+  test('renders "there" fallback and email in parens when user has no name', () => {
     mockUseSession.mockReturnValue({
       data: { user: { email: 'parent@example.com', image: null }, expires: '9999-01-01' },
       status: 'authenticated',
     })
     render(<Header />)
-    expect(screen.getByText('parent@example.com')).toBeInTheDocument()
+    const greetingLine = screen.getByTestId('user-greeting-line')
+    expect(greetingLine.textContent).toMatch(/there/i)
+    expect(greetingLine.textContent).toContain('parent@example.com')
+  })
+
+  test('greetings helper returns a value from the configured set', () => {
+    const { GREETINGS, pickGreeting } = require('@/features/layout/lib/greetings')
+    for (let i = 0; i < GREETINGS.length; i++) {
+      expect(GREETINGS).toContain(pickGreeting(i))
+    }
   })
 
   test('clicking Sign out calls signOut()', () => {

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import type { FeedbackRow } from '@/features/feedback/types'
 import { ApprovalModal } from '../components/ApprovalModal'
+import { RejectModal } from '../components/RejectModal'
 
 const SENTIMENT_EMOJI: Record<string, string> = {
   bad: '😣',
@@ -28,6 +29,7 @@ export function AdminFeedbackPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedRejectId, setSelectedRejectId] = useState<string | null>(null)
 
   const [filters, setFilters] = useState({
     status: '',
@@ -77,7 +79,19 @@ export function AdminFeedbackPage() {
     }
   }
 
+  const handleReject = async (id: string) => {
+    const response = await fetch(`/api/admin/feedback/${id}/reject`, { method: 'POST' })
+    const data = await response.json()
+    if (data.status === 'success') {
+      setRows(rows.map(r => (r.id === id ? { ...r, status: 'cancelled' } : r)))
+      setSelectedRejectId(null)
+    } else {
+      throw new Error(data.message)
+    }
+  }
+
   const selectedFeedback = selectedId ? rows.find(r => r.id === selectedId) : null
+  const selectedRejectFeedback = selectedRejectId ? rows.find(r => r.id === selectedRejectId) : null
   const statusCounts = rows.reduce<Record<string, number>>((counts, row) => {
     counts[row.status] = (counts[row.status] ?? 0) + 1
     return counts
@@ -314,15 +328,26 @@ export function AdminFeedbackPage() {
                   </div>
                 )}
 
-                {/* Action button */}
-                {row.status === 'awaiting_approval' && (
-                  <button
-                    onClick={() => setSelectedId(row.id)}
-                    className="mt-2 px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800 transition-colors"
-                    data-testid={`approve-button-${row.id}`}
-                  >
-                    Approve for planning
-                  </button>
+                {/* Action buttons */}
+                {(row.status === 'awaiting_approval' || row.status === 'reviewed') && (
+                  <div className="flex gap-2 mt-2">
+                    {row.status === 'awaiting_approval' && (
+                      <button
+                        onClick={() => setSelectedId(row.id)}
+                        className="px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800 transition-colors"
+                        data-testid={`approve-button-${row.id}`}
+                      >
+                        Approve for planning
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setSelectedRejectId(row.id)}
+                      className="px-4 py-2 bg-white text-red-700 border border-red-300 text-sm font-medium rounded-lg hover:bg-red-50 transition-colors"
+                      data-testid={`reject-button-${row.id}`}
+                    >
+                      Reject planning
+                    </button>
+                  </div>
                 )}
               </div>
             )
@@ -337,6 +362,16 @@ export function AdminFeedbackPage() {
           feedbackMessage={selectedFeedback.message || undefined}
           onConfirm={handleApprove}
           onCancel={() => setSelectedId(null)}
+        />
+      )}
+
+      {/* Reject modal */}
+      {selectedRejectFeedback && (
+        <RejectModal
+          feedbackId={selectedRejectFeedback.id}
+          feedbackMessage={selectedRejectFeedback.message || undefined}
+          onConfirm={handleReject}
+          onCancel={() => setSelectedRejectId(null)}
         />
       )}
     </div>

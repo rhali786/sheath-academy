@@ -95,6 +95,24 @@ export async function applyClassification(id: string, decision: ClassifyDecision
   await updateFeedbackTriage(id, triage)
 }
 
+export async function rejectForPlanning(id: string): Promise<void> {
+  const row = await getFeedbackById(id)
+
+  if (!row) {
+    throw new FeedbackWorkflowError('Feedback not found', 404, 'feedback_not_found')
+  }
+
+  if (row.status === 'shipped') {
+    throw new FeedbackWorkflowError(
+      'Shipped feedback cannot be rejected',
+      409,
+      'invalid_feedback_state',
+    )
+  }
+
+  await updateFeedbackTriage(id, { status: 'cancelled' })
+}
+
 export async function markFeedbackDuplicate(id: string, duplicateOfId: string): Promise<void> {
   await updateFeedbackTriage(id, {
     status: 'cancelled',

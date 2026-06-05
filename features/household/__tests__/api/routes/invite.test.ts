@@ -125,4 +125,18 @@ describe('POST /api/household/invite', () => {
       expect.objectContaining({ role: 'owner' }),
     )
   })
+
+  it('allows specifying teacher role and persists it', async () => {
+    await POST(makeRequest({ email: 'teacher@test.com', role: 'teacher' }))
+    expect(mockCreateInvitation).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'teacher' }),
+    )
+  })
+
+  it('rejects unknown roles and falls back to member', async () => {
+    await POST(makeRequest({ email: 'invitee@test.com', role: 'admin' }))
+    expect(mockCreateInvitation).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'member' }),
+    )
+  })
 })

@@ -40,6 +40,14 @@ export async function approveAdminFeedback(id: string): Promise<void> {
   }
 }
 
+export async function rejectAdminFeedback(id: string): Promise<void> {
+  const res = await fetch(`/api/admin/feedback/${id}/reject`, { method: 'POST' })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { message?: string }).message ?? 'Rejection failed')
+  }
+}
+
 export async function listAdminFeedback(filters: Partial<AdminFeedbackFilters> = {}): Promise<FeedbackRow[]> {
   const params = new URLSearchParams()
   if (filters.status) params.set('status', filters.status)

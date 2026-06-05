@@ -9,22 +9,33 @@
 const hasDb = !!process.env.DATABASE_URL
 const itDb = hasDb ? it : it.skip
 
-import { upsertUserByEmail, upsertHouseholdForUser, getHouseholdForUser } from '../../server/repository'
+import { upsertUserByEmail, upsertHouseholdForUser, getHouseholdForUser, addMember, listMembers } from '../../server/repository'
 
 const TS = Date.now()
 const testEmail = `repo-test-${TS}@sheath.test`
+const teacherEmail1 = `repo-teacher1-${TS}@sheath.test`
+const teacherEmail2 = `repo-teacher2-${TS}@sheath.test`
 
 afterAll(async () => {
   if (!hasDb) return
-  // Best-effort cleanup of test rows
   const { getDb } = await import('@/features/lib/server/db')
-  const { households, users } = await import('@/db/schema')
-  const { eq } = await import('drizzle-orm')
+  const { households, users, householdMembers } = await import('@/db/schema')
+  const { eq, inArray } = await import('drizzle-orm')
   const db = getDb()
-  const user = await db.select().from(users).where(eq(users.email, testEmail)).limit(1)
-  if (user[0]) {
-    await db.delete(households).where(eq(households.userId, user[0].id))
-    await db.delete(users).where(eq(users.id, user[0].id))
+  const testUsers = await db
+    .select()
+    .from(users)
+    .where(inArray(users.email, [testEmail, teacherEmail1, teacherEmail2]))
+  const ids = testUsers.map(u => u.id)
+  if (ids.length > 0) {
+    await db.delete(householdMembers).where(inArray(householdMembers.userId, ids))
+    const hhRows = await db.select().from(households).where(inArray(households.userId, ids))
+    const hhIds = hhRows.map(h => h.id)
+    if (hhIds.length > 0) {
+      await db.delete(householdMembers).where(inArray(householdMembers.householdId, hhIds))
+      await db.delete(households).where(inArray(households.id, hhIds))
+    }
+    await db.delete(users).where(inArray(users.id, ids))
   }
 })
 
@@ -68,5 +79,27 @@ describe('household repository', () => {
   itDb('getHouseholdForUser returns null for unknown user', async () => {
     const household = await getHouseholdForUser('unknown-user-id-xyz')
     expect(household).toBeNull()
+  })
+})
+
+describe('household teacher role', () => {
+  itDb('a member can be created with role "teacher"', async () => {
+    const owner = await upsertUserByEmail(teacherEmail1, 'Teacher One')
+    const household = await upsertHouseholdForUser(owner.id, 'Teacher Household')
+    const teacher2 = await upsertUserByEmail(teacherEmail2, 'Teacher Two')
+
+    const result = await addMember(household.id, teacher2.id, 'teacher')
+    expect(result.role).toBe('teacher')
+  })
+
+  itDb('multiple teacher members can coexist in one household', async () => {
+    const owner = await upsertUserByEmail(teacherEmail1)
+    const household = await upsertHouseholdForUser(owner.id)
+    const teacher2 = await upsertUserByEmail(teacherEmail2)
+
+    await addMember(household.id, teacher2.id, 'teacher')
+    const members = await listMembers(household.id)
+    const teacherMembers = members.filter(m => m.role === 'teacher')
+    expect(teacherMembers.length).toBeGreaterThanOrEqual(1)
   })
 })

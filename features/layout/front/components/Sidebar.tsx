@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -16,6 +16,18 @@ import { SheathLogo } from './SheathLogo'
 interface SidebarProps {
   mobileOpen?: boolean
   onClose?: () => void
+}
+
+function CollapseChevron({ direction }: { direction: 'left' | 'right' }) {
+  return (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+      {direction === 'left' ? (
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+      ) : (
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+      )}
+    </svg>
+  )
 }
 
 function NavIcon({ itemId, active }: { itemId: string; active: boolean }) {
@@ -101,6 +113,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const searchParams = useSearchParams()
   const settingsTab = pathname.startsWith('/settings') ? searchParams.get('tab') : null
   const [headerDates, setHeaderDates] = useState<HeaderDateDisplay | null>(null)
+  const [collapsed, setCollapsed] = useState(false)
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION
   const session = useSession()
   const isAdmin = session.data?.user?.isAdmin === true
@@ -114,6 +127,9 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const mainItems = filterByRole(getNavItemsBySection('main'))
   const footerItems = filterByRole(getNavItemsBySection('footer'))
 
+  const handleCollapse = useCallback(() => setCollapsed(true), [])
+  const handleExpand = useCallback(() => setCollapsed(false), [])
+
   const panel = (
     <aside
       className="flex flex-col h-full w-60 bg-slate-50 border-r border-slate-200/80"
@@ -121,14 +137,25 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
       aria-label="Main navigation"
     >
       <div className="px-4 pt-5 pb-4 border-b border-slate-100">
-        <Link href="/dashboard" className="block hover:opacity-80 transition-opacity" onClick={onClose}>
-          <div className="flex items-center gap-2.5 mb-1">
-            <SheathLogo size={34} data-testid="sheath-logo" />
-            <span className="text-lg font-bold text-slate-900 tracking-tight">Sheath</span>
-          </div>
-          <p className="text-xs text-slate-400 pl-[2.625rem]">Faith. Learning. Purpose.</p>
-        </Link>
-        <div className="mt-3 pl-[2.625rem]" data-testid="sidebar-hijri-date">
+        <div className="flex items-start justify-between gap-1">
+          <Link href="/dashboard" className="block hover:opacity-80 transition-opacity" onClick={onClose}>
+            <div className="flex items-center gap-2.5 mb-1">
+              <SheathLogo size={34} data-testid="sheath-logo" />
+              <span className="text-lg font-bold text-slate-900 tracking-tight">Sheath</span>
+            </div>
+            <p className="text-xs text-slate-400 pl-[2.625rem]">Faith. Learning. Purpose.</p>
+          </Link>
+          <button
+            type="button"
+            onClick={handleCollapse}
+            data-testid="sidebar-collapse-toggle"
+            aria-label="Collapse navigation"
+            className="mt-1 p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0"
+          >
+            <CollapseChevron direction="left" />
+          </button>
+        </div>
+        <div className="mt-3 text-center" data-testid="sidebar-hijri-date">
           <div className="text-sm font-bold text-forest-900 leading-tight" lang="ar" dir="rtl">
             {headerDates?.hijriDayMonthAr ?? '\u2014'}
           </div>
@@ -150,17 +177,34 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         ))}
       </nav>
       {appVersion && (
-        <div className="px-5 pb-4 text-[11px] text-slate-300" data-testid="sidebar-version">
+        <div className="pb-4 text-[11px] text-slate-300 text-center" data-testid="sidebar-version">
           v{appVersion}
         </div>
       )}
     </aside>
   )
 
+  const collapsedRail = (
+    <aside
+      className="flex flex-col h-full w-12 bg-slate-50 border-r border-slate-200/80 items-center pt-4"
+      aria-label="Navigation (collapsed)"
+    >
+      <button
+        type="button"
+        onClick={handleExpand}
+        data-testid="sidebar-collapse-toggle"
+        aria-label="Expand navigation"
+        className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+      >
+        <CollapseChevron direction="right" />
+      </button>
+    </aside>
+  )
+
   return (
     <>
       <div className="hidden md:flex md:flex-shrink-0 md:sticky md:top-0 md:h-screen">
-        {panel}
+        {collapsed ? collapsedRail : panel}
       </div>
 
       {mobileOpen && (

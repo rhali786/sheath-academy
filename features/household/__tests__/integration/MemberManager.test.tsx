@@ -160,4 +160,42 @@ describe('MemberManager', () => {
     const removeButtons = screen.getAllByRole('button', { name: /remove/i })
     expect(removeButtons).toHaveLength(1)
   })
+
+  it('shows teacher badge for members with teacher role', async () => {
+    const MEMBERS_WITH_TEACHER = [
+      ...MEMBERS,
+      { memberId: 'hm_3', userId: 'user_teacher', role: 'teacher', email: 'teacher@test.com', name: 'Aisha Teacher', createdAt: '2024-01-03' },
+    ]
+    mockFetch.mockImplementation((url: string, options?: RequestInit) => {
+      if (url.includes('/api/household/members') && (!options || !options.method || options.method === 'GET')) {
+        return Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: { members: MEMBERS_WITH_TEACHER }, message: '', timestamp: '' }) })
+      }
+      if (url.includes('/api/household/invitations')) {
+        return Promise.resolve({ ok: true, json: async () => ({ status: 'success', data: { invitations: [] }, message: '', timestamp: '' }) })
+      }
+      return Promise.resolve({ ok: false, json: async () => ({ status: 'error', message: 'Not found' }) })
+    })
+    render(<MemberManager />)
+    await waitFor(() => {
+      expect(screen.getByText('Aisha Teacher')).toBeInTheDocument()
+    })
+    expect(screen.getByText('teacher')).toBeInTheDocument()
+  })
+
+  it('invite form has a role selector and sends role in POST body', async () => {
+    render(<MemberManager />)
+    await waitFor(() => {
+      expect(screen.getByTestId('invite-role-select')).toBeInTheDocument()
+    })
+    fireEvent.change(screen.getByTestId('invite-role-select'), { target: { value: 'teacher' } })
+    fireEvent.change(screen.getByRole('textbox', { name: /email/i }), { target: { value: 'new-teacher@test.com' } })
+    fireEvent.click(screen.getByRole('button', { name: /send invite/i }))
+
+    await waitFor(() => {
+      const call = mockFetch.mock.calls.find(c => c[0].includes('/api/household/invite') && c[1]?.method === 'POST')
+      expect(call).toBeTruthy()
+      const body = JSON.parse(call[1].body)
+      expect(body.role).toBe('teacher')
+    })
+  })
 })

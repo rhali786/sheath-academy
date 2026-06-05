@@ -10,6 +10,8 @@ import {
   listFeedbackByUserId,
   getFeedbackById,
   listFeedbackForAdmin,
+  listUnclassifiedFeedback,
+  deleteFeedbackByIds,
   updateFeedbackTriage,
   updateFeedbackWorkflow,
   approveFeedback,
@@ -155,5 +157,38 @@ describe('feedback repository', () => {
   itDb('listFeedbackForAdmin returns empty when no matches', async () => {
     const rows = await listFeedbackForAdmin({ status: 'shipped' })
     expect(Array.isArray(rows)).toBe(true)
+  })
+
+  itDb('listUnclassifiedFeedback scoped to ids returns only those rows', async () => {
+    const rows = await listUnclassifiedFeedback({ ids: [feedbackId] })
+    expect(rows.every(r => r.id === feedbackId)).toBe(true)
+  })
+
+  itDb('listUnclassifiedFeedback scoped to unknown id returns empty', async () => {
+    const rows = await listUnclassifiedFeedback({ ids: ['nonexistent-id'] })
+    expect(rows).toHaveLength(0)
+  })
+
+  itDb('deleteFeedbackByIds removes the specified rows', async () => {
+    const { randomUUID } = await import('crypto')
+    const tempId = randomUUID()
+    await insertFeedback({
+      id: tempId,
+      userId: null,
+      householdId: null,
+      userEmail: 'delete-test@integration.local',
+      pagePath: '/test',
+      sentiment: 'okay',
+      message: 'temp row for delete test',
+    })
+
+    await deleteFeedbackByIds([tempId])
+
+    const row = await getFeedbackById(tempId)
+    expect(row).toBeNull()
+  })
+
+  itDb('deleteFeedbackByIds is a no-op for empty list', async () => {
+    await expect(deleteFeedbackByIds([])).resolves.not.toThrow()
   })
 })

@@ -48,7 +48,7 @@ describe('Sidebar', () => {
 
   test('renders main nav links', () => {
     render(<Sidebar />)
-    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/')
     expect(screen.getByRole('link', { name: 'Lesson Planner' })).toHaveAttribute('href', '/plan')
     expect(screen.getByRole('link', { name: 'Courses' })).toHaveAttribute('href', '/lessons')
     expect(screen.getByRole('link', { name: 'Quran' })).toHaveAttribute('href', '/quran')
@@ -75,9 +75,30 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: 'Admin' })).toHaveAttribute('href', '/admin/metrics')
   })
 
-  test('renders muted app version in the sidebar footer', () => {
+  test('renders muted app version centered in the sidebar footer', () => {
     render(<Sidebar />)
-    expect(screen.getByTestId('sidebar-version')).toHaveTextContent('v2.0.0')
+    const versionEl = screen.getByTestId('sidebar-version')
+    expect(versionEl).toHaveTextContent('v2.0.0')
+    expect(versionEl.className).toContain('text-center')
+  })
+
+  test('Hijri date block is centered under the tagline', () => {
+    render(<Sidebar />)
+    const hijri = screen.getByTestId('sidebar-hijri-date')
+    expect(hijri.className).toContain('text-center')
+  })
+
+  test('collapse toggle is present and collapses then expands the sidebar panel', () => {
+    render(<Sidebar />)
+    // Panel is expanded — nav links visible
+    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument()
+    // Click collapse
+    fireEvent.click(screen.getByTestId('sidebar-collapse-toggle'))
+    // Nav links gone from expanded panel
+    expect(screen.queryByRole('link', { name: 'Home' })).not.toBeInTheDocument()
+    // Expand again
+    fireEvent.click(screen.getByTestId('sidebar-collapse-toggle'))
+    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument()
   })
 
   test('disabled Messages and Finances are not links', () => {

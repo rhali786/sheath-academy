@@ -19,7 +19,7 @@ describe('navConfig', () => {
 
   test('main and footer sections include expected labels', () => {
     const mainLabels = getNavItemsBySection('main').map((i) => i.label)
-    expect(mainLabels).toContain('Dashboard')
+    expect(mainLabels).toContain('Home')
     expect(mainLabels).toContain('Lesson Planner')
     expect(mainLabels).toContain('Messages')
 
@@ -40,10 +40,18 @@ describe('navConfig', () => {
     expect(messages?.showDisabledBadge).toBe(true)
   })
 
-  test('dashboard is active only on /', () => {
+  test('dashboard nav item has label "Home", href "/", and is active only on /', () => {
     const dashboard = NAV_ITEMS.find((i) => i.id === 'dashboard')!
+    expect(dashboard.label).toBe('Home')
+    expect(dashboard.href).toBe('/')
     expect(isNavItemActive('/', dashboard)).toBe(true)
     expect(isNavItemActive('/plan', dashboard)).toBe(false)
+  })
+
+  test('messages nav item stays disabled — messaging surface held pending data-isolation review', () => {
+    const messages = NAV_ITEMS.find((i) => i.id === 'messages')!
+    expect(messages.disabled).toBe(true)
+    expect(messages.href).toBeUndefined()
   })
 
   test('lesson planner is active on /plan but not /plan/schedule', () => {

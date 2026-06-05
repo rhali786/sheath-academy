@@ -252,6 +252,50 @@ describe('AdminFeedbackPage', () => {
       })
     })
 
+    it('shows reject button for reviewed and awaiting_approval rows', async () => {
+      const rows = [
+        makeRow({ id: 'fb_reviewed', status: 'reviewed' }),
+        makeRow({ id: 'fb_waiting', status: 'awaiting_approval' }),
+        makeRow({ id: 'fb_submitted', status: 'submitted' }),
+        makeRow({ id: 'fb_shipped', status: 'shipped' }),
+      ]
+      mockFetch.mockResolvedValue(mockOk({ status: 'success', data: rows }))
+      render(<AdminFeedbackPage />)
+      await waitFor(() => {
+        expect(screen.getByTestId('reject-button-fb_reviewed')).toBeInTheDocument()
+        expect(screen.getByTestId('reject-button-fb_waiting')).toBeInTheDocument()
+        expect(screen.queryByTestId('reject-button-fb_submitted')).not.toBeInTheDocument()
+        expect(screen.queryByTestId('reject-button-fb_shipped')).not.toBeInTheDocument()
+      })
+    })
+
+    it('opens reject modal when reject button clicked', async () => {
+      mockFetch.mockResolvedValue(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'reviewed' })] }))
+      render(<AdminFeedbackPage />)
+      await waitFor(() => screen.getByTestId('reject-button-fb_1'))
+      fireEvent.click(screen.getByTestId('reject-button-fb_1'))
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+        expect(screen.getByText('Reject planning')).toBeInTheDocument()
+      })
+    })
+
+    it('calls reject endpoint and moves row to cancelled on confirm', async () => {
+      mockFetch
+        .mockResolvedValueOnce(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'reviewed' })] }))
+        .mockResolvedValueOnce(mockOk({ status: 'success', data: null }))
+      render(<AdminFeedbackPage />)
+      await waitFor(() => screen.getByTestId('reject-button-fb_1'))
+      fireEvent.click(screen.getByTestId('reject-button-fb_1'))
+      await waitFor(() => screen.getByRole('dialog'))
+      fireEvent.click(screen.getByRole('button', { name: /^Reject$/i }))
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith('/api/admin/feedback/fb_1/reject', { method: 'POST' })
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        expect(screen.getByText('cancelled')).toBeInTheDocument()
+      })
+    })
+
     it('optimistic update shows classified badge after approval', async () => {
       mockFetch
         .mockResolvedValueOnce(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'awaiting_approval' })] }))

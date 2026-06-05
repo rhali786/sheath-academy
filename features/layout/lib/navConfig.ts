@@ -16,7 +16,7 @@ export type NavItem = {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', href: '/', section: 'main', activePrefixes: ['/'] },
+  { id: 'dashboard', label: 'Home', href: '/', section: 'main', activePrefixes: ['/'] },
   {
     id: 'calendar',
     label: 'Calendar',

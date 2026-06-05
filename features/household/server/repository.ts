@@ -6,7 +6,7 @@ export type UserRow = typeof users.$inferSelect
 export type HouseholdRow = typeof households.$inferSelect
 export type HouseholdMemberRow = typeof householdMembers.$inferSelect
 export type HouseholdInvitationRow = typeof householdInvitations.$inferSelect
-export type MembershipRole = 'owner' | 'member'
+export type MembershipRole = 'owner' | 'member' | 'teacher'
 
 export interface HouseholdMembership {
   householdId: string
