@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useCallback, useState } from 'react'
-import { MessageList, Message, MainContainer, ChatContainer, ConversationHeader } from '@chatscope/chat-ui-kit-react'
+import { MessageList, Message } from '@chatscope/chat-ui-kit-react'
 import { useThread } from '@/features/messaging/front/hooks/useThread'
 import { markRead, removeParticipant, getConversation } from '@/features/messaging/front/services/api'
 import type { ConversationParticipant } from '@/features/messaging/types'

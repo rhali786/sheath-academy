@@ -1,11 +1,17 @@
 'use client'
 
 import React, { useState } from 'react'
+import dynamic from 'next/dynamic'
+import '@chatscope/chat-ui-kit-styles/dist/default/styles.min.css'
 import { MessagingProvider, useMessagingContext } from '@/features/messaging/front/context/MessagingContext'
 import { ConversationList } from '@/features/messaging/front/components/ConversationList'
-import { ThreadView } from '@/features/messaging/front/components/ThreadView'
 import { NewMessageModal } from '@/features/messaging/front/components/NewMessageModal'
 import { NewGroupModal } from '@/features/messaging/front/components/NewGroupModal'
+
+const ThreadView = dynamic(
+  () => import('@/features/messaging/front/components/ThreadView').then((m) => ({ default: m.ThreadView })),
+  { ssr: false },
+)
 import { useSession } from 'next-auth/react'
 import type { Conversation } from '@/features/messaging/types'
 
