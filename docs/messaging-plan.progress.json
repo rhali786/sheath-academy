@@ -198,14 +198,24 @@
       "id": "phase-7",
       "title": "Polish + QA",
       "gated": false,
-      "status": "in_progress",
+      "status": "complete",
       "model": "claude-sonnet-4-6",
       "startedAt": "2026-06-06T22:00:00.000Z",
-      "completedAt": null,
+      "completedAt": "2026-06-06T22:30:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/messaging/front/pages/MessagingPage.tsx",
+          "features/messaging/__tests__/ui/MessagingPagePolish.test.tsx"
+        ],
+        "testsRun": [
+          "MessagingPage renders 'No conversations yet — start one' when conversation list is empty",
+          "MessagingPage shows error message and a Retry button when listConversations fails",
+          "ThreadView shows an empty state message when the conversation has no messages",
+          "ThreadView shows error state when getConversation rejects",
+          "Mobile: shows ConversationList when no conversation is selected",
+          "Mobile: shows ThreadView with back button when a conversation is selected"
+        ],
+        "notes": "Phase 7 complete. Added data-testid='conversation-list-pane' and data-testid='thread-pane' to MessagingPage.tsx pane divs to enable mobile single-pane testability. Created features/messaging/__tests__/ui/MessagingPagePolish.test.tsx with 6 tests covering: MessagingPage empty/error states, ThreadView empty/error states, and mobile single-pane back navigation. All 6 new tests pass. Full test suite passes (1 pre-existing unrelated auth test failure in features/auth/__tests__/front/Login.test.tsx — unchanged from baseline). npm run build passes. Version bumped to 2.22.1. Messaging feature is ready for manual QA and PR."
       },
       "failureReason": null
     }
