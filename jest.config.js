@@ -14,6 +14,8 @@ const customJestConfig = {
     '^@nivo/line$': '<rootDir>/features/dashboard/__tests__/mocks/nivo.tsx',
     '^@nivo/bar$': '<rootDir>/features/dashboard/__tests__/mocks/nivo.tsx',
     '^@nivo/core$': '<rootDir>/features/dashboard/__tests__/mocks/nivo.tsx',
+    '^@chatscope/chat-ui-kit-react$': '<rootDir>/features/messaging/__tests__/mocks/chatscope.tsx',
+    '^@chatscope/chat-ui-kit-styles/.*$': '<rootDir>/features/messaging/__tests__/mocks/chatscope-styles.js',
   },
   testMatch: [
     '**/__tests__/**/*.test.ts',
