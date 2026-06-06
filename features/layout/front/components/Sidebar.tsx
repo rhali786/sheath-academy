@@ -11,6 +11,7 @@ import {
 } from '@/features/layout/lib/navConfig'
 import { getNavIcon } from '@/features/layout/lib/navIcons'
 import { formatHeaderDates, type HeaderDateDisplay } from '@/features/layout/lib/formatHeaderDates'
+import { useUnreadMessages } from '@/features/messaging/front/hooks/useUnreadMessages'
 import { SheathLogo } from './SheathLogo'
 
 interface SidebarProps {
@@ -18,13 +19,14 @@ interface SidebarProps {
   onClose?: () => void
 }
 
-function CollapseChevron({ direction }: { direction: 'left' | 'right' }) {
+function SquishedPanelIcon({ direction }: { direction: 'collapse' | 'expand' }) {
   return (
-    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-      {direction === 'left' ? (
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+    <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      {direction === 'collapse' ? (
+        <line x1="5" y1="1" x2="5" y2="15" stroke="currentColor" strokeWidth="1.5" />
       ) : (
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        <line x1="11" y1="1" x2="11" y2="15" stroke="currentColor" strokeWidth="1.5" />
       )}
     </svg>
   )
@@ -51,11 +53,13 @@ function NavRow({
   pathname,
   settingsTab,
   onNavigate,
+  unreadCount = 0,
 }: {
   item: NavItem
   pathname: string
   settingsTab: string | null
   onNavigate?: () => void
+  unreadCount?: number
 }) {
   const active = isNavItemActive(pathname, item, settingsTab)
 
@@ -104,6 +108,14 @@ function NavRow({
       aria-current={active ? 'page' : undefined}
     >
       {labelRow}
+      {unreadCount > 0 && (
+        <span
+          data-testid="nav-badge-messages"
+          className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700"
+        >
+          {unreadCount}
+        </span>
+      )}
     </Link>
   )
 }
@@ -117,6 +129,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION
   const session = useSession()
   const isAdmin = session.data?.user?.isAdmin === true
+  const { count: unreadMessages } = useUnreadMessages()
 
   useEffect(() => {
     setHeaderDates(formatHeaderDates(new Date()))
@@ -143,7 +156,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
               <SheathLogo size={34} data-testid="sheath-logo" />
               <span className="text-lg font-bold text-slate-900 tracking-tight">Sheath</span>
             </div>
-            <p className="text-xs text-slate-400 pl-[2.625rem]">Faith. Learning. Purpose.</p>
+            <p className="text-xs text-slate-400 pl-[2.625rem] whitespace-nowrap">Faith. Learning. Purpose.</p>
           </Link>
           <button
             type="button"
@@ -152,7 +165,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             aria-label="Collapse navigation"
             className="mt-1 p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0"
           >
-            <CollapseChevron direction="left" />
+            <SquishedPanelIcon direction="collapse" />
           </button>
         </div>
         <div className="mt-3 text-center" data-testid="sidebar-hijri-date">
@@ -167,7 +180,14 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
         {mainItems.map((item) => (
-          <NavRow key={item.id} item={item} pathname={pathname} settingsTab={settingsTab} onNavigate={onClose} />
+          <NavRow
+            key={item.id}
+            item={item}
+            pathname={pathname}
+            settingsTab={settingsTab}
+            onNavigate={onClose}
+            unreadCount={item.id === 'messages' ? unreadMessages : 0}
+          />
         ))}
       </nav>
 
@@ -196,7 +216,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         aria-label="Expand navigation"
         className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
       >
-        <CollapseChevron direction="right" />
+        <SquishedPanelIcon direction="expand" />
       </button>
     </aside>
   )

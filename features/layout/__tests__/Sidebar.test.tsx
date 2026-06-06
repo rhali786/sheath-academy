@@ -11,19 +11,30 @@ jest.mock('next-auth/react', () => ({
   useSession: jest.fn(() => ({ data: null, status: 'unauthenticated' })),
 }))
 
+jest.mock('@/features/messaging/front/hooks/useUnreadMessages', () => ({
+  useUnreadMessages: jest.fn(() => ({ count: 0 })),
+}))
+
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { useUnreadMessages } from '@/features/messaging/front/hooks/useUnreadMessages'
 
 const mockUsePathname = usePathname as jest.Mock
 const mockUseSearchParams = useSearchParams as jest.Mock
 const mockUseSession = useSession as jest.Mock
+const mockUseUnreadMessages = useUnreadMessages as jest.Mock
 
 describe('Sidebar', () => {
   beforeEach(() => {
     mockUsePathname.mockReturnValue('/')
     mockUseSearchParams.mockReturnValue(new URLSearchParams())
     mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
+    mockUseUnreadMessages.mockReturnValue({ count: 0 })
     process.env.NEXT_PUBLIC_APP_VERSION = '2.0.0'
+  })
+
+  afterEach(() => {
+    mockUseUnreadMessages.mockReturnValue({ count: 0 })
   })
 
   test('renders brand Sheath and tagline', () => {
@@ -101,18 +112,30 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument()
   })
 
-  test('disabled Messages and Finances are not links', () => {
+  test('disabled Finances is not a link', () => {
     render(<Sidebar />)
-    expect(screen.queryByRole('link', { name: /messages/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /finances/i })).not.toBeInTheDocument()
-    expect(screen.getByTestId('nav-disabled-messages')).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByTestId('nav-disabled-finances')).toHaveAttribute('aria-disabled', 'true')
   })
 
-  test('Messages shows grayed badge', () => {
+  test('Messages nav item is enabled and is a link to /messages', () => {
+    render(<Sidebar />)
+    const link = screen.getByRole('link', { name: /messages/i })
+    expect(link).toHaveAttribute('href', '/messages')
+    expect(screen.queryByTestId('nav-disabled-messages')).not.toBeInTheDocument()
+  })
+
+  test('Sidebar badge shows live unread count when count > 0', () => {
+    mockUseUnreadMessages.mockReturnValue({ count: 5 })
     render(<Sidebar />)
     const badge = screen.getByTestId('nav-badge-messages')
-    expect(badge).toHaveClass('opacity-40')
+    expect(badge).toHaveTextContent('5')
+  })
+
+  test('Sidebar badge is hidden when unread count is zero', () => {
+    mockUseUnreadMessages.mockReturnValue({ count: 0 })
+    render(<Sidebar />)
+    expect(screen.queryByTestId('nav-badge-messages')).not.toBeInTheDocument()
   })
 
   test('highlights active route', () => {

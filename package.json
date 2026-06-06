@@ -1,6 +1,6 @@
 {
   "name": "sheath-academy",
-  "version": "2.16.0",
+  "version": "2.21.0",
   "private": true,
   "engines": {
     "node": ">=22.22.2"
@@ -32,9 +32,12 @@
     "steward:ship": "dotenv -e .env.local -- tsx scripts/feedback-steward/run-ship.ts",
     "steward:notify": "dotenv -e .env.local -- tsx scripts/feedback-steward/feedback-notify.ts",
     "steward:reset-classification": "dotenv -e .env.local -- tsx scripts/feedback-steward/run-reset-classification.ts",
+    "plan:execute": "tsx .claude/skills/plan-execute/run-execute.ts",
     "test:steward:integration": "dotenv -e .env.local -- jest --testPathPattern=\"feedback-steward/__tests__/integration\" --no-coverage --runInBand"
   },
   "dependencies": {
+    "@chatscope/chat-ui-kit-react": "^2.1.1",
+    "@chatscope/chat-ui-kit-styles": "^1.4.0",
     "@dnd-kit/core": "^6.3.1",
     "@nivo/bar": "^0.83.0",
     "@nivo/core": "^0.83.0",

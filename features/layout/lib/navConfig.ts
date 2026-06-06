@@ -59,9 +59,9 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'messages',
     label: 'Messages',
+    href: '/messages',
     section: 'main',
-    disabled: true,
-    showDisabledBadge: true,
+    activePrefixes: ['/messages'],
   },
   { id: 'finances', label: 'Finances', section: 'main', disabled: true },
   {

@@ -30,14 +30,14 @@ describe('navConfig', () => {
     expect(footerLabels).toContain('Feedback queue')
   })
 
-  test('disabled items include Messages and Finances', () => {
+  test('disabled items include Finances only (messages is now enabled)', () => {
     const disabled = NAV_ITEMS.filter((i) => i.disabled)
-    expect(disabled.map((i) => i.id)).toEqual(['messages', 'finances'])
+    expect(disabled.map((i) => i.id)).toEqual(['finances'])
   })
 
-  test('Messages shows disabled badge flag', () => {
+  test('Messages does not show a disabled badge flag', () => {
     const messages = NAV_ITEMS.find((i) => i.id === 'messages')
-    expect(messages?.showDisabledBadge).toBe(true)
+    expect(messages?.showDisabledBadge).toBeUndefined()
   })
 
   test('dashboard nav item has label "Home", href "/", and is active only on /', () => {
@@ -48,10 +48,11 @@ describe('navConfig', () => {
     expect(isNavItemActive('/plan', dashboard)).toBe(false)
   })
 
-  test('messages nav item stays disabled — messaging surface held pending data-isolation review', () => {
+  test('Messages nav item is enabled with href /messages and activePrefixes', () => {
     const messages = NAV_ITEMS.find((i) => i.id === 'messages')!
-    expect(messages.disabled).toBe(true)
-    expect(messages.href).toBeUndefined()
+    expect(messages.disabled).toBeUndefined()
+    expect(messages.href).toBe('/messages')
+    expect(messages.activePrefixes).toContain('/messages')
   })
 
   test('lesson planner is active on /plan but not /plan/schedule', () => {
