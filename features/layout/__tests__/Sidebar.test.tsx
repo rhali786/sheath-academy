@@ -59,7 +59,7 @@ describe('Sidebar', () => {
 
   test('renders main nav links', () => {
     render(<Sidebar />)
-    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/dashboard')
     expect(screen.getByRole('link', { name: 'Lesson Planner' })).toHaveAttribute('href', '/plan')
     expect(screen.getByRole('link', { name: 'Courses' })).toHaveAttribute('href', '/lessons')
     expect(screen.getByRole('link', { name: 'Quran' })).toHaveAttribute('href', '/quran')

@@ -16,7 +16,7 @@ export type NavItem = {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Home', href: '/', section: 'main', activePrefixes: ['/'] },
+  { id: 'dashboard', label: 'Home', href: '/dashboard', section: 'main', activePrefixes: ['/dashboard'] },
   {
     id: 'calendar',
     label: 'Calendar',
@@ -92,7 +92,7 @@ export function isNavItemActive(
   const prefixes = item.activePrefixes ?? [item.href.split('?')[0]]
 
   if (item.id === 'dashboard') {
-    return pathname === '/'
+    return pathname === '/dashboard'
   }
 
   if (item.id === 'lesson-planner') {

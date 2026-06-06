@@ -40,11 +40,11 @@ describe('navConfig', () => {
     expect(messages?.showDisabledBadge).toBeUndefined()
   })
 
-  test('dashboard nav item has label "Home", href "/", and is active only on /', () => {
+  test('dashboard nav item has label "Home", href "/dashboard", and is active on /dashboard', () => {
     const dashboard = NAV_ITEMS.find((i) => i.id === 'dashboard')!
     expect(dashboard.label).toBe('Home')
-    expect(dashboard.href).toBe('/')
-    expect(isNavItemActive('/', dashboard)).toBe(true)
+    expect(dashboard.href).toBe('/dashboard')
+    expect(isNavItemActive('/dashboard', dashboard)).toBe(true)
     expect(isNavItemActive('/plan', dashboard)).toBe(false)
   })
 
