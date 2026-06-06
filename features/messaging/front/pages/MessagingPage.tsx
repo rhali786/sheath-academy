@@ -31,6 +31,7 @@ function MessagingPageInner() {
       {/* Left pane: conversation list */}
       {/* On mobile: hidden when a conversation is selected */}
       <div
+        data-testid="conversation-list-pane"
         className={`
           flex flex-col w-full md:w-80 border-r border-gray-200 bg-white flex-shrink-0
           ${selectedConversationId ? 'hidden md:flex' : 'flex'}
@@ -66,6 +67,7 @@ function MessagingPageInner() {
 
       {/* Right pane: thread or placeholder */}
       <div
+        data-testid="thread-pane"
         className={`
           flex-1 flex flex-col overflow-hidden
           ${selectedConversationId ? 'flex' : 'hidden md:flex'}

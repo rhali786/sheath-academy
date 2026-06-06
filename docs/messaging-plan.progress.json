@@ -1,0 +1,213 @@
+{
+  "plan": "docs/messaging-plan.json",
+  "createdAt": "2026-06-06T00:00:00-04:00",
+  "updatedAt": "2026-06-06T21:15:00.000Z",
+  "branch": "feature/messaging",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Schema + repository",
+      "gated": false,
+      "status": "complete",
+      "model": null,
+      "startedAt": "2026-06-05T10:02:56-04:00",
+      "completedAt": "2026-06-05T10:02:56-04:00",
+      "outputs": {
+        "filesChanged": [
+          "db/schema.ts",
+          "db/wipe_app_data.sql",
+          "features/messaging/types.ts",
+          "features/messaging/server/repository.ts",
+          "features/messaging/__tests__/repository/messaging.repository.test.ts"
+        ],
+        "testsRun": [
+          "createDirectConversation dedupes the same user pair",
+          "createGroupConversation sets creator as admin + participant rows",
+          "insertMessage bumps conversation.lastMessageAt",
+          "listMessagesAfter returns only newer messages ascending",
+          "listConversationsForUser sorted by lastMessageAt with correct unread, excludes left",
+          "getUnreadTotal counts only messages after lastReadAt from other senders",
+          "addParticipant / removeParticipant / selfLeave behave per rules",
+          "insertAttachment rejects >1MB and non-image MIME; getAttachment returns bytes",
+          "getUserByEmail returns user or null (read-only)"
+        ],
+        "notes": "Four new tables added to db/schema.ts: conversations, conversation_participants, messages, message_attachments. bytea custom type defined inline. db/wipe_app_data.sql updated to truncate all four tables. Types exported from features/messaging/types.ts: Conversation, ConversationType, ConversationParticipant, ParticipantRole, Message, MessageAttachmentMeta, ConversationSummary. Repository at features/messaging/server/repository.ts exports: createDirectConversation (dedupes), createGroupConversation (creator=admin), insertMessage (bumps lastMessageAt), listMessagesAfter, listConversationsForUser, getUnreadTotal, addParticipant, removeParticipant, selfLeave, insertAttachment, getAttachment, getUserByEmail. Migration was generated and applied — check drizzle/ folder for the migration file range."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-2",
+      "title": "Service layer + authorization guards",
+      "gated": false,
+      "status": "complete",
+      "model": null,
+      "startedAt": "2026-06-05T10:09:31-04:00",
+      "completedAt": "2026-06-05T10:09:31-04:00",
+      "outputs": {
+        "filesChanged": [
+          "features/messaging/server/service.ts",
+          "features/messaging/__tests__/service/messaging.service.test.ts"
+        ],
+        "testsRun": [
+          "assertConversationParticipant throws for non-participant",
+          "assertConversationAdmin throws for non-admin",
+          "direct conversation dedupe path via service",
+          "unread math via service"
+        ],
+        "notes": "Service layer at features/messaging/server/service.ts. Exports: assertConversationParticipant(conversationId, userId) — throws 403/404 if user has no active (leftAt IS NULL) participant row; assertConversationAdmin(conversationId, userId) — throws 403 if role !== 'admin'. These are participant-based guards, NOT household-based — do not confuse with assertOwnership() from features/auth/server/context.ts. Service also wraps repository calls for dedupe logic and unread count computation."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-3",
+      "title": "API routes + slug wiring",
+      "gated": false,
+      "status": "complete",
+      "model": null,
+      "startedAt": "2026-06-05T10:21:45-04:00",
+      "completedAt": "2026-06-05T10:21:45-04:00",
+      "outputs": {
+        "filesChanged": [
+          "features/messaging/api/router.ts",
+          "features/messaging/api/routes/conversations.ts",
+          "features/messaging/api/routes/conversation-detail.ts",
+          "features/messaging/api/routes/conversation-messages.ts",
+          "features/messaging/api/routes/conversation-read.ts",
+          "features/messaging/api/routes/conversation-participants.ts",
+          "features/messaging/api/routes/unread.ts",
+          "features/messaging/api/routes/attachments.ts",
+          "features/messaging/api/responseHelpers.ts",
+          "features/messaging/api/attachmentUtils.ts",
+          "app/api/[...slug]/route.ts",
+          "features/messaging/__tests__/api/messaging.routes.test.ts"
+        ],
+        "testsRun": [
+          "POST /conversations {email} unknown user -> friendly 404, no user created",
+          "POST /conversations/:id/messages by non-participant -> 403/404",
+          "POST /participants by non-admin -> 403",
+          "DELETE /participants/:self by member -> 200 (self-leave)",
+          "GET /messages?after= returns incremental payload",
+          "GET /attachments/:id non-participant 403/404; participant -> bytes + Content-Type",
+          "GET /unread returns { count }"
+        ],
+        "notes": "Messaging router at features/messaging/api/router.ts handles all /api/messaging/* routes. app/api/[...slug]/route.ts now has a branch for slug[0]==='messaging' that dispatches to messagingRouter. All routes use getRequestAuthCtx() for auth. Route map: GET /conversations, POST /conversations, GET /conversations/:id, GET /conversations/:id/messages?after=&limit=, POST /conversations/:id/messages, POST /conversations/:id/read, POST /conversations/:id/participants, DELETE /conversations/:id/participants/:userId, GET /unread, GET /attachments/:id. All responses use standard ApiResponse<T> shape."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-4",
+      "title": "Front data layer + polling hooks",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-06T19:44:25.393Z",
+      "completedAt": "2026-06-06T19:45:35.981Z",
+      "outputs": {
+        "filesChanged": [
+          "features/messaging/front/services/api.ts",
+          "features/messaging/front/hooks/useConversations.ts",
+          "features/messaging/front/hooks/useThread.ts",
+          "features/messaging/front/hooks/useUnreadMessages.ts",
+          "features/messaging/front/context/MessagingContext.tsx",
+          "features/messaging/__tests__/hooks/useConversations.test.ts",
+          "features/messaging/__tests__/hooks/useThread.test.ts",
+          "features/messaging/__tests__/hooks/useUnreadMessages.test.ts"
+        ],
+        "testsRun": [
+          "useUnreadMessages fetches on mount and returns count",
+          "useUnreadMessages polls every 15 seconds",
+          "useUnreadMessages does not double-register timers on re-render",
+          "useUnreadMessages clears interval on unmount",
+          "useThread loads initial messages from getConversation on mount",
+          "useThread appends new messages from poll without replacing existing messages",
+          "useThread advances the after cursor to the last received message id",
+          "useThread does not duplicate messages when poll returns already-seen ids",
+          "useThread sets error on failure",
+          "useConversations fetches on mount and returns conversations",
+          "useConversations sets error on failure",
+          "useConversations reload re-fetches the list"
+        ],
+        "notes": "Phase 4 complete. Exports: useConversations (features/messaging/front/hooks/useConversations.ts), useThread (features/messaging/front/hooks/useThread.ts), useUnreadMessages (features/messaging/front/hooks/useUnreadMessages.ts — polls GET /api/messaging/unread every 15s), MessagingProvider + useMessagingContext (features/messaging/front/context/MessagingContext.tsx), full API client (features/messaging/front/services/api.ts — listConversations, getConversation, sendMessage, getMessages, markRead, getUnread, createDirectConversation, createGroupConversation, addParticipant, removeParticipant, getAttachmentUrl). Types used from features/messaging/types.ts: ConversationSummary, Message, ConversationParticipant, Conversation. Additional types exported from api.ts: ConversationDetail, MessagesPage, UnreadCount, ConversationList. All 12 hook tests pass; npm run build passes. Committed as feat(messaging): front data layer + polling hooks (version bumped to 2.20.0)."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-5",
+      "title": "Chat UI + discovery/group modals + attachments",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-06T20:30:00.000Z",
+      "completedAt": "2026-06-06T21:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "jest.config.js",
+          "features/messaging/__tests__/mocks/chatscope.tsx",
+          "features/messaging/__tests__/mocks/chatscope-styles.js",
+          "features/messaging/__tests__/integration/MessagingPage.test.tsx",
+          "features/messaging/front/components/ConversationList.tsx",
+          "features/messaging/front/components/ThreadView.tsx",
+          "features/messaging/front/components/Composer.tsx",
+          "features/messaging/front/components/NewMessageModal.tsx",
+          "features/messaging/front/components/NewGroupModal.tsx",
+          "features/messaging/front/pages/MessagingPage.tsx",
+          "app/(shell)/messages/page.tsx"
+        ],
+        "testsRun": [
+          "ConversationList renders loading skeleton",
+          "ConversationList renders empty state: 'No conversations yet'",
+          "ConversationList renders error state with retry",
+          "ConversationList renders populated list of conversations",
+          "Selecting a conversation renders ThreadView and fires markRead",
+          "Composer send calls sendMessage and appends the message",
+          "NewMessageModal household tab lists household members (mocked GET /api/household/members)",
+          "NewMessageModal email tab shows 'No account found' on unknown email",
+          "NewGroupModal requires title + at least 1 participant before creating",
+          "Non-admin member sees no add/remove controls but sees Leave button"
+        ],
+        "notes": "Phase 5 complete. Components: MessagingPage (features/messaging/front/pages/MessagingPage.tsx), ConversationList, ThreadView, Composer, NewMessageModal, NewGroupModal (all in features/messaging/front/components/). Shell route: app/(shell)/messages/page.tsx. Chatscope mock: YES — mock is at features/messaging/__tests__/mocks/chatscope.tsx and jest.config.js moduleNameMapper was updated with entries for @chatscope/chat-ui-kit-react and @chatscope/chat-ui-kit-styles. Integration tests: features/messaging/__tests__/integration/MessagingPage.test.tsx — all 10 pass. npm run build passes. Committed as feat(messaging): chat UI, discovery + group modals, attachments (version bumped to 2.21.0). Pre-existing unrelated auth test failure in features/auth/__tests__/front/Login.test.tsx — confirmed pre-exists on baseline branch."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-6",
+      "title": "Nav enablement + live unread badge",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-06T21:05:00.000Z",
+      "completedAt": "2026-06-06T21:15:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/layout/lib/navConfig.ts",
+          "features/layout/front/components/Sidebar.tsx",
+          "features/layout/__tests__/navConfig.test.ts",
+          "features/layout/__tests__/Sidebar.test.tsx"
+        ],
+        "testsRun": [
+          "Messages nav item is enabled with href /messages and activePrefixes",
+          "Messages nav item is enabled and is a link to /messages",
+          "Sidebar badge shows live unread count when count > 0",
+          "Sidebar badge is hidden when unread count is zero"
+        ],
+        "notes": "Phase 6 complete. Nav messages item enabled: features/layout/lib/navConfig.ts — removed disabled:true and showDisabledBadge:true, added href:'/messages' and activePrefixes:['/messages']. Sidebar.tsx imports useUnreadMessages from @/features/messaging/front/hooks/useUnreadMessages and renders a live badge (data-testid='nav-badge-messages') with the count value, hidden when count === 0. NavRow component gains an optional unreadCount prop; the badge is rendered inside the Link (enabled) branch only. Version bumped to 2.22.0. All 51 layout tests pass; npm run build passes."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-7",
+      "title": "Polish + QA",
+      "gated": false,
+      "status": "in_progress",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-06T22:00:00.000Z",
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    }
+  ]
+}
