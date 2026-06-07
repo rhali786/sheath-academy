@@ -1,11 +1,13 @@
 'use client'
 
-import React, { useEffect, useCallback, useState } from 'react'
-import { MessageList, Message } from '@chatscope/chat-ui-kit-react'
+import React, { useEffect, useCallback, useRef, useState } from 'react'
+import { ArrowLeft, MessageCircle, UserPlus } from 'lucide-react'
 import { useThread } from '@/features/messaging/front/hooks/useThread'
-import { markRead, removeParticipant, getConversation } from '@/features/messaging/front/services/api'
-import type { ConversationParticipant } from '@/features/messaging/types'
+import { markRead, removeParticipant } from '@/features/messaging/front/services/api'
 import { Composer } from '@/features/messaging/front/components/Composer'
+import { Avatar } from '@/features/messaging/front/components/Avatar'
+import { MessageBubble } from '@/features/messaging/front/components/MessageBubble'
+import { formatDaySeparator } from '@/features/messaging/front/lib/formatRelativeTime'
 
 interface ThreadViewProps {
   conversationId: string
@@ -15,29 +17,12 @@ interface ThreadViewProps {
 }
 
 export function ThreadView({ conversationId, currentUserId, onBack, onAddParticipant }: ThreadViewProps) {
-  const { messages, loading, error } = useThread(conversationId)
-  const [participants, setParticipants] = useState<ConversationParticipant[]>([])
-  const [convTitle, setConvTitle] = useState<string | null>(null)
-  const [convType, setConvType] = useState<'direct' | 'group'>('direct')
+  const { messages, participants, conversation, loading, error } = useThread(conversationId)
   const [leaving, setLeaving] = useState(false)
   const [leaveConfirm, setLeaveConfirm] = useState(false)
   const [localMessages, setLocalMessages] = useState(messages)
+  const bottomRef = useRef<HTMLDivElement>(null)
 
-  // Load participants and conversation meta
-  useEffect(() => {
-    let active = true
-    getConversation(conversationId)
-      .then((res) => {
-        if (!active) return
-        setParticipants(res.data.participants)
-        setConvTitle(res.data.conversation.title)
-        setConvType(res.data.conversation.type)
-      })
-      .catch(() => {})
-    return () => { active = false }
-  }, [conversationId])
-
-  // Mark read on mount and on new messages
   useEffect(() => {
     markRead(conversationId).catch(() => {})
   }, [conversationId])
@@ -48,6 +33,10 @@ export function ThreadView({ conversationId, currentUserId, onBack, onAddPartici
     }
     setLocalMessages(messages)
   }, [messages, conversationId])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView?.({ behavior: 'auto', block: 'end' })
+  }, [localMessages.length])
 
   const handleMessageSent = useCallback((msg: any) => {
     setLocalMessages((prev) => [...prev, msg])
@@ -68,23 +57,29 @@ export function ThreadView({ conversationId, currentUserId, onBack, onAddPartici
   const myParticipant = participants.find((p) => p.userId === currentUserId)
   const isAdmin = myParticipant?.role === 'admin'
 
-  const headerTitle = convType === 'group'
-    ? (convTitle || 'Group')
-    : (() => {
-        const other = participants.find((p) => p.userId !== currentUserId)
-        return other?.userName || other?.userEmail || 'Conversation'
-      })()
+  const otherParticipant = participants.find((p) => p.userId !== currentUserId)
+  const headerTitle = conversation?.type === 'group'
+    ? (conversation.title || 'Group')
+    : (otherParticipant?.userName || otherParticipant?.userEmail || 'Conversation')
+
+  const headerSubtitle = conversation?.type === 'group'
+    ? `${participants.length} members`
+    : 'Direct message'
+
+  const headerAvatar = conversation?.type === 'group'
+    ? { name: conversation.title, email: conversation.id }
+    : { name: otherParticipant?.userName, email: otherParticipant?.userEmail }
 
   if (loading) {
     return (
-      <div data-testid="thread-view-loading" className="flex-1 flex items-center justify-center p-8">
-        <div className="animate-pulse space-y-3 w-full max-w-lg">
+      <div data-testid="thread-view-loading" className="flex flex-1 items-center justify-center p-8">
+        <div className="w-full max-w-lg animate-pulse space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex space-x-3">
-              <div className="rounded-full bg-gray-200 h-8 w-8" />
+              <div className="h-8 w-8 rounded-full bg-slate-200" />
               <div className="flex-1 space-y-2">
-                <div className="h-3 bg-gray-200 rounded w-2/3" />
-                <div className="h-3 bg-gray-200 rounded w-1/3" />
+                <div className="h-3 w-2/3 rounded bg-slate-200" />
+                <div className="h-3 w-1/3 rounded bg-slate-200" />
               </div>
             </div>
           ))}
@@ -95,54 +90,59 @@ export function ThreadView({ conversationId, currentUserId, onBack, onAddPartici
 
   if (error) {
     return (
-      <div data-testid="thread-view-error" className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-        <p className="text-red-600 text-sm mb-2">Failed to load messages</p>
-        <p className="text-gray-500 text-xs">{error}</p>
+      <div data-testid="thread-view-error" className="flex flex-1 flex-col items-center justify-center p-8 text-center">
+        <p className="mb-2 text-sm text-red-600">Failed to load messages</p>
+        <p className="text-xs text-slate-500">{error}</p>
       </div>
     )
   }
 
   return (
-    <div data-testid="thread-view" className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
-        <div className="flex items-center gap-2">
+    <div data-testid="thread-view" className="flex h-full flex-col bg-white">
+      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+        <div className="flex min-w-0 items-center gap-3">
           {onBack && (
             <button
               onClick={onBack}
-              className="text-gray-600 hover:text-gray-900 mr-1"
+              className="mr-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 hover:text-slate-900 md:hidden"
               aria-label="Back to conversations"
             >
-              ←
+              <ArrowLeft className="h-5 w-5" />
             </button>
           )}
-          <span className="font-semibold text-gray-900">{headerTitle}</span>
+          <Avatar name={headerAvatar.name} email={headerAvatar.email} size="md" />
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-slate-900">{headerTitle}</p>
+            <p className="truncate text-xs text-slate-500">{headerSubtitle}</p>
+          </div>
         </div>
+
         <div className="flex items-center gap-2">
           {isAdmin && (
             <button
               onClick={onAddParticipant}
-              className="text-sm text-forest-600 hover:text-forest-800"
+              className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-forest-700 hover:bg-forest-50"
               aria-label="Add participant"
             >
-              + Add
+              <UserPlus className="h-4 w-4" />
+              Add
             </button>
           )}
           {currentUserId && (
             <>
               {leaveConfirm ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Leave this conversation?</span>
+                  <span className="text-sm text-slate-600">Leave this conversation?</span>
                   <button
                     onClick={handleLeave}
                     disabled={leaving}
-                    className="text-sm text-red-600 hover:text-red-800 font-medium"
+                    className="text-sm font-medium text-red-600 hover:text-red-800"
                   >
                     {leaving ? 'Leaving…' : 'Confirm'}
                   </button>
                   <button
                     onClick={() => setLeaveConfirm(false)}
-                    className="text-sm text-gray-500 hover:text-gray-700"
+                    className="text-sm text-slate-500 hover:text-slate-700"
                   >
                     Cancel
                   </button>
@@ -150,7 +150,7 @@ export function ThreadView({ conversationId, currentUserId, onBack, onAddPartici
               ) : (
                 <button
                   onClick={() => setLeaveConfirm(true)}
-                  className="text-sm text-gray-500 hover:text-red-600"
+                  className="rounded-lg px-3 py-1.5 text-sm text-slate-500 hover:bg-red-50 hover:text-red-600"
                 >
                   Leave
                 </button>
@@ -160,31 +160,49 @@ export function ThreadView({ conversationId, currentUserId, onBack, onAddPartici
         </div>
       </div>
 
-      {/* Message list */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50">
+      <div className="flex-1 overflow-y-auto bg-slate-50 px-4 py-4">
         {localMessages.length === 0 ? (
-          <div data-testid="thread-empty" className="text-center text-gray-400 text-sm mt-8">
-            No messages yet — say hello!
+          <div data-testid="thread-empty" className="flex h-full flex-col items-center justify-center text-center">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-forest-700 shadow-sm">
+              <MessageCircle className="h-6 w-6" />
+            </div>
+            <p className="text-sm font-medium text-slate-700">No messages yet</p>
+            <p className="mt-1 text-sm text-slate-500">Say hello to start the conversation</p>
           </div>
         ) : (
-          <MessageList>
-            {localMessages.map((msg) => (
-              <Message
-                key={msg.id}
-                model={{
-                  message: msg.body,
-                  sentTime: msg.createdAt,
-                  sender: msg.senderName || msg.senderUserId,
-                  direction: msg.senderUserId === currentUserId ? 'outgoing' : 'incoming',
-                  position: 'single',
-                }}
-              />
-            ))}
-          </MessageList>
+          <>
+            {localMessages.map((msg, index) => {
+              const isOutgoing = msg.senderUserId === currentUserId
+              const previous = localMessages[index - 1]
+              const daySeparator = formatDaySeparator(msg.createdAt)
+              const prevDaySeparator = previous ? formatDaySeparator(previous.createdAt) : null
+              const newDay = daySeparator !== prevDaySeparator
+              const firstOfGroup = newDay || !previous || previous.senderUserId !== msg.senderUserId
+
+              return (
+                <React.Fragment key={msg.id}>
+                  {newDay && (
+                    <div data-testid="day-separator" className="flex items-center justify-center py-3">
+                      <span className="rounded-full bg-slate-200/70 px-3 py-1 text-xs font-medium text-slate-500">
+                        {daySeparator}
+                      </span>
+                    </div>
+                  )}
+                  <MessageBubble
+                    message={msg}
+                    direction={isOutgoing ? 'outgoing' : 'incoming'}
+                    firstOfGroup={firstOfGroup}
+                    senderName={msg.senderName}
+                    senderEmail={participants.find((p) => p.userId === msg.senderUserId)?.userEmail}
+                  />
+                </React.Fragment>
+              )
+            })}
+            <div ref={bottomRef} aria-hidden="true" />
+          </>
         )}
       </div>
 
-      {/* Composer */}
       <Composer conversationId={conversationId} onMessageSent={handleMessageSent} />
     </div>
   )

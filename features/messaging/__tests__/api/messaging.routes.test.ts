@@ -25,6 +25,8 @@ jest.mock('@/features/messaging/server/service', () => {
 
 jest.mock('@/features/messaging/server/repository', () => ({
   listConversationsForUser: jest.fn(),
+  getConversationForUser: jest.fn(),
+  loadConversationDetailForUser: jest.fn(),
   insertMessage: jest.fn(),
   listMessagesAfter: jest.fn(),
   markRead: jest.fn(),
@@ -53,9 +55,13 @@ import {
   addParticipant,
   selfLeave,
   getAttachment,
+  listConversationsForUser,
+  getConversationForUser,
+  loadConversationDetailForUser,
 } from '@/features/messaging/server/repository'
 import { resolveAttachmentConversation } from '@/features/messaging/api/attachmentUtils'
 import { POST as postConversations } from '@/features/messaging/api/routes/conversations'
+import { GET as getConversationDetail } from '@/features/messaging/api/routes/conversation-detail'
 import {
   GET as getMessages,
   POST as postMessage,
@@ -76,6 +82,9 @@ const mockListMessagesAfter = jest.mocked(listMessagesAfter)
 const mockAddParticipant = jest.mocked(addParticipant)
 const mockSelfLeave = jest.mocked(selfLeave)
 const mockGetAttachment = jest.mocked(getAttachment)
+const mockListConversationsForUser = jest.mocked(listConversationsForUser)
+const mockGetConversationForUser = jest.mocked(getConversationForUser)
+const mockLoadConversationDetailForUser = jest.mocked(loadConversationDetailForUser)
 const mockResolveAttachmentConversation = jest.mocked(resolveAttachmentConversation)
 
 function makeRequest(method: string, url: string, body?: unknown): Request {
@@ -144,6 +153,52 @@ describe('POST /conversations — direct via email', () => {
     const body = await res.json()
     expect(res.status).toBe(400)
     expect(body.message).toMatch(/target user/i)
+  })
+})
+
+// ── 1b. GET /conversations/:id — detail payload includes participants ─────────
+
+describe('GET /conversations/:id', () => {
+  it('returns participants alongside conversation and messages, matching the client contract', async () => {
+    const summary = {
+      id: 'conv_1',
+      type: 'direct' as const,
+      title: null,
+      participants: [
+        { userId: 'user_a', role: 'member', userName: 'A', userEmail: 'a@test.com' },
+        { userId: 'user_b', role: 'member', userName: 'B', userEmail: 'b@test.com' },
+      ],
+    }
+    mockLoadConversationDetailForUser.mockResolvedValue({
+      conversation: summary as any,
+      messages: [],
+      participants: summary.participants,
+    })
+    mockListMessagesAfter.mockResolvedValue([])
+
+    const req = makeRequest('GET', 'http://localhost/api/messaging/conversations/conv_1')
+    const res = await getConversationDetail(req, 'conv_1')
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.data.conversation.id).toBe('conv_1')
+    expect(body.data.participants).toEqual(summary.participants)
+    expect(mockLoadConversationDetailForUser).toHaveBeenCalledWith('user_a', 'conv_1')
+    expect(mockListConversationsForUser).not.toHaveBeenCalled()
+    expect(mockAssertConversationParticipant).not.toHaveBeenCalled()
+    expect(mockListMessagesAfter).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 when the conversation is not found for the caller', async () => {
+    mockLoadConversationDetailForUser.mockResolvedValue(null)
+
+    const req = makeRequest('GET', 'http://localhost/api/messaging/conversations/conv_missing')
+    const res = await getConversationDetail(req, 'conv_missing')
+    const body = await res.json()
+
+    expect(res.status).toBe(404)
+    expect(body.message).toMatch(/not found/i)
+    expect(mockListConversationsForUser).not.toHaveBeenCalled()
   })
 })
 

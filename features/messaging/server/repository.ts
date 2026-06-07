@@ -1,4 +1,5 @@
 import { eq, and, or, gt, isNull, isNotNull, sql, desc, asc, inArray } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { getDb } from '@/features/lib/server/db'
 import {
   conversations,
@@ -11,6 +12,15 @@ import type { ConversationSummary } from '../types'
 
 const ALLOWED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
 const MAX_ATTACHMENT_BYTES = 1_048_576 // 1 MB
+
+function toIso(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
+}
+
+function toIsoOrNull(value: Date | string | null | undefined): string | null {
+  if (value == null) return null
+  return toIso(value)
+}
 
 function newId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
@@ -246,77 +256,89 @@ export async function listMessagesAfter(
 export async function listConversationsForUser(userId: string): Promise<ConversationSummary[]> {
   const db = getDb()
 
-  // Fetch active participant rows for this user
-  const myParticipations = await db
-    .select({ conversationId: conversationParticipants.conversationId, lastReadAt: conversationParticipants.lastReadAt })
+  const convRows = await db
+    .select({
+      id: conversations.id,
+      type: conversations.type,
+      title: conversations.title,
+      createdByUserId: conversations.createdByUserId,
+      lastMessageAt: conversations.lastMessageAt,
+      settings: conversations.settings,
+      createdAt: conversations.createdAt,
+      updatedAt: conversations.updatedAt,
+    })
     .from(conversationParticipants)
+    .innerJoin(conversations, eq(conversationParticipants.conversationId, conversations.id))
     .where(
       and(eq(conversationParticipants.userId, userId), isNull(conversationParticipants.leftAt)),
     )
-
-  if (myParticipations.length === 0) return []
-
-  const convIds = myParticipations.map((p) => p.conversationId)
-  const lastReadMap = new Map(myParticipations.map((p) => [p.conversationId, p.lastReadAt]))
-
-  // Fetch conversations
-  const convRows = await db
-    .select()
-    .from(conversations)
-    .where(inArray(conversations.id, convIds))
     .orderBy(desc(conversations.lastMessageAt))
 
-  // Fetch all active participants with user info
-  const allParticipants = await db
-    .select({
-      conversationId: conversationParticipants.conversationId,
-      userId: conversationParticipants.userId,
-      role: conversationParticipants.role,
-      userName: users.name,
-      userEmail: users.email,
-    })
-    .from(conversationParticipants)
-    .innerJoin(users, eq(users.id, conversationParticipants.userId))
-    .where(
-      and(
-        inArray(conversationParticipants.conversationId, convIds),
-        isNull(conversationParticipants.leftAt),
+  if (convRows.length === 0) return []
+
+  const convIds = convRows.map((c) => c.id)
+
+  const [allParticipants, unreadRows, lastMsgResult] = await Promise.all([
+    db
+      .select({
+        conversationId: conversationParticipants.conversationId,
+        userId: conversationParticipants.userId,
+        role: conversationParticipants.role,
+        userName: users.name,
+        userEmail: users.email,
+      })
+      .from(conversationParticipants)
+      .innerJoin(users, eq(users.id, conversationParticipants.userId))
+      .where(
+        and(
+          inArray(conversationParticipants.conversationId, convIds),
+          isNull(conversationParticipants.leftAt),
+        ),
       ),
-    )
-
-  // Compute unread counts per conversation
-  const unreadCounts = await Promise.all(
-    myParticipations.map(async (p) => {
-      const lastReadAt = p.lastReadAt
-      const countResult = await db
-        .select({ count: sql<number>`cast(count(*) as int)` })
-        .from(messages)
-        .where(
-          and(
-            eq(messages.conversationId, p.conversationId),
-            sql`${messages.senderUserId} <> ${userId}`,
-            lastReadAt ? gt(messages.createdAt, lastReadAt) : sql`true`,
+    db
+      .select({
+        conversationId: messages.conversationId,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(messages)
+      .innerJoin(
+        conversationParticipants,
+        and(
+          eq(conversationParticipants.conversationId, messages.conversationId),
+          eq(conversationParticipants.userId, userId),
+          isNull(conversationParticipants.leftAt),
+        ),
+      )
+      .where(
+        and(
+          inArray(messages.conversationId, convIds),
+          sql`${messages.senderUserId} <> ${userId}`,
+          or(
+            isNull(conversationParticipants.lastReadAt),
+            gt(messages.createdAt, conversationParticipants.lastReadAt),
           ),
-        )
-      return { conversationId: p.conversationId, count: countResult[0]?.count ?? 0 }
-    }),
-  )
+        ),
+      )
+      .groupBy(messages.conversationId),
+    db.execute<{ conversationId: string; body: string; senderUserId: string }>(sql`
+      SELECT DISTINCT ON (m.conversation_id)
+        m.conversation_id AS "conversationId",
+        m.body AS body,
+        m.sender_user_id AS "senderUserId"
+      FROM messages m
+      WHERE m.conversation_id IN (${sql.join(convIds.map((id) => sql`${id}`), sql`, `)})
+      ORDER BY m.conversation_id, m.created_at DESC
+    `),
+  ])
 
-  const unreadMap = new Map(unreadCounts.map((u) => [u.conversationId, u.count]))
+  const lastMsgRows = lastMsgResult as unknown as {
+    conversationId: string
+    body: string
+    senderUserId: string
+  }[]
 
-  // Fetch last message per conversation
-  const lastMessages = await Promise.all(
-    convIds.map(async (convId) => {
-      const rows = await db
-        .select({ body: messages.body, senderUserId: messages.senderUserId })
-        .from(messages)
-        .where(eq(messages.conversationId, convId))
-        .orderBy(desc(messages.createdAt))
-        .limit(1)
-      return { conversationId: convId, lastMessage: rows[0] ?? null }
-    }),
-  )
-  const lastMsgMap = new Map(lastMessages.map((l) => [l.conversationId, l.lastMessage]))
+  const unreadMap = new Map(unreadRows.map((u) => [u.conversationId, u.count]))
+  const lastMsgMap = new Map(lastMsgRows.map((l) => [l.conversationId, l]))
 
   return convRows.map((conv) => ({
     ...conv,
@@ -326,7 +348,10 @@ export async function listConversationsForUser(userId: string): Promise<Conversa
     updatedAt: conv.updatedAt.toISOString(),
     settings: (conv.settings as Record<string, unknown>) ?? null,
     unreadCount: unreadMap.get(conv.id) ?? 0,
-    lastMessage: lastMsgMap.get(conv.id) ?? null,
+    lastMessage: (() => {
+      const lm = lastMsgMap.get(conv.id)
+      return lm ? { body: lm.body, senderUserId: lm.senderUserId } : null
+    })(),
     participants: allParticipants
       .filter((p) => p.conversationId === conv.id)
       .map((p) => ({
@@ -336,6 +361,196 @@ export async function listConversationsForUser(userId: string): Promise<Conversa
         userEmail: p.userEmail,
       })),
   }))
+}
+
+/**
+ * Thread-detail loader: one JOIN query for conversation + participants.
+ * Skips inbox-only fields (unreadCount, lastMessage) — the detail route loads messages separately.
+ */
+export async function getConversationForUser(
+  userId: string,
+  conversationId: string,
+): Promise<ConversationSummary | null> {
+  const db = getDb()
+  const myParticipation = alias(conversationParticipants, 'my_participation')
+
+  const rows = await db
+    .select({
+      id: conversations.id,
+      type: conversations.type,
+      title: conversations.title,
+      createdByUserId: conversations.createdByUserId,
+      lastMessageAt: conversations.lastMessageAt,
+      settings: conversations.settings,
+      createdAt: conversations.createdAt,
+      updatedAt: conversations.updatedAt,
+      participantUserId: conversationParticipants.userId,
+      role: conversationParticipants.role,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(conversations)
+    .innerJoin(
+      myParticipation,
+      and(
+        eq(myParticipation.conversationId, conversations.id),
+        eq(myParticipation.userId, userId),
+        isNull(myParticipation.leftAt),
+      ),
+    )
+    .innerJoin(
+      conversationParticipants,
+      and(
+        eq(conversationParticipants.conversationId, conversations.id),
+        isNull(conversationParticipants.leftAt),
+      ),
+    )
+    .innerJoin(users, eq(users.id, conversationParticipants.userId))
+    .where(eq(conversations.id, conversationId))
+
+  if (rows.length === 0) return null
+
+  const head = rows[0]
+  return {
+    id: head.id,
+    type: head.type as 'direct' | 'group',
+    title: head.title,
+    createdByUserId: head.createdByUserId,
+    lastMessageAt: head.lastMessageAt?.toISOString() ?? null,
+    settings: (head.settings as Record<string, unknown>) ?? null,
+    createdAt: head.createdAt.toISOString(),
+    updatedAt: head.updatedAt.toISOString(),
+    unreadCount: 0,
+    lastMessage: null,
+    participants: rows.map((p) => ({
+      userId: p.participantUserId,
+      role: p.role as 'admin' | 'member',
+      userName: p.userName,
+      userEmail: p.userEmail,
+    })),
+  }
+}
+
+/** Thread open: conversation + participants + messages in a single DB round-trip. */
+export async function loadConversationDetailForUser(
+  userId: string,
+  conversationId: string,
+): Promise<{
+  conversation: ConversationSummary
+  messages: (typeof messages.$inferSelect)[]
+  participants: ConversationSummary['participants']
+} | null> {
+  const db = getDb()
+
+  type DetailRow = {
+    convId: string
+    convType: string
+    title: string | null
+    createdByUserId: string
+    lastMessageAt: Date | null
+    settings: unknown
+    createdAt: Date
+    updatedAt: Date
+    participants: ConversationSummary['participants'] | string
+    messages:
+      | Array<{
+          id: string
+          conversationId: string
+          senderUserId: string
+          body: string
+          reactions: unknown
+          createdAt: Date | string
+        }>
+      | string
+  }
+
+  const result = await db.execute(sql`
+    SELECT
+      c.id AS "convId",
+      c.type AS "convType",
+      c.title AS title,
+      c.created_by_user_id AS "createdByUserId",
+      c.last_message_at AS "lastMessageAt",
+      c.settings AS settings,
+      c.created_at AS "createdAt",
+      c.updated_at AS "updatedAt",
+      (
+        SELECT COALESCE(json_agg(json_build_object(
+          'userId', cp.user_id,
+          'role', cp.role,
+          'userName', u.name,
+          'userEmail', u.email
+        ) ORDER BY cp.user_id), '[]'::json)
+        FROM conversation_participants cp
+        INNER JOIN users u ON u.id = cp.user_id
+        WHERE cp.conversation_id = c.id AND cp.left_at IS NULL
+      ) AS participants,
+      (
+        SELECT COALESCE(json_agg(json_build_object(
+          'id', m.id,
+          'conversationId', m.conversation_id,
+          'senderUserId', m.sender_user_id,
+          'body', m.body,
+          'reactions', m.reactions,
+          'createdAt', m.created_at
+        ) ORDER BY m.created_at ASC, m.id ASC), '[]'::json)
+        FROM (
+          SELECT id, conversation_id, sender_user_id, body, reactions, created_at
+          FROM messages
+          WHERE conversation_id = c.id
+          ORDER BY created_at ASC, id ASC
+          LIMIT 50
+        ) m
+      ) AS messages
+    FROM conversations c
+    INNER JOIN conversation_participants my_cp
+      ON my_cp.conversation_id = c.id
+      AND my_cp.user_id = ${userId}
+      AND my_cp.left_at IS NULL
+    WHERE c.id = ${conversationId}
+    LIMIT 1
+  `)
+
+  const rows = result as unknown as DetailRow[]
+
+  if (rows.length === 0) return null
+
+  const row = rows[0]
+  const participantsRaw = row.participants
+  const participants: ConversationSummary['participants'] =
+    typeof participantsRaw === 'string'
+      ? (JSON.parse(participantsRaw) as ConversationSummary['participants'])
+      : (participantsRaw ?? [])
+  const messagesRaw = row.messages
+  const parsedMessages =
+    typeof messagesRaw === 'string'
+      ? (JSON.parse(messagesRaw) as DetailRow['messages'])
+      : (messagesRaw ?? [])
+
+  const messageRows: (typeof messages.$inferSelect)[] = (Array.isArray(parsedMessages) ? parsedMessages : []).map((m) => ({
+    id: m.id,
+    conversationId: m.conversationId,
+    senderUserId: m.senderUserId,
+    body: m.body,
+    reactions: m.reactions as (typeof messages.$inferSelect)['reactions'],
+    createdAt: m.createdAt instanceof Date ? m.createdAt : new Date(m.createdAt),
+  }))
+
+  const conversation: ConversationSummary = {
+    id: row.convId,
+    type: row.convType as 'direct' | 'group',
+    title: row.title,
+    createdByUserId: row.createdByUserId,
+    lastMessageAt: toIsoOrNull(row.lastMessageAt),
+    settings: (row.settings as Record<string, unknown>) ?? null,
+    createdAt: toIso(row.createdAt),
+    updatedAt: toIso(row.updatedAt),
+    unreadCount: 0,
+    lastMessage: null,
+    participants,
+  }
+
+  return { conversation, messages: messageRows, participants }
 }
 
 // ── Unread total ──────────────────────────────────────────────────────────────

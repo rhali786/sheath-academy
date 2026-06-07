@@ -36,8 +36,6 @@
     "test:steward:integration": "dotenv -e .env.local -- jest --testPathPattern=\"feedback-steward/__tests__/integration\" --no-coverage --runInBand"
   },
   "dependencies": {
-    "@chatscope/chat-ui-kit-react": "^2.1.1",
-    "@chatscope/chat-ui-kit-styles": "^1.4.0",
     "@dnd-kit/core": "^6.3.1",
     "@nivo/bar": "^0.83.0",
     "@nivo/core": "^0.83.0",

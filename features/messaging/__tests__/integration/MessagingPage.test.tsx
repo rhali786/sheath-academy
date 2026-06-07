@@ -11,10 +11,19 @@ jest.mock('next/navigation', () => ({
 // Mock next-auth/react
 jest.mock('next-auth/react', () => ({
   useSession: jest.fn(() => ({
-    data: { user: { id: 'user-me', name: 'Test User', email: 'test@example.com' } },
+    data: {
+      user: {
+        id: 'dev-bypass@example.com',
+        userId: 'user-me',
+        name: 'Test User',
+        email: 'test@example.com',
+      },
+    },
     status: 'authenticated',
   })),
 }))
+
+import { useSession } from 'next-auth/react'
 
 // Mock the messaging API service
 jest.mock('@/features/messaging/front/services/api', () => ({
@@ -48,6 +57,7 @@ const mockGetMessages = getMessages as jest.Mock
 const mockMarkRead = markRead as jest.Mock
 const mockCreateDirect = createDirectConversation as jest.Mock
 const mockCreateGroup = createGroupConversation as jest.Mock
+const mockUseSession = useSession as jest.Mock
 
 import type { ConversationSummary, Message, ConversationParticipant } from '@/features/messaging/types'
 
@@ -177,6 +187,40 @@ describe('ConversationList', () => {
     })
     // Should show participant name for direct conversation (not current user)
     expect(screen.getByText(/other person/i)).toBeInTheDocument()
+    expect(screen.queryByText(/^test user$/i)).not.toBeInTheDocument()
+    expect(screen.getByTestId('conversation-timestamp-conv-1')).toBeInTheDocument()
+    expect(screen.getAllByTestId('message-avatar').length).toBeGreaterThan(0)
+  })
+
+  it('shows the other participant when session.userId differs from session.user.id', async () => {
+    mockUseSession.mockImplementation(() => ({
+      data: {
+        user: {
+          id: 'dev-bypass@example.com',
+          userId: 'user-me',
+          name: 'Test User',
+          email: 'test@example.com',
+        },
+      },
+      status: 'authenticated',
+    }))
+
+    const conv = makeConversation()
+    mockListConversations.mockResolvedValue({
+      data: { conversations: [conv] },
+      status: 'success',
+      message: '',
+      timestamp: '',
+    })
+
+    await act(async () => {
+      render(<MessagingPage />)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/other person/i)).toBeInTheDocument()
+    })
+    expect(screen.queryByText(/^test user$/i)).not.toBeInTheDocument()
   })
 })
 
@@ -214,6 +258,8 @@ describe('Selecting a conversation renders ThreadView and fires markRead', () =>
       expect(screen.getByTestId('thread-view')).toBeInTheDocument()
     })
     expect(mockMarkRead).toHaveBeenCalledWith('conv-1')
+    expect(screen.getByTestId('message-bubble-msg-1')).toHaveAttribute('data-direction', 'incoming')
+    expect(screen.getByTestId('message-timestamp-msg-1')).toBeInTheDocument()
   })
 })
 
@@ -235,7 +281,12 @@ describe('Composer send calls sendMessage and appends the message', () => {
       render(<Composer conversationId="conv-1" onMessageSent={onMessageSent} />)
     })
 
-    const sendButton = screen.getByTestId('cs-message-input-send')
+    const input = screen.getByTestId('composer-input')
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'test message' } })
+    })
+
+    const sendButton = screen.getByTestId('composer-send')
     await act(async () => {
       fireEvent.click(sendButton)
     })
@@ -372,6 +423,82 @@ describe('NewGroupModal', () => {
     expect(mockCreateGroup).not.toHaveBeenCalled()
     // Should show validation error message (the text "Group title is required")
     expect(screen.getByText('Group title is required')).toBeInTheDocument()
+
+    global.fetch = origFetch
+  })
+})
+
+// ── Creating a conversation refreshes the visible list ────────────────────────
+
+describe('MessagingPage — creating a conversation shows it in the list', () => {
+  it('adds the new direct conversation to the list after creation', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          data: { members: [{ userId: 'user-other', name: 'Other Person', email: 'other@example.com' }] },
+          status: 'success',
+          message: '',
+          timestamp: '',
+        }),
+    })
+    const origFetch = global.fetch
+    global.fetch = fetchMock as any
+
+    const newConv = makeConversation({ id: 'conv-new' })
+
+    // First load: no conversations yet. After creation, the list includes the new one.
+    mockListConversations
+      .mockResolvedValueOnce({
+        data: { conversations: [] },
+        status: 'success',
+        message: '',
+        timestamp: '',
+      })
+      .mockResolvedValue({
+        data: { conversations: [newConv] },
+        status: 'success',
+        message: '',
+        timestamp: '',
+      })
+    mockCreateDirect.mockResolvedValue({
+      data: newConv,
+      status: 'success',
+      message: '',
+      timestamp: '',
+    })
+    mockGetConversation.mockResolvedValue({
+      data: { conversation: newConv, messages: [], participants: newConv.participants },
+      status: 'success',
+      message: '',
+      timestamp: '',
+    })
+
+    await act(async () => {
+      render(<MessagingPage />)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-list-empty')).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /new message/i }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Other Person')).toBeInTheDocument()
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByText('Other Person'))
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /start conversation/i }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId(`conversation-item-${newConv.id}`)).toBeInTheDocument()
+    })
 
     global.fetch = origFetch
   })

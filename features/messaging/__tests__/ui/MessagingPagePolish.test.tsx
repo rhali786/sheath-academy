@@ -12,10 +12,19 @@ jest.mock('next/navigation', () => ({
 // Mock next-auth/react
 jest.mock('next-auth/react', () => ({
   useSession: jest.fn(() => ({
-    data: { user: { id: 'user-me', name: 'Test User', email: 'test@example.com' } },
+    data: {
+      user: {
+        id: 'dev-bypass@example.com',
+        userId: 'user-me',
+        name: 'Test User',
+        email: 'test@example.com',
+      },
+    },
     status: 'authenticated',
   })),
 }))
+
+import { useSession } from 'next-auth/react'
 
 // Mock the messaging API service
 jest.mock('@/features/messaging/front/services/api', () => ({
@@ -43,6 +52,7 @@ const mockListConversations = listConversations as jest.Mock
 const mockGetConversation = getConversation as jest.Mock
 const mockGetMessages = getMessages as jest.Mock
 const mockMarkRead = markRead as jest.Mock
+const mockUseSession = useSession as jest.Mock
 
 import type { ConversationSummary, Message, ConversationParticipant } from '@/features/messaging/types'
 
@@ -131,6 +141,8 @@ describe('MessagingPage renders empty state', () => {
     await waitFor(() => {
       expect(screen.getByText(/no conversations yet.*start one/i)).toBeInTheDocument()
     })
+    expect(screen.getByTestId('messaging-shell')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /messages/i })).toHaveClass('page-title')
   })
 })
 
@@ -148,6 +160,66 @@ describe('MessagingPage renders error state with retry button when conversation 
       expect(screen.getByText(/failed to load/i)).toBeInTheDocument()
     })
     expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
+  })
+})
+
+// ── MessagingPage conversation labels ─────────────────────────────────────────
+
+describe('MessagingPage conversation list labels', () => {
+  it('shows the other participant using session.user.userId, not session.user.id', async () => {
+    mockUseSession.mockImplementation(() => ({
+      data: {
+        user: {
+          id: 'dev-bypass@example.com',
+          userId: 'user-me',
+          name: 'Test User',
+          email: 'test@example.com',
+        },
+      },
+      status: 'authenticated',
+    }))
+    mockListConversations.mockResolvedValue({
+      data: { conversations: [makeConversation()] },
+      status: 'success',
+      message: '',
+      timestamp: '',
+    })
+
+    await act(async () => {
+      render(<MessagingPage />)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/other person/i)).toBeInTheDocument()
+    })
+    expect(screen.queryByText(/^test user$/i)).not.toBeInTheDocument()
+  })
+})
+
+// ── ThreadView data loading ───────────────────────────────────────────────────
+
+describe('ThreadView data loading', () => {
+  it('calls getConversation only once on mount (via useThread)', async () => {
+    const conv = makeConversation()
+    mockGetConversation.mockResolvedValue({
+      data: {
+        conversation: conv,
+        messages: [],
+        participants: makeParticipants(),
+      },
+      status: 'success',
+      message: '',
+      timestamp: '',
+    })
+
+    await act(async () => {
+      render(<ThreadView conversationId="conv-1" currentUserId="user-me" onBack={() => {}} />)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('thread-view')).toBeInTheDocument()
+    })
+    expect(mockGetConversation).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -174,6 +246,8 @@ describe('ThreadView renders empty state when no messages', () => {
     await waitFor(() => {
       expect(screen.getByTestId('thread-empty')).toBeInTheDocument()
     })
+    expect(screen.getByTestId('composer-input')).toBeInTheDocument()
+    expect(screen.getByTestId('composer-send')).toBeInTheDocument()
   })
 })
 

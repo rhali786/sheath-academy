@@ -9,6 +9,7 @@ import {
   insertMessage,
   listMessagesAfter,
   listConversationsForUser,
+  getConversationForUser,
   getUnreadTotal,
   addParticipant,
   removeParticipant,
@@ -210,6 +211,35 @@ describe('listConversationsForUser', () => {
     const convs = await listConversationsForUser(userA.id)
     const found = convs.find((c) => c.id === conv.id)
     expect(found?.unreadCount).toBeGreaterThanOrEqual(2)
+  })
+})
+
+// ── 5b. getConversationForUser ────────────────────────────────────────────────
+
+describe('getConversationForUser', () => {
+  itDb('returns a single conversation summary for an active participant', async () => {
+    const conv = await createDirectConversation(userA.id, userB.id)
+    await insertMessage({ conversationId: conv.id, senderUserId: userB.id, body: 'Hi A' })
+
+    const summary = await getConversationForUser(userA.id, conv.id)
+    expect(summary).not.toBeNull()
+    expect(summary?.id).toBe(conv.id)
+    expect(summary?.participants.map((p) => p.userId).sort()).toEqual([userA.id, userB.id].sort())
+    expect(summary?.lastMessage).toBeNull()
+    expect(summary?.unreadCount).toBe(0)
+  })
+
+  itDb('returns null when the user is not an active participant', async () => {
+    const conv = await createDirectConversation(userA.id, userB.id)
+    await selfLeave(conv.id, userA.id)
+
+    const summary = await getConversationForUser(userA.id, conv.id)
+    expect(summary).toBeNull()
+  })
+
+  itDb('returns null for an unknown conversation id', async () => {
+    const summary = await getConversationForUser(userA.id, 'conv_does_not_exist')
+    expect(summary).toBeNull()
   })
 })
 

@@ -1,8 +1,10 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { X } from 'lucide-react'
 import { createDirectConversation } from '@/features/messaging/front/services/api'
 import type { Conversation } from '@/features/messaging/types'
+import { Avatar } from '@/features/messaging/front/components/Avatar'
 
 interface HouseholdMember {
   userId: string
@@ -86,38 +88,37 @@ export function NewMessageModal({ onClose, onCreated, currentUserId }: NewMessag
       role="dialog"
       aria-modal="true"
       aria-label="New message"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
     >
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">New Message</h2>
+      <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-900">New Message</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600"
             aria-label="Close"
           >
-            ✕
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200 mb-4">
+        <div className="mb-4 flex border-b border-slate-200">
           <button
             onClick={() => { setActiveTab('household'); setError(null) }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === 'household'
                 ? 'border-forest-600 text-forest-700'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
             Household
           </button>
           <button
             onClick={() => { setActiveTab('email'); setError(null) }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === 'email'
                 ? 'border-forest-600 text-forest-700'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
             By Email
@@ -127,13 +128,20 @@ export function NewMessageModal({ onClose, onCreated, currentUserId }: NewMessag
         {activeTab === 'household' && (
           <div>
             {loadingMembers ? (
-              <p className="text-sm text-gray-500">Loading members…</p>
+              <p className="text-sm text-slate-500">Loading members…</p>
             ) : members.length === 0 ? (
-              <p className="text-sm text-gray-500">No other household members found</p>
+              <p className="text-sm text-slate-500">No other household members found</p>
             ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
+              <div className="max-h-48 space-y-2 overflow-y-auto">
                 {members.map((m) => (
-                  <label key={m.userId} className="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-gray-50">
+                  <label
+                    key={m.userId}
+                    className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
+                      selectedUserId === m.userId
+                        ? 'border-forest-200 bg-forest-50'
+                        : 'border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="member"
@@ -142,24 +150,27 @@ export function NewMessageModal({ onClose, onCreated, currentUserId }: NewMessag
                       onChange={() => setSelectedUserId(m.userId)}
                       className="accent-forest-600"
                     />
-                    <span className="text-sm text-gray-900">{m.name}</span>
-                    <span className="text-xs text-gray-500">{m.email}</span>
+                    <Avatar name={m.name} email={m.email} size="sm" />
+                    <div className="min-w-0">
+                      <span className="block text-sm font-medium text-slate-900">{m.name}</span>
+                      <span className="block truncate text-xs text-slate-500">{m.email}</span>
+                    </div>
                   </label>
                 ))}
               </div>
             )}
-            {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
-            <div className="flex justify-end gap-2 mt-4">
+            {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+            <div className="mt-4 flex justify-end gap-2">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                className="rounded-lg px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800"
               >
                 Cancel
               </button>
               <button
                 onClick={handleHouseholdSubmit}
                 disabled={submitting || !selectedUserId}
-                className="px-4 py-2 text-sm bg-forest-600 text-white rounded hover:bg-forest-700 disabled:opacity-50"
+                className="rounded-lg bg-forest-900 px-4 py-2 text-sm font-medium text-white hover:bg-forest-800 disabled:opacity-50"
               >
                 {submitting ? 'Starting…' : 'Start Conversation'}
               </button>
@@ -169,7 +180,7 @@ export function NewMessageModal({ onClose, onCreated, currentUserId }: NewMessag
 
         {activeTab === 'email' && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-slate-700">
               Email address
             </label>
             <input
@@ -177,20 +188,20 @@ export function NewMessageModal({ onClose, onCreated, currentUserId }: NewMessag
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter email address"
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
             />
-            {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
-            <div className="flex justify-end gap-2 mt-4">
+            {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+            <div className="mt-4 flex justify-end gap-2">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                className="rounded-lg px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800"
               >
                 Cancel
               </button>
               <button
                 onClick={handleEmailSubmit}
                 disabled={submitting || !email.trim()}
-                className="px-4 py-2 text-sm bg-forest-600 text-white rounded hover:bg-forest-700 disabled:opacity-50"
+                className="rounded-lg bg-forest-900 px-4 py-2 text-sm font-medium text-white hover:bg-forest-800 disabled:opacity-50"
               >
                 {submitting ? 'Starting…' : 'Start Conversation'}
               </button>

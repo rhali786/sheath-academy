@@ -48,6 +48,25 @@ describe('useThread', () => {
     expect(result.current.messages[0].id).toBe('msg_1')
   })
 
+  it('exposes participants and conversation from the initial getConversation response', async () => {
+    const participants = [
+      { userId: 'u1', userName: 'Alice', userEmail: 'a@test.com', role: 'member' as const },
+    ]
+    mockGetConversation.mockImplementation(async () => ({
+      status: 'success',
+      data: { conversation: baseConversation, messages: [msg1], participants },
+      message: '',
+      timestamp: '',
+    }))
+
+    const { result } = renderHook(() => useThread('conv_1'))
+    await act(async () => {})
+
+    expect(result.current.participants).toEqual(participants)
+    expect(result.current.conversation?.id).toBe('conv_1')
+    expect(mockGetConversation).toHaveBeenCalledTimes(1)
+  })
+
   it('appends new messages from poll without replacing existing messages', async () => {
     mockGetMessages.mockImplementation(async (_convId, after) => {
       if (after === 'msg_1') {
