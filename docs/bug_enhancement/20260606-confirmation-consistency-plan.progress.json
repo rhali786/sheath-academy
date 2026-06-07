@@ -1,21 +1,27 @@
 {
   "plan": "C:\\PROJECTS\\sheath-academy-features\\docs\\bug_enhancement\\20260606-confirmation-consistency-plan.json",
   "createdAt": "2026-06-07T23:13:54.079Z",
-  "updatedAt": "2026-06-07T23:13:54.080Z",
+  "updatedAt": "2026-06-08T01:00:00.000Z",
   "branch": "feat/confirmation-consistency",
   "phases": [
     {
       "id": "phase-1",
       "title": "Shared InlineConfirm component (foundation)",
       "gated": true,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "claude-opus-4-8",
+      "startedAt": "2026-06-07T23:30:51.660Z",
+      "completedAt": "2026-06-08T00:00:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/lib/front/components/InlineConfirm.tsx",
+          "features/lib/__tests__/integration/InlineConfirm.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns \"/node_modules/\" --runTestsByPath features/lib/__tests__/integration/InlineConfirm.test.tsx (8 passed)",
+          "npm run build (passed)"
+        ],
+        "notes": "InlineConfirm exported from @/features/lib/front/components/InlineConfirm. Props: { message, detail?, confirmLabel?='Delete', pendingLabel?='Working…', cancelLabel?='Cancel', tone?='danger'|'warning', onConfirm: ()=>void|Promise<void>, onCancel: ()=>void }. Owns its OWN pending+error state internally — later phases must DROP local deleting/saving/isSubmitting flags and just pass onConfirm; on a rejected onConfirm promise the panel stays open and shows the error message inline (role=alert). Renders role=group with aria-label={message}; confirm/cancel buttons use aria-label={confirmLabel}/{cancelLabel}. tone drives confirm-button color only: danger=bg-red-600, warning=bg-amber-600. Markup: outer div role='group' with border (red-200/amber-200) rounded-lg p-4 bg-white space-y-3; message as <p> font-medium, detail as <p> text-xs text-gray-500. IMPORTANT REPO QUIRK for later phases: the default `npm test` config (jest.config.js) has testPathIgnorePatterns including '/__tests__/integration/', so the plan's doneWhen `npm test -- <integration path>` reports 'No tests found' (exit 1). Run integration tests with: npx jest --testPathIgnorePatterns \"/node_modules/\" --runTestsByPath <path>. Pre-existing failures unrelated to this work exist in features/feedback/__tests__/integration/AdminFeedbackPage.test.tsx (phase-5 will address feedback). No schema/migration touched."
       },
       "failureReason": null
     },
@@ -23,14 +29,24 @@
       "id": "phase-2",
       "title": "Migrate Pattern-B sites (LessonCard, EvidenceListItem, QuranPage)",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-07T23:35:08.366Z",
+      "completedAt": "2026-06-08T01:00:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/plan/front/components/LessonCard.tsx",
+          "features/portfolio/front/components/EvidenceListItem.tsx",
+          "features/quran/front/pages/QuranPage.tsx",
+          "features/plan/__tests__/integration/LessonTaskList.test.tsx",
+          "features/portfolio/__tests__/integration/EvidenceListItem.test.tsx",
+          "features/quran/__tests__/integration/QuranPage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath features/plan/__tests__/integration/LessonTaskList.test.tsx features/portfolio/__tests__/integration/EvidenceListItem.test.tsx features/quran/__tests__/integration/QuranPage.test.tsx (44 passed)",
+          "npm run build (passed)"
+        ],
+        "notes": "LessonCard, EvidenceListItem, QuranPage now render InlineConfirm (from @/features/lib/front/components/InlineConfirm) in place of each component's hand-rolled confirm panel. Local deleting/isSubmitting flags removed: EvidenceListItem dropped 'deleting' state + handleDelete fn; QuranPage dropped 'deletingId' state + confirmDelete fn. Confirm trigger state retained (confirmDelete in LessonCard/EvidenceListItem, confirmDeleteId in QuranPage). InlineConfirm messages: 'Delete this lesson?', 'Delete this evidence item?', 'Delete this session?' — these are the role=group aria-label values testable via getByRole('group', { name: /.../ }). InlineConfirm confirm button aria-label defaults to 'Delete'; cancel defaults to 'Cancel'. Tests updated to assert InlineConfirm markup (role=group) and use name='Delete'/'Cancel' for button selectors; error-keeps-open tests added for EvidenceListItem and QuranPage. IMPORTANT REPO QUIRK (same as phase-1): integration tests must be run with npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath <path> — not npm test."
       },
       "failureReason": null
     },
