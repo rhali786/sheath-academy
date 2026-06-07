@@ -9,7 +9,7 @@ import { ok, err } from '../responseHelpers'
 export async function GET() {
   const auth = getRequestAuthCtx()
   const conversations = await listConversationsForUser(auth.userId)
-  return ok(conversations)
+  return ok({ conversations })
 }
 
 export async function POST(request: Request) {
