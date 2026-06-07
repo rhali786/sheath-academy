@@ -48,6 +48,7 @@ import {
   markRead,
   createDirectConversation,
   createGroupConversation,
+  removeParticipant,
 } from '@/features/messaging/front/services/api'
 
 const mockListConversations = listConversations as jest.Mock
@@ -57,6 +58,7 @@ const mockGetMessages = getMessages as jest.Mock
 const mockMarkRead = markRead as jest.Mock
 const mockCreateDirect = createDirectConversation as jest.Mock
 const mockCreateGroup = createGroupConversation as jest.Mock
+const mockRemoveParticipant = removeParticipant as jest.Mock
 const mockUseSession = useSession as jest.Mock
 
 import type { ConversationSummary, Message, ConversationParticipant } from '@/features/messaging/types'
@@ -120,6 +122,7 @@ beforeEach(() => {
   mockMarkRead.mockReset()
   mockCreateDirect.mockReset()
   mockCreateGroup.mockReset()
+  mockRemoveParticipant.mockReset()
 
   // Default: never-resolving promise for getMessages (prevents polling side effects)
   mockGetMessages.mockReturnValue(new Promise(() => {}))
@@ -501,6 +504,139 @@ describe('MessagingPage — creating a conversation shows it in the list', () =>
     })
 
     global.fetch = origFetch
+  })
+})
+
+// ── ThreadView leave conversation ────────────────────────────────────────────
+
+function makeGroupConvMock() {
+  return {
+    data: {
+      conversation: makeConversation({
+        id: 'conv-group',
+        type: 'group',
+        title: 'Study Group',
+        createdByUserId: 'user-other',
+        participants: [
+          { userId: 'user-me', userName: 'Test User', userEmail: 'test@example.com', role: 'member' as const },
+          { userId: 'user-other', userName: 'Admin Person', userEmail: 'admin@example.com', role: 'admin' as const },
+        ],
+      }),
+      messages: [],
+      participants: [
+        {
+          id: 'p1',
+          conversationId: 'conv-group',
+          userId: 'user-me',
+          role: 'member' as const,
+          lastReadAt: null,
+          joinedAt: '2026-06-06T09:00:00Z',
+          leftAt: null,
+          userName: 'Test User',
+          userEmail: 'test@example.com',
+        },
+        {
+          id: 'p2',
+          conversationId: 'conv-group',
+          userId: 'user-other',
+          role: 'admin' as const,
+          lastReadAt: null,
+          joinedAt: '2026-06-06T09:00:00Z',
+          leftAt: null,
+          userName: 'Admin Person',
+          userEmail: 'admin@example.com',
+        },
+      ] as ConversationParticipant[],
+    },
+    status: 'success' as const,
+    message: '',
+    timestamp: '',
+  }
+}
+
+describe('ThreadView — leave conversation', () => {
+  it('clicking Leave shows InlineConfirm panel attached to the thread header', async () => {
+    mockGetConversation.mockResolvedValue(makeGroupConvMock())
+
+    await act(async () => {
+      render(
+        <ThreadView
+          conversationId="conv-group"
+          currentUserId="user-me"
+          onBack={jest.fn()}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('thread-view')).toBeInTheDocument()
+    })
+
+    expect(screen.getByRole('button', { name: /leave/i })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /leave/i }))
+
+    expect(screen.getByRole('group', { name: /leave this conversation\?/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^leave$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^cancel$/i })).toBeInTheDocument()
+  })
+
+  it('cancel hides InlineConfirm and restores the Leave button', async () => {
+    mockGetConversation.mockResolvedValue(makeGroupConvMock())
+
+    await act(async () => {
+      render(
+        <ThreadView
+          conversationId="conv-group"
+          currentUserId="user-me"
+          onBack={jest.fn()}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('thread-view')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /leave/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
+
+    expect(screen.getByRole('button', { name: /leave/i })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: /leave this conversation\?/i })).not.toBeInTheDocument()
+  })
+
+  it('confirm calls removeParticipant and invokes onBack', async () => {
+    mockGetConversation.mockResolvedValue(makeGroupConvMock())
+    mockRemoveParticipant.mockResolvedValue({ status: 'success', message: '', timestamp: '', data: {} })
+
+    const onBack = jest.fn()
+
+    await act(async () => {
+      render(
+        <ThreadView
+          conversationId="conv-group"
+          currentUserId="user-me"
+          onBack={onBack}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('thread-view')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /leave/i }))
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^leave$/i }))
+    })
+
+    await waitFor(() => {
+      expect(mockRemoveParticipant).toHaveBeenCalledWith('conv-group', 'user-me')
+    })
+    await waitFor(() => {
+      expect(onBack).toHaveBeenCalled()
+    })
   })
 })
 
