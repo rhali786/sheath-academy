@@ -102,7 +102,8 @@ describe('POST /conversations — direct via email', () => {
       new MessagingError(404, 'No account found for that email'),
     )
     const req = makeRequest('POST', 'http://localhost/api/messaging/conversations', {
-      email: 'nobody@test.com',
+      type: 'direct',
+      target: { email: 'nobody@test.com' },
     })
     const res = await postConversations(req)
     const body = await res.json()
@@ -116,11 +117,33 @@ describe('POST /conversations — direct via email', () => {
       new MessagingError(404, 'No account found for that email'),
     )
     const req = makeRequest('POST', 'http://localhost/api/messaging/conversations', {
-      email: 'nobody@test.com',
+      type: 'direct',
+      target: { email: 'nobody@test.com' },
     })
     await postConversations(req)
     // openDirectConversation was called (it threw), but no user-creation side-effect
     expect(mockOpenDirectConversation).toHaveBeenCalledWith('user_a', { email: 'nobody@test.com' })
+  })
+
+  it('routes a {type: "direct", target: {userId}} body to openDirectConversation with a userId target', async () => {
+    mockOpenDirectConversation.mockResolvedValue({ id: 'conv_1', type: 'direct' })
+    const req = makeRequest('POST', 'http://localhost/api/messaging/conversations', {
+      type: 'direct',
+      target: { userId: 'user_b' },
+    })
+    const res = await postConversations(req)
+    expect(res.status).toBe(200)
+    expect(mockOpenDirectConversation).toHaveBeenCalledWith('user_a', { userId: 'user_b' })
+  })
+
+  it('returns 400 when a direct request has no target', async () => {
+    const req = makeRequest('POST', 'http://localhost/api/messaging/conversations', {
+      type: 'direct',
+    })
+    const res = await postConversations(req)
+    const body = await res.json()
+    expect(res.status).toBe(400)
+    expect(body.message).toMatch(/target user/i)
   })
 })
 

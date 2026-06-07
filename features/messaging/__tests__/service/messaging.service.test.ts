@@ -122,6 +122,21 @@ describe('openDirectConversation', () => {
     ).rejects.toMatchObject({ status: 404 })
     expect(mockCreateDirectConversation).not.toHaveBeenCalled()
   })
+
+  it('throws MessagingError(400) and does not create a conversation when targeting self by userId', async () => {
+    await expect(
+      openDirectConversation('user_a', { userId: 'user_a' }),
+    ).rejects.toMatchObject({ status: 400, message: expect.stringMatching(/cannot start a conversation with yourself/i) })
+    expect(mockCreateDirectConversation).not.toHaveBeenCalled()
+  })
+
+  it('throws MessagingError(400) and does not create a conversation when targeting self by email', async () => {
+    mockGetUserByEmail.mockImplementation(async () => ({ id: 'user_a', email: 'a@test.com' }))
+    await expect(
+      openDirectConversation('user_a', { email: 'a@test.com' }),
+    ).rejects.toMatchObject({ status: 400, message: expect.stringMatching(/cannot start a conversation with yourself/i) })
+    expect(mockCreateDirectConversation).not.toHaveBeenCalled()
+  })
 })
 
 // ── 4. getUnreadCount — unread math via service ───────────────────────────────

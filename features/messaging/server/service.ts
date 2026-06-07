@@ -41,7 +41,8 @@ export async function assertConversationAdmin(
  * Opens or returns an existing direct conversation between the current user and
  * a target identified by userId or email.  Deduplication is handled by the
  * repository — calling twice for the same pair returns the same conversation.
- * Throws MessagingError(404) if an email is given but no account is found.
+ * Throws MessagingError(404) if an email is given but no account is found,
+ * or MessagingError(400) if the target resolves to the current user.
  */
 export async function openDirectConversation(
   currentUserId: string,
@@ -57,6 +58,10 @@ export async function openDirectConversation(
     targetUserId = user.id
   } else {
     targetUserId = target.userId
+  }
+
+  if (targetUserId === currentUserId) {
+    throw new MessagingError(400, 'You cannot start a conversation with yourself')
   }
 
   return createDirectConversation(currentUserId, targetUserId)
