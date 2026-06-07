@@ -152,6 +152,26 @@ New REST surface: extend the dynamic slug handler and the feature router consist
 
 - Real chart code does not run in Jest. Pass **explicit** array props (`legends`, `layers`, `markers`, `defs`, `fill`) so production does not hit `undefined.map` when `defaultProps` are not applied as expected.
 
+**Shell, git, and `gh` ergonomics (Windows / PowerShell — primary dev env)**
+
+The default shell here is **PowerShell**, not bash. Automated runs (`steward:execute`, `plan:execute`, headless `claude -p`) have repeatedly stalled or produced empty PRs on bash-isms. Apply these:
+
+- **No heredocs / `$(cat <<EOF …)`** — PowerShell does not support them. For multi-line `gh` PR/issue bodies, write a temp file and use `--body-file`:
+  ```
+  Set-Content -Path .pr-body.txt -Value $body
+  gh pr create --base dev --head <branch> --title "<title>" --body-file .pr-body.txt
+  Remove-Item .pr-body.txt
+  ```
+- **Idempotent PR creation** — `gh pr create` errors if a PR already exists for the branch. Check first: `gh pr list --head <branch> --json number`; if non-empty, `gh pr edit <number> --body-file …` instead.
+- **Merges must not open an editor or create surprise merge commits** — use `git merge --ff-only origin/dev` (stop and report on failure) or `--no-edit` when a merge commit is intended.
+- **Branches:** create with `git checkout -b <branch>` on first creation only. On resume/re-run use plain `git checkout <branch>` — **never** `git checkout -B`, which resets the branch to its base and destroys in-progress work.
+- **Commits come from the worker/operator, never implicitly** — the `plan:execute` runner does not commit. Uncommitted phase changes produce empty pushes/PRs. Commit per phase (see the `plan-execute` worker contract). Never `--no-verify` (the pre-commit hook bumps the version shown in the header).
+- **Check exit codes explicitly** — PowerShell does not chain like bash; read `$LASTEXITCODE` after a subprocess (`npm run plan:execute` returns `0` complete / `2` gated / `1` failed) rather than assuming success.
+
+**Database side effects (migrations)**
+
+`db:migrate` / `db:generate` and any plan phase touching `db/schema.ts` mutate whatever **`DATABASE_URL`** points at — there is no local-only sandbox by default. Before approving a gated schema/migration phase, confirm which database is targeted. Running migrations from multiple feature branches against one shared dev database causes journal drift; prefer merging migration PRs in order, or point at a throwaway DB for execution.
+
 ---
 
 ## Testing
