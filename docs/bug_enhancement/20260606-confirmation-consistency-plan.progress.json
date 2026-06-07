@@ -1,0 +1,113 @@
+{
+  "plan": "C:\\PROJECTS\\sheath-academy-features\\docs\\bug_enhancement\\20260606-confirmation-consistency-plan.json",
+  "createdAt": "2026-06-07T23:13:54.079Z",
+  "updatedAt": "2026-06-07T23:13:54.080Z",
+  "branch": "feat/confirmation-consistency",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Shared InlineConfirm component (foundation)",
+      "gated": true,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-2",
+      "title": "Migrate Pattern-B sites (LessonCard, EvidenceListItem, QuranPage)",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-3",
+      "title": "Migrate Pattern C (AttendanceList void, ThreadView leave)",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-4",
+      "title": "Fix #11 — ChildList archive (detached banner → attached panel)",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-5",
+      "title": "Convert feedback admin modals to inline panels",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-6",
+      "title": "Style-guide update — InlineConfirm as the single approved pattern",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-7",
+      "title": "Track C — InlineSuccess transient notice + style-guide §9",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    }
+  ]
+}
