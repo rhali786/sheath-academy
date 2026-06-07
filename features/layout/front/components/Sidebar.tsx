@@ -6,8 +6,10 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import {
   getNavItemsBySection,
+  getNavModules,
   isNavItemActive,
   type NavItem,
+  type NavModule,
 } from '@/features/layout/lib/navConfig'
 import { getNavIcon } from '@/features/layout/lib/navIcons'
 import { formatHeaderDates, type HeaderDateDisplay } from '@/features/layout/lib/formatHeaderDates'
@@ -139,6 +141,11 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
 
   const mainItems = filterByRole(getNavItemsBySection('main'))
   const footerItems = filterByRole(getNavItemsBySection('footer'))
+  const navModules = getNavModules().map(m => ({ ...m, items: filterByRole(m.items) }))
+
+  function shouldShowModuleHeading(moduleLabel: NavModule, items: NavItem[]): boolean {
+    return !items.some(item => item.label === moduleLabel)
+  }
 
   const handleCollapse = useCallback(() => setCollapsed(true), [])
   const handleExpand = useCallback(() => setCollapsed(false), [])
@@ -178,17 +185,30 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
-        {mainItems.map((item) => (
-          <NavRow
-            key={item.id}
-            item={item}
-            pathname={pathname}
-            settingsTab={settingsTab}
-            onNavigate={onClose}
-            unreadCount={item.id === 'messages' ? unreadMessages : 0}
-          />
-        ))}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
+        {navModules.map(({ label, items }) =>
+          items.length === 0 ? null : (
+            <div key={label}>
+              {shouldShowModuleHeading(label, items) && (
+                <p className="px-1 mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  {label}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {items.map(item => (
+                  <NavRow
+                    key={item.id}
+                    item={item}
+                    pathname={pathname}
+                    settingsTab={settingsTab}
+                    onNavigate={onClose}
+                    unreadCount={item.id === 'messages' ? unreadMessages : 0}
+                  />
+                ))}
+              </div>
+            </div>
+          )
+        )}
       </nav>
 
       <nav className="px-3 py-4 border-t border-slate-100 space-y-0.5">

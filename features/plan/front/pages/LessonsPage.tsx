@@ -33,7 +33,7 @@ export function LessonsPage() {
   const [filterStatus, setFilterStatus] = useState<LessonTaskStatus | ''>('')
   const [dateSort, setDateSort] = useState<DateSort>('desc')
   const [showForm, setShowForm] = useState(false)
-
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
   // Sync URL childId → filterChildId after children load and on URL changes
   useEffect(() => {
@@ -75,6 +75,8 @@ export function LessonsPage() {
     const householdId = householdProfile?.id ?? ''
     await plannerApi.createLesson({ ...data, householdId })
     await fetchLessons()
+    setShowForm(false)
+    setSuccessMsg('Lesson added!')
   }
 
   async function handleUpdate(id: string, patch: Partial<LessonTask>) {
@@ -89,11 +91,16 @@ export function LessonsPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-8">
+      {successMsg && (
+        <div role="alert" className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
+          {successMsg}
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h1 className="page-title mb-0">Lessons</h1>
         <button
           type="button"
-          onClick={() => setShowForm(v => !v)}
+          onClick={() => { setShowForm(v => !v); setSuccessMsg(null) }}
           className="px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800"
         >
           {showForm ? 'Cancel' : 'Add lesson'}

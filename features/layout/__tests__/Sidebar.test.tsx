@@ -168,3 +168,33 @@ describe('Sidebar', () => {
     expect(people.className).toContain('bg-forest-100')
   })
 })
+
+describe('Sidebar — module grouping headings', () => {
+  test('sidebar renders module group headings in main nav', () => {
+    render(<Sidebar />)
+    expect(screen.getByText('Planbook')).toBeInTheDocument()
+    expect(screen.getByText('Records')).toBeInTheDocument()
+    // Settings heading: multiple "Settings" exist (heading + footer link); verify at least 2
+    expect(screen.getAllByText('Settings').length).toBeGreaterThanOrEqual(2)
+  })
+
+  test('Home module does not get a redundant heading since the single item is named Home', () => {
+    render(<Sidebar />)
+    const homeTexts = screen.getAllByText('Home')
+    // Only the nav link itself — no separate heading element
+    expect(homeTexts).toHaveLength(1)
+  })
+
+  test('Compliance module does not get a redundant heading since the single item is named Compliance', () => {
+    render(<Sidebar />)
+    const complianceTexts = screen.getAllByText('Compliance')
+    expect(complianceTexts).toHaveLength(1)
+  })
+
+  test('all existing main nav items are still rendered', () => {
+    render(<Sidebar />)
+    expect(screen.getByRole('link', { name: /lesson planner/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /attendance/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /reports & records/i })).toBeInTheDocument()
+  })
+})

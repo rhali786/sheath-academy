@@ -229,4 +229,28 @@ describe('LessonsPage', () => {
       expect(sel).toHaveValue('child_002')
     })
   })
+
+  it('collapses form and shows Lesson added confirmation after successful submit', async () => {
+    const mockCreate = plannerApi.createLesson as jest.Mock
+    mockCreate.mockResolvedValue(ok(makeLesson()))
+    render(<LessonsPage />)
+    await openAddLessonForm()
+
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'New Lesson' } })
+    fireEvent.change(screen.getAllByRole('combobox').find(s =>
+      Array.from((s as HTMLSelectElement).options).some(o => o.text === 'Select child')
+    )!, { target: { value: 'child_001' } })
+
+    const subjectSel = screen.getAllByRole('combobox').find(s =>
+      Array.from((s as HTMLSelectElement).options).some(o => o.text === 'Select subject')
+    )
+    if (subjectSel) fireEvent.change(subjectSel, { target: { value: 'subj_001' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: /add lesson/i })).not.toBeInTheDocument()
+      expect(screen.getByText(/lesson added/i)).toBeInTheDocument()
+    })
+  })
 })

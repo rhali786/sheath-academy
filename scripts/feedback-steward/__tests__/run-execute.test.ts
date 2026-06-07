@@ -14,6 +14,7 @@ jest.mock('../run-daily', () => {
 })
 
 import { existsSync, readFileSync } from 'fs'
+import * as path from 'path'
 import { executeSavedDailyPlan } from '../run-daily'
 import { runExecuteDaily } from '../run-execute'
 
@@ -69,22 +70,24 @@ beforeEach(() => {
 
 describe('runExecuteDaily', () => {
   it('reads a saved plan artifact and executes that exact plan', async () => {
-    mockReadFileSync.mockImplementation((path: any) => {
-      const normalized = String(path).replace(/\\/g, '/')
+    mockReadFileSync.mockImplementation((filePath: any) => {
+      const normalized = String(filePath).replace(/\\/g, '/')
       if (normalized.endsWith('/docs/bug_enhancement/20260525-1558-steward-grouped-plan.json')) {
         return JSON.stringify(makePlanArtifact()) as never
       }
       throw new Error(`Unexpected readFileSync path: ${normalized}`)
     })
 
-    const result = await runExecuteDaily({
-      artifactPath: 'c:\\PROJECTS\\sheath-academy\\docs\\bug_enhancement\\20260525-1558-steward-grouped-plan.json',
-    })
+    const artifactPath = 'docs/bug_enhancement/20260525-1558-steward-grouped-plan.json'
+    const expectedJsonPath = path.resolve(artifactPath)
+    const expectedMarkdownPath = expectedJsonPath.slice(0, -'.json'.length) + '.md'
+
+    const result = await runExecuteDaily({ artifactPath })
 
     expect(mockExecuteSavedDailyPlan).toHaveBeenCalledWith({
       plan: makePlanArtifact(),
-      jsonArtifactPath: 'c:\\PROJECTS\\sheath-academy\\docs\\bug_enhancement\\20260525-1558-steward-grouped-plan.json',
-      markdownArtifactPath: 'c:\\PROJECTS\\sheath-academy\\docs\\bug_enhancement\\20260525-1558-steward-grouped-plan.md',
+      jsonArtifactPath: expectedJsonPath,
+      markdownArtifactPath: expectedMarkdownPath,
     })
     expect(result.execution.prNumber).toBe(42)
   })

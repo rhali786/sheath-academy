@@ -130,6 +130,7 @@ export function AttendancePage() {
   }
 
   const activeChildren = useMemo(() => children.filter(c => c.isActive), [children])
+  const selectedChild = children.find(c => c.id === selectedChildId)
 
   const filteredRecords = useMemo(() => {
     let list = records
@@ -248,7 +249,9 @@ export function AttendancePage() {
         </>
       )}
       <div>
-        <h2 className="text-lg font-bold text-slate-900 mb-3">Summary</h2>
+        <h2 className="text-lg font-bold text-slate-900 mb-3">
+          Summary{selectedChild ? ` — ${selectedChild.name}` : ''}
+        </h2>
         <AttendanceSummary summary={summary} />
       </div>
 
