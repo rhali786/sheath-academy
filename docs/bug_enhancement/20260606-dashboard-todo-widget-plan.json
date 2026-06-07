@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/bug_enhancement/20260606-dashboard-todo-widget-plan.md",
+  "branch": "feature/personal-todos",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Schema + repository + service (TDD, no UI)",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": ["None — first phase, new features/todos folder created from scratch; confirm migration SQL with the user before running db:migrate"],
+      "fileScope": [
+        "db/schema.ts",
+        "features/todos/types.ts",
+        "features/todos/server/repository.ts",
+        "features/todos/server/service.ts",
+        "features/todos/server/ids.ts",
+        "features/todos/__tests__/api/repository.test.ts",
+        "db/migrations/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: features/todos/__tests__/api/repository.test.ts — listTodoRows/insertTodoRow/updateTodoRow/deleteTodoRow round-trip persistence, mocking getDb() at the repository boundary per testing-patterns"
+      ],
+      "implementationSteps": [
+        "Add personal_todos table to db/schema.ts: id (text PK), householdId (FK households.id, notNull), text (notNull), done (boolean, notNull, default false), dueDate (nullable date), sortOrder (integer, notNull, default 0), completedAt (nullable timestamp), createdAt/updatedAt; index personal_todos_household_done_idx on (householdId, done)",
+        "Create features/todos/types.ts: PersonalTodo, CreateTodoInput, UpdateTodoInput",
+        "Implement server/ids.ts (generateTodoId, mirrors features/subjects/server/ids.ts)",
+        "Implement server/repository.ts (listTodoRows/getTodoRow/insertTodoRow/updateTodoRow/deleteTodoRow, always scoped by householdId) and server/service.ts (listTodos/createTodo/updateTodo/toggleTodoDone/deleteTodo/reorderTodos)",
+        "Run npm run db:generate, review the generated SQL, present to the user for confirmation before npm run db:migrate"
+      ],
+      "doneWhen": [
+        "RUN: npm run db:generate (review generated SQL before proceeding)",
+        "RUN: npm test -- features/todos/__tests__/api",
+        "RUN: npm run build",
+        "CONFIRM with user, then RUN: npm run db:migrate"
+      ],
+      "invariants": [
+        "npm run db:generate produces exactly one new migration creating personal_todos with a FK to households and an index on (householdId, done)",
+        "npm run db:migrate applies cleanly with no gap",
+        "no other table references personal_todos — additive and fully reversible by dropping the table"
+      ],
+      "writeBack": "New features/todos feature scaffolded: personal_todos table (householdId FK, text, done, dueDate, sortOrder, completedAt, timestamps, index on (householdId,done)); types PersonalTodo/CreateTodoInput/UpdateTodoInput in types.ts; repository (listTodoRows/getTodoRow/insertTodoRow/updateTodoRow/deleteTodoRow) and service (listTodos/createTodo/updateTodo/toggleTodoDone/deleteTodo/reorderTodos) implemented and unit-tested at the repository boundary."
+    },
+    {
+      "id": "phase-2",
+      "title": "API route + front client",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "Phase 1 repository/service functions implemented and migration applied",
+        "Read features/quran/api/router.ts's handle<Feature>Route shape (slug.length/slug[0]/method dispatch) before writing handleTodosRoute"
+      ],
+      "fileScope": [
+        "features/todos/api/router.ts",
+        "features/todos/api/routes/todos.ts",
+        "features/todos/api/routes/todo.ts",
+        "features/todos/front/services/api.ts",
+        "app/api/[...slug]/route.ts",
+        "features/todos/__tests__/api/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: GET/POST /api/todos — list returns the household's todos open-first ordered by sortOrder; create persists { text, dueDate? } and returns the standard { status, data, message, timestamp } shape",
+        "NEW TEST: PATCH/DELETE /api/todos/:id — update covers edit/toggle-done/reorder via { text?, dueDate?, done?, sortOrder? }; delete removes the row; both scoped to the session's householdId via getRequestAuthCtx"
+      ],
+      "implementationSteps": [
+        "Implement api/router.ts (handleTodosRoute matching slug.length/slug[0]/method, mirroring handleQuranRoute)",
+        "Implement api/routes/todos.ts (GET list, POST create) and api/routes/todo.ts (PATCH update/toggle/reorder, DELETE), each calling getRequestAuthCtx() for householdId and returning the standard response envelope",
+        "Register handleTodosRoute in app/api/[...slug]/route.ts alongside the other handle*Route imports",
+        "Implement front/services/api.ts (todosApi: list/create/update/toggle/remove/reorder) mirroring features/subjects/front/services/api.ts's get/post/put/patch wrapper shape"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/todos/__tests__/api",
+        "RUN: npm run build"
+      ],
+      "writeBack": "GET/POST /api/todos and PATCH/DELETE /api/todos/:id implemented in features/todos/api/{router,routes/todos,routes/todo}.ts, registered as handleTodosRoute in app/api/[...slug]/route.ts; todosApi front client (list/create/update/toggle/remove/reorder) added at features/todos/front/services/api.ts mirroring subjectsApi's wrapper shape."
+    },
+    {
+      "id": "phase-3",
+      "title": "Dashboard widget + integration tests",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "Phase 2 todosApi client available and routes live",
+        "Consult ui-style-guide for the inline editable-list and destructive-confirm patterns; check whether docs/bug_enhancement/20260606-confirmation-consistency-plan's InlineConfirm has merged — use it if so, otherwise ship a simple confirm-on-delete and note a follow-up to migrate"
+      ],
+      "fileScope": [
+        "features/todos/front/components/PersonalTodoList.tsx",
+        "features/todos/__tests__/integration/PersonalTodoList.test.tsx",
+        "features/dashboard/front/pages/Dashboard.tsx",
+        "features/dashboard/__tests__/integration/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: PersonalTodoList.test.tsx — loading (skeleton), empty ('No to-dos yet — add one for curriculum or supply planning'), error (retry affordance), and populated (ordered list, toggle, add, delete) states render correctly; add/toggle/delete interactions call todosApi and update the rendered list; destructive delete uses the agreed confirm pattern",
+        "UPDATE TEST: Dashboard integration test — PersonalTodoList renders in the right-rail composition alongside QuranStreak/SchoolYearProgressCard"
+      ],
+      "implementationSteps": [
+        "Build PersonalTodoList with loading/empty/error/populated states (skeleton consistent with DoToday/QuranStreak; error retry per Dashboard.tsx:121-135) plus checkbox toggle, inline add-input, and per-item delete",
+        "Wire it into Dashboard.tsx's right-rail space-y-6 column — final placement (between SchoolYearProgressCard and QuranStreak, or below QuranStreak) decided against the live rendered page to avoid crowding",
+        "No Header/AppShell import inside the widget (CLAUDE.md rule for feature components)"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/todos/__tests__/integration features/dashboard/__tests__/integration",
+        "RUN: npm run build"
+      ],
+      "writeBack": "PersonalTodoList widget built (loading/empty/error/populated, add/toggle/delete) and wired into Dashboard.tsx's right-rail column at <final placement>; integration tests cover all four states and every interaction per CLAUDE.md. Record which destructive-confirm pattern was used (InlineConfirm vs a simple confirm-on-delete placeholder) and whether a follow-up migration note was left."
+    },
+    {
+      "id": "phase-4",
+      "title": "Build, full test suite, smoke",
+      "gated": false,
+      "modelTier": "cheap",
+      "preconditions": ["Phases 1-3 complete and individually green"],
+      "fileScope": [],
+      "testsFirst": [
+        "VERIFY: full project build + test suite + smoke pass with features/todos and the PersonalTodoList widget in place — no regressions introduced"
+      ],
+      "doneWhen": [
+        "RUN: npm run build",
+        "RUN: npm test",
+        "RUN: npm run smoke"
+      ],
+      "writeBack": "Full build, test suite, and smoke checks pass with features/todos and the PersonalTodoList widget in place (no Nivo/chart involvement to verify — the widget has no charts). Feature ready for PR."
+    }
+  ]
+}

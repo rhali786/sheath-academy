@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/bug_enhancement/20260606-quran-progress-chart-plan.md",
+  "branch": "feat/quran-progress-chart",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "QuranProgressChart — beautiful client-side weekly progress chart (UI-only, Opus craft)",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [
+        "VERIFY FIRST: QuranPage already fetches and holds the full session list client-side (it renders a session list, fetched in the existing useEffect ~QuranPage.tsx:107-110). If the page only holds a summary (not the per-session rows), STOP and surface that server-side aggregation is needed instead — do not silently add a backend aggregation path.",
+        "Resolve the chart-primitive cross-feature ownership question: duplicate the ~12-line ChartContainer wrapper into features/quran/front/components/shared/, OR promote nivoTheme/palette/childColors to features/lib as shared design tokens — do not silently cross-import from features/dashboard/front (architecture-rules).",
+        "BEAUTY BAR (ui-style-guide): this page must meet the same polish level as the messaging surface — reuse the forest/slate palette and childColors tokens, the icon-in-circle empty state, and animate-pulse skeletons. Do NOT reuse the chat-bubble metaphor; match the polish, not the conversation pattern."
+      ],
+      "fileScope": [
+        "features/quran/front/components/QuranProgressChart.tsx",
+        "features/quran/front/components/shared/**",
+        "features/quran/front/pages/QuranPage.tsx",
+        "features/quran/front/services/api.ts",
+        "features/lib/front/**",
+        "features/quran/__tests__/integration/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: pure bucketing helper unit test — given session rows spanning several weeks, returns correct week-start buckets and counts, with an empty-input case returning [] (no DB, no mocks)",
+        "NEW TEST: features/quran/__tests__/integration/ — QuranProgressChart renders the populated chart container, a polished empty state (icon-in-circle + headline 'No Quran sessions logged yet' + hint), and an animate-pulse loading skeleton; Nivo is mocked per Jest config so assertions target the container/empty/loading affordances, not SVG output"
+      ],
+      "implementationSteps": [
+        "Implement a pure bucketByWeek(sessions) helper (colocated with the component) grouping the already-fetched session rows into weekly session-count buckets via useMemo — no API/route/service/schema change",
+        "Resolve the chart-primitive gate (duplicate ChartContainer into features/quran/front/components/shared/, or promote nivoTheme/palette/childColors to features/lib) and record the choice",
+        "Build QuranProgressChart ('use client', ResponsiveLine or ResponsiveBar following WeeklyActivity conventions): useMemo { data, isEmpty }, explicit array/object props (data, theme={nivoTheme}, margin, axisBottom/axisLeft with explicit format fns, legends as an explicit array or custom HTML legend, tooltip render fn, and layers/markers/defs/fill as explicit [] if ResponsiveLine)",
+        "BEAUTY: color the series from the shared forest/childColors palette (per-learner color where relevant); add a soft area gradient fill under the line via defs+fill, a smooth curve, light/no heavy gridlines, and a styled accessible tooltip — visually consistent with the dashboard charts and the messaging polish bar",
+        "BEAUTY: frame the chart in the app card surface (card / add-form-card with a 'form-section-heading' title e.g. 'Memorization progress'), responsive height ~220-260, consistent spacing; the empty state is a centered icon-in-circle (h-12 w-12 rounded-full bg-forest-50 text-forest-700 + a lucide-react glyph) over a headline + hint (mirroring ui-style-guide empty-state quality), and loading is an animate-pulse skeleton mirroring the chart footprint — never a spinner",
+        "Render the chart in QuranPage between the page intro and the session list, fed by the sessions array the page already holds (no new fetch)",
+        "Manual browser smoke after landing: npm run dev, /quran with seeded demo data (npm run db:reset:demo), confirm no undefined.map/.length crash, axes/legend/tooltip render, the gradient/curve look polished, and the empty state shows for a zero-session learner — document in PR"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/quran/__tests__/integration",
+        "RUN: npm run build",
+        "MANUAL: npm run dev, open /quran with seeded demo household, verify the chart renders without undefined.map/.length crashes, looks polished (palette, gradient, tooltip), and the empty state appears for a zero-session learner (Jest's Nivo mock cannot catch this)"
+      ],
+      "writeBack": "QuranProgressChart added (ResponsiveLine/Bar per WeeklyActivity conventions) and rendered in QuranPage between intro and session list; buckets the already-fetched sessions client-side via a pure weekly helper in a useMemo — NO backend/route/service/schema change. Built to the beauty bar: shared forest/childColors palette, area-gradient fill, smooth curve, styled tooltip, card framing, icon-in-circle empty state, animate-pulse loading skeleton. Chart-primitive decision recorded as duplicated-into-quran OR promoted-to-lib (state which + the import path). The dead chartData:[] stub in sessions.ts was left untouched (no longer needed). Manual browser smoke documented. Closes c9f5e6c9."
+    }
+  ]
+}

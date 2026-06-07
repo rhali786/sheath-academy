@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/bug_enhancement/20260606-schedule-calendar-views-plan.md",
+  "branch": "feat/schedule-calendar-views",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "View-mode state + day-view refactor (no behavior change)",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["Confirm the exact path of features/schedule/__tests__/integration/SchedulePage.test.tsx (plan notes 'if present — confirm during audit')"],
+      "fileScope": [
+        "features/schedule/front/pages/SchedulePage.tsx",
+        "features/schedule/front/lib/calendarRange.ts",
+        "features/schedule/__tests__/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: calendarRange unit tests — day/week/month window boundaries computed correctly, weekStartDay respected, month-grid lead/trail days correct",
+        "UPDATE TEST: SchedulePage integration test — day-view renders identically to before (regression: same timeline, lessons, date) and the fetch now requests the computed window's startDate/endDate"
+      ],
+      "implementationSteps": [
+        "Add viewMode: 'day' | 'week' | 'month' state to SchedulePage (default 'day', persisted as ?view= alongside the existing ?date=)",
+        "Create calendarRange.ts: a date-window helper computing the visible range per mode (day → [date,date]; week → 7-day window respecting householdProfile.weekStartDay like WeekGrid; month → calendar-month grid window incl. adjacent-month lead/trail days)",
+        "Refactor SchedulePage's fetch to call plannerApi.getLessons with the computed window's startDate/endDate and group results by dueDate client-side",
+        "Extend (do not replace) the existing isValidDateParam validation so deep-linked single-day ?date= URLs (e.g. from WeekGrid's click-through) keep working",
+        "Day mode continues to render exactly as today (single ScheduleTimeline) — only the range computation and fetch change"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/schedule/__tests__",
+        "RUN: npm run build"
+      ],
+      "writeBack": "Added viewMode ('day'|'week'|'month', persisted via ?view=) to SchedulePage and a new calendarRange.ts date-window helper covering all three modes (respecting householdProfile.weekStartDay). SchedulePage now fetches the computed window via plannerApi.getLessons and groups results by dueDate; day-mode rendering is an exact regression match to the prior behavior."
+    },
+    {
+      "id": "phase-2",
+      "title": "View-switcher + prev/next navigation control",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["Phase 1's viewMode state and calendarRange helper are in place"],
+      "fileScope": [
+        "features/schedule/front/components/CalendarNav.tsx",
+        "features/schedule/front/pages/SchedulePage.tsx",
+        "features/schedule/__tests__/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: CalendarNav/SchedulePage integration test — Previous/Next/Today change the displayed date range correctly per mode and update the ?date=/?view= URL params (mirrors WeekNavigator.test.tsx patterns if one exists)"
+      ],
+      "implementationSteps": [
+        "Build a Day/Week/Month segmented view-mode switcher plus Previous/Next/Today navigation buttons mirroring WeekNavigator's '← Previous'/'Next →' pattern, stepping by one day/week/month depending on viewMode",
+        "Wire both controls to update selectedDate (and the ?date=/?view= URL params) and re-trigger the Phase-1 windowed fetch",
+        "Colocate in SchedulePage.tsx if small enough per ui-style-guide component-size conventions, otherwise extract to CalendarNav.tsx"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/schedule/__tests__",
+        "RUN: npm run build"
+      ],
+      "writeBack": "Added a Day/Week/Month segmented switcher plus Previous/Next/Today navigation (mirrors WeekNavigator, steps by mode) wired to selectedDate and the ?date=/?view= URL params; both re-trigger the Phase-1 windowed fetch."
+    },
+    {
+      "id": "phase-3",
+      "title": "Week view renderer",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": ["Review the condensed-entry layout against ui-style-guide before implementation — confirm whether a compact ScheduleTimeline variant is acceptable at 7-column density or whether the guide prescribes a specific calendar pattern"],
+      "fileScope": [
+        "features/schedule/front/components/WeekCalendarView.tsx",
+        "features/schedule/__tests__/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: WeekCalendarView integration test — loading/empty/error/populated states render; all 7 days render including an explicit empty-day state ('No lessons scheduled'); clicking into a day navigates to (or expands) its day view"
+      ],
+      "implementationSteps": [
+        "Build WeekCalendarView laying out 7 DaySchedules (grouped per day, each built via the existing buildDailySchedule — called once per day, signature unchanged) as side-by-side day columns or a stacked agenda, rendered via ScheduleTimeline or a condensed variant per the style-guide gate decision",
+        "Render an explicit empty-state for days with no lessons (not a blank column)",
+        "Wire click-through from a day to its day view"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/schedule/__tests__",
+        "RUN: npm run build"
+      ],
+      "writeBack": "WeekCalendarView built — 7 DaySchedules grouped per day, built via the unchanged buildDailySchedule and rendered with ScheduleTimeline (or a condensed variant, per the style-guide review's chosen density); empty days show 'No lessons scheduled'; clicking a day navigates to its day view. Record which entry-density layout the ui-style-guide review approved, for Phase 4 to stay consistent."
+    },
+    {
+      "id": "phase-4",
+      "title": "Month view renderer",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [
+        "Same ui-style-guide review gate as Phase 3 — month-cell summary density (lesson count vs subject chips) is a design decision to confirm before implementation",
+        "Phase 1's calendarRange month-window helper (incl. lead/trail day boundaries) is available to reuse"
+      ],
+      "fileScope": [
+        "features/schedule/front/components/MonthCalendarView.tsx",
+        "features/schedule/__tests__/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: MonthCalendarView integration test — loading/empty/error/populated states render; adjacent-month lead/trail days render dimmed and non-interactive; lesson summaries (count/subject chips) are accurate; click-through to day view works"
+      ],
+      "implementationSteps": [
+        "Build MonthCalendarView rendering a traditional calendar grid (weeks × days), each cell showing a compact summary (lesson count / subject chips per the style-guide gate decision), with dimmed/non-interactive lead/trail days from adjacent months",
+        "Reuse Phase-1's calendarRange month-window helper for grid boundaries",
+        "Wire click-through from a cell to that day's day view"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/schedule/__tests__",
+        "RUN: npm run build"
+      ],
+      "writeBack": "MonthCalendarView built — calendar grid (weeks × days) using calendarRange's month-window helper for boundaries, dimmed/non-interactive lead/trail days, and compact per-cell summaries (record whether lesson-count or subject-chip style was approved by the style-guide review); click-through to day view wired."
+    }
+  ]
+}

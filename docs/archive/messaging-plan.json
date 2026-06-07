@@ -1,0 +1,292 @@
+{
+  "feature": "messaging",
+  "planDoc": "docs/messaging-plan.md",
+  "branch": "feature/messaging",
+  "baseBranch": "dev",
+  "progressFile": "docs/messaging-plan.progress.json",
+  "obligatorySetup": ["npm install", "npm run setup-hooks"],
+  "loadSkillsBeforeCoding": ["testing-patterns", "architecture-rules", "ui-style-guide"],
+  "rules": [
+    "TDD: write the failing test(s) for a phase first, then implement until green.",
+    "npm run build and npm test must pass before committing each phase.",
+    "Stay inside the phase allowedFiles; do not touch out-of-scope paths.",
+    "Read the actual type/schema files before editing (CLAUDE.md pre-implementation audit).",
+    "Never use --no-verify; the pre-commit hook bumps the patch version.",
+    "Messaging is user-scoped, NOT household-scoped. Authorization is participant-based.",
+    "Storage is normalized rows; jsonb only for bounded fields; document shape built at the API boundary.",
+    "getDb() is never mocked; repository integration tests skip without DATABASE_URL."
+  ],
+  "decisions": {
+    "shapes": "1:1 and group threads",
+    "discovery": "household-member dropdown (reuse GET /api/household/members at client layer) + email-to-DM lookup (read-only, never creates a user)",
+    "realtime": "polling; open thread every 3s via ?after=<messageId>; nav unread badge every 15s",
+    "attachments": "images only, <=1MB, bytea in message_attachments table, served via guarded GET /api/messaging/attachments/:id",
+    "chatUi": "@chatscope/chat-ui-kit-react + @chatscope/chat-ui-kit-styles, wrapped in local components, Tailwind/forest overrides",
+    "groupAdmin": "creator is admin; only admin adds/removes others; any member may self-leave (set leftAt)",
+    "byteaNote": "Drizzle pg-core has no native bytea; define customType<{ data: Buffer }>()"
+  },
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "Schema + repository",
+      "gated": false,
+      "modelTier": "strong",
+      "allowedFiles": [
+        "db/schema.ts",
+        "db/wipe_app_data.sql",
+        "drizzle/**",
+        "features/messaging/types.ts",
+        "features/messaging/server/repository.ts",
+        "features/messaging/__tests__/**"
+      ],
+      "tests": [
+        "createDirectConversation dedupes the same user pair",
+        "createGroupConversation sets creator as admin + participant rows",
+        "insertMessage bumps conversation.lastMessageAt",
+        "listMessagesAfter returns only newer messages ascending",
+        "listConversationsForUser sorted by lastMessageAt with correct unread, excludes left",
+        "getUnreadTotal counts only messages after lastReadAt from other senders",
+        "addParticipant / removeParticipant / selfLeave behave per rules",
+        "insertAttachment rejects >1MB and non-image MIME; getAttachment returns bytes",
+        "getUserByEmail returns user or null (read-only)"
+      ],
+      "commit": "feat(messaging): schema + repository for conversations, messages, attachments"
+    },
+    {
+      "id": "phase-2",
+      "name": "Service layer + authorization guards",
+      "gated": false,
+      "modelTier": "standard",
+      "allowedFiles": [
+        "features/messaging/server/**",
+        "features/messaging/__tests__/**"
+      ],
+      "tests": [
+        "assertConversationParticipant throws for non-participant",
+        "assertConversationAdmin throws for non-admin",
+        "direct conversation dedupe path via service",
+        "unread math via service"
+      ],
+      "commit": "feat(messaging): service layer with participant/admin authorization"
+    },
+    {
+      "id": "phase-3",
+      "name": "API routes + slug wiring",
+      "gated": false,
+      "modelTier": "standard",
+      "allowedFiles": [
+        "features/messaging/api/**",
+        "app/api/[...slug]/route.ts",
+        "features/messaging/__tests__/**"
+      ],
+      "tests": [
+        "POST /conversations {email} unknown user -> friendly 404, no user created",
+        "POST /conversations/:id/messages by non-participant -> 403/404",
+        "POST /participants by non-admin -> 403",
+        "DELETE /participants/:self by member -> 200 (self-leave)",
+        "GET /messages?after= returns incremental payload",
+        "GET /attachments/:id non-participant 403/404; participant -> bytes + Content-Type",
+        "GET /unread returns { count }"
+      ],
+      "commit": "feat(messaging): REST routes + slug wiring"
+    },
+    {
+      "id": "phase-4",
+      "name": "Front data layer + polling hooks",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "progress.json shows phase-3 status: complete",
+        "features/messaging/api/router.ts exists and handles all messaging routes",
+        "app/api/[...slug]/route.ts dispatches slug[0]==='messaging' to messagingRouter"
+      ],
+      "allowedFiles": [
+        "features/messaging/types.ts",
+        "features/messaging/front/services/api.ts",
+        "features/messaging/front/context/MessagingContext.tsx",
+        "features/messaging/front/hooks/useConversations.ts",
+        "features/messaging/front/hooks/useThread.ts",
+        "features/messaging/front/hooks/useUnreadMessages.ts",
+        "features/messaging/__tests__/hooks/**"
+      ],
+      "IMPORTANT_NOTE": "All implementation files and tests for this phase already exist on disk as UNTRACKED files (not yet committed). Read them BEFORE doing anything. Do NOT rewrite or overwrite them. Your job is: (1) run the tests, (2) fix any failures within scope, (3) run npm run build, (4) stage and commit.",
+      "tests": [
+        "useUnreadMessages fetches on mount and returns count",
+        "useUnreadMessages polls every 15 seconds",
+        "useUnreadMessages clears interval on unmount",
+        "useThread appends only new messages from ?after= incremental fetch",
+        "useConversations loading/error/populated states and reload"
+      ],
+      "steps": [
+        "1. Read progress.json and verify preconditions hold.",
+        "2. Read ALL existing files in allowedFiles before doing anything — they are already written.",
+        "3. Run: npm test -- --testPathPattern=\"features/messaging/__tests__/hooks\"",
+        "4. If tests fail, fix within allowedFiles scope only. Do NOT rewrite passing tests.",
+        "5. Run: npm run build — must pass.",
+        "6. Stage all untracked phase-4 files: features/messaging/front/ and features/messaging/__tests__/hooks/",
+        "7. Commit with message: feat(messaging): front data layer + polling hooks"
+      ],
+      "doneWhen": [
+        "npm test -- --testPathPattern=\"features/messaging/__tests__/hooks\" passes",
+        "npm run build passes",
+        "All phase-4 files are committed on feature/messaging branch"
+      ],
+      "writeBack": "Phase 4 complete. Exports: useConversations (features/messaging/front/hooks/useConversations.ts), useThread (features/messaging/front/hooks/useThread.ts), useUnreadMessages (features/messaging/front/hooks/useUnreadMessages.ts — polls GET /api/messaging/unread every 15s), MessagingProvider + useMessagingContext (features/messaging/front/context/MessagingContext.tsx), full API client (features/messaging/front/services/api.ts — listConversations, getConversation, sendMessage, getMessages, markRead, getUnread, createDirectConversation, createGroupConversation, addParticipant, removeParticipant, getAttachmentUrl). Types in features/messaging/types.ts: ConversationSummary, Message, ConversationParticipant, Conversation, ConversationDetail, MessagesPage, UnreadCount, ConversationList.",
+      "commit": "feat(messaging): front data layer + polling hooks"
+    },
+    {
+      "id": "phase-5",
+      "name": "Chat UI + discovery/group modals + attachments",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "progress.json shows phase-4 status: complete",
+        "features/messaging/front/services/api.ts exports listConversations, getConversation, sendMessage, getMessages, markRead, createDirectConversation, createGroupConversation, addParticipant, removeParticipant, getAttachmentUrl",
+        "features/messaging/front/hooks/useThread.ts exports useThread(conversationId)",
+        "features/messaging/front/hooks/useConversations.ts exports useConversations()",
+        "features/messaging/front/context/MessagingContext.tsx exports MessagingProvider and useMessagingContext"
+      ],
+      "allowedFiles": [
+        "features/messaging/front/pages/**",
+        "features/messaging/front/components/**",
+        "features/messaging/front/hooks/**",
+        "app/(shell)/messages/page.tsx",
+        "package.json",
+        "package-lock.json",
+        "jest.config.js",
+        "features/messaging/__tests__/integration/**",
+        "features/messaging/__tests__/mocks/**"
+      ],
+      "tests": [
+        "ConversationList renders loading skeleton",
+        "ConversationList renders empty state: 'No conversations yet'",
+        "ConversationList renders error state with retry",
+        "ConversationList renders populated list of conversations",
+        "Selecting a conversation renders ThreadView and fires markRead",
+        "Composer send calls sendMessage and appends the message",
+        "NewMessageModal household tab lists household members (mocked GET /api/household/members)",
+        "NewMessageModal email tab shows 'No account found' on unknown email",
+        "NewGroupModal requires title + at least 1 participant before creating",
+        "Non-admin member sees no add/remove controls but sees Leave button"
+      ],
+      "steps": [
+        "1. Read progress.json; verify preconditions from phase-4 outputs.notes.",
+        "2. Check package.json: if @chatscope/chat-ui-kit-react is NOT listed, run: npm install @chatscope/chat-ui-kit-react @chatscope/chat-ui-kit-styles",
+        "3. Write ALL failing integration tests first under features/messaging/__tests__/integration/ before writing any component.",
+        "4. Attempt a minimal chatscope render in jsdom. If it throws, create features/messaging/__tests__/mocks/chatscope.tsx mocking MessageList, Message, MessageInput, MainContainer, ChatContainer, ConversationList, Conversation, ConversationHeader — then add the moduleNameMapper entry to jest.config.js (follow the Nivo mock precedent already in jest.config.js).",
+        "5. Create features/messaging/front/components/ConversationList.tsx — loading/empty/error/populated states; each item shows conversation title (or participant names for direct), unread badge, last message preview; data-testid='conversation-list'; calls setSelectedConversationId on click.",
+        "6. Create features/messaging/front/components/ThreadView.tsx — uses useThread(conversationId); wraps chatscope MessageList; loading/error states; calls markRead on mount and on new messages; data-testid='thread-view'.",
+        "7. Create features/messaging/front/components/Composer.tsx — wraps chatscope MessageInput; calls sendMessage; handles image attachment picker (client-side reject >1MB or non-image MIME before send); data-testid='composer'.",
+        "8. Create features/messaging/front/components/NewMessageModal.tsx — modal (not window.confirm); two tabs: Household (dropdown from GET /api/household/members, filter out current user) and By Email (text input, shows friendly error if email not found); on confirm calls createDirectConversation.",
+        "9. Create features/messaging/front/components/NewGroupModal.tsx — modal; title input + multi-select participants; requires title + >=1 participant; on confirm calls createGroupConversation.",
+        "10. Create features/messaging/front/pages/MessagingPage.tsx — wraps MessagingProvider; two-pane layout (ConversationList left, ThreadView right); NewMessageModal / NewGroupModal triggered by toolbar buttons; admin sees add/remove participant controls; any member sees Leave with styled confirm (no window.confirm); data-testid='messaging-page'.",
+        "11. Create app/(shell)/messages/page.tsx — thin shell: import MessagingPage and render it; export metadata with title 'Messages'.",
+        "12. Run: npm test -- --testPathPattern=\"features/messaging/__tests__/integration\" — fix any failures within allowedFiles.",
+        "13. Run: npm run build — must pass.",
+        "14. Commit: feat(messaging): chat UI, discovery + group modals, attachments"
+      ],
+      "notes": "Resolve whether @chatscope kit renders under jsdom; if it crashes add a mock under features/messaging/__tests__/mocks/ (Nivo precedent in jest.config.js).",
+      "doneWhen": [
+        "npm test -- --testPathPattern=\"features/messaging/__tests__/integration\" passes",
+        "npm run build passes",
+        "app/(shell)/messages/page.tsx exists and exports a default page component"
+      ],
+      "writeBack": "Phase 5 complete. Components: MessagingPage (features/messaging/front/pages/MessagingPage.tsx), ConversationList, ThreadView, Composer, NewMessageModal, NewGroupModal (all in features/messaging/front/components/). Shell route: app/(shell)/messages/page.tsx. Chatscope mock: record YES or NO — if YES, mock is at features/messaging/__tests__/mocks/chatscope.tsx and jest.config.js moduleNameMapper was updated. Integration tests under features/messaging/__tests__/integration/.",
+      "commit": "feat(messaging): chat UI, discovery + group modals, attachments"
+    },
+    {
+      "id": "phase-6",
+      "name": "Nav enablement + live unread badge",
+      "gated": false,
+      "modelTier": "cheap",
+      "preconditions": [
+        "progress.json shows phase-5 status: complete",
+        "app/(shell)/messages/page.tsx exists",
+        "features/messaging/front/hooks/useUnreadMessages.ts exports useUnreadMessages() returning { count: number }",
+        "features/layout/lib/navConfig.ts has a 'messages' entry (currently disabled: true)"
+      ],
+      "allowedFiles": [
+        "features/layout/lib/navConfig.ts",
+        "features/layout/front/components/Sidebar.tsx",
+        "features/layout/__tests__/**",
+        "features/messaging/__tests__/**"
+      ],
+      "tests": [
+        "Messages nav item is enabled (href='/messages') and not disabled",
+        "Sidebar badge shows the live unread count from useUnreadMessages",
+        "Sidebar badge is hidden when unread count is zero"
+      ],
+      "steps": [
+        "1. Read progress.json; verify preconditions from phase-5 outputs.notes.",
+        "2. Write the failing test first under features/layout/__tests__/ before editing any nav files.",
+        "3. Read features/layout/lib/navConfig.ts in full. Find the 'messages' nav item (currently has disabled:true and showDisabledBadge:true).",
+        "4. Update the messages item: remove disabled:true, remove showDisabledBadge:true, add href:'/messages', add activePrefixes:['/messages']. Leave all other nav items unchanged.",
+        "5. Read features/layout/front/components/Sidebar.tsx in full. Find where the static badge is rendered for the messages nav item.",
+        "6. Import useUnreadMessages from '@/features/messaging/front/hooks/useUnreadMessages' in Sidebar.tsx.",
+        "7. Replace the static badge with the live count: render the badge only when count > 0, show the count value.",
+        "8. Run: npm test -- --testPathPattern=\"features/layout\" — fix any failures within allowedFiles.",
+        "9. Run: npm run build — must pass.",
+        "10. Commit: feat(messaging): enable Messages nav item with live unread badge"
+      ],
+      "doneWhen": [
+        "npm test -- --testPathPattern=\"features/layout\" passes",
+        "npm run build passes",
+        "navConfig messages entry has href:'/messages' and no disabled:true"
+      ],
+      "writeBack": "Phase 6 complete. Nav messages item is enabled with href='/messages'. Sidebar.tsx imports useUnreadMessages and renders a live badge that hides at zero. The Messages nav link is now clickable and routes to /messages.",
+      "commit": "feat(messaging): enable Messages nav item with live unread badge"
+    },
+    {
+      "id": "phase-7",
+      "name": "Polish + QA",
+      "gated": false,
+      "modelTier": "cheap",
+      "preconditions": [
+        "progress.json shows phase-6 status: complete",
+        "npm run build passes on the current branch",
+        "npm test passes on the current branch"
+      ],
+      "allowedFiles": [
+        "features/messaging/front/**",
+        "features/messaging/__tests__/**",
+        "app/(shell)/messages/page.tsx"
+      ],
+      "tests": [
+        "MessagingPage renders empty state 'No conversations yet — start one' when conversation list is empty",
+        "MessagingPage renders error state with retry button when conversation load fails",
+        "ThreadView renders empty state when no messages",
+        "ThreadView renders error state when thread load fails",
+        "Mobile: single-pane shows ConversationList when no conversation selected; shows ThreadView with back button when a conversation is selected"
+      ],
+      "steps": [
+        "1. Read progress.json; verify preconditions.",
+        "2. Write failing tests for empty/error states and mobile single-pane behavior before editing components.",
+        "3. Audit ConversationList: ensure loading skeleton, empty state ('No conversations yet — start one'), and error state with retry are all implemented and covered by tests.",
+        "4. Audit ThreadView: ensure loading skeleton, empty state (no messages yet), and error state are all implemented and covered by tests.",
+        "5. Add mobile single-pane behavior to MessagingPage: at viewport < md breakpoint, render either the conversation list OR the thread (not both). When a conversation is selected show the thread with a back button that clears the selection. Use Tailwind responsive classes (hidden md:block / block md:hidden).",
+        "6. Apply Tailwind/forest design overrides to chatscope components that do not match the app's visual style (forest color tokens, matching font sizes, consistent border-radius).",
+        "7. Run the full test suite: npm test — all tests must pass.",
+        "8. Run: npm run build — must pass.",
+        "9. Commit: chore(messaging): empty/error/mobile polish + QA"
+      ],
+      "doneWhen": [
+        "npm test passes (full suite)",
+        "npm run build passes"
+      ],
+      "writeBack": "Phase 7 complete. Empty/error states implemented for ConversationList and ThreadView. Mobile single-pane with back navigation implemented. Full test suite and build green. Messaging feature ready for manual QA and PR.",
+      "commit": "chore(messaging): empty/error/mobile polish + QA"
+    }
+  ],
+  "outOfScope": [
+    "websockets / typing / presence",
+    "message edit & delete",
+    "reactions UI (column reserved)",
+    "read-receipt avatars (unread counts only)",
+    "push/email notifications",
+    "non-image attachments / object storage",
+    "inviting non-registered emails",
+    "direct -> group promotion",
+    "message search",
+    "per-message replies/threading"
+  ]
+}

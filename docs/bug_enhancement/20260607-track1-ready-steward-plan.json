@@ -1,0 +1,213 @@
+{
+  "version": 1,
+  "generatedAt": "2026-06-07T13:58:00.000Z",
+  "feedbackIds": [
+    "a4083d43-b26e-4d52-b516-0a22071181ba",
+    "9ce47578-5e33-48ed-a708-89b98f6062d3",
+    "4d1b0fdd-04f5-4919-bcc8-4cce36e57c5f",
+    "e1c3f3db-27c7-4978-a7ac-f40160c2d0df",
+    "7f75f578-c9bd-4945-a9d6-1ebc32e4c7bb",
+    "e9da1b59-9370-4b69-8c4d-58d2874f156d"
+  ],
+  "eligibilitySnapshot": {
+    "autoEligibleIds": [
+      "a4083d43-b26e-4d52-b516-0a22071181ba",
+      "9ce47578-5e33-48ed-a708-89b98f6062d3",
+      "4d1b0fdd-04f5-4919-bcc8-4cce36e57c5f",
+      "7f75f578-c9bd-4945-a9d6-1ebc32e4c7bb",
+      "e9da1b59-9370-4b69-8c4d-58d2874f156d"
+    ],
+    "approvedIds": [
+      "e1c3f3db-27c7-4978-a7ac-f40160c2d0df"
+    ]
+  },
+  "workstreams": [
+    {
+      "featureArea": "plan",
+      "summary": "Add post-submit feedback on the Lessons page (collapse the Add-lesson form and show a 'Lesson added' confirmation) and surface an 'Add lesson' affordance on the Lesson Planner page, which today has no add entry point.",
+      "owningComponent": "features/plan/front/pages/LessonsPage.tsx",
+      "allowedFiles": [
+        "features/plan/front/pages/LessonsPage.tsx",
+        "features/plan/front/components/WeeklyPlannerPage.tsx",
+        "features/plan/__tests__/integration/LessonsPage.test.tsx",
+        "features/plan/__tests__/integration/WeeklyPlannerPage.test.tsx"
+      ],
+      "testPlan": [
+        "NEW TEST: features/plan/__tests__/integration/LessonsPage.test.tsx — after submitting the Add lesson form, the form collapses and a visible 'Lesson added' success confirmation appears",
+        "NEW TEST: features/plan/__tests__/integration/WeeklyPlannerPage.test.tsx — Lesson Planner renders an 'Add lesson' control linking to /lessons",
+        "RUN: npm test -- features/plan/__tests__/integration/LessonsPage.test.tsx",
+        "RUN: npm test -- features/plan/__tests__/integration/WeeklyPlannerPage.test.tsx"
+      ],
+      "blastRadiusNotes": "",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "a4083d43-b26e-4d52-b516-0a22071181ba": [
+          "Open the Render preview and sign in.",
+          "Navigate to /lessons.",
+          "Click 'Add lesson' to open the form.",
+          "Fill in a child, subject and date, then submit the form.",
+          "Confirm the form collapses (returns to the 'Add lesson' button state) AND a 'Lesson added' confirmation message is shown so it is obvious the save succeeded."
+        ],
+        "9ce47578-5e33-48ed-a708-89b98f6062d3": [
+          "In the preview, navigate to /plan (Lesson Planner).",
+          "Confirm an 'Add lesson' button/link is now visible on the planner.",
+          "Click it and confirm it takes you to the /lessons add-lesson flow."
+        ]
+      }
+    },
+    {
+      "featureArea": "settings",
+      "summary": "Clarify the 'Maximum lessons per day' setting in the Planning Defaults tab with clearer help copy explaining what the value controls (planner overload flagging).",
+      "owningComponent": "features/settings/front/components/PlanningDefaultsTab.tsx",
+      "allowedFiles": [
+        "features/settings/front/components/PlanningDefaultsTab.tsx",
+        "features/settings/__tests__/integration/SettingsPage.test.tsx"
+      ],
+      "testPlan": [
+        "NEW TEST: features/settings/__tests__/integration/SettingsPage.test.tsx — Planning Defaults tab renders explanatory help text describing what 'Maximum lessons per day' controls",
+        "RUN: npm test -- features/settings/__tests__/integration/SettingsPage.test.tsx"
+      ],
+      "blastRadiusNotes": "",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "4d1b0fdd-04f5-4919-bcc8-4cce36e57c5f": [
+          "In the preview, navigate to /settings?tab=planning-defaults.",
+          "Locate the 'Maximum lessons per day' field.",
+          "Confirm the help text now clearly explains the setting's purpose (lessons above this number are flagged as an overloaded day in the planner)."
+        ]
+      }
+    },
+    {
+      "featureArea": "navigation",
+      "summary": "APPROVED first slice of the module-based navigation restructure: introduce a module grouping for the existing sidebar (Home, Planbook, Records, Compliance, People, Settings) so main nav items render grouped under module headings, WITHOUT changing any routes or building new umbrella landing pages. Delivers the IA visual grouping safely; deeper restructure follows in later waves.",
+      "owningComponent": "features/layout/lib/navConfig.ts",
+      "allowedFiles": [
+        "features/layout/lib/navConfig.ts",
+        "features/layout/front/components/Sidebar.tsx",
+        "features/layout/__tests__/navConfig.test.ts",
+        "features/layout/__tests__/Sidebar.test.tsx"
+      ],
+      "testPlan": [
+        "NEW TEST: features/layout/__tests__/navConfig.test.ts — each main NavItem declares a module group and a getNavModules() helper returns the six target modules (Home, Planbook, Records, Compliance, People, Settings) with the existing items mapped under them",
+        "NEW TEST: features/layout/__tests__/Sidebar.test.tsx — sidebar renders main items grouped under their module headings while every existing href and adminOnly/footer item is preserved unchanged",
+        "RUN: npm test -- features/layout/__tests__/navConfig.test.ts",
+        "RUN: npm test -- features/layout/__tests__/Sidebar.test.tsx",
+        "RUN: npm run build"
+      ],
+      "blastRadiusNotes": "Admin-approved high-risk IA change; this is intentionally the smallest safe first slice. SCOPE OF THIS SLICE: add a `module` grouping to the NavItem shape and render the sidebar grouped under the six module headings; all current hrefs (e.g. /plan, /plan/schedule, /lessons, /growth, /attendance, /records, /settings?tab=children) stay exactly as they are. EXPLICITLY OUT OF SCOPE (follow-up waves): new umbrella landing pages and 'last used' routing; hover/speed-layer menus; the new In-session classroom screen; relocating the learner switcher to a global header; rehoming Finances→Settings, Resources, and Quran→Planbook subject; converting People/Compliance from settings tabs to real module landing pages. Changing the NavItem type touches all navConfig consumers — Sidebar.tsx, isNavItemActive(), validateNavConfig() and their tests — so the build must pass. NOTE: this workstream and the rewritten 'portfolio grade-discoverability' workstream both edit features/layout/lib/navConfig.ts — this one adds a `module` key to every NavItem (including 'grades-progress'); land it FIRST, then the grade-discoverability label rename is applied on top in the same branch (see that workstream's blastRadiusNotes for the explicit sequencing).",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "e1c3f3db-27c7-4978-a7ac-f40160c2d0df": [
+          "In the preview, sign in and view the left sidebar on any /dashboard or /plan page.",
+          "Confirm the main nav items are now visually grouped under module headings (Home, Planbook, Records, Compliance, People, Settings).",
+          "Confirm every existing item still appears and every link still navigates to the same destination as before (Calendar→/plan/schedule, Lesson Planner→/plan, Courses→/lessons, Attendance→/attendance, Grades & Progress→/growth, Reports & Records→/records, People→/settings?tab=children, Compliance→/settings?tab=records-compliance).",
+          "Confirm admin-only items (Admin, Feedback queue) and footer items (Settings, About) are unchanged.",
+          "Confirm no console errors and active-state highlighting still works on each route."
+        ]
+      }
+    },
+    {
+      "featureArea": "attendance",
+      "summary": "Per-learner total attendance view on /attendance. An AttendanceSummary component and a summary API route already exist, so the right move is to clarify the desired 'totals per learner' presentation against what is already there before building.",
+      "owningComponent": "features/attendance/front/pages/AttendancePage.tsx",
+      "allowedFiles": [
+        "features/attendance/front/pages/AttendancePage.tsx",
+        "features/attendance/__tests__/integration/AttendancePage.test.tsx"
+      ],
+      "testPlan": [
+        "NEW TEST: features/attendance/__tests__/integration/AttendancePage.test.tsx — switching the learner selector updates both the displayed learner-name label rendered above/alongside <AttendanceSummary> and the summary counts together (no stale name/number mismatch), proving the new label tracks the existing per-learner refetch",
+        "NEW TEST: features/attendance/__tests__/integration/AttendancePage.test.tsx — empty state ('No attendance recorded yet for this learner') names the selected learner when the optional learnerName prop is wired through to AttendanceSummary",
+        "RUN: npm test -- features/attendance/__tests__/integration/AttendancePage.test.tsx"
+      ],
+      "blastRadiusNotes": "The audit confirmed the suspicion in the original note: AttendanceSummary already aggregates and displays per-learner totals end-to-end — there is no missing capability. The feedback is a labeling/discoverability gap (the heading doesn't name which learner the totals belong to), fixable as a tiny, contained, auto-eligible change (Mode 1 — pure UI labeling, zero data-layer touch). Add a visible label naming the selected learner above/alongside <AttendanceSummary> (e.g. <h2>Summary — {selectedChild?.name}</h2>), resolved via children.find(c => c.id === selectedChildId) (the page already has `children` in scope from useHousehold()). Optionally pass the resolved name into AttendanceSummary as an optional `learnerName` prop so its empty-state copy can name the learner too. No schema, repository, service, or route change — the type, contract, and aggregation are already correctly per-learner at every layer. Full findings in docs/bug_enhancement/20260606-attendance-totals-plan.md.",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "7f75f578-c9bd-4945-a9d6-1ebc32e4c7bb": [
+          "Open the Render preview, sign in, and navigate to /attendance with at least two active learners seeded.",
+          "Confirm the 'Summary' section header (or sub-label) now names the currently selected learner.",
+          "Switch the learner selector inside 'Mark attendance' (or via the ?childId= URL param) and confirm both the name label and the totals/cards update together, with no stale name/number mismatch.",
+          "Confirm the empty state ('No attendance recorded yet for this learner') names the learner when the optional prop is wired through.",
+          "Confirm Print still renders the labeled summary correctly (no layout regression from the added label)."
+        ]
+      }
+    },
+    {
+      "featureArea": "portfolio",
+      "summary": "Grade-input discoverability on /growth. The /growth route currently renders the Portfolio (evidence) page, so 'where do I enter grades' is genuinely unclear; needs investigation of where grades are captured before adding guidance.",
+      "owningComponent": "features/layout/lib/navConfig.ts",
+      "allowedFiles": [
+        "features/layout/lib/navConfig.ts",
+        "features/layout/__tests__/navConfig.test.ts"
+      ],
+      "testPlan": [
+        "UPDATE TEST: features/layout/__tests__/navConfig.test.ts — read the existing assertions first to avoid duplicating one, then add/update an assertion that the 'grades-progress' nav item's label no longer contains the word 'Grades' (regression-proof against re-promising a feature that doesn't exist), while its href ('/growth') and activePrefixes (['/growth', '/portfolio']) remain unchanged",
+        "RUN: npm test -- features/layout/__tests__/navConfig.test.ts",
+        "RUN: npm run build"
+      ],
+      "blastRadiusNotes": "The audit found this is not a discoverability gap but a missing-feature request mislabeled as one — an exhaustive grep across portfolio, plan, subjects, and records features found zero grade-input surfaces anywhere in the codebase (no field, type, status value, or form input stores a numeric/letter score for student work). The contained fix (Mode 1 — pure copy/IA, one string-literal edit) is retitling the misleading nav label at features/layout/lib/navConfig.ts:38 from 'Grades & Progress' to something that matches what the destination actually offers (e.g. 'Growth' / 'Growth & Reflection', aligning with PortfolioPage.tsx's own <h1>Growth</h1> heading) — no routing, type, schema, service, or repository change. CONFLICT WITH THE NAVIGATION WORKSTREAM (WS3, feedback e1c3f3db, same branch): both workstreams edit the SAME 'grades-progress' object literal in features/layout/lib/navConfig.ts — WS3 adds a `module` grouping key to every NavItem (including this one) without touching any label/href, while this workstream edits only that entry's `label` string. APPLY THIS RENAME AFTER WS3's module-grouping change lands in the same branch: rebase onto WS3's commit, change only the `label` field on the existing 'grades-progress' item, and do NOT revert or alter the `module` key WS3 added. Re-run features/layout/__tests__/navConfig.test.ts and features/layout/__tests__/Sidebar.test.tsx together once both edits coexist. The underlying capability ('let a parent record an assignment grade') is a separate, schema-touching follow-up plan and is explicitly out of scope here — do not add a placeholder grade field anywhere. Full findings in docs/bug_enhancement/20260606-grade-discoverability-plan.md.",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "e9da1b59-9370-4b69-8c4d-58d2874f156d": [
+          "Open the Render preview, sign in, and view the left sidebar.",
+          "Confirm the item previously labeled 'Grades & Progress' now reads the corrected label (e.g. 'Growth & Reflection' / 'Growth').",
+          "Click it and confirm it still navigates to /growth and renders the same Portfolio/evidence page with the <h1>Growth</h1> heading — no routing change, no broken link.",
+          "Confirm active-state highlighting still triggers correctly on /growth and /portfolio/* paths (per activePrefixes, unchanged).",
+          "Confirm no other surface (Reports & Records, Dashboard, Settings) still references the old 'Grades & Progress' label in a way that is now inconsistent."
+        ]
+      }
+    },
+    {
+      "featureArea": "layout",
+      "summary": "BUG (not in the feedback queue) — Two notification bells. A dead stub bell lives in the global Header (features/layout/front/components/Header.tsx, rendered only when !isDashboard, with no data and no dropdown), while the real NotificationBellDropdown lives in DashboardHeader (features/dashboard/front/components/DashboardHeader.tsx) and only appears on the dashboard. Per user decision: REMOVE the dashboard-only bell and make the Header bell the single, real, populated bell shown on every page. Wire alert data into the Header bell (reuse NotificationBellDropdown) and drop the !isDashboard guard; remove the NotificationBellDropdown usage from DashboardHeader.",
+      "owningComponent": "features/layout/front/components/Header.tsx",
+      "allowedFiles": [
+        "features/layout/front/components/Header.tsx",
+        "features/dashboard/front/components/DashboardHeader.tsx",
+        "features/dashboard/front/components/NotificationBellDropdown.tsx",
+        "features/layout/__tests__/Header.test.tsx",
+        "features/dashboard/__tests__/integration/components/DashboardHeader.test.tsx"
+      ],
+      "testPlan": [
+        "UPDATE: features/layout/__tests__/Header.test.tsx — Header renders a single functional notification bell on every route (including dashboard) wired to alert data; the dead stub is gone",
+        "UPDATE: features/dashboard/__tests__/integration/components/DashboardHeader.test.tsx — DashboardHeader no longer renders its own NotificationBellDropdown",
+        "RUN: npm test -- features/layout features/dashboard",
+        "RUN: npm run build"
+      ],
+      "blastRadiusNotes": "NotificationBellDropdown currently lives in features/dashboard; if the Header (features/layout) consumes it, confirm the cross-feature client import is acceptable or relocate the component to a shared location (features/lib/front/components). Alert data source must be verified: DashboardHeader receives alerts as a prop today — trace how the Header/AppShell layer can obtain alerts (context or a front service) so the single bell stays populated on every page, not just the dashboard. Not in the feedback queue (no feedback row), so this workstream has no feedbackUpdates entry.",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "manual-bug-notification-bells": [
+          "Sign in and view several pages (dashboard and non-dashboard).",
+          "Confirm exactly ONE notification bell appears, next to the user name in the header, on every page.",
+          "Confirm it shows the notification/alert count and opens the dropdown when clicked.",
+          "Confirm there is no longer a second bell on the dashboard."
+        ]
+      }
+    },
+    {
+      "featureArea": "portfolio",
+      "summary": "BUG (not in the feedback queue) — On /portfolio the Subject dropdown cannot be used even though the learner has subjects. EvidenceForm filters subjects with subjects.filter(s => s.childId === childId) (features/portfolio/front/components/EvidenceForm.tsx ~L105); if a subject's childId does not match the selected child's id at that boundary, filteredSubjects is empty and only the 'Select subject' placeholder shows. Trace where PortfolioPage sources its subject list and which id it carries (Workspace id vs HouseholdProfile/StudentProfile id), confirm it matches the child id used in the dropdown, and fix the mismatch (or loading/scoping gap) so a learner's subjects are selectable.",
+      "owningComponent": "features/portfolio/front/components/EvidenceForm.tsx",
+      "allowedFiles": [
+        "features/portfolio/front/components/EvidenceForm.tsx",
+        "features/portfolio/front/pages/PortfolioPage.tsx",
+        "features/portfolio/__tests__/integration/EvidenceForm.test.tsx"
+      ],
+      "testPlan": [
+        "NEW/UPDATE TEST: features/portfolio/__tests__/integration/EvidenceForm.test.tsx — when a child is selected and that child has subjects whose childId matches, the Subject dropdown lists those subjects and one can be selected; regression for the empty-dropdown bug",
+        "RUN: npm test -- features/portfolio",
+        "RUN: npm run build"
+      ],
+      "blastRadiusNotes": "Root cause unverified — most likely an id-boundary mismatch (subject.childId vs the selected child id; per project rules householdId on students is HouseholdProfile.id, not Workspace.id). Trace PortfolioPage's subject data source before changing the filter. The fix must preserve child-scoped filtering (do not simply remove the filter). It is also possible the subjects are not being loaded for the child at all. Not in the feedback queue (no feedback row), so this workstream has no feedbackUpdates entry.",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "manual-bug-portfolio-subject-dropdown": [
+          "Sign in and go to /portfolio.",
+          "Select a learner who has at least one subject/course assigned.",
+          "Open the Subject dropdown and confirm the learner's subjects are listed and selectable.",
+          "Save an evidence item with a selected subject and confirm it persists."
+        ]
+      }
+    }
+  ]
+}

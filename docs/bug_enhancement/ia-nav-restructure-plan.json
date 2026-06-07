@@ -1,0 +1,195 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/ia-nav-restructure-plan.md",
+  "branch": "refactor/ia-nav-restructure",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "navConfig module model + re-homing",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "Branch refactor/ia-nav-restructure created from up-to-date master/dev",
+        "features/layout/lib/navConfig.ts NAV_ITEMS is the single IA source of truth (Home rename, people/compliance settings-tab hrefs already present)"
+      ],
+      "fileScope": [
+        "features/layout/lib/navConfig.ts",
+        "features/layout/__tests__/navConfig.test.ts"
+      ],
+      "testsFirst": [
+        "UPDATE features/layout/__tests__/navConfig.test.ts: isNavModuleActive('/plan/schedule', planbook) === true and isNavModuleActive('/attendance', planbook) === false",
+        "NEW assertions: getModuleItems(records) returns ['attendance','reports-records','compliance'] item ids in order",
+        "NEW assertions: 'quran' and 'resources' are members of the planbook module's itemIds; 'finances' is a member of the settings module and remains disabled (no href)",
+        "NEW assertions: leaf hrefs unchanged for /dashboard,/plan,/plan/schedule,/lessons,/quran,/resources,/attendance,/records,/growth,/messages"
+      ],
+      "implementationSteps": [
+        "Add NavModuleId and NavModule types to navConfig.ts (id,label,defaultHref,itemIds,section,adminOnly?)",
+        "Add NAV_MODULES: home→/dashboard[], planbook→/plan/schedule['calendar','lesson-planner','courses','quran','resources'], records→/attendance['attendance','reports-records','compliance'], progress→/growth['grades-progress'], people→/people[], messages→/messages[], settings(footer)→/settings['finances']",
+        "Add getModuleItems(module) mapping itemIds → NavItem via NAV_ITEMS",
+        "Add isNavModuleActive(pathname, module, settingsTab?) = any child item active OR pathname matches module default surface",
+        "Keep all existing NAV_ITEMS hrefs stable in this phase (people/compliance still point at settings tabs here; repointed in phase-2)",
+        "Run validateNavConfig() still passes"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/layout/__tests__/navConfig.test.ts",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "navConfig.ts now exports NavModule, NavModuleId, NAV_MODULES, getModuleItems(module), isNavModuleActive(pathname,module,settingsTab?). NAV_ITEMS hrefs UNCHANGED this phase. Module ids: home,planbook,records,progress,people,messages,settings. finances stays disabled, owned by settings module."
+    },
+    {
+      "id": "phase-2",
+      "title": "/people and /compliance thin pages + nav repoint",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase-1 complete: NAV_MODULES + isNavModuleActive exist",
+        "ChildrenProvider/ChildList and RecordsComplianceTab are standalone components; (shell) layout already provides HouseholdProvider"
+      ],
+      "fileScope": [
+        "app/(shell)/people/page.tsx",
+        "app/(shell)/compliance/page.tsx",
+        "features/children/front/pages/**",
+        "features/children/front/__tests__/integration/**",
+        "features/settings/front/pages/**",
+        "features/settings/front/__tests__/integration/**",
+        "features/layout/lib/navConfig.ts",
+        "features/layout/__tests__/navConfig.test.ts",
+        "features/layout/__tests__/Sidebar.test.tsx"
+      ],
+      "testsFirst": [
+        "NEW features/children/front/__tests__/integration/PeoplePage.test.tsx: mounts the /people page wrapper, asserts loading→populated ChildList (mock childrenApi) and empty state when children=[]",
+        "NEW features/settings/front/__tests__/integration/CompliancePage.test.tsx: mounts /compliance wrapper, asserts data-testid='settings-panel-records-compliance' present",
+        "UPDATE features/layout/__tests__/navConfig.test.ts: People active on '/people' (not '/settings'); Compliance active on '/compliance'; footer Settings still active on '/settings'; remove obsolete ?tab people/compliance assertions",
+        "UPDATE features/layout/__tests__/Sidebar.test.tsx: People active-highlight test uses pathname '/people'"
+      ],
+      "implementationSteps": [
+        "Add thin client wrapper features/children/front/pages/PeoplePage.tsx: reads householdId from useHousehold(), renders <ChildrenProvider householdId><ChildList/></ChildrenProvider>",
+        "Add app/(shell)/people/page.tsx delegating to PeoplePage (thin-route convention like growth/page.tsx)",
+        "Add app/(shell)/compliance/page.tsx rendering <RecordsComplianceTab/> (optionally a thin features/settings page wrapper to keep app/ thin)",
+        "In navConfig.ts: repoint NAV_ITEMS people href '/settings?tab=children'→'/people' (activePrefixes ['/people']); compliance '/settings?tab=records-compliance'→'/compliance' (activePrefixes ['/compliance'])",
+        "Remove People/Compliance branches from the /settings special-case in isNavItemActive; keep the footer settings branch and dashboard/lesson-planner/calendar special-cases",
+        "Update NAV_MODULES people→/people and records compliance item still resolves to /compliance"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/children features/settings features/layout",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "New routes /people (features/children/front/pages/PeoplePage.tsx → ChildrenProvider+ChildList) and /compliance (RecordsComplianceTab). navConfig people href=/people, compliance href=/compliance; isNavItemActive no longer special-cases people/compliance under /settings (footer settings branch kept). SettingsPage tabs for children/records-compliance still exist but nav no longer points at them."
+    },
+    {
+      "id": "phase-3",
+      "title": "Hover menus, sub-nav, last-used destination",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase-1 module model + phase-2 repointed hrefs in place",
+        "Sidebar.tsx currently renders a flat NavRow list from getNavItemsBySection"
+      ],
+      "fileScope": [
+        "features/layout/front/hooks/useModuleLastDestination.ts",
+        "features/layout/front/components/Sidebar.tsx",
+        "features/layout/lib/navIcons.tsx",
+        "features/layout/__tests__/useModuleLastDestination.test.ts",
+        "features/layout/__tests__/Sidebar.test.tsx"
+      ],
+      "testsFirst": [
+        "NEW features/layout/__tests__/useModuleLastDestination.test.ts: stores and reads sessionStorage['sheath.module.lastHref.<id>']; returns null when sessionStorage.getItem throws (silent fallback)",
+        "UPDATE features/layout/__tests__/Sidebar.test.tsx: clicking Planbook module with no stored value links to /plan/schedule; after setting last href to /lessons it links to /lessons; a non-active module reveals its sub-nav items on focus; sub-nav links carry aria-current when active"
+      ],
+      "implementationSteps": [
+        "Add useModuleLastDestination(moduleId): [string|null, (href)=>void] mirroring useSelectedChild try/catch silent-fallback shape, key 'sheath.module.lastHref.'+moduleId",
+        "Refactor Sidebar.tsx to render NAV_MODULES: each module = header row using isNavModuleActive styling + disclosure/hover sub-nav from getModuleItems",
+        "Module header link target = lastDestination(moduleId) ?? module.defaultHref; sub-nav link onClick stores visited href for that module",
+        "Collapsed rail shows module icons with hover/focus flyout; mobile renders sub-nav inline (no flyout); keep forest/slate palette and existing NavRow classes",
+        "Keep footer (settings/admin/about/feedback-queue) and standalone main items (e.g. my-feedback) rendering; add any missing module icons to navIcons.tsx",
+        "Ensure keyboard focus opens menus and links remain real <Link> with aria-current"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/layout",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Sidebar now module-grouped. Hook useModuleLastDestination (sessionStorage key 'sheath.module.lastHref.<id>', silent fallback) drives module header destination = last ?? defaultHref. Sub-nav presentational over getModuleItems; hover+focus open; mobile inline. No data/contract change."
+    },
+    {
+      "id": "phase-4",
+      "title": "Attendance capture in schedule day-view",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "attendanceApi.createRecord/batchRecord and AttendanceStatusButtons/BatchAttendanceForm exist and are reusable",
+        "SchedulePage renders the day-view for a selectedDate via plannerApi.getLessons"
+      ],
+      "fileScope": [
+        "features/schedule/front/pages/SchedulePage.tsx",
+        "features/schedule/front/components/**",
+        "features/schedule/front/__tests__/integration/**"
+      ],
+      "testsFirst": [
+        "NEW features/schedule/front/__tests__/integration/ScheduleAttendanceCapture.test.tsx: day-view shows a collapsible 'Mark attendance' block; selecting a status calls attendanceApi.createRecord with the day-view date and the focused learner (mock attendanceApi); marking is additive (no destructive confirm)"
+      ],
+      "implementationSteps": [
+        "Add a §5 collapsible 'Mark attendance' block to SchedulePage (showForm toggle in the heading row, add-form-card wrapper)",
+        "Reuse AttendanceStatusButtons (individual) and optionally BatchAttendanceForm, importing via @/features/attendance/front/components",
+        "Scope capture to the schedule selectedDate and the focused learner (children from useHousehold; reuse the same learner the day-view shows)",
+        "Wire status select → attendanceApi.createRecord({childId,householdId,date,status,...}); no new persistence path",
+        "Show existing attendance error handling; do not duplicate attendance summary/list on this page"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/schedule",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "SchedulePage now has a collapsible attendance-capture block reusing attendanceApi + AttendanceStatusButtons/BatchAttendanceForm, scoped to the day-view date + focused learner. No new store/API. /attendance page unchanged and remains the records list owner."
+    },
+    {
+      "id": "phase-5",
+      "title": "Global learner switcher (AppShell provider + header)",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": [
+        "phases 1-4 merged/green",
+        "No app-wide learner context exists yet; useSelectedChild holds [id,setId] with sessionStorage['sheath.selectedChildId']",
+        "DashboardProvider calls useSelectedChild() directly; AttendancePage and settings subjects tab roll their own selection"
+      ],
+      "fileScope": [
+        "features/layout/front/context/**",
+        "features/layout/front/components/AppShell.tsx",
+        "features/layout/front/components/Header.tsx",
+        "features/dashboard/front/hooks/useSelectedChild.ts",
+        "features/dashboard/front/context/DashboardProvider.tsx",
+        "features/dashboard/front/components/ChildSelector.tsx",
+        "features/attendance/front/pages/AttendancePage.tsx",
+        "features/settings/front/pages/SettingsPage.tsx",
+        "features/layout/__tests__/integration/**",
+        "features/dashboard/__tests__/**",
+        "features/attendance/__tests__/**"
+      ],
+      "testsFirst": [
+        "NEW features/layout/__tests__/integration/LearnerSwitcher.test.tsx: header switcher changes selection; a consuming stub re-renders with the new id; selection read back from sessionStorage['sheath.selectedChildId']",
+        "UPDATE features/dashboard/__tests__ provider/integration tests: dashboard reads selection from LearnerProvider (wrap renders with LearnerProvider)",
+        "UPDATE features/attendance/__tests__: attendance page scopes to the shared learner selection (regression)"
+      ],
+      "implementationSteps": [
+        "Create features/layout/front/context/LearnerContext.tsx exposing useLearner(): { selectedChildId, setSelectedChildId } backed by the existing sessionStorage key (move useSelectedChild logic in, keep key 'sheath.selectedChildId')",
+        "Mount <LearnerProvider> in AppShell (inside HouseholdProvider so children list is available); render the learner switcher in Header.tsx next to HouseholdSwitcher (labelled <select>, aria-label='Viewing learner', hidden when <2 learners)",
+        "DashboardProvider: replace useSelectedChild() with useLearner() 1:1; keep both fetch effects intact",
+        "ChildSelector: read/write via useLearner (or keep reading dashboard context which now delegates to the provider) — ensure single source",
+        "AttendancePage: derive selectedChildId from useLearner (seed from ?childId= param into the shared selection rather than local-only state)",
+        "SettingsPage subjects tab: read shared selection for the subjects child tabs (do not rewrite the tab body otherwise)",
+        "Verify selection persists across module navigation and reload"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/layout features/dashboard features/attendance features/settings",
+        "RUN: npm run build"
+      ],
+      "invariants": [
+        "db:generate produces no new migration; db:migrate applies cleanly",
+        "sessionStorage key 'sheath.selectedChildId' preserved (no contract change)"
+      ],
+      "writeBack": "Learner selection now owned by features/layout LearnerProvider (useLearner), mounted in AppShell, surfaced via a header switcher. DashboardProvider/ChildSelector/AttendancePage/SettingsPage-subjects all read the shared selection; key 'sheath.selectedChildId' unchanged so persistence/contract is identical. If a schema migration appears, STOP — out of scope."
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "branch": "feat/course-rollover-year-scoped",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Schema: add subjects.school_year_id FK + additive migration + backfill to active year",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": [
+        "HARD DEPENDENCY (whole plan): phase-1 of docs/bug_enhancement/20260606-course-rollover-plan.json — the subject_learners join table for multi-learner enrollment — MUST already be merged/migrated. Rollover (phase-3) copies join rows, so the table must exist. Do NOT re-specify the join table here; if it is absent, stop and surface that the prerequisite plan has not landed.",
+        "school_years table already exists (db/schema.ts ~154-173: name, startDate, endDate, isActive, householdId). It is OWNED by features/school-year (server/service.ts, server/repository.ts). This plan does NOT change how school_years are owned/edited — read-only consumption only.",
+        "subjects table (db/schema.ts ~177-193) currently has a single nullable learner_id FK and NO school-year relationship. `schoolYearId` exists only as a dead field on the createSubject client payload type (features/subjects/front/services/api.ts:60) and the SubjectCourse type (features/subjects/types.ts:45) — it is never read or persisted today."
+      ],
+      "fileScope": [
+        "db/schema.ts",
+        "db/migrations/**",
+        "features/subjects/server/repository.ts",
+        "features/subjects/__tests__/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: features/subjects/__tests__/server/repository.schoolYear.test.ts (real-DB integration, getDb not mocked) — createSubjectRow called with { schoolYearId } persists it and getSubjectRow/listSubjectRows round-trips school_year_id back (round-trip proof for the new column).",
+        "NEW TEST: same file — backfill assertion: given two subjects rows with NULL school_year_id and an active school_years row for the household, after the backfill statement runs both subjects rows carry the active year's id (existing courses do not orphan)."
+      ],
+      "implementationSteps": [
+        "Add nullable column to the subjects pgTable in db/schema.ts: schoolYearId: text('school_year_id').references(() => schoolYears.id). Nullable (no .notNull()) so the additive migration applies without a default and pre-existing rows are legal until backfilled. Optionally add index('subjects_household_school_year_idx').on(t.householdId, t.schoolYearId) for the phase-2 read filter.",
+        "Extend SubjectRow consumers: add optional schoolYearId to CreateSubjectInput; in createSubjectRow and upsertSubjectRow write input.schoolYearId ?? null into the insert .values(). (Read path already returns the full row via db.select(); no mapper change needed in repository.)",
+        "RUN db:generate to produce ONE additive migration adding the school_year_id column + FK (+ index if added). Review the generated SQL before applying.",
+        "Append the backfill to the SAME generated migration .sql file (do not create a second migration): UPDATE subjects SET school_year_id = (SELECT sy.id FROM school_years sy WHERE sy.household_id = subjects.household_id AND sy.is_active = true LIMIT 1) WHERE school_year_id IS NULL; — backfills every existing course to its household's active school year. Households with no active year leave their rows NULL (handled as a legacy safety net in phase-2 filtering)."
+      ],
+      "doneWhen": [
+        "RUN: npm run db:generate (review generated SQL; confirm it is a single additive column+FK migration with no unrelated drift)",
+        "RUN: npm test -- features/subjects/__tests__",
+        "RUN: npm run build",
+        "CONFIRM with the user before any DB mutation, then RUN: npm run db:migrate (per the never-run-migrations-silently rule)"
+      ],
+      "invariants": [
+        "npm run db:generate produces NO further migration after the school_year_id column is added (schema and migrations are in sync)",
+        "npm run db:migrate applies cleanly with no gap",
+        "The migration is additive only: no existing subjects column dropped/renamed; no change to the school_years table"
+      ],
+      "writeBack": "Added nullable subjects.school_year_id text FK -> school_years.id (additive migration N, includes a backfill UPDATE setting every existing course to its household's active school year; courses in households with no active year stay NULL). CreateSubjectInput now accepts schoolYearId and createSubjectRow/upsertSubjectRow persist it; the select-* read path round-trips it. No read filtering yet and createSubjectRow does NOT yet default to the active year — that is phase-2. school_years ownership untouched."
+    },
+    {
+      "id": "phase-2",
+      "title": "Read path filters subjects by active school year; new courses default to active year",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [
+        "Phase-1 merged: subjects.school_year_id exists, is backfilled to the active year, and round-trips through the repository.",
+        "Active-year resolution must come from features/school-year's service (getActiveSchoolYear(householdId)) — the architecture-rules boundary: a route handler may call another feature's SERVICE, but must not read another feature's store/repository directly, and the subjects repository must not import school-year code.",
+        "DECISION PINNED — back-compat safety net: active-year reads return rows WHERE school_year_id = activeYearId OR school_year_id IS NULL, so any legacy/unbackfilled course never disappears from the list."
+      ],
+      "fileScope": [
+        "features/subjects/server/repository.ts",
+        "features/subjects/api/routes/subjects.ts",
+        "features/subjects/__tests__/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: repository test — listSubjectRows(householdId, learnerId, includeInactive, { schoolYearId }) returns only rows matching that year OR null school_year_id, and EXCLUDES rows belonging to a different year (regression proving active-year reads do not show other-year duplicate course rows).",
+        "NEW TEST: repository test — createSubjectRow with no schoolYearId, given an active year resolvable, persists the active year's id (new courses join the active year by default).",
+        "UPDATE TEST: features/subjects/__tests__ POST-route test — POST /api/subjects with no schoolYearId stamps the resolved active year onto the created row; GET /api/subjects returns only active-year (+ null) courses."
+      ],
+      "implementationSteps": [
+        "Add an optional schoolYearId filter param to listSubjectRows; when provided, add condition or(eq(subjects.schoolYearId, schoolYearId), isNull(subjects.schoolYearId)) to the existing and(...) clause. (isNull is already imported in repository.ts.)",
+        "In createSubjectRow, when input.schoolYearId is undefined, the CALLER supplies the active year — repository stays feature-pure. Keep the column write as input.schoolYearId ?? null.",
+        "In features/subjects/api/routes/subjects.ts GET: after resolving householdId, call getActiveSchoolYear(householdId) from '@/features/school-year/server/service', and pass activeYear?.id into listSubjectRows so the list is scoped to the active year (+ null safety net). If no active year, fall back to the current unfiltered behavior so a household without a configured year still sees its courses.",
+        "In POST: resolve the active year the same way and pass schoolYearId: activeYear?.id into createSubjectRow so new courses default to the active year.",
+        "Extend rowToSubject in subjects.ts to surface schoolYearId on the returned SubjectCourse (the type field already exists at features/subjects/types.ts:45)."
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/subjects/__tests__",
+        "RUN: npm run build"
+      ],
+      "writeBack": "listSubjectRows now accepts an optional schoolYearId and filters to (schoolYearId OR NULL). The subjects GET/POST route handlers resolve the active year via school-year's getActiveSchoolYear(householdId) service and: (a) scope GET to active-year+null rows, (b) default new POST courses to the active year. rowToSubject now returns schoolYearId. Cross-feature contact is route-handler -> school-year SERVICE only; subjects repository stays feature-pure. No active year configured => unfiltered fallback (legacy behavior)."
+    },
+    {
+      "id": "phase-3",
+      "title": "rolloverCourses service + thin API route (clone courses + carry enrollments into target year)",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "Phase-2 merged: active-year filtering and default-to-active-year writes are in place.",
+        "subject_learners join table (prerequisite plan phase-1) exists — rollover copies its rows so multi-learner enrollments carry forward.",
+        "DECISIONS PINNED: (1) rollover clones a USER-SELECTED subset of courses, defaulting to ALL active courses in the source year; (2) learner enrollments carry forward by default (decision A); (3) in-progress lessons on the old-year course are OUT of scope — they stay on the old-year course row, not copied."
+      ],
+      "fileScope": [
+        "features/subjects/server/**",
+        "features/subjects/api/router.ts",
+        "features/subjects/api/routes/**",
+        "features/subjects/front/services/api.ts",
+        "features/subjects/__tests__/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: features/subjects/__tests__/server/rollover.test.ts (real-DB integration) — rolloverCourses(householdId, fromYearId, toYearId, courseIds) clones each selected course into toYearId with a NEW id and school_year_id = toYearId, leaves the source rows untouched, and for a course enrolling 2 learners copies BOTH subject_learners join rows onto the new course id (enrollments carry forward).",
+        "NEW TEST: rollover.test.ts — courseIds omitted => all active courses in fromYearId are cloned; an inactive/archived source course is NOT cloned.",
+        "NEW TEST: features/subjects/__tests__/api — POST /api/subjects/rollover with { fromYearId, toYearId, courseIds? } returns ApiResponse { status:'success', data: <created courses> }; missing fromYearId/toYearId => 400."
+      ],
+      "implementationSteps": [
+        "Add rolloverCourses(householdId, fromYearId, toYearId, courseIds?) to features/subjects/server (new rollover.ts, or co-located in repository.ts). For each source subject (filtered by householdId + school_year_id = fromYearId + isActive, intersected with courseIds when provided): insert a new subjects row with a fresh id, identical name/category/description/color/sortOrder/learnerId, isActive true, and school_year_id = toYearId; then read the source course's subject_learners rows and insert matching join rows pointing at the new course id. Return the created SubjectRow[].",
+        "Add a thin route handler features/subjects/api/routes/rollover.ts: POST parses { fromYearId, toYearId, courseIds? }, validates fromYearId+toYearId present (400 if not), resolves householdId via getRequestAuthCtx, calls rolloverCourses, maps rows to SubjectCourse, returns the standard ApiResponse shape (201).",
+        "Wire features/subjects/api/router.ts: add a case BEFORE the generic single-slug handlers — if slug.length === 1 && slug[0] === 'rollover' && method === 'POST' return rolloverHandler.POST(request). (Confirm no existing course id can be the literal 'rollover'; ids are generated as subject_<ts>, so no collision.)",
+        "Add subjectsApi.rolloverCourses({ fromYearId, toYearId, courseIds? }) to features/subjects/front/services/api.ts as a POST('/api/subjects/rollover', body) for the phase-4 UI."
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/subjects/__tests__",
+        "RUN: npm run build"
+      ],
+      "writeBack": "Added rolloverCourses(householdId, fromYearId, toYearId, courseIds?) in features/subjects/server — clones selected (default: all active) source-year courses into the target year with new ids + school_year_id=toYearId and copies each course's subject_learners rows so enrollments carry forward; source rows and their lessons are left untouched. New route POST /api/subjects/rollover (router case added before generic single-slug handlers) and client subjectsApi.rolloverCourses(...) added. Standard ApiResponse shape; 400 when fromYearId/toYearId missing."
+    },
+    {
+      "id": "phase-4",
+      "title": "UI: 'Roll over courses to <year>' action on Settings -> School year tab, styled confirmation",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "Phase-3 merged: subjectsApi.rolloverCourses and POST /api/subjects/rollover exist.",
+        "UI pattern (ui-style-guide §3 destructive/irreversible confirmation): rollover creates duplicate course rows, so it MUST use the app-styled inline confirmation panel (swap-in state like features/portfolio/front/components/EvidenceListItem.tsx confirmDelete) — NOT window.confirm. Copy must name the source year, target year, and course count; confirm and cancel visually distinct; cancel mutates nothing.",
+        "DECISION PINNED — target year selection: the target is an EXISTING school_years row chosen by the user (rollover does NOT create the year; school_years ownership stays with features/school-year). If the household has no school year other than the active one, show guidance to create the next year first using the SchoolYearForm already on this tab.",
+        "Settings -> School year tab lives at features/settings/front/pages/SettingsPage.tsx (activeTab === 'school-year', ~line 282) and already loads activeYear via schoolYearApi.getActiveSchoolYear()."
+      ],
+      "fileScope": [
+        "features/subjects/front/components/**",
+        "features/subjects/front/services/api.ts",
+        "features/settings/front/pages/SettingsPage.tsx",
+        "features/subjects/__tests__/integration/**",
+        "features/settings/__tests__/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: features/subjects/__tests__/integration/RolloverCoursesPanel.test.tsx — renders loading, empty (no other year => create-year guidance, no roll-over button), and populated (active-year courses listed, all selected by default, target-year picker shows other years) states.",
+        "NEW TEST: same file — interaction: deselect one course, pick a target year, click Roll over => styled confirm panel appears naming source year + target year + selected count; Cancel closes with NO API call; Confirm calls subjectsApi.rolloverCourses with the selected courseIds + fromYearId/toYearId, then shows success and the cloned courses.",
+        "UPDATE TEST: features/settings/__tests__/integration/SettingsPage.test.tsx — the School year panel renders the rollover entry point when an active year and at least one additional target year exist."
+      ],
+      "implementationSteps": [
+        "Create features/subjects/front/components/RolloverCoursesPanel.tsx (owned by features/subjects). Props: householdId, activeYear (source). On mount load schoolYearApi.getSchoolYears() for target options (exclude the active/source year) and subjectsApi.getSubjects() for the active-year course list.",
+        "Render: a target-year <select> (existing years only), a checkbox list of active-year courses defaulting to all-selected, and a 'Roll over courses to <target year name>' button. Empty state when no other year exists: guidance to create the next year via the SchoolYearForm already on the tab.",
+        "Implement the styled inline confirmation per ui-style-guide §3 using local state (mirror EvidenceListItem's confirmDelete swap): on Confirm call subjectsApi.rolloverCourses({ fromYearId: activeYear.id, toYearId, courseIds }); on success show a confirmation and refresh; on error keep the panel open with a message. No window.confirm.",
+        "Mount <RolloverCoursesPanel> inside the activeTab === 'school-year' section of SettingsPage.tsx, below the existing active-year card / SchoolYearForm, passing householdId and the loaded activeYear. Do not alter the SchoolYearForm or active-year loading logic."
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/subjects/__tests__/integration features/settings/__tests__",
+        "RUN: npm run build"
+      ],
+      "writeBack": "Added features/subjects/front/components/RolloverCoursesPanel.tsx, mounted in SettingsPage School year tab below the active-year card. It lists active-year courses (default all-selected), lets the user pick an existing target school year, and rolls selected courses over via subjectsApi.rolloverCourses behind a styled inline confirm panel (no window.confirm) naming source/target year + course count. Target years are existing school_years only (no year creation here). Closes feedback 6347ab95 (year-scoped rollover). Browser-verify the new panel since Settings/Nivo-adjacent UI is not fully exercised by Jest."
+    }
+  ]
+}
