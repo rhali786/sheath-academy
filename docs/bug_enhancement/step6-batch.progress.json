@@ -4,7 +4,7 @@
   "updatedAt": "2026-06-07T00:00:00Z",
   "currentPlanIndex": 0,
   "plans": [
-    { "id": "confirmation-consistency", "path": "docs/bug_enhancement/20260606-confirmation-consistency-plan.json", "branch": "feat/confirmation-consistency", "status": "in_progress", "prNumber": null },
+    { "id": "confirmation-consistency", "path": "docs/bug_enhancement/20260606-confirmation-consistency-plan.json", "branch": "feat/confirmation-consistency", "status": "gated", "prNumber": null },
     { "id": "quran-progress-chart",      "path": "docs/bug_enhancement/20260606-quran-progress-chart-plan.json",      "branch": "feat/quran-progress-chart",      "status": "pending", "prNumber": null },
     { "id": "dashboard-todo-widget",     "path": "docs/bug_enhancement/20260606-dashboard-todo-widget-plan.json",     "branch": "feature/personal-todos",           "status": "pending", "prNumber": null },
     { "id": "portfolio-file-upload",     "path": "docs/bug_enhancement/20260606-portfolio-file-upload-plan.json",     "branch": "feature/portfolio-evidence-file-upload", "status": "pending", "prNumber": null },
