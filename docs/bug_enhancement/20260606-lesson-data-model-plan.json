@@ -1,0 +1,156 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/bug_enhancement/20260606-lesson-data-model-plan.md",
+  "branch": "feat/lesson-data-model",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Reschedule discoverability on /plan (UI-only, no migration)",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": ["Confirm with the user/UAT that df8e7fa4 is a discoverability complaint (not a request for bulk reschedule or in-place editing) before scoping this phase's tests"],
+      "fileScope": [
+        "features/plan/front/components/WeekGrid.tsx",
+        "features/plan/front/components/WeeklyList.tsx",
+        "features/plan/__tests__/integration/WeekGrid.test.tsx",
+        "features/plan/__tests__/integration/LessonTaskList.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE TEST: WeekGrid.test.tsx / LessonTaskList.test.tsx — reschedule affordance is visible and labelled; existing drag-and-drop (desktop) and click-through-to-edit (mobile) paths still move a lesson's due date and persist (regression)"
+      ],
+      "implementationSteps": [
+        "Add a visible drag hint or per-card reschedule affordance to WeekGrid and WeeklyList alongside the existing working drag-and-drop / click-through-to-edit paths",
+        "Do not alter the underlying handleDragEnd → plannerApi.updateLesson or the /lessons?editId= edit flow"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/plan/__tests__/integration/WeekGrid.test.tsx features/plan/__tests__/integration/LessonTaskList.test.tsx",
+        "RUN: npm run build"
+      ],
+      "writeBack": "Added a visible reschedule affordance to WeekGrid/WeeklyList; existing drag-and-drop and click-through-to-edit paths confirmed unchanged and still persist via plannerApi.updateLesson — no data-model change."
+    },
+    {
+      "id": "phase-2",
+      "title": "Persist resourceLink/lessonType/estimatedDuration (contained migration)",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": ["Phase 1 shipped (ordering only — no data dependency); npm run db:generate output reviewed and npm run db:migrate confirmed explicitly with the user before applying"],
+      "fileScope": [
+        "db/schema.ts",
+        "features/plan/server/repository.ts",
+        "features/plan/api/mapLessonTaskRow.ts",
+        "features/plan/api/routes/lesson.ts",
+        "db/migrations/**",
+        "features/plan/__tests__/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: repository unit test — resourceLink/lessonType/estimatedDuration round-trip through CreateLessonTaskInput/UpdateLessonTaskInput and mapLessonTaskRow on create and update",
+        "NEW TEST: lesson.ts API route test — the three fields survive create→read and update→read",
+        "UPDATE TEST: LessonCard integration test — a saved resourceLink renders as a clickable link after reload (closes feedback 687d54eb)"
+      ],
+      "implementationSteps": [
+        "Add nullable columns resource_link text, lesson_type text, estimated_duration text to lesson_tasks in db/schema.ts",
+        "Extend CreateLessonTaskInput/UpdateLessonTaskInput and mapLessonTaskRow to carry the three fields both ways",
+        "Pass the fields through features/plan/api/routes/lesson.ts create/update handlers",
+        "Run npm run db:generate, review the generated SQL, present to user for confirmation before npm run db:migrate"
+      ],
+      "doneWhen": [
+        "RUN: npm run db:generate (review generated SQL before proceeding)",
+        "RUN: npm test -- features/plan/__tests__",
+        "RUN: npm run build",
+        "CONFIRM with user, then RUN: npm run db:migrate"
+      ],
+      "invariants": [
+        "npm run db:generate produces exactly one new migration adding nullable resource_link/lesson_type/estimated_duration columns to lesson_tasks",
+        "npm run db:migrate applies cleanly with no gap",
+        "a subsequent npm run db:generate produces no further migration"
+      ],
+      "writeBack": "lesson_tasks gained nullable columns resource_link/lesson_type/estimated_duration; CreateLessonTaskInput/UpdateLessonTaskInput, mapLessonTaskRow, and the lesson API route now carry these fields through both ways; values round-trip create→read and update→read, closing feedback 687d54eb."
+    },
+    {
+      "id": "phase-3",
+      "title": "Date-range planned dates (7a7abe8c) — completion window (DECIDED)",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": [
+        "DECISION PINNED: a date range is a COMPLETION WINDOW — the lesson is open/in-progress between a start date and the existing due_date, and its completion status still resolves at due_date. Implement additively as a nullable planned_start_date; the existing due_date stays the window end and keeps its index. A lesson with NULL planned_start_date behaves exactly as today (single due date).",
+        "Phase 2 columns/migration applied"
+      ],
+      "fileScope": [
+        "db/schema.ts",
+        "features/plan/server/repository.ts",
+        "features/plan/types.ts",
+        "features/plan/front/components/LessonTaskForm.tsx",
+        "features/plan/front/components/WeekGrid.tsx",
+        "features/plan/front/components/WeeklyList.tsx",
+        "features/plan/front/components/LessonCard.tsx",
+        "db/migrations/**",
+        "features/plan/__tests__/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: repository — a lesson with planned_start_date + due_date round-trips both; listLessonTaskRows over a window returns lessons whose [planned_start_date, due_date] overlaps the queried range, while lessons with NULL planned_start_date still match on due_date alone (back-compat)",
+        "UPDATE TEST: LessonTaskForm integration — an optional start-date input persists planned_start_date; saving with only a due date persists NULL planned_start_date (back-compat regression)",
+        "UPDATE TEST: WeekGrid/WeeklyList integration — a lesson with a completion window renders a window/range indicator; completion status still resolves against due_date (unchanged semantics)"
+      ],
+      "implementationSteps": [
+        "Add nullable planned_start_date date column to lesson_tasks in db/schema.ts (additive; due_date remains the window end and keeps its existing index)",
+        "Extend CreateLessonTaskInput/UpdateLessonTaskInput, LessonTask type, and mapLessonTaskRow to carry planned_start_date both ways",
+        "Update listLessonTaskRows window filtering to match lessons whose [planned_start_date ?? due_date, due_date] overlaps the requested range",
+        "Add an optional start-date input to LessonTaskForm and render the window (date range) in LessonCard/WeekGrid/WeeklyList without changing completion semantics (status still resolves at due_date)",
+        "Generate and review migration; confirm with user before applying"
+      ],
+      "doneWhen": [
+        "RUN: npm run db:generate (review generated SQL)",
+        "RUN: npm test -- features/plan/__tests__",
+        "RUN: npm run build",
+        "CONFIRM with user, then RUN: npm run db:migrate"
+      ],
+      "invariants": [
+        "npm run db:generate produces exactly one additive migration adding nullable planned_start_date to lesson_tasks",
+        "npm run db:migrate applies cleanly with no gap",
+        "the existing due_date index is unchanged and lessons with NULL planned_start_date behave exactly as before; history/progress aggregation re-verified unchanged"
+      ],
+      "writeBack": "Completion-window model implemented additively: lesson_tasks gained a nullable planned_start_date; the window is [planned_start_date, due_date] with completion still resolving at due_date. Create/Update inputs, LessonTask type, mapLessonTaskRow, listLessonTaskRows window filtering, LessonTaskForm, and LessonCard/WeekGrid/WeeklyList rendering all carry it; NULL planned_start_date = legacy single-due-date behavior. Closes 7a7abe8c."
+    },
+    {
+      "id": "phase-4",
+      "title": "Multi-learner lesson assignment (25fb9738) — fan-out + group_id (DECIDED)",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": [
+        "DECISION PINNED: fan-out + group_id (NOT a join table). Add a nullable group_id text column to lesson_tasks; creating one lesson for N learners inserts N linked rows sharing the same generated group_id, each with its own learner and independent completion status. This preserves today's per-learner completion semantics; a single-learner lesson leaves group_id NULL.",
+        "Phase 2 columns/migration applied"
+      ],
+      "fileScope": [
+        "db/schema.ts",
+        "features/plan/server/repository.ts",
+        "features/plan/front/components/LessonTaskForm.tsx",
+        "features/plan/front/components/LessonCard.tsx",
+        "db/migrations/**",
+        "features/plan/__tests__/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: repository — creating a lesson for 3 learners inserts 3 rows sharing one group_id, each with its own learner and independent status; a group update applies to all rows in the group; a group delete removes all of them; a single-learner create leaves group_id NULL",
+        "UPDATE TEST: LessonTaskForm integration — a multi-select learner picker submitting 2+ learners creates one row per learner sharing a group_id (regression proving completion stays per-learner, not collapsed)",
+        "UPDATE TEST: LessonCard integration — a grouped lesson shows a group affordance and offers apply-to-group on edit, while per-learner completion still toggles independently"
+      ],
+      "implementationSteps": [
+        "Add nullable group_id text column to lesson_tasks in db/schema.ts (additive)",
+        "Add group-aware create (one row per selected learner sharing a generated group_id), update (optionally apply-to-group), and delete (whole group) to the repository",
+        "Add a multi-select learner picker to LessonTaskForm (single selection => group_id NULL) and a group-edit affordance to LessonCard; completion remains per-row",
+        "Generate and review migration; confirm with user before applying"
+      ],
+      "doneWhen": [
+        "RUN: npm run db:generate (review generated SQL)",
+        "RUN: npm test -- features/plan/__tests__",
+        "RUN: npm run build",
+        "CONFIRM with user, then RUN: npm run db:migrate"
+      ],
+      "invariants": [
+        "npm run db:generate produces exactly one additive migration adding nullable group_id to lesson_tasks",
+        "npm run db:migrate applies cleanly with no gap",
+        "per-learner completion/progress aggregation (progressBySubject.ts, completedLessonHistory.ts) verified unchanged for non-grouped (group_id NULL) lessons"
+      ],
+      "writeBack": "Fan-out + group_id implemented: lesson_tasks gained a nullable group_id; creating a lesson for N learners inserts N linked rows sharing the group_id with independent per-learner completion; group-aware update/delete added; LessonTaskForm gained a multi-select learner picker and LessonCard a group affordance. Single-learner lessons keep group_id NULL and behave as before. Closes 25fb9738."
+    }
+  ]
+}

@@ -1,0 +1,187 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/bug_enhancement/20260606-confirmation-consistency-plan.md",
+  "branch": "feat/confirmation-consistency",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Shared InlineConfirm component (foundation)",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": ["None — first phase, creates the new shared component from scratch"],
+      "fileScope": [
+        "features/lib/front/components/InlineConfirm.tsx",
+        "features/lib/__tests__/integration/InlineConfirm.test.tsx"
+      ],
+      "testsFirst": [
+        "NEW TEST: features/lib/__tests__/integration/InlineConfirm.test.tsx — renders message+detail; cancel calls onCancel (not onConfirm); confirm calls onConfirm; shows pendingLabel while promise unresolved; rejected promise shows inline error and keeps panel open; tone='warning' applies amber confirm class; buttons have accessible names"
+      ],
+      "implementationSteps": [
+        "Create InlineConfirm.tsx per the documented props contract (message, detail?, confirmLabel?, pendingLabel?, cancelLabel?, tone?, onConfirm, onCancel)",
+        "Implement pending/error state internally (subsumes parent deleting/saving/isSubmitting flags)",
+        "role=group + aria-label from message; tone drives confirm-button color only (red-600/amber-600)"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/lib/__tests__/integration/InlineConfirm.test.tsx",
+        "RUN: npm run build"
+      ],
+      "writeBack": "InlineConfirm exported from features/lib/front/components/InlineConfirm.tsx with props {message, detail?, confirmLabel?, pendingLabel?, cancelLabel?, tone?, onConfirm, onCancel}; owns its own pending/error state; import path @/features/lib/front/components/InlineConfirm for all later phases."
+    },
+    {
+      "id": "phase-2",
+      "title": "Migrate Pattern-B sites (LessonCard, EvidenceListItem, QuranPage)",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["Phase 1 InlineConfirm exists and exports the documented props contract"],
+      "fileScope": [
+        "features/plan/front/components/LessonCard.tsx",
+        "features/portfolio/front/components/EvidenceListItem.tsx",
+        "features/quran/front/pages/QuranPage.tsx",
+        "features/plan/__tests__/integration/LessonTaskList.test.tsx",
+        "features/portfolio/__tests__/integration/EvidenceListItem.test.tsx",
+        "features/quran/__tests__/integration/QuranPage.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE TEST: LessonTaskList.test.tsx — delete-lesson cancel and confirm paths assert InlineConfirm markup replaces the card",
+        "UPDATE TEST: EvidenceListItem.test.tsx — delete-evidence cancel/confirm and error-keeps-open assert InlineConfirm markup",
+        "UPDATE TEST: QuranPage.test.tsx — delete-session cancel/confirm and error-keeps-open assert InlineConfirm markup"
+      ],
+      "implementationSteps": [
+        "Replace each site's local confirm-panel markup with InlineConfirm rendered in place of the card",
+        "Drop local deleting/isSubmitting pending-state flags (InlineConfirm owns pending now); keep the confirm* trigger state (confirmDelete/confirmDeleteId)"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/plan/__tests__/integration/LessonTaskList.test.tsx features/portfolio/__tests__/integration/EvidenceListItem.test.tsx features/quran/__tests__/integration/QuranPage.test.tsx",
+        "RUN: npm run build"
+      ],
+      "writeBack": "LessonCard, EvidenceListItem, QuranPage render InlineConfirm in place of the card; local deleting/isSubmitting flags removed, confirm* trigger state retained; their integration tests assert the new shared markup on cancel and confirm."
+    },
+    {
+      "id": "phase-3",
+      "title": "Migrate Pattern C (AttendanceList void, ThreadView leave)",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["Phase 1 InlineConfirm available; Phase 2 established the migration pattern for replacing local panels"],
+      "fileScope": [
+        "features/attendance/front/components/AttendanceList.tsx",
+        "features/messaging/front/components/ThreadView.tsx",
+        "features/attendance/__tests__/integration/AttendanceList.test.tsx",
+        "features/messaging/__tests__/integration/MessagingPage.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE TEST: AttendanceList.test.tsx — void-record cancel/confirm paths assert InlineConfirm renders attached to the row in place of the inline button swap",
+        "UPDATE TEST: MessagingPage.test.tsx (ThreadView) — leave-conversation cancel/confirm paths assert InlineConfirm renders attached to the row"
+      ],
+      "implementationSteps": [
+        "Replace the inline Confirm/Cancel button-swap markup with InlineConfirm attached to the row",
+        "Drop local leaving/pending flags; keep confirmVoid/leaveConfirm trigger state"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/attendance/__tests__/integration/AttendanceList.test.tsx features/messaging/__tests__/integration/MessagingPage.test.tsx",
+        "RUN: npm run build"
+      ],
+      "writeBack": "AttendanceList void and ThreadView leave render InlineConfirm attached to the row, replacing the local Confirm/Cancel swap; leaving/pending flags removed, confirmVoid/leaveConfirm trigger state retained."
+    },
+    {
+      "id": "phase-4",
+      "title": "Fix #11 — ChildList archive (detached banner → attached panel)",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["Phase 1 InlineConfirm available with tone='warning' support"],
+      "fileScope": [
+        "features/children/front/components/ChildList.tsx",
+        "features/children/__tests__/integration/ChildrenComponents.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE TEST: ChildrenComponents.test.tsx — archiving a learner renders InlineConfirm (tone='warning') attached to that learner's ChildCard, not a top-of-list banner; cancel leaves the learner active, confirm archives"
+      ],
+      "implementationSteps": [
+        "Remove the top-of-list amber banner (archiveConfirm at list level)",
+        "Render InlineConfirm tone='warning' attached to the matching ChildCard for the learner being archived"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/children/__tests__/integration/ChildrenComponents.test.tsx",
+        "RUN: npm run build"
+      ],
+      "writeBack": "ChildList archive confirm now renders InlineConfirm tone='warning' attached to the matching ChildCard, replacing the detached top banner — fixes feedback #11 (confirm is always in view next to the clicked Archive button)."
+    },
+    {
+      "id": "phase-5",
+      "title": "Convert feedback admin modals to inline panels",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["Phase 1 InlineConfirm available; AdminFeedbackPage selectedId/selectedRejectId trigger state unchanged"],
+      "fileScope": [
+        "features/feedback/front/components/RejectModal.tsx",
+        "features/feedback/front/components/ApprovalModal.tsx",
+        "features/feedback/front/pages/AdminFeedbackPage.tsx",
+        "features/feedback/__tests__/integration/RejectModal.test.tsx",
+        "features/feedback/__tests__/integration/ApprovalModal.test.tsx",
+        "features/feedback/__tests__/integration/AdminFeedbackPage.test.tsx"
+      ],
+      "testsFirst": [
+        "NEW/UPDATE TEST: AdminFeedbackPage.test.tsx — approving/rejecting a row renders InlineConfirm inline within that feedback row (message preview via detail), cancel clears selection without mutation, confirm calls handleApprove/handleReject; folds in the former RejectModal/ApprovalModal cancel+confirm assertions"
+      ],
+      "implementationSteps": [
+        "Replace RejectModal/ApprovalModal rendering in AdminFeedbackPage with InlineConfirm rendered within the selected row (detail = message preview)",
+        "Wire onConfirm to handleApprove/handleReject and onCancel to clear selectedId/selectedRejectId",
+        "Delete RejectModal.tsx and ApprovalModal.tsx; fold their test assertions into AdminFeedbackPage.test.tsx"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/feedback/__tests__/integration/AdminFeedbackPage.test.tsx",
+        "RUN: npm run build"
+      ],
+      "writeBack": "RejectModal and ApprovalModal deleted; AdminFeedbackPage renders InlineConfirm inline in the selected feedback row for approve/reject, still calling handleApprove/handleReject; modal test files folded into AdminFeedbackPage.test.tsx."
+    },
+    {
+      "id": "phase-6",
+      "title": "Style-guide update — InlineConfirm as the single approved pattern",
+      "gated": false,
+      "modelTier": "cheap",
+      "preconditions": ["Phases 1-5 complete — InlineConfirm is the only destructive-confirm component in use across all sites"],
+      "fileScope": [
+        ".claude/skills/ui-style-guide/SKILL.md",
+        ".claude/skills/ui-style-guide/references/**"
+      ],
+      "testsFirst": [
+        "DOC CHECK: ui-style-guide §3 names InlineConfirm as the single approved destructive-confirmation component, with placement guidance (replace-card for Pattern B sites vs attached-to-row for Pattern C/D sites)"
+      ],
+      "implementationSteps": [
+        "Rewrite §3 Destructive confirmation to point at InlineConfirm as the codified pattern, replacing the prior hand-rolled-pattern descriptions"
+      ],
+      "doneWhen": [
+        "RUN: npm run build"
+      ],
+      "writeBack": "ui-style-guide §3 rewritten to document InlineConfirm as the single approved destructive-confirmation component, with replace-card vs attached-row placement guidance."
+    },
+    {
+      "id": "phase-7",
+      "title": "Track C — InlineSuccess transient notice + style-guide §9",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["Phase 4 ChildList archive uses InlineConfirm; Phase 6 §3 rewritten so §9 can be added alongside it"],
+      "fileScope": [
+        "features/lib/front/components/InlineSuccess.tsx",
+        "features/lib/__tests__/integration/InlineSuccess.test.tsx",
+        "features/children/front/components/ChildList.tsx",
+        "features/children/__tests__/integration/ChildrenComponents.test.tsx",
+        ".claude/skills/ui-style-guide/SKILL.md",
+        ".claude/skills/ui-style-guide/references/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: features/lib/__tests__/integration/InlineSuccess.test.tsx — renders message, auto-dismisses after timeout (fake timers), supports manual dismiss",
+        "UPDATE TEST: ChildrenComponents.test.tsx — confirming archive shows a transient '<name> archived' notice near the action that auto-dismisses"
+      ],
+      "implementationSteps": [
+        "Create InlineSuccess (transient inline notice, auto-dismiss + manual dismiss)",
+        "Apply it to ChildList archive success (#11 second half — '<name> archived')",
+        "Add ui-style-guide §9 Success confirmation documenting the pattern"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/lib/__tests__/integration/InlineSuccess.test.tsx features/children/__tests__/integration/ChildrenComponents.test.tsx",
+        "RUN: npm run build"
+      ],
+      "writeBack": "InlineSuccess created and applied to ChildList archive success ('<name> archived', auto-dismissing); style-guide §9 Success confirmation documented. Lesson-save success (#1) intentionally deferred to the steward artifact track, which will reuse §9."
+    }
+  ]
+}

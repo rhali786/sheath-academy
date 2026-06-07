@@ -1,0 +1,402 @@
+{
+  "version": 1,
+  "generatedAt": "2026-06-06T20:16:28.139Z",
+  "feedbackIds": [
+    "e9da1b59-9370-4b69-8c4d-58d2874f156d",
+    "df8e7fa4-af4d-4a4a-bbcb-de1f75ec2235",
+    "7f75f578-c9bd-4945-a9d6-1ebc32e4c7bb",
+    "4b4a5daf-0029-4fac-8982-59db10bb904d",
+    "c9f5e6c9-5ec8-4a94-af57-d8795a5e287f",
+    "a52f7cc7-6d6b-4f01-a72b-032fffd15b26",
+    "4d1b0fdd-04f5-4919-bcc8-4cce36e57c5f",
+    "19106260-efdb-4b8a-b42e-9ed189f4070d",
+    "687d54eb-1072-4cf3-b4cc-ec371b929716",
+    "8a593246-2d1e-4fff-8ff1-b11fcfc68113",
+    "a4083d43-b26e-4d52-b516-0a22071181ba",
+    "7a7abe8c-565a-49f8-9502-dcf65a08ec96",
+    "25fb9738-fe9e-4863-933f-2ee56090f5bb",
+    "9ce47578-5e33-48ed-a708-89b98f6062d3",
+    "6347ab95-cef5-445c-81b5-4646d9e2ea64",
+    "e1815332-b7a8-46b9-a5e2-dc97b3986098",
+    "e1c3f3db-27c7-4978-a7ac-f40160c2d0df"
+  ],
+  "eligibilitySnapshot": {
+    "autoEligibleIds": [
+      "e9da1b59-9370-4b69-8c4d-58d2874f156d",
+      "df8e7fa4-af4d-4a4a-bbcb-de1f75ec2235",
+      "7f75f578-c9bd-4945-a9d6-1ebc32e4c7bb",
+      "4b4a5daf-0029-4fac-8982-59db10bb904d",
+      "c9f5e6c9-5ec8-4a94-af57-d8795a5e287f",
+      "a52f7cc7-6d6b-4f01-a72b-032fffd15b26",
+      "4d1b0fdd-04f5-4919-bcc8-4cce36e57c5f",
+      "19106260-efdb-4b8a-b42e-9ed189f4070d",
+      "687d54eb-1072-4cf3-b4cc-ec371b929716",
+      "8a593246-2d1e-4fff-8ff1-b11fcfc68113",
+      "a4083d43-b26e-4d52-b516-0a22071181ba",
+      "7a7abe8c-565a-49f8-9502-dcf65a08ec96",
+      "25fb9738-fe9e-4863-933f-2ee56090f5bb",
+      "9ce47578-5e33-48ed-a708-89b98f6062d3",
+      "6347ab95-cef5-445c-81b5-4646d9e2ea64",
+      "e1815332-b7a8-46b9-a5e2-dc97b3986098"
+    ],
+    "approvedIds": [
+      "e1c3f3db-27c7-4978-a7ac-f40160c2d0df"
+    ]
+  },
+  "workstreams": [
+    {
+      "featureArea": "plan",
+      "summary": "Add post-submit feedback on the Lessons page (collapse the Add-lesson form and show a 'Lesson added' confirmation) and surface an 'Add lesson' affordance on the Lesson Planner page, which today has no add entry point.",
+      "owningComponent": "features/plan/front/pages/LessonsPage.tsx",
+      "allowedFiles": [
+        "features/plan/front/pages/LessonsPage.tsx",
+        "features/plan/front/components/WeeklyPlannerPage.tsx",
+        "features/plan/__tests__/integration/LessonsPage.test.tsx",
+        "features/plan/__tests__/integration/WeeklyPlannerPage.test.tsx"
+      ],
+      "testPlan": [
+        "NEW TEST: features/plan/__tests__/integration/LessonsPage.test.tsx — after submitting the Add lesson form, the form collapses and a visible 'Lesson added' success confirmation appears",
+        "NEW TEST: features/plan/__tests__/integration/WeeklyPlannerPage.test.tsx — Lesson Planner renders an 'Add lesson' control linking to /lessons",
+        "RUN: npm test -- features/plan/__tests__/integration/LessonsPage.test.tsx",
+        "RUN: npm test -- features/plan/__tests__/integration/WeeklyPlannerPage.test.tsx"
+      ],
+      "blastRadiusNotes": "",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "a4083d43-b26e-4d52-b516-0a22071181ba": [
+          "Open the Render preview and sign in.",
+          "Navigate to /lessons.",
+          "Click 'Add lesson' to open the form.",
+          "Fill in a child, subject and date, then submit the form.",
+          "Confirm the form collapses (returns to the 'Add lesson' button state) AND a 'Lesson added' confirmation message is shown so it is obvious the save succeeded."
+        ],
+        "9ce47578-5e33-48ed-a708-89b98f6062d3": [
+          "In the preview, navigate to /plan (Lesson Planner).",
+          "Confirm an 'Add lesson' button/link is now visible on the planner.",
+          "Click it and confirm it takes you to the /lessons add-lesson flow."
+        ]
+      }
+    },
+    {
+      "featureArea": "settings",
+      "summary": "Clarify the 'Maximum lessons per day' setting in the Planning Defaults tab with clearer help copy explaining what the value controls (planner overload flagging).",
+      "owningComponent": "features/settings/front/components/PlanningDefaultsTab.tsx",
+      "allowedFiles": [
+        "features/settings/front/components/PlanningDefaultsTab.tsx",
+        "features/settings/__tests__/integration/SettingsPage.test.tsx"
+      ],
+      "testPlan": [
+        "NEW TEST: features/settings/__tests__/integration/SettingsPage.test.tsx — Planning Defaults tab renders explanatory help text describing what 'Maximum lessons per day' controls",
+        "RUN: npm test -- features/settings/__tests__/integration/SettingsPage.test.tsx"
+      ],
+      "blastRadiusNotes": "",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "4d1b0fdd-04f5-4919-bcc8-4cce36e57c5f": [
+          "In the preview, navigate to /settings?tab=planning-defaults.",
+          "Locate the 'Maximum lessons per day' field.",
+          "Confirm the help text now clearly explains the setting's purpose (lessons above this number are flagged as an overloaded day in the planner)."
+        ]
+      }
+    },
+    {
+      "featureArea": "navigation",
+      "summary": "APPROVED first slice of the module-based navigation restructure: introduce a module grouping for the existing sidebar (Home, Planbook, Records, Compliance, People, Settings) so main nav items render grouped under module headings, WITHOUT changing any routes or building new umbrella landing pages. Delivers the IA visual grouping safely; deeper restructure follows in later waves.",
+      "owningComponent": "features/layout/lib/navConfig.ts",
+      "allowedFiles": [
+        "features/layout/lib/navConfig.ts",
+        "features/layout/front/components/Sidebar.tsx",
+        "features/layout/__tests__/navConfig.test.ts",
+        "features/layout/__tests__/Sidebar.test.tsx"
+      ],
+      "testPlan": [
+        "NEW TEST: features/layout/__tests__/navConfig.test.ts — each main NavItem declares a module group and a getNavModules() helper returns the six target modules (Home, Planbook, Records, Compliance, People, Settings) with the existing items mapped under them",
+        "NEW TEST: features/layout/__tests__/Sidebar.test.tsx — sidebar renders main items grouped under their module headings while every existing href and adminOnly/footer item is preserved unchanged",
+        "RUN: npm test -- features/layout/__tests__/navConfig.test.ts",
+        "RUN: npm test -- features/layout/__tests__/Sidebar.test.tsx",
+        "RUN: npm run build"
+      ],
+      "blastRadiusNotes": "Admin-approved high-risk IA change; this is intentionally the smallest safe first slice. SCOPE OF THIS SLICE: add a `module` grouping to the NavItem shape and render the sidebar grouped under the six module headings; all current hrefs (e.g. /plan, /plan/schedule, /lessons, /growth, /attendance, /records, /settings?tab=children) stay exactly as they are. EXPLICITLY OUT OF SCOPE (follow-up waves): new umbrella landing pages and 'last used' routing; hover/speed-layer menus; the new In-session classroom screen; relocating the learner switcher to a global header; rehoming Finances→Settings, Resources, and Quran→Planbook subject; converting People/Compliance from settings tabs to real module landing pages. Changing the NavItem type touches all navConfig consumers — Sidebar.tsx, isNavItemActive(), validateNavConfig() and their tests — so the build must pass.",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "e1c3f3db-27c7-4978-a7ac-f40160c2d0df": [
+          "In the preview, sign in and view the left sidebar on any /dashboard or /plan page.",
+          "Confirm the main nav items are now visually grouped under module headings (Home, Planbook, Records, Compliance, People, Settings).",
+          "Confirm every existing item still appears and every link still navigates to the same destination as before (Calendar→/plan/schedule, Lesson Planner→/plan, Courses→/lessons, Attendance→/attendance, Grades & Progress→/growth, Reports & Records→/records, People→/settings?tab=children, Compliance→/settings?tab=records-compliance).",
+          "Confirm admin-only items (Admin, Feedback queue) and footer items (Settings, About) are unchanged.",
+          "Confirm no console errors and active-state highlighting still works on each route."
+        ]
+      }
+    },
+    {
+      "featureArea": "plan",
+      "summary": "DEFERRED — Lesson data-model enhancements: reschedule lessons from /plan, date-range (start/end) planned dates, assigning one lesson to multiple learners, and showing saved lesson details/links on click. These require changes to the LessonTask schema (db/schema.ts) and the plan service/repository, not local UI tweaks.",
+      "owningComponent": "features/plan/types.ts",
+      "allowedFiles": [
+        "features/plan/types.ts",
+        "features/plan/server/repository.ts",
+        "features/plan/front/components/LessonCard.tsx",
+        "features/plan/front/components/LessonTaskForm.tsx"
+      ],
+      "testPlan": [
+        "Audit complete — see docs/bug_enhancement/20260606-lesson-data-model-plan.md for the phased build plan, code-path citations, and named tests per phase (Phase 1 reschedule-discoverability UI, Phase 2 persist resourceLink/lessonType/estimatedDuration, Phase 3 date-range gated on a product decision, Phase 4 multi-learner gated on an association-model decision)."
+      ],
+      "blastRadiusNotes": "The audit found these four items are not of equal weight: reschedule (df8e7fa4) already works end-to-end (drag-and-drop + click-through) and is likely a discoverability gap; resourceLink/lessonType/estimatedDuration (687d54eb) are collected by the UI and declared on LessonTask but silently dropped before the DB write — a contained migration, not an open question; date-range (7a7abe8c) and multi-learner (25fb9738) are genuine open data-model questions gated on product decisions. Full phased plan with code-path citations, ownership findings, and gates in docs/bug_enhancement/20260606-lesson-data-model-plan.md.",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "df8e7fa4-af4d-4a4a-bbcb-de1f75ec2235": [
+          "Deferred pending data-model review — no preview to test yet. Reschedule-from-/plan needs a planned-date edit path on the lesson record."
+        ],
+        "7a7abe8c-565a-49f8-9502-dcf65a08ec96": [
+          "Deferred pending data-model review — date-range planned dates require start/end fields on LessonTask and a migration."
+        ],
+        "25fb9738-fe9e-4863-933f-2ee56090f5bb": [
+          "Deferred pending data-model review — multi-learner lessons require a lesson↔learner relationship change and migration."
+        ],
+        "687d54eb-1072-4cf3-b4cc-ec371b929716": [
+          "Deferred pending review — confirm whether a saved link/details field is persisted on LessonTask before designing the expanded lesson detail view."
+        ]
+      }
+    },
+    {
+      "featureArea": "subjects",
+      "summary": "DEFERRED — Course/year management: roll courses over from one school year to the next, and assign a single course to multiple learners in one action. Both require new service operations and likely schema/relationship changes around subjects and school years.",
+      "owningComponent": "features/subjects/front/components/SubjectForm.tsx",
+      "allowedFiles": [
+        "features/subjects/front/components/SubjectForm.tsx",
+        "features/subjects/front/components/SubjectsAllTable.tsx"
+      ],
+      "testPlan": [
+        "Audit complete — see docs/bug_enhancement/20260606-course-rollover-plan.md for the phased build plan, code-path citations, and named tests (Phase 1 persists multi-learner via a new subject_learners join table; Phase 2 rollover/year-scoping is its own follow-up plan gated on a product decision)."
+      ],
+      "blastRadiusNotes": "The audit found the two items are not symmetric: multi-learner assignment (e1815332) is a persistence bug — SubjectForm already collects and sends learnerIds: string[], but the route truncates to learnerIds[0] and the schema has only a single nullable learner_id column, so every learner past the first is silently dropped (same shape as the lesson resourceLink finding). Rollover (6347ab95) has no foundation to build on — subjects have no relationship to school years anywhere in the system; the real open question is whether courses should be year-scoped at all, or whether enrollment (course × learner × year) should own the year dimension. Full phased plan with code-path citations, ownership findings, and gates in docs/bug_enhancement/20260606-course-rollover-plan.md.",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "6347ab95-cef5-445c-81b5-4646d9e2ea64": [
+          "Deferred pending data-model review — year-to-year course rollover needs a defined cloning/linking strategy."
+        ],
+        "e1815332-b7a8-46b9-a5e2-dc97b3986098": [
+          "Deferred pending data-model review — assigning one course to multiple learners needs an association-model decision."
+        ]
+      }
+    },
+    {
+      "featureArea": "attendance",
+      "summary": "DEFERRED — Per-learner total attendance view on /attendance. An AttendanceSummary component and a summary API route already exist, so the right move is to clarify the desired 'totals per learner' presentation against what is already there before building.",
+      "owningComponent": "features/attendance/front/components/AttendanceSummary.tsx",
+      "allowedFiles": [
+        "features/attendance/front/components/AttendanceSummary.tsx",
+        "features/attendance/front/pages/AttendancePage.tsx"
+      ],
+      "testPlan": [
+        "Audit complete — see docs/bug_enhancement/20260606-attendance-totals-plan.md: existing AttendanceSummary already fully covers per-learner totals; the only change needed is naming the learner in the summary heading (Mode 1, tiny UI fix with a named test)."
+      ],
+      "blastRadiusNotes": "The audit confirmed the suspicion in the original note: AttendanceSummary already aggregates and displays per-learner totals end-to-end — there is no missing capability. The feedback is a labeling/discoverability gap (the heading doesn't name which learner the totals belong to), fixable as a tiny, contained, auto-eligible change. Full findings and the named test in docs/bug_enhancement/20260606-attendance-totals-plan.md.",
+      "clarifyingQuestions": [
+        "The /attendance page already has an AttendanceSummary component and summary endpoint — does the user want a new per-learner totals breakdown, or is the existing summary just not discoverable/aggregated the way they expect?"
+      ],
+      "uatByFeedbackId": {
+        "7f75f578-c9bd-4945-a9d6-1ebc32e4c7bb": [
+          "Deferred pending clarification — verify whether existing AttendanceSummary already covers per-learner totals before designing any new view."
+        ]
+      }
+    },
+    {
+      "featureArea": "quran",
+      "summary": "DEFERRED — Progress chart/graph for Quran memorization on /quran. Requires aggregating session/memorization data into a time-series and rendering a Nivo chart with explicit array props per project charting rules.",
+      "owningComponent": "features/quran/front/pages/QuranPage.tsx",
+      "allowedFiles": [
+        "features/quran/front/pages/QuranPage.tsx",
+        "features/quran/server/service.ts"
+      ],
+      "testPlan": [
+        "Audit complete — see docs/bug_enhancement/20260606-quran-progress-chart-plan.md for the phased build plan: replaces the dead chartData: [] stub in sessions.ts with weekly-bucketed session-count aggregation, plus a Nivo chart spec with explicit array props and named integration tests."
+      ],
+      "blastRadiusNotes": "The audit found a dead chartData: [] stub already wired into the page (sessions.ts:27) — the aggregation slot exists but returns nothing. The plan settles the data shape (weekly-bucketed session counts) and flags that ChartContainer/nivoTheme/childColors need to be relocated out of features/dashboard/front for cross-feature reuse per architecture-rules. Full phased plan with code-path citations, chart-prop spec, and gates in docs/bug_enhancement/20260606-quran-progress-chart-plan.md.",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "c9f5e6c9-5ec8-4a94-af57-d8795a5e287f": [
+          "Deferred pending data/chart design — no preview yet; memorization progress series must be defined first."
+        ]
+      }
+    },
+    {
+      "featureArea": "portfolio",
+      "summary": "DEFERRED — Grade-input discoverability on /growth. The /growth route currently renders the Portfolio (evidence) page, so 'where do I enter grades' is genuinely unclear; needs investigation of where grades are captured before adding guidance.",
+      "owningComponent": "features/portfolio/front/pages/PortfolioPage.tsx",
+      "allowedFiles": [
+        "features/portfolio/front/pages/PortfolioPage.tsx"
+      ],
+      "testPlan": [
+        "Audit complete — see docs/bug_enhancement/20260606-grade-discoverability-plan.md: an exhaustive grep confirms grades are entered NOWHERE in the app today. The fix is retitling the nav label 'Grades & Progress' → something that matches what /growth (Portfolio) actually shows, in features/layout/lib/navConfig.ts:38 (Mode 1, tiny copy fix with a named test)."
+      ],
+      "blastRadiusNotes": "The audit found this is not a discoverability gap but a missing-feature request mislabeled as one — grade entry does not exist anywhere in the codebase (exhaustive grep across portfolio, plan, subjects, and records features found zero grade-input surfaces). The contained fix is correcting the misleading nav label so it matches the Portfolio/evidence UI it actually points to. Flags a same-file merge overlap with the approved nav-restructure workstream (both touch features/layout/lib/navConfig.ts) — sequence after it lands. Full findings and the named test in docs/bug_enhancement/20260606-grade-discoverability-plan.md.",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "e9da1b59-9370-4b69-8c4d-58d2874f156d": [
+          "Deferred pending investigation — confirm the intended grade-entry location before testing any discoverability fix."
+        ]
+      }
+    },
+    {
+      "featureArea": "portfolio",
+      "summary": "DEFERRED — File/image upload for assignments/projects on /portfolio. The portfolio EvidenceForm currently has no file-upload capability; adding it requires file storage/blob handling infrastructure that does not yet exist.",
+      "owningComponent": "features/portfolio/front/components/EvidenceForm.tsx",
+      "allowedFiles": [
+        "features/portfolio/front/components/EvidenceForm.tsx",
+        "features/portfolio/server/service.ts",
+        "features/portfolio/types.ts"
+      ],
+      "testPlan": [
+        "Audit complete — storage decision made (DB bytea, per Postgres-only persistence convention). See docs/bug_enhancement/20260606-portfolio-file-upload-plan.md for the phased build plan: new portfolio_evidence_attachments table modeled on messageAttachments/bytea, multipart/form-data transport, 2MB limit, images+PDF, serving route modeled on features/messaging/api/routes/attachments.ts."
+      ],
+      "blastRadiusNotes": "No file-upload path exists in EvidenceForm today. The storage strategy is settled — bytea in Postgres, mirroring the existing messageAttachments precedent (db/schema.ts:581-595) — so this is now a contained, designed migration rather than an open infrastructure question: new attachments table + repository/service, an upload API route with validation/size limits, a serving route modeled on the messaging attachments route, and EvidenceForm wiring. Full phased plan with code-path citations and gates in docs/bug_enhancement/20260606-portfolio-file-upload-plan.md.",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "4b4a5daf-0029-4fac-8982-59db10bb904d": [
+          "Deferred pending storage-infrastructure decision — no preview to test yet."
+        ]
+      }
+    },
+    {
+      "featureArea": "dashboard",
+      "summary": "DEFERRED — Personal to-do list widget on the dashboard for curriculum/supply planning. Requires a new persisted to-do entity (table, repository, API route) plus a dashboard widget; not a local UI change.",
+      "owningComponent": "features/dashboard/front/pages/Dashboard.tsx",
+      "allowedFiles": [
+        "features/dashboard/front/pages/Dashboard.tsx"
+      ],
+      "testPlan": [
+        "Audit complete — see docs/bug_enhancement/20260606-dashboard-todo-widget-plan.md for the phased build plan: new features/todos feature (placement decision — not inside dashboard, per architecture-rules cross-feature ownership), personal_todos table (household-scoped), repository/service/API route, and a dashboard widget with named loading/empty/error/populated tests."
+      ],
+      "blastRadiusNotes": "The audit settled the placement question that made this 'not a local UI change': a new features/todos feature owns persisted_todos (household-scoped: id, householdId, text, done, dueDate, sortOrder, completedAt, timestamps) — citing features/dashboard/api/routes/quran.ts as the counter-example of the cross-feature-violation this avoids — and the dashboard only composes the widget. Full phased plan with schema design, code-path citations, and named tests in docs/bug_enhancement/20260606-dashboard-todo-widget-plan.md.",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "a52f7cc7-6d6b-4f01-a72b-032fffd15b26": [
+          "Deferred pending data-model design — no preview yet for a persisted to-do list."
+        ]
+      }
+    },
+    {
+      "featureArea": "schedule",
+      "summary": "DEFERRED — Day/week/month calendar views with prev/next navigation on /plan/schedule. The current SchedulePage is a single timeline view; multiple selectable views plus date navigation is a substantial calendar rework.",
+      "owningComponent": "features/schedule/front/pages/SchedulePage.tsx",
+      "allowedFiles": [
+        "features/schedule/front/pages/SchedulePage.tsx",
+        "features/schedule/front/components/ScheduleTimeline.tsx"
+      ],
+      "testPlan": [
+        "Audit complete — see docs/bug_enhancement/20260606-schedule-calendar-views-plan.md for the phased build plan: a UI-only change (plannerApi.getLessons already supports arbitrary startDate/endDate windows) — Phase 1 view-mode + date-window state, Phase 2 prev/next navigation mirroring the existing WeekNavigator pattern, Phase 3 week renderer, Phase 4 month renderer, each with named loading/empty/error/populated tests."
+      ],
+      "blastRadiusNotes": "The audit found this is UI-only, not the 'substantial calendar rework requiring new data-fetching' the original note assumed: plannerApi.getLessons(week, childIds, subjectIds, startDate, endDate) already accepts arbitrary date windows (features/plan/front/services/api.ts:51-65), buildDailySchedule composes cleanly across multiple days unmodified, and WeekNavigator already provides a working prev/next pattern to mirror. No schema, repository, or route changes. Also confirms there is no nav-label collision with the approved nav-restructure workstream — /plan/schedule is already labeled 'Calendar' in navConfig.ts. Full phased plan with code-path citations and gates in docs/bug_enhancement/20260606-schedule-calendar-views-plan.md.",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "8a593246-2d1e-4fff-8ff1-b11fcfc68113": [
+          "Deferred pending calendar-view design — no preview yet for day/week/month switching and navigation."
+        ]
+      }
+    },
+    {
+      "featureArea": "confirmation-consistency",
+      "summary": "Standardize ALL destructive confirmations on one shared inline-panel component and add a success-feedback pattern. Today there are 4 hand-rolled patterns (centered modal, inline card-replace panel, inline row swap, detached top banner) and no shared component. Build features/lib/front/components/InlineConfirm.tsx (self-contained pending+error state, danger/warning tone) and migrate every destructive action to it: delete lesson, delete evidence, delete Qur'an session, void attendance, leave conversation, archive learner, and approve/reject feedback (the two feedback modal components are converted to inline panels and removed). Also add InlineSuccess + style-guide section 9 (transient success notice) and apply it to archive success. This fixes feedback #11: ChildList renders the archive confirm as a banner at the TOP of the list, far from the per-card Archive button, so on a long list the user does not see it and clicks repeatedly.",
+      "owningComponent": "features/lib/front/components/InlineConfirm.tsx",
+      "allowedFiles": [
+        "features/lib/front/components/InlineConfirm.tsx",
+        "features/lib/front/components/InlineSuccess.tsx",
+        "features/lib/__tests__/integration/InlineConfirm.test.tsx",
+        "features/lib/__tests__/integration/InlineSuccess.test.tsx",
+        "features/plan/front/components/LessonCard.tsx",
+        "features/portfolio/front/components/EvidenceListItem.tsx",
+        "features/quran/front/pages/QuranPage.tsx",
+        "features/attendance/front/components/AttendanceList.tsx",
+        "features/messaging/front/components/ThreadView.tsx",
+        "features/children/front/components/ChildList.tsx",
+        "features/children/front/components/ChildCard.tsx",
+        "features/feedback/front/pages/AdminFeedbackPage.tsx",
+        "features/feedback/front/components/RejectModal.tsx",
+        "features/feedback/front/components/ApprovalModal.tsx",
+        "features/plan/__tests__/integration/LessonTaskList.test.tsx",
+        "features/portfolio/__tests__/integration/EvidenceListItem.test.tsx",
+        "features/quran/__tests__/integration/QuranPage.test.tsx",
+        "features/attendance/__tests__/integration/AttendanceList.test.tsx",
+        "features/messaging/__tests__/integration/MessagingPage.test.tsx",
+        "features/children/__tests__/integration/ChildrenComponents.test.tsx",
+        "features/feedback/__tests__/integration/RejectModal.test.tsx",
+        "features/feedback/__tests__/integration/ApprovalModal.test.tsx",
+        ".claude/skills/ui-style-guide/SKILL.md"
+      ],
+      "testPlan": [
+        "NEW TEST: features/lib/__tests__/integration/InlineConfirm.test.tsx — renders message+detail; cancel calls onCancel and not onConfirm; confirm calls onConfirm; shows pendingLabel while the confirm promise is unresolved; on rejected promise shows an error and keeps the panel open; tone='warning' applies amber confirm styling; buttons have accessible names",
+        "NEW TEST: features/lib/__tests__/integration/InlineSuccess.test.tsx — renders the success message, auto-dismisses after the timeout (fake timers), and supports manual dismiss",
+        "UPDATE: features/children/__tests__/integration/ChildrenComponents.test.tsx — archive confirm renders ATTACHED to the learner's card (not a top banner); cover cancel + confirm; success notice appears after archive",
+        "UPDATE: LessonTaskList / EvidenceListItem / QuranPage / AttendanceList / MessagingPage tests — assert the shared InlineConfirm markup on both cancel and confirm paths (incl. error-keeps-open for evidence/quran)",
+        "UPDATE: feedback RejectModal/ApprovalModal tests — re-scope to the inline confirm rendered by AdminFeedbackPage (standalone modal components removed)",
+        "RUN: npm test -- features/lib features/plan features/portfolio features/quran features/attendance features/messaging features/children features/feedback",
+        "RUN: npm run build"
+      ],
+      "blastRadiusNotes": "Cross-feature UI refactor; presentational only — no service, API route, repository, schema, or seed change. New shared component lives in features/lib/front/components (client cross-feature import is the established pattern). Each migrated site keeps its existing handler (onDelete/onArchive/archiveChild/quranApi.deleteSession/handleReject/handleApprove). Biggest visual change is the feedback admin modals (overlay → inline row panel); the two modal components are deleted only after AdminFeedbackPage interaction tests pass. Tone convention: red = destructive (delete/void/reject), amber = reversible (archive/leave). Implement in dependency order: shared component first, then card-replace deletes (lesson/evidence/quran), then row-swap (void/leave), then ChildList archive fix (#11), then feedback conversion, then style-guide section 3 + section 9. Full phased plan in docs/bug_enhancement/20260606-confirmation-consistency-plan.md.",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "19106260-efdb-4b8a-b42e-9ed189f4070d": [
+          "Open the Render preview and sign in; go to /settings?tab=children with several learners.",
+          "Scroll down and click Archive on a learner near the bottom of the list.",
+          "Confirm the archive confirmation panel appears ATTACHED to that learner's card (in view), not as a banner at the top of the list.",
+          "Click Cancel — the learner stays active. Click Archive again then Confirm — a brief '<name> archived' success notice appears and the learner moves to archived.",
+          "Spot-check other destructive actions share the same panel look: /plan delete a lesson, /portfolio delete evidence, /quran delete a session, /attendance void a record, /messaging leave a conversation, and /admin/feedback approve/reject a row (now an inline panel, not a full-screen modal)."
+        ]
+      }
+    },
+    {
+      "featureArea": "layout",
+      "summary": "BUG (not in the feedback queue) — Two notification bells. A dead stub bell lives in the global Header (features/layout/front/components/Header.tsx, rendered only when !isDashboard, with no data and no dropdown), while the real NotificationBellDropdown lives in DashboardHeader (features/dashboard/front/components/DashboardHeader.tsx) and only appears on the dashboard. Per user decision: REMOVE the dashboard-only bell and make the Header bell the single, real, populated bell shown on every page. Wire alert data into the Header bell (reuse NotificationBellDropdown) and drop the !isDashboard guard; remove the NotificationBellDropdown usage from DashboardHeader.",
+      "owningComponent": "features/layout/front/components/Header.tsx",
+      "allowedFiles": [
+        "features/layout/front/components/Header.tsx",
+        "features/dashboard/front/components/DashboardHeader.tsx",
+        "features/dashboard/front/components/NotificationBellDropdown.tsx",
+        "features/layout/__tests__/Header.test.tsx",
+        "features/dashboard/__tests__/integration/components/DashboardHeader.test.tsx"
+      ],
+      "testPlan": [
+        "UPDATE: features/layout/__tests__/Header.test.tsx — Header renders a single functional notification bell on every route (including dashboard) wired to alert data; the dead stub is gone",
+        "UPDATE: features/dashboard/__tests__/integration/components/DashboardHeader.test.tsx — DashboardHeader no longer renders its own NotificationBellDropdown",
+        "RUN: npm test -- features/layout features/dashboard",
+        "RUN: npm run build"
+      ],
+      "blastRadiusNotes": "NotificationBellDropdown currently lives in features/dashboard; if the Header (features/layout) consumes it, confirm the cross-feature client import is acceptable or relocate the component to a shared location (features/lib/front/components). Alert data source must be verified: DashboardHeader receives alerts as a prop today — trace how the Header/AppShell layer can obtain alerts (context or a front service) so the single bell stays populated on every page, not just the dashboard. Not in the feedback queue (no feedback row), so this workstream has no feedbackUpdates entry.",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "manual-bug-notification-bells": [
+          "Sign in and view several pages (dashboard and non-dashboard).",
+          "Confirm exactly ONE notification bell appears, next to the user name in the header, on every page.",
+          "Confirm it shows the notification/alert count and opens the dropdown when clicked.",
+          "Confirm there is no longer a second bell on the dashboard."
+        ]
+      }
+    },
+    {
+      "featureArea": "portfolio",
+      "summary": "BUG (not in the feedback queue) — On /portfolio the Subject dropdown cannot be used even though the learner has subjects. EvidenceForm filters subjects with subjects.filter(s => s.childId === childId) (features/portfolio/front/components/EvidenceForm.tsx ~L105); if a subject's childId does not match the selected child's id at that boundary, filteredSubjects is empty and only the 'Select subject' placeholder shows. Trace where PortfolioPage sources its subject list and which id it carries (Workspace id vs HouseholdProfile/StudentProfile id), confirm it matches the child id used in the dropdown, and fix the mismatch (or loading/scoping gap) so a learner's subjects are selectable.",
+      "owningComponent": "features/portfolio/front/components/EvidenceForm.tsx",
+      "allowedFiles": [
+        "features/portfolio/front/components/EvidenceForm.tsx",
+        "features/portfolio/front/pages/PortfolioPage.tsx",
+        "features/portfolio/__tests__/integration/EvidenceForm.test.tsx"
+      ],
+      "testPlan": [
+        "NEW/UPDATE TEST: features/portfolio/__tests__/integration/EvidenceForm.test.tsx — when a child is selected and that child has subjects whose childId matches, the Subject dropdown lists those subjects and one can be selected; regression for the empty-dropdown bug",
+        "RUN: npm test -- features/portfolio",
+        "RUN: npm run build"
+      ],
+      "blastRadiusNotes": "Root cause unverified — most likely an id-boundary mismatch (subject.childId vs the selected child id; per project rules householdId on students is HouseholdProfile.id, not Workspace.id). Trace PortfolioPage's subject data source before changing the filter. The fix must preserve child-scoped filtering (do not simply remove the filter). It is also possible the subjects are not being loaded for the child at all. Not in the feedback queue (no feedback row), so this workstream has no feedbackUpdates entry.",
+      "clarifyingQuestions": [],
+      "uatByFeedbackId": {
+        "manual-bug-portfolio-subject-dropdown": [
+          "Sign in and go to /portfolio.",
+          "Select a learner who has at least one subject/course assigned.",
+          "Open the Subject dropdown and confirm the learner's subjects are listed and selectable.",
+          "Save an evidence item with a selected subject and confirm it persists."
+        ]
+      }
+    }
+  ]
+}
