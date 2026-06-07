@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { usePlanner } from '../context/PlannerContext'
 import { useHousehold } from '@/features/household/front/context'
 import { WeekNavigator } from './WeekNavigator'
@@ -48,6 +49,11 @@ export function WeeklyPlannerPage() {
 
   return (
     <div className="flex flex-col h-screen bg-slate-50">
+      <div className="flex items-center justify-end px-4 sm:px-6 lg:px-8 pt-3">
+        <Link href="/lessons" className="px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800">
+          Add lesson
+        </Link>
+      </div>
       <WeekNavigator />
       <ChildSubjectFilter />
 

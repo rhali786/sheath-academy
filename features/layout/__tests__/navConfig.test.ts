@@ -1,6 +1,7 @@
 import {
   NAV_ITEMS,
   getNavItemsBySection,
+  getNavModules,
   isNavItemActive,
   validateNavConfig,
 } from '@/features/layout/lib/navConfig'
@@ -89,5 +90,42 @@ describe('navConfig', () => {
     expect(isNavItemActive('/settings', settings, 'household')).toBe(true)
     expect(isNavItemActive('/settings', settings, 'children')).toBe(false)
     expect(isNavItemActive('/settings', settings, 'records-compliance')).toBe(false)
+  })
+})
+
+describe('Module grouping', () => {
+  test('every main NavItem declares a module field', () => {
+    const mainItems = getNavItemsBySection('main')
+    for (const item of mainItems) {
+      expect(item.module).toBeTruthy()
+    }
+  })
+
+  test('getNavModules returns 6 modules with expected labels', () => {
+    const modules = getNavModules()
+    const labels = modules.map(m => m.label)
+    expect(labels).toEqual(['Home', 'Planbook', 'Records', 'Compliance', 'People', 'Settings'])
+  })
+
+  test('getNavModules groups items correctly — Planbook includes Calendar, Lesson Planner, Courses', () => {
+    const modules = getNavModules()
+    const planbook = modules.find(m => m.label === 'Planbook')!
+    const planbookIds = planbook.items.map(i => i.id)
+    expect(planbookIds).toContain('calendar')
+    expect(planbookIds).toContain('lesson-planner')
+    expect(planbookIds).toContain('courses')
+  })
+})
+
+describe('Grade-discoverability nav label', () => {
+  test('grades-progress item label does not contain the word Grades', () => {
+    const item = NAV_ITEMS.find(i => i.id === 'grades-progress')!
+    expect(item.label).not.toMatch(/grades/i)
+  })
+
+  test('grades-progress href and activePrefixes are unchanged', () => {
+    const item = NAV_ITEMS.find(i => i.id === 'grades-progress')!
+    expect(item.href).toBe('/growth')
+    expect(item.activePrefixes).toEqual(['/growth', '/portfolio'])
   })
 })

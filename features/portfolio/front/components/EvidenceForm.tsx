@@ -76,6 +76,15 @@ export function EvidenceForm({
   const [errors, setErrors] = useState<FormErrors>({})
   const [submitting, setSubmitting] = useState(false)
 
+  // Sync childId when initialChildId prop changes (handles async child load)
+  useEffect(() => {
+    if (!editingItem) {
+      setChildId(initialChildId ?? '')
+      setSubjectId('')
+      setLessonTaskId('')
+    }
+  }, [initialChildId])
+
   // Pre-fill form when editingItem changes
   useEffect(() => {
     if (editingItem) {

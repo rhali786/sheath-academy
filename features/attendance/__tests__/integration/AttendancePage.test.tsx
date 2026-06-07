@@ -333,6 +333,35 @@ describe('AttendancePage', () => {
     })
   })
 
+  it('summary heading shows selected learner name', async () => {
+    render(<AttendancePage />)
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /summary — adam/i })).toBeInTheDocument()
+    })
+  })
+
+  it('summary heading updates when learner selector changes', async () => {
+    render(<AttendancePage />)
+    await openMarkForm()
+    await waitFor(() => {
+      const sel = screen.getByLabelText(/^learner$/i) as HTMLSelectElement
+      expect(sel).toHaveValue('child_001')
+    })
+    mockGetSummary.mockResolvedValue(ok({ childId: 'child_002', totalRecorded: 0, byStatus: emptyAttendanceStatusCounts() }))
+    fireEvent.change(screen.getByLabelText(/^learner$/i), { target: { value: 'child_002' } })
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /summary — khadijah/i })).toBeInTheDocument()
+    })
+  })
+
+  it('summary heading still names the learner when attendance is empty', async () => {
+    mockGetRecords.mockResolvedValue(ok([]))
+    render(<AttendancePage />)
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /summary — adam/i })).toBeInTheDocument()
+    })
+  })
+
   it('updates selected learner when URL childId changes while component stays mounted', async () => {
     mockSearchParams = new URLSearchParams()
     const { rerender } = render(<AttendancePage />)

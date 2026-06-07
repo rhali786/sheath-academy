@@ -2,25 +2,32 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { Header } from '@/features/layout/front/components/Header'
 
-jest.mock('next/navigation', () => ({
-  usePathname: jest.fn(() => '/plan'),
-}))
-
 jest.mock('next-auth/react', () => ({
   useSession: jest.fn(),
   signOut: jest.fn(),
 }))
 
+jest.mock('@/features/dashboard/front/components/NotificationBellDropdown', () => ({
+  NotificationBellDropdown: ({ alerts }: { alerts: unknown[] }) => (
+    <div data-testid="dashboard-notification-bell" data-alert-count={alerts.length} />
+  ),
+}))
+
 import { useSession, signOut } from 'next-auth/react'
-import { usePathname } from 'next/navigation'
 
 const mockUseSession = useSession as jest.Mock
 const mockSignOut = signOut as jest.Mock
-const mockUsePathname = usePathname as jest.Mock
+
+function mockFetchEmpty() {
+  ;(global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve({ data: [] }),
+  })
+}
 
 describe('Header — unauthenticated', () => {
   beforeEach(() => {
-    mockUsePathname.mockReturnValue('/plan')
+    mockFetchEmpty()
     mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
   })
 
@@ -34,14 +41,14 @@ describe('Header — unauthenticated', () => {
     expect(screen.queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument()
   })
 
-  test('renders notification bell stub', () => {
+  test('renders notification bell on every route', () => {
     render(<Header />)
-    expect(screen.getByTestId('notification-bell-stub')).toBeInTheDocument()
+    expect(screen.getByTestId('dashboard-notification-bell')).toBeInTheDocument()
   })
 
-  test('hides notification bell on dashboard route', () => {
-    mockUsePathname.mockReturnValue('/')
+  test('renders notification bell on the dashboard route too (no more isDashboard guard)', () => {
     render(<Header />)
+    expect(screen.getByTestId('dashboard-notification-bell')).toBeInTheDocument()
     expect(screen.queryByTestId('notification-bell-stub')).not.toBeInTheDocument()
   })
 })
@@ -53,6 +60,7 @@ describe('Header — authenticated', () => {
   }
 
   beforeEach(() => {
+    mockFetchEmpty()
     mockUseSession.mockReturnValue({ data: session, status: 'authenticated' })
     mockSignOut.mockClear()
   })
@@ -92,7 +100,7 @@ describe('Header — authenticated', () => {
 
 describe('Header — mobile menu trigger', () => {
   beforeEach(() => {
-    mockUsePathname.mockReturnValue('/plan')
+    mockFetchEmpty()
     mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
   })
 
@@ -118,6 +126,7 @@ describe('Header — app header height sync', () => {
       }
     }
     global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver
+    mockFetchEmpty()
     mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
   })
 

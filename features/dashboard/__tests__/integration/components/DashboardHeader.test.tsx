@@ -1,6 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { DashboardHeader } from '@/features/dashboard/front/components/DashboardHeader'
-import { mockAlerts } from '../../fixtures/mockData'
 
 jest.mock('next-auth/react', () => ({
   useSession: jest.fn(() => ({
@@ -27,7 +26,6 @@ jest.mock('@/features/dashboard/front/components/ChildSelector', () => ({
 const defaultProps = {
   selectedDate: '2026-05-24',
   onDateChange: jest.fn(),
-  alerts: mockAlerts,
 }
 
 describe('DashboardHeader', () => {
@@ -64,10 +62,8 @@ describe('DashboardHeader', () => {
     expect(screen.getByRole('link', { name: /today's plan/i })).toHaveAttribute('href', '/plan')
   })
 
-  test('notification bell opens alert list', () => {
+  test('DashboardHeader does not render its own notification bell (bell is in global Header)', () => {
     render(<DashboardHeader {...defaultProps} />)
-    fireEvent.click(screen.getByTestId('dashboard-notification-bell'))
-    expect(screen.getByTestId('notification-dropdown')).toBeInTheDocument()
-    expect(screen.getByText(mockAlerts[0].title)).toBeInTheDocument()
+    expect(screen.queryByTestId('dashboard-notification-bell')).not.toBeInTheDocument()
   })
 })

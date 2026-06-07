@@ -180,4 +180,16 @@ describe('WeeklyPlannerPage', () => {
     // Chrome (WeekNavigator) is visible before lessons resolve
     expect(screen.getByRole('button', { name: /previous week/i })).toBeInTheDocument()
   })
+
+  it('renders an Add lesson link pointing to /lessons', async () => {
+    mockChildrenAndSubjects()
+    renderWithPlanner()
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading planner/i)).not.toBeInTheDocument()
+    })
+
+    const addLink = screen.getByRole('link', { name: /add lesson/i })
+    expect(addLink).toHaveAttribute('href', '/lessons')
+  })
 })

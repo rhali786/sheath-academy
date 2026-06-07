@@ -150,6 +150,47 @@ describe('EvidenceForm', () => {
     expect(fileInputs).toHaveLength(0)
   })
 
+  it('shows subjects for initialChildId on first render — regression for empty-dropdown bug', () => {
+    render(
+      <EvidenceForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        lessons={mockLessons}
+        onSave={jest.fn().mockResolvedValue(undefined)}
+        initialChildId="child_a"
+      />
+    )
+    const subjectSelect = screen.getByLabelText(/subject/i) as HTMLSelectElement
+    const options = Array.from(subjectSelect.options).map(o => o.text)
+    expect(options).toContain('Math')
+    expect(options).not.toContain('Science')
+  })
+
+  it('subject dropdown updates when initialChildId prop changes — regression for async load bug', () => {
+    const { rerender } = render(
+      <EvidenceForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        lessons={mockLessons}
+        onSave={jest.fn().mockResolvedValue(undefined)}
+        initialChildId={null}
+      />
+    )
+    rerender(
+      <EvidenceForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        lessons={mockLessons}
+        onSave={jest.fn().mockResolvedValue(undefined)}
+        initialChildId="child_a"
+      />
+    )
+    const subjectSelect = screen.getByLabelText(/subject/i) as HTMLSelectElement
+    const options = Array.from(subjectSelect.options).map(o => o.text)
+    expect(options).toContain('Math')
+    expect(options).not.toContain('Science')
+  })
+
   it('resets form after successful save', async () => {
     const onSave = jest.fn().mockResolvedValue(undefined)
     renderForm(onSave)
