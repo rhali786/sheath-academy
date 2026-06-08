@@ -1,7 +1,7 @@
 {
   "plan": "C:\\PROJECTS\\sheath-academy-features\\docs\\bug_enhancement\\20260606-confirmation-consistency-plan.json",
   "createdAt": "2026-06-07T23:13:54.079Z",
-  "updatedAt": "2026-06-08T00:03:57.262Z",
+  "updatedAt": "2026-06-08T12:00:00.000Z",
   "branch": "feat/confirmation-consistency",
   "phases": [
     {
@@ -142,14 +142,24 @@
       "id": "phase-7",
       "title": "Track C — InlineSuccess transient notice + style-guide §9",
       "gated": false,
-      "status": "in_progress",
+      "status": "complete",
       "model": "claude-sonnet-4-6",
-      "startedAt": "2026-06-08T00:03:57.262Z",
-      "completedAt": null,
+      "startedAt": "2026-06-08T11:11:34.695Z",
+      "completedAt": "2026-06-08T12:00:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/lib/front/components/InlineSuccess.tsx",
+          "features/lib/__tests__/integration/InlineSuccess.test.tsx",
+          "features/children/front/components/ChildList.tsx",
+          "features/children/__tests__/integration/ChildrenComponents.test.tsx",
+          ".claude/skills/ui-style-guide/SKILL.md"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath features/lib/__tests__/integration/InlineSuccess.test.tsx (5 passed)",
+          "npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath features/children/__tests__/integration/ChildrenComponents.test.tsx (34 passed)",
+          "npm run build (passed)"
+        ],
+        "notes": "InlineSuccess created at @/features/lib/front/components/InlineSuccess. Props: { message: string, dismissAfterMs?: number (default 3000), onDismiss?: () => void }. Renders role='status' with green styling; auto-dismisses via internal setTimeout; manual dismiss via aria-label='Dismiss' button; uses useRef for stable onDismiss callback. Applied to ChildList archive success: archiveSuccess state { id, name } | null added; after archiveChild resolves and archiveConfirm is cleared, setArchiveSuccess is called; InlineSuccess renders above the children grid with message '<name> archived' and onDismiss clears archiveSuccess. Style-guide §9 'Success confirmation (transient notice)' added documenting InlineSuccess as the approved pattern. No schema/migration touched. REPO QUIRK: integration tests must run with npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath."
       },
       "failureReason": null
     }
