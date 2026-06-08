@@ -134,10 +134,10 @@ describe('Sidebar + Dashboard shell', () => {
     })
   })
 
-  test('Grades & Progress link is present in sidebar', async () => {
+  test('Growth & Reflection link is present in sidebar', async () => {
     renderWithShell()
     await waitForDashboard()
-    expect(screen.getByRole('link', { name: 'Grades & Progress' })).toHaveAttribute('href', '/growth')
+    expect(screen.getByRole('link', { name: 'Growth & Reflection' })).toHaveAttribute('href', '/growth')
   })
 
   test('Settings link is present in sidebar footer', async () => {

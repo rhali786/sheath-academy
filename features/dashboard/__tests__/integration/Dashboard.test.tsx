@@ -35,6 +35,10 @@ jest.mock('@/features/dashboard/front/components/SchoolYearProgressCard', () => 
   SchoolYearProgressCard: () => <div data-testid="school-year-progress-card" />,
 }))
 
+jest.mock('@/features/todos/front/components/PersonalTodoList', () => ({
+  PersonalTodoList: () => <div data-testid="personal-todo-list" />,
+}))
+
 jest.mock('@/features/schedule/front/components/ScheduleTimeline', () => ({
   ScheduleTimeline: () => <div data-testid="schedule-timeline" />,
 }))
@@ -220,6 +224,30 @@ describe('Dashboard Page Integration', () => {
     await waitFor(() => {
       expect(screen.getByTestId('personal-assistant-panel')).toBeInTheDocument()
     })
+  })
+
+  test('personal to-do list renders in the alerts rail alongside the assistant panel', async () => {
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dashboard-alerts-rail')).toBeInTheDocument()
+    })
+
+    const rail = screen.getByTestId('dashboard-alerts-rail')
+    expect(rail).toContainElement(screen.getByTestId('personal-assistant-panel'))
+    expect(rail).toContainElement(screen.getByTestId('personal-todo-list'))
+  })
+
+  test('more insights right rail keeps school year and Quran cards without the to-do list', async () => {
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dashboard-more-insights')).toBeInTheDocument()
+    })
+
+    const rail = screen.getByTestId('dashboard-more-insights')
+    expect(rail).toContainElement(screen.getByTestId('school-year-progress-card'))
+    expect(rail).not.toContainElement(screen.getByTestId('personal-todo-list'))
   })
 
   test('Dashboard reads the selected date from the URL query', async () => {

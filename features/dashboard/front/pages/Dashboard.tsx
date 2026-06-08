@@ -7,6 +7,7 @@ import { SchoolYearProgressCard } from '../components/SchoolYearProgressCard'
 import { NeedsAttention } from '../components/NeedsAttention'
 import { PersonalAssistantPanel } from '../components/PersonalAssistantPanel'
 import { QuranStreak } from '../components/QuranStreak'
+import { PersonalTodoList } from '@/features/todos/front/components/PersonalTodoList'
 import { RecordsProof } from '../components/RecordsProof'
 import { IslamicCalendarCard } from '@/features/islamic-calendar/front/components/IslamicCalendarCard'
 import { getIslamicCalendarCountdowns } from '@/features/islamic-calendar/front/lib/countdowns'
@@ -158,8 +159,9 @@ export default function Dashboard() {
               subjects={allSubjects}
             />
           </div>
-          <aside data-testid="dashboard-alerts-rail">
+          <aside className="space-y-6" data-testid="dashboard-alerts-rail">
             <PersonalAssistantPanel insight={assistantInsight} />
+            <PersonalTodoList />
             <NeedsAttention alerts={alerts} />
           </aside>
         </div>
