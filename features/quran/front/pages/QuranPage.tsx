@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { Pencil, Trash2, X, Check } from 'lucide-react'
 import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import { quranApi } from '@/features/quran/front/services/api'
+import { QuranProgressChart } from '@/features/quran/front/components/QuranProgressChart'
 import { useHousehold } from '@/features/household/front/context'
 import { SURAHS } from '@/features/quran/front/constants/surahs'
 import type { QuranSession } from '@/features/lib/types'
@@ -176,6 +177,10 @@ export default function QuranPage() {
         </button>
       </div>
       <p className="text-sm text-slate-500 mb-8">Track Quran memorisation and recitation sessions.</p>
+
+      <div className="mb-8">
+        <QuranProgressChart sessions={displayedSessions} students={children} loading={loading} />
+      </div>
 
       {/* Add session form */}
       {showAddForm && <div className="mb-8">
