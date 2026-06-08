@@ -1,7 +1,7 @@
 {
   "plan": "C:\\PROJECTS\\sheath-academy-features\\docs\\bug_enhancement\\20260606-confirmation-consistency-plan.json",
   "createdAt": "2026-06-07T23:13:54.079Z",
-  "updatedAt": "2026-06-08T01:00:00.000Z",
+  "updatedAt": "2026-06-08T00:00:15.041Z",
   "branch": "feat/confirmation-consistency",
   "phases": [
     {
@@ -54,14 +54,22 @@
       "id": "phase-3",
       "title": "Migrate Pattern C (AttendanceList void, ThreadView leave)",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-07T23:42:26.305Z",
+      "completedAt": "2026-06-08T02:00:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/attendance/front/components/AttendanceList.tsx",
+          "features/messaging/front/components/ThreadView.tsx",
+          "features/attendance/__tests__/integration/AttendanceList.test.tsx",
+          "features/messaging/__tests__/integration/MessagingPage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath features/attendance/__tests__/integration/AttendanceList.test.tsx features/messaging/__tests__/integration/MessagingPage.test.tsx (24 passed)",
+          "npm run build (passed)"
+        ],
+        "notes": "AttendanceList RecordRow: replaced inline Confirm/Cancel button-swap with InlineConfirm (message='Void this record?', confirmLabel='Void') appended inside the <li> below the row content; Edit/Void buttons hidden when confirmVoid=true; confirmVoid trigger state retained. ThreadView: replaced leaveConfirm button-swap in header with Leave trigger button (hidden when leaveConfirm=true) + InlineConfirm panel (message='Leave this conversation?', confirmLabel='Leave') rendered below the header bar; dropped local 'leaving' state — InlineConfirm owns pending now; handleLeave simplified to await removeParticipant then call onBack. Import path for both: @/features/lib/front/components/InlineConfirm. Tests updated: AttendanceList void tests assert role=group with name 'Void this record?'; MessagingPage test extended with 3 new leave-conversation tests (show/cancel/confirm) asserting role=group with name 'Leave this conversation?'. REPO QUIRK (same as phases 1-2): integration tests must run with npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath — not npm test. No schema/migration touched."
       },
       "failureReason": null
     },
@@ -69,14 +77,20 @@
       "id": "phase-4",
       "title": "Fix #11 — ChildList archive (detached banner → attached panel)",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-07T23:49:42.840Z",
+      "completedAt": "2026-06-08T03:00:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/children/front/components/ChildList.tsx",
+          "features/children/__tests__/integration/ChildrenComponents.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath features/children/__tests__/integration/ChildrenComponents.test.tsx (33 passed)",
+          "npm run build (passed)"
+        ],
+        "notes": "ChildList archive confirm now renders InlineConfirm (tone='warning', from @/features/lib/front/components/InlineConfirm) in place of the ChildCard for the learner being archived, replacing the detached top-of-list amber banner. archiveConfirm trigger state ({id, name}) retained at list level. confirmArchive function removed — InlineConfirm owns pending/error state. onConfirm calls archiveChild(child.id) then setArchiveConfirm(null). InlineConfirm message='Archive <name>?', detail='They'll be hidden from active lists but can be restored.', confirmLabel='Archive'. Tests: 3 new tests added (InlineConfirm attached to card, cancel restores card, confirm calls archiveChild with within() scoping to avoid ambiguity with other Archive buttons). REPO QUIRK: integration tests must run with npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath. No schema/migration touched."
       },
       "failureReason": null
     },
@@ -84,14 +98,24 @@
       "id": "phase-5",
       "title": "Convert feedback admin modals to inline panels",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-07T23:53:35.453Z",
+      "completedAt": "2026-06-08T04:00:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/feedback/front/pages/AdminFeedbackPage.tsx",
+          "features/feedback/__tests__/integration/AdminFeedbackPage.test.tsx",
+          "features/feedback/front/components/ApprovalModal.tsx (deleted)",
+          "features/feedback/front/components/RejectModal.tsx (deleted)",
+          "features/feedback/__tests__/integration/ApprovalModal.test.tsx (deleted)",
+          "features/feedback/__tests__/integration/RejectModal.test.tsx (deleted)"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath features/feedback/__tests__/integration/AdminFeedbackPage.test.tsx (31 passed)",
+          "npm run build (passed)"
+        ],
+        "notes": "ApprovalModal and RejectModal deleted. AdminFeedbackPage now renders InlineConfirm (from @/features/lib/front/components/InlineConfirm) inline within each feedback row: approve uses message='Approve for planning?' confirmLabel='Approve' tone='warning'; reject uses message='Reject planning?' confirmLabel='Reject' tone='danger' (default). detail={row.message} provides the message preview. Action buttons (approve-button-*, reject-button-*) are hidden while the confirm panel is open for that row (selectedId/selectedRejectId check). onConfirm calls handleApprove(row.id) / handleReject(row.id) which close themselves on success via setSelectedId(null)/setSelectedRejectId(null); InlineConfirm catches thrown errors and keeps the panel open with role=alert. Tests: 31 tests in AdminFeedbackPage.test.tsx; modal test files folded in. No schema/migration touched. REPO QUIRK: integration tests must run with npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath."
       },
       "failureReason": null
     },
@@ -99,9 +123,9 @@
       "id": "phase-6",
       "title": "Style-guide update — InlineConfirm as the single approved pattern",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
+      "status": "in_progress",
+      "model": "claude-haiku-4-5-20251001",
+      "startedAt": "2026-06-08T00:00:15.041Z",
       "completedAt": null,
       "outputs": {
         "filesChanged": [],
