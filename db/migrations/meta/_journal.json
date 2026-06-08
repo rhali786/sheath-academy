@@ -127,6 +127,13 @@
       "when": 1780667931887,
       "tag": "0017_daily_matthew_murdock",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1780942456353,
+      "tag": "0018_short_stranger",
+      "breakpoints": true
     }
   ]
 }

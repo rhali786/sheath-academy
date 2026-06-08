@@ -192,6 +192,24 @@ export const subjects = pgTable(
   (t) => [index('subjects_household_active_idx').on(t.householdId, t.isActive)],
 )
 
+// ─── Personal Todos ───────────────────────────────────────────────────────────
+
+export const personalTodos = pgTable(
+  'personal_todos',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    text: text('text').notNull(),
+    done: boolean('done').notNull().default(false),
+    dueDate: date('due_date'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    completedAt: timestamp('completed_at'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [index('personal_todos_household_done_idx').on(t.householdId, t.done)],
+)
+
 // ─── Lesson Tasks ─────────────────────────────────────────────────────────────
 
 export const lessonTasks = pgTable(
