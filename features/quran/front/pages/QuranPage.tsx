@@ -192,7 +192,7 @@ export default function QuranPage() {
       <p className="text-sm text-slate-500 mb-8">Track Quran memorisation and recitation sessions.</p>
 
       <div className="mb-8">
-        <QuranProgressChart sessions={sessions} loading={loading} />
+        <QuranProgressChart sessions={displayedSessions} students={children} loading={loading} />
       </div>
 
       {/* Add session form */}

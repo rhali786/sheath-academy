@@ -5,6 +5,11 @@ export const FOREST_LINE = '#1a5c3a'
 export const FOREST_FILL_FROM = 'rgba(26, 92, 58, 0.25)'
 export const FOREST_FILL_TO = 'rgba(26, 92, 58, 0)'
 
+// One color per child — forest green, sky blue, warm amber.
+// Duplicated from features/dashboard/front/theme.ts (cross-feature imports are not allowed);
+// keep in sync with QuranStreak's per-child coloring.
+export const childColors = ['#1a5c3a', '#0284c7', '#b45309']
+
 export const nivoTheme = {
   background: 'transparent',
   textColor: '#64748b',
