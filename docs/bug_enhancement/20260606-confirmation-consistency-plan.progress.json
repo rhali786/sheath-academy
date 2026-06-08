@@ -1,7 +1,7 @@
 {
   "plan": "C:\\PROJECTS\\sheath-academy-features\\docs\\bug_enhancement\\20260606-confirmation-consistency-plan.json",
   "createdAt": "2026-06-07T23:13:54.079Z",
-  "updatedAt": "2026-06-08T00:00:15.041Z",
+  "updatedAt": "2026-06-08T05:00:15.041Z",
   "branch": "feat/confirmation-consistency",
   "phases": [
     {
@@ -123,14 +123,18 @@
       "id": "phase-6",
       "title": "Style-guide update — InlineConfirm as the single approved pattern",
       "gated": false,
-      "status": "in_progress",
+      "status": "complete",
       "model": "claude-haiku-4-5-20251001",
       "startedAt": "2026-06-08T00:00:15.041Z",
-      "completedAt": null,
+      "completedAt": "2026-06-08T05:00:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          ".claude/skills/ui-style-guide/SKILL.md"
+        ],
+        "testsRun": [
+          "npm run build (passed)"
+        ],
+        "notes": "ui-style-guide §3 rewritten to document InlineConfirm (@/features/lib/front/components/InlineConfirm) as the single approved destructive-confirmation component. Section 3 now includes: props contract (message, detail?, confirmLabel?, pendingLabel?, cancelLabel?, tone?); tone='danger' (red) vs tone='warning' (amber); Pattern A (replace-card for LessonCard/EvidenceListItem/QuranPage) and Pattern B (attached-to-row for AttendanceList/ThreadView/ChildList) with code examples; 7 rules covering pending/error state ownership, copy, cancel/confirm behavior, error display, and test coverage. No schema/migration touched."
       },
       "failureReason": null
     },
