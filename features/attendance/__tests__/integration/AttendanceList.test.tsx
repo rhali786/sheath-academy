@@ -43,11 +43,10 @@ describe('AttendanceList — void confirmation', () => {
       />
     )
     expect(screen.getByRole('button', { name: /void record/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /confirm void/i })).not.toBeInTheDocument()
-    expect(screen.queryByText(/void this record/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: /void this record\?/i })).not.toBeInTheDocument()
   })
 
-  it('clicking Void icon shows inline confirm UI', () => {
+  it('clicking Void icon shows InlineConfirm attached to the row', () => {
     render(
       <AttendanceList
         records={[makeRecord()]}
@@ -57,8 +56,9 @@ describe('AttendanceList — void confirmation', () => {
       />
     )
     fireEvent.click(screen.getByRole('button', { name: /void record/i }))
-    expect(screen.getByRole('button', { name: /confirm void/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /cancel void/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /void this record\?/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^void$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^cancel$/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /void record/i })).not.toBeInTheDocument()
   })
 
@@ -73,11 +73,11 @@ describe('AttendanceList — void confirmation', () => {
       />
     )
     fireEvent.click(screen.getByRole('button', { name: /void record/i }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm void/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^void$/i }))
     expect(onArchive).toHaveBeenCalledWith('rec_abc')
   })
 
-  it('clicking Cancel hides confirm UI and does not call onArchive', () => {
+  it('clicking Cancel hides InlineConfirm and does not call onArchive', () => {
     const onArchive = jest.fn()
     render(
       <AttendanceList
@@ -88,11 +88,10 @@ describe('AttendanceList — void confirmation', () => {
       />
     )
     fireEvent.click(screen.getByRole('button', { name: /void record/i }))
-    fireEvent.click(screen.getByRole('button', { name: /cancel void/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
     expect(onArchive).not.toHaveBeenCalled()
-    // Should return to normal state
     expect(screen.getByRole('button', { name: /void record/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /confirm void/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: /void this record\?/i })).not.toBeInTheDocument()
   })
 })
 

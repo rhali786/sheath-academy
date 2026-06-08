@@ -179,13 +179,14 @@ describe('QuranPage', () => {
     })
   })
 
-  it('clicking Trash shows delete confirmation panel', async () => {
+  it('clicking Trash shows InlineConfirm panel', async () => {
     mockGetSessions.mockResolvedValue(okSessions([makeSession({ surah: 'Al-Fatiha' })]))
     render(<QuranPage />)
     await waitFor(() => screen.getByRole('button', { name: /delete session/i }))
     fireEvent.click(screen.getByRole('button', { name: /delete session/i }))
-    expect(screen.getByRole('button', { name: /confirm delete session/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /cancel delete/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /delete this session/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
   })
 
   it('Confirm delete calls deleteSession and removes the session', async () => {
@@ -193,20 +194,33 @@ describe('QuranPage', () => {
     render(<QuranPage />)
     await waitFor(() => screen.getByRole('button', { name: /delete session/i }))
     fireEvent.click(screen.getByRole('button', { name: /delete session/i }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm delete session/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
     await waitFor(() => {
       expect(mockDeleteSession).toHaveBeenCalledWith('session_del')
     })
   })
 
-  it('Cancel delete closes confirmation without calling deleteSession', async () => {
+  it('Cancel delete closes InlineConfirm panel without calling deleteSession', async () => {
     mockGetSessions.mockResolvedValue(okSessions([makeSession({ surah: 'Al-Fatiha' })]))
     render(<QuranPage />)
     await waitFor(() => screen.getByRole('button', { name: /delete session/i }))
     fireEvent.click(screen.getByRole('button', { name: /delete session/i }))
-    fireEvent.click(screen.getByRole('button', { name: /cancel delete/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(mockDeleteSession).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: /delete session/i })).toBeInTheDocument()
+  })
+
+  it('error in deleteSession keeps InlineConfirm panel open and shows error message', async () => {
+    mockGetSessions.mockResolvedValue(okSessions([makeSession({ surah: 'Al-Fatiha' })]))
+    mockDeleteSession.mockRejectedValue(new Error('Server error'))
+    render(<QuranPage />)
+    await waitFor(() => screen.getByRole('button', { name: /delete session/i }))
+    fireEvent.click(screen.getByRole('button', { name: /delete session/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+      expect(screen.getByRole('group', { name: /delete this session/i })).toBeInTheDocument()
+    })
   })
 
   it('updates child filter when URL childId changes while component stays mounted', async () => {

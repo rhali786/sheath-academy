@@ -16,6 +16,76 @@ Each entry below is a data point toward that calibration.
 
 ---
 
+## 2026-06-08 — 7:11am, Step 6 plan:execute overnight run (fresh session 12% used, resets 11:50am America/New_York)
+
+**This snapshot is NOT the batch cost.** The `$1.48 / 12%` panel is a fresh
+morning session (2 lines changed, 4m 31s API) — just the branch switch + phase-7
+being marked `in_progress`. The real overnight `plan:execute` spend lives in the
+now-reset ~9pm window AND in the child `claude -p` worker processes, which the
+machine-local panel does not roll up (Subagents shows only `Explore 2%`, no
+plan-execute; `/feedback-execute 24%` is yesterday's steward bleed-through). So
+the cost of plan #1 is **not observable here** — we can log outcome precisely but
+not dollars/points for the batch.
+
+### This-session panel (morning, not the batch)
+
+- **Total cost:** $1.48 (claude-sonnet-4-6 only: 2.8k in, 16.5k out, 918.2k cache read, 253.4k cache write)
+- **Current session:** 12% used (resets 11:50am)
+- **Current week (all models):** 26% used (resets Jun 14)
+
+### Overnight outcome — Step 6 plan #1 of 9 (`confirmation-consistency`)
+
+Ran via the conductor prompt + fixed `plan:execute` (workers now `--permission-mode
+acceptEdits`). Session limit hit ~9pm (reset 11:30pm) at phase-7 of 7.
+
+| Phase | Title | Model (routed) | Status |
+|-------|-------|----------------|--------|
+| P1 | InlineConfirm component (gated foundation) | **Opus** (strong) | ✅ |
+| P2 | LessonCard/EvidenceListItem/QuranPage migrate | Sonnet | ✅ |
+| P3 | AttendanceList void + ThreadView leave | Sonnet | ✅ |
+| P4 | ChildList archive → attached panel | Sonnet | ✅ |
+| P5 | feedback admin modals → inline panels | Sonnet | ✅ |
+| P6 | ui-style-guide §3 rewrite | **Haiku** (cheap) | ✅ |
+| P7 | InlineSuccess transient notice + §9 | Sonnet | ⛔ session limit, `in_progress` |
+
+- **6/7 phases complete + committed**; +939/−592 across 26 files; InlineConfirm
+  created, ApprovalModal/RejectModal deleted, 6 confirm sites migrated.
+- **No PR yet** — stopped one phase short of completion (conductor opens the PR
+  only at exit 0).
+
+### What the two fixes from yesterday bought us (both verified working)
+
+- **Per-phase model routing fired correctly:** Opus only for the gated foundation,
+  Sonnet for migrations, **Haiku for the doc-only P6**. This is the main quota
+  lever and it engaged automatically — a cheap doc phase did not burn Sonnet/Opus.
+- **Per-phase commits held:** 10 commits on the branch (one per phase + batch
+  bookkeeping). The 9pm crash lost nothing; plan is cleanly resumable.
+
+### Side effect
+
+- **Track 1 merged to `dev` (PR #24)** — this satisfies the ia-nav (#9) dependency
+  ahead of schedule.
+
+### To finish plan #1
+
+`--resume` re-runs phase-7 from scratch (safe by design):
+```
+git checkout feat/confirmation-consistency
+npm run plan:execute -- --plan docs/bug_enhancement/20260606-confirmation-consistency-plan.json --resume
+```
+Then the conductor pushes + opens the PR against `dev`, marks plan #1 `pr_open`,
+and advances to #2 (quran).
+
+### Calibration note (open question)
+
+We still have **no clean points/$ number for a single Step 6 plan** because the
+cost is split across reset windows and invisible child processes. Next run: grab a
+session-% snapshot immediately BEFORE and AFTER one plan completes in the same
+window to finally price one plan:execute plan. confirmation-consistency is the
+biggest (7 phases, 1 Opus); the rest should be cheaper per-plan.
+
+---
+
 ## 2026-06-07 — pre-"DOZZY" checkpoint (session at 80% used, resets 6:30pm America/New_York)
 
 - **Total cost:** $21.34

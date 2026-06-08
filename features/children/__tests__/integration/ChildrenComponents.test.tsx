@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { ChildrenContext } from '@/features/children/front/context/ChildrenContext'
 import { ChildList } from '@/features/children/front/components/ChildList'
 import { ChildCard } from '@/features/children/front/components/ChildCard'
@@ -68,11 +68,50 @@ describe('ChildList component', () => {
     expect(screen.getByText('Add a new child')).toBeInTheDocument()
   })
 
-  test('shows archive confirm prompt when Archive is clicked on a card', () => {
+  test('archiving a learner renders InlineConfirm attached to that card (not a top banner)', () => {
     renderWithContext(<ChildList />, makeContext())
     const archiveButtons = screen.getAllByText('Archive')
     fireEvent.click(archiveButtons[0])
+    // InlineConfirm role=group with aria-label matching the child's name
+    expect(screen.getByRole('group', { name: new RegExp(`Archive ${activeProfiles[0].name}`, 'i') })).toBeInTheDocument()
+    // detail text present within the panel
     expect(screen.getByText(/They'll be hidden from active lists/i)).toBeInTheDocument()
+    // the card for the confirming child is replaced — Archive button for that child is gone
+    const remainingArchiveButtons = screen.getAllByText('Archive')
+    // Only Archive confirm button (aria-label=Archive) remains, not the card-level button
+    // The second active child's card is still visible
+    expect(screen.getByText(activeProfiles[1].name)).toBeInTheDocument()
+  })
+
+  test('cancel on InlineConfirm restores the child card', () => {
+    renderWithContext(<ChildList />, makeContext())
+    fireEvent.click(screen.getAllByText('Archive')[0])
+    expect(screen.getByRole('group', { name: new RegExp(`Archive ${activeProfiles[0].name}`, 'i') })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
+    expect(screen.queryByRole('group', { name: new RegExp(`Archive ${activeProfiles[0].name}`, 'i') })).not.toBeInTheDocument()
+    expect(screen.getByText(activeProfiles[0].name)).toBeInTheDocument()
+  })
+
+  test('confirm on InlineConfirm calls archiveChild and clears panel', async () => {
+    const archiveChild = jest.fn().mockResolvedValue(undefined)
+    renderWithContext(<ChildList />, makeContext({ archiveChild }))
+    fireEvent.click(screen.getAllByText('Archive')[0])
+    const panel = screen.getByRole('group', { name: new RegExp(`Archive ${activeProfiles[0].name}`, 'i') })
+    fireEvent.click(within(panel).getByRole('button', { name: /^Archive$/i }))
+    await waitFor(() => {
+      expect(archiveChild).toHaveBeenCalledWith(activeProfiles[0].id)
+    })
+  })
+
+  test('confirm on InlineConfirm shows a transient archived notice', async () => {
+    const archiveChild = jest.fn().mockResolvedValue(undefined)
+    renderWithContext(<ChildList />, makeContext({ archiveChild }))
+    fireEvent.click(screen.getAllByText('Archive')[0])
+    const panel = screen.getByRole('group', { name: new RegExp(`Archive ${activeProfiles[0].name}`, 'i') })
+    fireEvent.click(within(panel).getByRole('button', { name: /^Archive$/i }))
+    await waitFor(() => {
+      expect(screen.getByText(new RegExp(`${activeProfiles[0].name} archived`, 'i'))).toBeInTheDocument()
+    })
   })
 
   test('shows edit form with child name when Edit profile is clicked', () => {

@@ -129,6 +129,38 @@ Charts use Nivo consistently unless the plan documents an approved exception. Do
 
 ---
 
+## 9. Success confirmation (transient notice)
+
+After a destructive or significant action completes successfully, show a transient inline notice using `InlineSuccess` from `@/features/lib/front/components/InlineSuccess`. Do **not** use `alert()`, a toast library, or a bespoke inline paragraph — use `InlineSuccess`.
+
+**Props contract:**
+
+| Prop | Type | Default | Purpose |
+|---|---|---|---|
+| `message` | `string` | — | The success text, e.g. `"Aisha archived"` |
+| `dismissAfterMs` | `number` | `3000` | Auto-dismiss delay in ms |
+| `onDismiss` | `() => void` | — | Called on both auto- and manual dismiss; use to clear parent state |
+
+**Placement:** Render in the same area as the action that triggered it — typically immediately above the record list or grid where the action occurred. If the affected item is removed from the list on success, render the notice in its place within the layout, not in a detached banner far from the action.
+
+**Rules:**
+
+1. Always pass `onDismiss` to clear the parent state so the notice unmounts after dismissal.
+2. Copy: short and specific — `"<Name> archived"`, not `"Success"`.
+3. Do not stack multiple success notices; only one action completes at a time.
+4. Tests prove the notice appears after the confirming action resolves.
+
+```tsx
+{archiveSuccess && (
+  <InlineSuccess
+    message={`${archiveSuccess.name} archived`}
+    onDismiss={() => setArchiveSuccess(null)}
+  />
+)}
+```
+
+---
+
 ## 8. UI audit & tests
 
 Before modifying UI, the plan or audit reports: which rules above apply; the closest approved component/pattern; the icons and confirmation pattern used; whether the page keeps the approved width and shell; for editable cards, whether it expands inline (or why not); which tests prove the pattern. (This is the UI half of the `plan-builder` audit.)

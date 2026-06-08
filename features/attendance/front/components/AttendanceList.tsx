@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
+import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import type { AttendanceRecord, AttendanceStatus } from '@/features/attendance/types'
 import { STATUS_LABELS } from '@/features/attendance/types'
 
@@ -170,8 +171,8 @@ function RecordRow({ record, childMap, onArchive, onUpdate }: RecordRowProps) {
   }
 
   return (
-    <li className="bg-white border border-slate-200 rounded-lg px-4 py-3 shadow-sm">
-      <div className="flex items-center justify-between">
+    <li className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3 flex-wrap">
           <span className={`text-xs font-semibold px-2 py-1 rounded border ${STATUS_STYLES[record.status]}`}>
             {STATUS_LABELS[record.status]}
@@ -218,27 +219,18 @@ function RecordRow({ record, childMap, onArchive, onUpdate }: RecordRowProps) {
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
-          {confirmVoid && (
-            <>
-              <span className="text-xs text-slate-600 mr-1">Void this record?</span>
-              <button
-                onClick={() => { onArchive(record.id); setConfirmVoid(false) }}
-                aria-label="Confirm void"
-                className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700 transition-colors"
-              >
-                Confirm void
-              </button>
-              <button
-                onClick={() => setConfirmVoid(false)}
-                aria-label="Cancel void"
-                className="text-xs px-2 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-              >
-                Cancel
-              </button>
-            </>
-          )}
         </div>
       </div>
+      {confirmVoid && (
+        <div className="px-4 pb-4">
+          <InlineConfirm
+            message="Void this record?"
+            confirmLabel="Void"
+            onConfirm={() => onArchive(record.id)}
+            onCancel={() => setConfirmVoid(false)}
+          />
+        </div>
+      )}
     </li>
   )
 }

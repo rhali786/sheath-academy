@@ -1,0 +1,167 @@
+{
+  "plan": "C:\\PROJECTS\\sheath-academy-features\\docs\\bug_enhancement\\20260606-confirmation-consistency-plan.json",
+  "createdAt": "2026-06-07T23:13:54.079Z",
+  "updatedAt": "2026-06-08T12:00:00.000Z",
+  "branch": "feat/confirmation-consistency",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Shared InlineConfirm component (foundation)",
+      "gated": true,
+      "status": "complete",
+      "model": "claude-opus-4-8",
+      "startedAt": "2026-06-07T23:30:51.660Z",
+      "completedAt": "2026-06-08T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/lib/front/components/InlineConfirm.tsx",
+          "features/lib/__tests__/integration/InlineConfirm.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns \"/node_modules/\" --runTestsByPath features/lib/__tests__/integration/InlineConfirm.test.tsx (8 passed)",
+          "npm run build (passed)"
+        ],
+        "notes": "InlineConfirm exported from @/features/lib/front/components/InlineConfirm. Props: { message, detail?, confirmLabel?='Delete', pendingLabel?='Working…', cancelLabel?='Cancel', tone?='danger'|'warning', onConfirm: ()=>void|Promise<void>, onCancel: ()=>void }. Owns its OWN pending+error state internally — later phases must DROP local deleting/saving/isSubmitting flags and just pass onConfirm; on a rejected onConfirm promise the panel stays open and shows the error message inline (role=alert). Renders role=group with aria-label={message}; confirm/cancel buttons use aria-label={confirmLabel}/{cancelLabel}. tone drives confirm-button color only: danger=bg-red-600, warning=bg-amber-600. Markup: outer div role='group' with border (red-200/amber-200) rounded-lg p-4 bg-white space-y-3; message as <p> font-medium, detail as <p> text-xs text-gray-500. IMPORTANT REPO QUIRK for later phases: the default `npm test` config (jest.config.js) has testPathIgnorePatterns including '/__tests__/integration/', so the plan's doneWhen `npm test -- <integration path>` reports 'No tests found' (exit 1). Run integration tests with: npx jest --testPathIgnorePatterns \"/node_modules/\" --runTestsByPath <path>. Pre-existing failures unrelated to this work exist in features/feedback/__tests__/integration/AdminFeedbackPage.test.tsx (phase-5 will address feedback). No schema/migration touched."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-2",
+      "title": "Migrate Pattern-B sites (LessonCard, EvidenceListItem, QuranPage)",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-07T23:35:08.366Z",
+      "completedAt": "2026-06-08T01:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/plan/front/components/LessonCard.tsx",
+          "features/portfolio/front/components/EvidenceListItem.tsx",
+          "features/quran/front/pages/QuranPage.tsx",
+          "features/plan/__tests__/integration/LessonTaskList.test.tsx",
+          "features/portfolio/__tests__/integration/EvidenceListItem.test.tsx",
+          "features/quran/__tests__/integration/QuranPage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath features/plan/__tests__/integration/LessonTaskList.test.tsx features/portfolio/__tests__/integration/EvidenceListItem.test.tsx features/quran/__tests__/integration/QuranPage.test.tsx (44 passed)",
+          "npm run build (passed)"
+        ],
+        "notes": "LessonCard, EvidenceListItem, QuranPage now render InlineConfirm (from @/features/lib/front/components/InlineConfirm) in place of each component's hand-rolled confirm panel. Local deleting/isSubmitting flags removed: EvidenceListItem dropped 'deleting' state + handleDelete fn; QuranPage dropped 'deletingId' state + confirmDelete fn. Confirm trigger state retained (confirmDelete in LessonCard/EvidenceListItem, confirmDeleteId in QuranPage). InlineConfirm messages: 'Delete this lesson?', 'Delete this evidence item?', 'Delete this session?' — these are the role=group aria-label values testable via getByRole('group', { name: /.../ }). InlineConfirm confirm button aria-label defaults to 'Delete'; cancel defaults to 'Cancel'. Tests updated to assert InlineConfirm markup (role=group) and use name='Delete'/'Cancel' for button selectors; error-keeps-open tests added for EvidenceListItem and QuranPage. IMPORTANT REPO QUIRK (same as phase-1): integration tests must be run with npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath <path> — not npm test."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-3",
+      "title": "Migrate Pattern C (AttendanceList void, ThreadView leave)",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-07T23:42:26.305Z",
+      "completedAt": "2026-06-08T02:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/attendance/front/components/AttendanceList.tsx",
+          "features/messaging/front/components/ThreadView.tsx",
+          "features/attendance/__tests__/integration/AttendanceList.test.tsx",
+          "features/messaging/__tests__/integration/MessagingPage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath features/attendance/__tests__/integration/AttendanceList.test.tsx features/messaging/__tests__/integration/MessagingPage.test.tsx (24 passed)",
+          "npm run build (passed)"
+        ],
+        "notes": "AttendanceList RecordRow: replaced inline Confirm/Cancel button-swap with InlineConfirm (message='Void this record?', confirmLabel='Void') appended inside the <li> below the row content; Edit/Void buttons hidden when confirmVoid=true; confirmVoid trigger state retained. ThreadView: replaced leaveConfirm button-swap in header with Leave trigger button (hidden when leaveConfirm=true) + InlineConfirm panel (message='Leave this conversation?', confirmLabel='Leave') rendered below the header bar; dropped local 'leaving' state — InlineConfirm owns pending now; handleLeave simplified to await removeParticipant then call onBack. Import path for both: @/features/lib/front/components/InlineConfirm. Tests updated: AttendanceList void tests assert role=group with name 'Void this record?'; MessagingPage test extended with 3 new leave-conversation tests (show/cancel/confirm) asserting role=group with name 'Leave this conversation?'. REPO QUIRK (same as phases 1-2): integration tests must run with npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath — not npm test. No schema/migration touched."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-4",
+      "title": "Fix #11 — ChildList archive (detached banner → attached panel)",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-07T23:49:42.840Z",
+      "completedAt": "2026-06-08T03:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/children/front/components/ChildList.tsx",
+          "features/children/__tests__/integration/ChildrenComponents.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath features/children/__tests__/integration/ChildrenComponents.test.tsx (33 passed)",
+          "npm run build (passed)"
+        ],
+        "notes": "ChildList archive confirm now renders InlineConfirm (tone='warning', from @/features/lib/front/components/InlineConfirm) in place of the ChildCard for the learner being archived, replacing the detached top-of-list amber banner. archiveConfirm trigger state ({id, name}) retained at list level. confirmArchive function removed — InlineConfirm owns pending/error state. onConfirm calls archiveChild(child.id) then setArchiveConfirm(null). InlineConfirm message='Archive <name>?', detail='They'll be hidden from active lists but can be restored.', confirmLabel='Archive'. Tests: 3 new tests added (InlineConfirm attached to card, cancel restores card, confirm calls archiveChild with within() scoping to avoid ambiguity with other Archive buttons). REPO QUIRK: integration tests must run with npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath. No schema/migration touched."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-5",
+      "title": "Convert feedback admin modals to inline panels",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-07T23:53:35.453Z",
+      "completedAt": "2026-06-08T04:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/feedback/front/pages/AdminFeedbackPage.tsx",
+          "features/feedback/__tests__/integration/AdminFeedbackPage.test.tsx",
+          "features/feedback/front/components/ApprovalModal.tsx (deleted)",
+          "features/feedback/front/components/RejectModal.tsx (deleted)",
+          "features/feedback/__tests__/integration/ApprovalModal.test.tsx (deleted)",
+          "features/feedback/__tests__/integration/RejectModal.test.tsx (deleted)"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath features/feedback/__tests__/integration/AdminFeedbackPage.test.tsx (31 passed)",
+          "npm run build (passed)"
+        ],
+        "notes": "ApprovalModal and RejectModal deleted. AdminFeedbackPage now renders InlineConfirm (from @/features/lib/front/components/InlineConfirm) inline within each feedback row: approve uses message='Approve for planning?' confirmLabel='Approve' tone='warning'; reject uses message='Reject planning?' confirmLabel='Reject' tone='danger' (default). detail={row.message} provides the message preview. Action buttons (approve-button-*, reject-button-*) are hidden while the confirm panel is open for that row (selectedId/selectedRejectId check). onConfirm calls handleApprove(row.id) / handleReject(row.id) which close themselves on success via setSelectedId(null)/setSelectedRejectId(null); InlineConfirm catches thrown errors and keeps the panel open with role=alert. Tests: 31 tests in AdminFeedbackPage.test.tsx; modal test files folded in. No schema/migration touched. REPO QUIRK: integration tests must run with npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-6",
+      "title": "Style-guide update — InlineConfirm as the single approved pattern",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-haiku-4-5-20251001",
+      "startedAt": "2026-06-08T00:00:15.041Z",
+      "completedAt": "2026-06-08T05:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          ".claude/skills/ui-style-guide/SKILL.md"
+        ],
+        "testsRun": [
+          "npm run build (passed)"
+        ],
+        "notes": "ui-style-guide §3 rewritten to document InlineConfirm (@/features/lib/front/components/InlineConfirm) as the single approved destructive-confirmation component. Section 3 now includes: props contract (message, detail?, confirmLabel?, pendingLabel?, cancelLabel?, tone?); tone='danger' (red) vs tone='warning' (amber); Pattern A (replace-card for LessonCard/EvidenceListItem/QuranPage) and Pattern B (attached-to-row for AttendanceList/ThreadView/ChildList) with code examples; 7 rules covering pending/error state ownership, copy, cancel/confirm behavior, error display, and test coverage. No schema/migration touched."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-7",
+      "title": "Track C — InlineSuccess transient notice + style-guide §9",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-08T11:11:34.695Z",
+      "completedAt": "2026-06-08T12:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/lib/front/components/InlineSuccess.tsx",
+          "features/lib/__tests__/integration/InlineSuccess.test.tsx",
+          "features/children/front/components/ChildList.tsx",
+          "features/children/__tests__/integration/ChildrenComponents.test.tsx",
+          ".claude/skills/ui-style-guide/SKILL.md"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath features/lib/__tests__/integration/InlineSuccess.test.tsx (5 passed)",
+          "npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath features/children/__tests__/integration/ChildrenComponents.test.tsx (34 passed)",
+          "npm run build (passed)"
+        ],
+        "notes": "InlineSuccess created at @/features/lib/front/components/InlineSuccess. Props: { message: string, dismissAfterMs?: number (default 3000), onDismiss?: () => void }. Renders role='status' with green styling; auto-dismisses via internal setTimeout; manual dismiss via aria-label='Dismiss' button; uses useRef for stable onDismiss callback. Applied to ChildList archive success: archiveSuccess state { id, name } | null added; after archiveChild resolves and archiveConfirm is cleared, setArchiveSuccess is called; InlineSuccess renders above the children grid with message '<name> archived' and onDismiss clears archiveSuccess. Style-guide §9 'Success confirmation (transient notice)' added documenting InlineSuccess as the approved pattern. No schema/migration touched. REPO QUIRK: integration tests must run with npx jest --testPathIgnorePatterns /node_modules/ --runTestsByPath."
+      },
+      "failureReason": null
+    }
+  ]
+}

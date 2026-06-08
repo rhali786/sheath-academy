@@ -25,7 +25,9 @@
       "Bash(type .gitignore)",
       "Bash(echo \"check-ignore exit: $? \\(1 = not ignored, good\\)\")",
       "Bash(gh run *)",
-      "Bash(gh pr *)"
+      "Bash(gh pr *)",
+      "Bash(echo \"EXITCODE=$?\")",
+      "Read(//c/Users/rashe/AppData/Local/Temp/claude/**)"
     ]
   }
 }

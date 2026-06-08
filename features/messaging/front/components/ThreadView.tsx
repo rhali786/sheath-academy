@@ -4,6 +4,7 @@ import React, { useEffect, useCallback, useRef, useState } from 'react'
 import { ArrowLeft, MessageCircle, UserPlus } from 'lucide-react'
 import { useThread } from '@/features/messaging/front/hooks/useThread'
 import { markRead, removeParticipant } from '@/features/messaging/front/services/api'
+import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import { Composer } from '@/features/messaging/front/components/Composer'
 import { Avatar } from '@/features/messaging/front/components/Avatar'
 import { MessageBubble } from '@/features/messaging/front/components/MessageBubble'
@@ -18,7 +19,6 @@ interface ThreadViewProps {
 
 export function ThreadView({ conversationId, currentUserId, onBack, onAddParticipant }: ThreadViewProps) {
   const { messages, participants, conversation, loading, error } = useThread(conversationId)
-  const [leaving, setLeaving] = useState(false)
   const [leaveConfirm, setLeaveConfirm] = useState(false)
   const [localMessages, setLocalMessages] = useState(messages)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -44,14 +44,8 @@ export function ThreadView({ conversationId, currentUserId, onBack, onAddPartici
 
   const handleLeave = useCallback(async () => {
     if (!currentUserId) return
-    setLeaving(true)
-    try {
-      await removeParticipant(conversationId, currentUserId)
-      onBack?.()
-    } catch {
-      setLeaving(false)
-      setLeaveConfirm(false)
-    }
+    await removeParticipant(conversationId, currentUserId)
+    onBack?.()
   }, [conversationId, currentUserId, onBack])
 
   const myParticipant = participants.find((p) => p.userId === currentUserId)
@@ -128,37 +122,27 @@ export function ThreadView({ conversationId, currentUserId, onBack, onAddPartici
               Add
             </button>
           )}
-          {currentUserId && (
-            <>
-              {leaveConfirm ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-600">Leave this conversation?</span>
-                  <button
-                    onClick={handleLeave}
-                    disabled={leaving}
-                    className="text-sm font-medium text-red-600 hover:text-red-800"
-                  >
-                    {leaving ? 'Leaving…' : 'Confirm'}
-                  </button>
-                  <button
-                    onClick={() => setLeaveConfirm(false)}
-                    className="text-sm text-slate-500 hover:text-slate-700"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setLeaveConfirm(true)}
-                  className="rounded-lg px-3 py-1.5 text-sm text-slate-500 hover:bg-red-50 hover:text-red-600"
-                >
-                  Leave
-                </button>
-              )}
-            </>
+          {currentUserId && !leaveConfirm && (
+            <button
+              onClick={() => setLeaveConfirm(true)}
+              className="rounded-lg px-3 py-1.5 text-sm text-slate-500 hover:bg-red-50 hover:text-red-600"
+            >
+              Leave
+            </button>
           )}
         </div>
       </div>
+
+      {currentUserId && leaveConfirm && (
+        <div className="border-b border-slate-200 px-4 py-3">
+          <InlineConfirm
+            message="Leave this conversation?"
+            confirmLabel="Leave"
+            onConfirm={handleLeave}
+            onCancel={() => setLeaveConfirm(false)}
+          />
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto bg-slate-50 px-4 py-4">
         {localMessages.length === 0 ? (

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
+import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import type { EvidenceItem, EvidenceType, CreateEvidenceItemInput } from '@/features/portfolio/types'
 
 const TYPE_LABELS: Record<EvidenceType, string> = {
@@ -55,7 +56,6 @@ export function EvidenceListItem({ item, childName, subjectName, onUpdate, onDel
   const [isEditing, setIsEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
 
   // Edit form state
   const [editTitle, setEditTitle] = useState(item.title)
@@ -115,19 +115,6 @@ export function EvidenceListItem({ item, childName, subjectName, onUpdate, onDel
       // keep form open on error
     } finally {
       setSaving(false)
-    }
-  }
-
-  async function handleDelete() {
-    if (!onDelete) return
-    setDeleting(true)
-    try {
-      await onDelete(item.id)
-      setConfirmDelete(false)
-    } catch {
-      // keep confirmation open on error
-    } finally {
-      setDeleting(false)
     }
   }
 
@@ -272,27 +259,12 @@ export function EvidenceListItem({ item, childName, subjectName, onUpdate, onDel
 
   if (confirmDelete) {
     return (
-      <div className="border border-red-200 rounded-lg p-4 bg-white space-y-3">
-        <p className="text-sm font-medium text-red-700">Delete this evidence item?</p>
-        <p className="text-xs text-gray-500">{item.title}</p>
-        <div className="flex gap-2 justify-end">
-          <button
-            onClick={() => setConfirmDelete(false)}
-            aria-label="Cancel delete"
-            className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 border border-slate-200 rounded-lg transition-colors"
-          >
-            <X className="w-3 h-3" /> Cancel
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            aria-label="Confirm delete evidence"
-            className="flex items-center gap-1 text-xs text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-          >
-            <Trash2 className="w-3 h-3" /> {deleting ? 'Deleting…' : 'Delete'}
-          </button>
-        </div>
-      </div>
+      <InlineConfirm
+        message="Delete this evidence item?"
+        detail={item.title}
+        onConfirm={() => onDelete!(item.id)}
+        onCancel={() => setConfirmDelete(false)}
+      />
     )
   }
 

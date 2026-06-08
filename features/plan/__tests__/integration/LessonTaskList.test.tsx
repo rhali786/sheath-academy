@@ -169,7 +169,7 @@ describe('LessonTaskList', () => {
     expect(onEdit).toHaveBeenCalledWith(baseLesson)
   })
 
-  it('Delete button (Trash icon) shows inline confirmation before calling onDelete', () => {
+  it('Delete button (Trash icon) shows InlineConfirm panel before calling onDelete', () => {
     const onDelete = jest.fn()
     render(
       <LessonTaskList
@@ -181,12 +181,12 @@ describe('LessonTaskList', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: /delete lesson/i }))
     expect(onDelete).not.toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: /confirm delete lesson/i })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /confirm delete lesson/i }))
+    expect(screen.getByRole('group', { name: /delete this lesson/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
     expect(onDelete).toHaveBeenCalledWith('lesson_001')
   })
 
-  it('Cancel in delete confirmation hides the confirmation', () => {
+  it('Cancel in InlineConfirm hides the confirmation panel', () => {
     const onDelete = jest.fn()
     render(
       <LessonTaskList
@@ -197,8 +197,8 @@ describe('LessonTaskList', () => {
       />
     )
     fireEvent.click(screen.getByRole('button', { name: /delete lesson/i }))
-    fireEvent.click(screen.getByRole('button', { name: /cancel delete/i }))
-    expect(screen.queryByRole('button', { name: /confirm delete/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('group', { name: /delete this lesson/i })).not.toBeInTheDocument()
     expect(onDelete).not.toHaveBeenCalled()
   })
 })

@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { AdminFeedbackPage } from '@/features/feedback/front/pages/AdminFeedbackPage'
 import type { FeedbackRow } from '@/features/feedback/types'
 
@@ -215,40 +215,70 @@ describe('AdminFeedbackPage', () => {
       })
     })
 
-    it('opens approval modal when approve clicked', async () => {
-      mockFetch.mockResolvedValue(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'awaiting_approval' })] }))
+    it('renders InlineConfirm inline within the row when approve clicked', async () => {
+      mockFetch.mockResolvedValue(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'awaiting_approval', message: 'Dashboard looks broken' })] }))
       render(<AdminFeedbackPage />)
       await waitFor(() => screen.getByTestId('approve-button-fb_1'))
       fireEvent.click(screen.getByTestId('approve-button-fb_1'))
       await waitFor(() => {
-        expect(screen.getByRole('dialog')).toBeInTheDocument()
+        const row = screen.getByTestId('feedback-item-fb_1')
+        expect(within(row).getByRole('group', { name: 'Approve for planning?' })).toBeInTheDocument()
+      })
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('shows message preview as InlineConfirm detail for approve', async () => {
+      mockFetch.mockResolvedValue(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'awaiting_approval', message: 'Unique preview text' })] }))
+      render(<AdminFeedbackPage />)
+      await waitFor(() => screen.getByTestId('approve-button-fb_1'))
+      fireEvent.click(screen.getByTestId('approve-button-fb_1'))
+      await waitFor(() => {
+        const group = screen.getByRole('group', { name: 'Approve for planning?' })
+        expect(within(group).getByText('Unique preview text')).toBeInTheDocument()
       })
     })
 
-    it('closes modal on cancel', async () => {
+    it('cancel clears approve selection without calling API', async () => {
       mockFetch.mockResolvedValue(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'awaiting_approval' })] }))
       render(<AdminFeedbackPage />)
       await waitFor(() => screen.getByTestId('approve-button-fb_1'))
       fireEvent.click(screen.getByTestId('approve-button-fb_1'))
-      await waitFor(() => screen.getByRole('dialog'))
+      await waitFor(() => screen.getByRole('group', { name: 'Approve for planning?' }))
+      const callsBefore = mockFetch.mock.calls.length
       fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
       await waitFor(() => {
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        expect(screen.queryByRole('group', { name: 'Approve for planning?' })).not.toBeInTheDocument()
       })
+      expect(mockFetch.mock.calls.length).toBe(callsBefore)
     })
 
-    it('calls approve endpoint and closes modal on confirm', async () => {
+    it('calls approve endpoint and closes confirm on confirm', async () => {
       mockFetch
         .mockResolvedValueOnce(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'awaiting_approval' })] }))
         .mockResolvedValueOnce(mockOk({ status: 'success', data: null }))
       render(<AdminFeedbackPage />)
       await waitFor(() => screen.getByTestId('approve-button-fb_1'))
       fireEvent.click(screen.getByTestId('approve-button-fb_1'))
-      await waitFor(() => screen.getByRole('dialog'))
+      await waitFor(() => screen.getByRole('group', { name: 'Approve for planning?' }))
       fireEvent.click(screen.getByRole('button', { name: /^Approve$/i }))
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith('/api/admin/feedback/fb_1/approve', { method: 'POST' })
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        expect(screen.queryByRole('group', { name: 'Approve for planning?' })).not.toBeInTheDocument()
+      })
+    })
+
+    it('error keeps approve InlineConfirm open', async () => {
+      mockFetch
+        .mockResolvedValueOnce(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'awaiting_approval' })] }))
+        .mockResolvedValueOnce(mockOk({ status: 'error', message: 'Approval failed', data: null }))
+      render(<AdminFeedbackPage />)
+      await waitFor(() => screen.getByTestId('approve-button-fb_1'))
+      fireEvent.click(screen.getByTestId('approve-button-fb_1'))
+      await waitFor(() => screen.getByRole('group', { name: 'Approve for planning?' }))
+      fireEvent.click(screen.getByRole('button', { name: /^Approve$/i }))
+      await waitFor(() => {
+        expect(screen.getByRole('group', { name: 'Approve for planning?' })).toBeInTheDocument()
+        expect(screen.getByRole('alert')).toBeInTheDocument()
       })
     })
 
@@ -269,15 +299,41 @@ describe('AdminFeedbackPage', () => {
       })
     })
 
-    it('opens reject modal when reject button clicked', async () => {
-      mockFetch.mockResolvedValue(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'reviewed' })] }))
+    it('renders InlineConfirm inline within the row when reject clicked', async () => {
+      mockFetch.mockResolvedValue(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'reviewed', message: 'Something to reject' })] }))
       render(<AdminFeedbackPage />)
       await waitFor(() => screen.getByTestId('reject-button-fb_1'))
       fireEvent.click(screen.getByTestId('reject-button-fb_1'))
       await waitFor(() => {
-        expect(screen.getByRole('dialog')).toBeInTheDocument()
-        expect(screen.getByText('Reject planning')).toBeInTheDocument()
+        const row = screen.getByTestId('feedback-item-fb_1')
+        expect(within(row).getByRole('group', { name: 'Reject planning?' })).toBeInTheDocument()
       })
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('shows message preview as InlineConfirm detail for reject', async () => {
+      mockFetch.mockResolvedValue(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'reviewed', message: 'Another unique preview' })] }))
+      render(<AdminFeedbackPage />)
+      await waitFor(() => screen.getByTestId('reject-button-fb_1'))
+      fireEvent.click(screen.getByTestId('reject-button-fb_1'))
+      await waitFor(() => {
+        const group = screen.getByRole('group', { name: 'Reject planning?' })
+        expect(within(group).getByText('Another unique preview')).toBeInTheDocument()
+      })
+    })
+
+    it('cancel clears reject selection without calling API', async () => {
+      mockFetch.mockResolvedValue(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'reviewed' })] }))
+      render(<AdminFeedbackPage />)
+      await waitFor(() => screen.getByTestId('reject-button-fb_1'))
+      fireEvent.click(screen.getByTestId('reject-button-fb_1'))
+      await waitFor(() => screen.getByRole('group', { name: 'Reject planning?' }))
+      const callsBefore = mockFetch.mock.calls.length
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
+      await waitFor(() => {
+        expect(screen.queryByRole('group', { name: 'Reject planning?' })).not.toBeInTheDocument()
+      })
+      expect(mockFetch.mock.calls.length).toBe(callsBefore)
     })
 
     it('calls reject endpoint and moves row to cancelled on confirm', async () => {
@@ -287,26 +343,41 @@ describe('AdminFeedbackPage', () => {
       render(<AdminFeedbackPage />)
       await waitFor(() => screen.getByTestId('reject-button-fb_1'))
       fireEvent.click(screen.getByTestId('reject-button-fb_1'))
-      await waitFor(() => screen.getByRole('dialog'))
+      await waitFor(() => screen.getByRole('group', { name: 'Reject planning?' }))
       fireEvent.click(screen.getByRole('button', { name: /^Reject$/i }))
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith('/api/admin/feedback/fb_1/reject', { method: 'POST' })
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        expect(screen.queryByRole('group', { name: 'Reject planning?' })).not.toBeInTheDocument()
         expect(screen.getByText('cancelled')).toBeInTheDocument()
       })
     })
 
-    it('optimistic update shows classified badge after approval', async () => {
+    it('error keeps reject InlineConfirm open', async () => {
+      mockFetch
+        .mockResolvedValueOnce(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'reviewed' })] }))
+        .mockResolvedValueOnce(mockOk({ status: 'error', message: 'Reject failed', data: null }))
+      render(<AdminFeedbackPage />)
+      await waitFor(() => screen.getByTestId('reject-button-fb_1'))
+      fireEvent.click(screen.getByTestId('reject-button-fb_1'))
+      await waitFor(() => screen.getByRole('group', { name: 'Reject planning?' }))
+      fireEvent.click(screen.getByRole('button', { name: /^Reject$/i }))
+      await waitFor(() => {
+        expect(screen.getByRole('group', { name: 'Reject planning?' })).toBeInTheDocument()
+        expect(screen.getByRole('alert')).toBeInTheDocument()
+      })
+    })
+
+    it('optimistic update shows reviewed badge after approval', async () => {
       mockFetch
         .mockResolvedValueOnce(mockOk({ status: 'success', data: [makeRow({ id: 'fb_1', status: 'awaiting_approval' })] }))
         .mockResolvedValueOnce(mockOk({ status: 'success', data: null }))
       render(<AdminFeedbackPage />)
       await waitFor(() => screen.getByTestId('approve-button-fb_1'))
       fireEvent.click(screen.getByTestId('approve-button-fb_1'))
-      await waitFor(() => screen.getByRole('dialog'))
+      await waitFor(() => screen.getByRole('group', { name: 'Approve for planning?' }))
       fireEvent.click(screen.getByRole('button', { name: /^Approve$/i }))
       await waitFor(() => {
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        expect(screen.queryByRole('group', { name: 'Approve for planning?' })).not.toBeInTheDocument()
         expect(screen.getByText('reviewed')).toBeInTheDocument()
       })
     })

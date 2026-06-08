@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/bug_enhancement/20260606-quran-progress-chart-plan.md",
+  "branch": "feat/quran-progress-chart",
+  "phases": [
+    {
+      "id": "phase-1",
+      "status": "complete",
+      "model": "claude-sonnet-4-6 (strong tier, inline session)",
+      "filesChanged": [
+        "features/quran/front/components/QuranProgressChart.tsx",
+        "features/quran/front/components/shared/ChartContainer.tsx",
+        "features/quran/front/theme.ts",
+        "features/quran/front/pages/QuranPage.tsx",
+        "features/quran/__tests__/unit/bucketByWeek.test.ts",
+        "features/quran/__tests__/integration/QuranProgressChart.test.tsx"
+      ],
+      "testsRun": [
+        "npx jest --testPathIgnorePatterns \"/node_modules/\" --runTestsByPath features/quran/__tests__/unit/bucketByWeek.test.ts features/quran/__tests__/integration/QuranProgressChart.test.tsx features/quran/__tests__/integration/QuranPage.test.tsx (3 suites, 20 passed)",
+        "npm run build (passed)"
+      ],
+      "notes": "Chart-primitive decision: duplicated ChartContainer (~12 lines) into features/quran/front/components/shared/, plus a small local theme.ts (nivoTheme + forest line/gradient tokens) — no cross-import from features/dashboard/front. Manual Playwright smoke against npm run dev + seeded demo data caught a real undefined.map crash: ResponsiveLine needs an explicit `layers` array prop in this build (its defaultProps weren't applied) — fixed by adding layers=['grid','markers','axes','areas','crosshair','lines','points','slices','mesh','legends']. After the fix the chart renders a smooth forest-green curve with gradient fill, week-start axis labels, and a styled tooltip with no console/runtime errors. All 6 seeded learners (household_seed_001 + household_seed_amina) already have Quran sessions (27-76 each) — no zero-session learner exists to exercise the empty state live; it is covered by the integration test's DOM assertions instead (icon-in-circle + 'No Quran sessions logged yet' + hint, mirroring the proven ConversationList empty-state pattern). PR #26 opened against dev."
+    }
+  ]
+}
