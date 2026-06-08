@@ -103,6 +103,17 @@ describe('ChildList component', () => {
     })
   })
 
+  test('confirm on InlineConfirm shows a transient archived notice', async () => {
+    const archiveChild = jest.fn().mockResolvedValue(undefined)
+    renderWithContext(<ChildList />, makeContext({ archiveChild }))
+    fireEvent.click(screen.getAllByText('Archive')[0])
+    const panel = screen.getByRole('group', { name: new RegExp(`Archive ${activeProfiles[0].name}`, 'i') })
+    fireEvent.click(within(panel).getByRole('button', { name: /^Archive$/i }))
+    await waitFor(() => {
+      expect(screen.getByText(new RegExp(`${activeProfiles[0].name} archived`, 'i'))).toBeInTheDocument()
+    })
+  })
+
   test('shows edit form with child name when Edit profile is clicked', () => {
     renderWithContext(<ChildList />, makeContext())
     const editButtons = screen.getAllByRole('button', { name: /edit profile/i })

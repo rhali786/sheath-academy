@@ -6,12 +6,14 @@ import { useChildren } from '../context'
 import { ChildCard } from './ChildCard'
 import { ChildForm } from './ChildForm'
 import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
+import { InlineSuccess } from '@/features/lib/front/components/InlineSuccess'
 
 export function ChildList() {
   const { children, allChildren, householdId, showArchived, setShowArchived, loading, createChild, updateChild, archiveChild, restoreChild } = useChildren()
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingChild, setEditingChild] = useState<StudentProfile | null>(null)
   const [archiveConfirm, setArchiveConfirm] = useState<{ id: string; name: string } | null>(null)
+  const [archiveSuccess, setArchiveSuccess] = useState<{ id: string; name: string } | null>(null)
 
   async function handleCreateChild(data: Parameters<typeof createChild>[0]) {
     try {
@@ -98,6 +100,13 @@ export function ChildList() {
         </div>
       )}
 
+      {archiveSuccess && (
+        <InlineSuccess
+          message={`${archiveSuccess.name} archived`}
+          onDismiss={() => setArchiveSuccess(null)}
+        />
+      )}
+
       {children.length === 0 ? (
         <div className="text-center py-8 text-slate-500">
           <p>{showArchived ? 'No children.' : 'No active children. Add one to get started.'}</p>
@@ -115,6 +124,7 @@ export function ChildList() {
                   onConfirm={async () => {
                     await archiveChild(child.id)
                     setArchiveConfirm(null)
+                    setArchiveSuccess({ id: child.id, name: child.name })
                   }}
                   onCancel={() => setArchiveConfirm(null)}
                 />
