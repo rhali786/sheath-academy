@@ -20,6 +20,7 @@ import { handleAdminMetricsRoute } from '@/features/admin-metrics/api/router'
 import { handleFeedbackRoute } from '@/features/feedback/api/router'
 import { handleAdminFeedbackRoute } from '@/features/feedback/api/adminRouter'
 import { handleMessagingRoute } from '@/features/messaging/api/router'
+import { handleTodosRoute } from '@/features/todos/api/router'
 
 async function handleRoute(slug: string[], request: Request): Promise<NextResponse | Response | null> {
   if (slug[0] === 'dashboard') {
@@ -95,6 +96,10 @@ async function handleRoute(slug: string[], request: Request): Promise<NextRespon
 
   if (slug[0] === 'messaging') {
     return await handleMessagingRoute(slug.slice(1), request)
+  }
+
+  if (slug[0] === 'todos') {
+    return await handleTodosRoute(slug.slice(1), request)
   }
 
   return null

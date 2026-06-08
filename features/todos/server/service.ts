@@ -48,6 +48,7 @@ export async function updateTodo(
     dueDate: input.dueDate,
     done: input.done,
     sortOrder: input.sortOrder,
+    completedAt: input.done === undefined ? undefined : (input.done ? new Date() : null),
   })
   return row ? toPersonalTodo(row) : null
 }
@@ -57,11 +58,7 @@ export async function toggleTodoDone(
   householdId: string,
   done: boolean,
 ): Promise<PersonalTodo | null> {
-  const row = await updateTodoRow(id, householdId, {
-    done,
-    completedAt: done ? new Date() : null,
-  })
-  return row ? toPersonalTodo(row) : null
+  return updateTodo(id, householdId, { done })
 }
 
 export async function deleteTodo(id: string, householdId: string): Promise<boolean> {
