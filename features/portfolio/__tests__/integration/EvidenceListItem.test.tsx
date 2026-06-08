@@ -175,7 +175,7 @@ describe('EvidenceListItem — edit expansion (inline)', () => {
 })
 
 describe('EvidenceListItem — delete confirmation', () => {
-  it('shows delete confirmation panel when Trash icon is clicked', () => {
+  it('shows InlineConfirm panel when Trash icon is clicked', () => {
     render(
       <EvidenceListItem
         item={makeItem()}
@@ -185,11 +185,12 @@ describe('EvidenceListItem — delete confirmation', () => {
       />
     )
     fireEvent.click(screen.getByRole('button', { name: /delete evidence/i }))
-    expect(screen.getByRole('button', { name: /confirm delete evidence/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /cancel delete/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /delete this evidence item/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
   })
 
-  it('Cancel delete hides confirmation and does not call onDelete', () => {
+  it('Cancel hides InlineConfirm panel and does not call onDelete', () => {
     const onDelete = jest.fn()
     render(
       <EvidenceListItem
@@ -200,10 +201,10 @@ describe('EvidenceListItem — delete confirmation', () => {
       />
     )
     fireEvent.click(screen.getByRole('button', { name: /delete evidence/i }))
-    fireEvent.click(screen.getByRole('button', { name: /cancel delete/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(onDelete).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: /delete evidence/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /confirm delete/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: /delete this evidence item/i })).not.toBeInTheDocument()
   })
 
   it('Confirm delete calls onDelete with item id', async () => {
@@ -217,9 +218,27 @@ describe('EvidenceListItem — delete confirmation', () => {
       />
     )
     fireEvent.click(screen.getByRole('button', { name: /delete evidence/i }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm delete evidence/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
     await waitFor(() => {
       expect(onDelete).toHaveBeenCalledWith('ev_del_123')
+    })
+  })
+
+  it('error in onDelete keeps InlineConfirm panel open and shows error message', async () => {
+    const onDelete = jest.fn().mockRejectedValue(new Error('Server error'))
+    render(
+      <EvidenceListItem
+        item={makeItem()}
+        childName="Adam"
+        subjectName="Math"
+        onDelete={onDelete}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /delete evidence/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+      expect(screen.getByRole('group', { name: /delete this evidence item/i })).toBeInTheDocument()
     })
   })
 })

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Pencil, Trash2, X, Check } from 'lucide-react'
+import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import { quranApi } from '@/features/quran/front/services/api'
 import { useHousehold } from '@/features/household/front/context'
 import { SURAHS } from '@/features/quran/front/constants/surahs'
@@ -57,7 +58,6 @@ export default function QuranPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<EditState | null>(null)
   const [saving, setSaving] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [filterChildId, setFilterChildId] = useState<string>('')
   const [filterType, setFilterType] = useState<string>('')
@@ -161,19 +161,6 @@ export default function QuranPage() {
 
   function cancelDelete() {
     setConfirmDeleteId(null)
-  }
-
-  async function confirmDelete(id: string) {
-    setDeletingId(id)
-    try {
-      await quranApi.deleteSession(id)
-      setSessions(prev => prev.filter(s => s.id !== id))
-      setConfirmDeleteId(null)
-    } catch {
-      // keep confirmation open on error
-    } finally {
-      setDeletingId(null)
-    }
   }
 
   return (
@@ -406,30 +393,16 @@ export default function QuranPage() {
                   </div>
                 </div>
               ) : confirmDeleteId === s.id ? (
-                /* Delete confirmation panel */
-                <div className="p-4 bg-red-50 border-t border-red-100">
-                  <p className="text-sm text-red-700 font-medium mb-3">Delete this session?</p>
-                  <p className="text-xs text-red-600 mb-3">
-                    {s.surah} · {s.type} · {s.date}
-                  </p>
-                  <div className="flex gap-2 justify-end">
-                    <button
-                      onClick={cancelDelete}
-                      aria-label="Cancel delete"
-                      className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 border border-slate-200 rounded-lg bg-white transition-colors"
-                    >
-                      <X className="w-3 h-3" /> Cancel
-                    </button>
-                    <button
-                      onClick={() => confirmDelete(s.id)}
-                      disabled={deletingId === s.id}
-                      aria-label="Confirm delete session"
-                      className="flex items-center gap-1 text-xs text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      <Trash2 className="w-3 h-3" /> {deletingId === s.id ? 'Deleting…' : 'Delete'}
-                    </button>
-                  </div>
-                </div>
+                <InlineConfirm
+                  message="Delete this session?"
+                  detail={`${s.surah} · ${s.type} · ${s.date}`}
+                  onConfirm={async () => {
+                    await quranApi.deleteSession(s.id)
+                    setSessions(prev => prev.filter(session => session.id !== s.id))
+                    setConfirmDeleteId(null)
+                  }}
+                  onCancel={cancelDelete}
+                />
               ) : (
                 /* Read state */
                 <div className="flex items-center justify-between gap-4 p-4">

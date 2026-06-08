@@ -3,8 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import type { FeedbackRow } from '@/features/feedback/types'
-import { ApprovalModal } from '../components/ApprovalModal'
-import { RejectModal } from '../components/RejectModal'
+import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 
 const SENTIMENT_EMOJI: Record<string, string> = {
   bad: '😣',
@@ -90,8 +89,6 @@ export function AdminFeedbackPage() {
     }
   }
 
-  const selectedFeedback = selectedId ? rows.find(r => r.id === selectedId) : null
-  const selectedRejectFeedback = selectedRejectId ? rows.find(r => r.id === selectedRejectId) : null
   const statusCounts = rows.reduce<Record<string, number>>((counts, row) => {
     counts[row.status] = (counts[row.status] ?? 0) + 1
     return counts
@@ -328,8 +325,32 @@ export function AdminFeedbackPage() {
                   </div>
                 )}
 
-                {/* Action buttons */}
-                {(row.status === 'awaiting_approval' || row.status === 'reviewed') && (
+                {/* Inline approve confirm */}
+                {selectedId === row.id && (
+                  <InlineConfirm
+                    message="Approve for planning?"
+                    detail={row.message || undefined}
+                    confirmLabel="Approve"
+                    tone="warning"
+                    onConfirm={() => handleApprove(row.id)}
+                    onCancel={() => setSelectedId(null)}
+                  />
+                )}
+
+                {/* Inline reject confirm */}
+                {selectedRejectId === row.id && (
+                  <InlineConfirm
+                    message="Reject planning?"
+                    detail={row.message || undefined}
+                    confirmLabel="Reject"
+                    onConfirm={() => handleReject(row.id)}
+                    onCancel={() => setSelectedRejectId(null)}
+                  />
+                )}
+
+                {/* Action buttons — hidden when a confirm panel is open for this row */}
+                {(row.status === 'awaiting_approval' || row.status === 'reviewed') &&
+                  selectedId !== row.id && selectedRejectId !== row.id && (
                   <div className="flex gap-2 mt-2">
                     {row.status === 'awaiting_approval' && (
                       <button
@@ -355,25 +376,6 @@ export function AdminFeedbackPage() {
         </div>
       )}
 
-      {/* Approval modal */}
-      {selectedFeedback && (
-        <ApprovalModal
-          feedbackId={selectedFeedback.id}
-          feedbackMessage={selectedFeedback.message || undefined}
-          onConfirm={handleApprove}
-          onCancel={() => setSelectedId(null)}
-        />
-      )}
-
-      {/* Reject modal */}
-      {selectedRejectFeedback && (
-        <RejectModal
-          feedbackId={selectedRejectFeedback.id}
-          feedbackMessage={selectedRejectFeedback.message || undefined}
-          onConfirm={handleReject}
-          onCancel={() => setSelectedRejectId(null)}
-        />
-      )}
     </div>
   )
 }

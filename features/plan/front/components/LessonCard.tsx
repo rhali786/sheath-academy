@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
+import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
@@ -238,26 +239,12 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
 
   if (confirmDelete) {
     return (
-      <div className="p-4 bg-white rounded-lg border border-red-200 shadow-sm">
-        <p className="text-sm font-medium text-red-700 mb-1">Delete this lesson?</p>
-        <p className="text-xs text-slate-500 mb-3">{lesson.title}</p>
-        <div className="flex gap-2 justify-end">
-          <button
-            onClick={() => setConfirmDelete(false)}
-            aria-label="Cancel delete"
-            className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 border border-slate-200 rounded-lg transition-colors"
-          >
-            <X className="w-3 h-3" /> Cancel
-          </button>
-          <button
-            onClick={() => { if (onDelete) onDelete(lesson.id); setConfirmDelete(false) }}
-            aria-label="Confirm delete lesson"
-            className="flex items-center gap-1 text-xs text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <Trash2 className="w-3 h-3" /> Delete
-          </button>
-        </div>
-      </div>
+      <InlineConfirm
+        message="Delete this lesson?"
+        detail={lesson.title}
+        onConfirm={() => { if (onDelete) onDelete(lesson.id) }}
+        onCancel={() => setConfirmDelete(false)}
+      />
     )
   }
 
