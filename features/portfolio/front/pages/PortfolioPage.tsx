@@ -119,6 +119,16 @@ export function PortfolioPage() {
     await refreshItems()
   }
 
+  async function handleDeleteAttachment(attachmentId: string) {
+    await portfolioApi.deleteEvidenceAttachment(attachmentId)
+    await refreshItems()
+  }
+
+  async function handleUploadAttachment(evidenceId: string, file: File) {
+    await portfolioApi.uploadEvidenceAttachment(evidenceId, file)
+    await refreshItems()
+  }
+
   const children = studentProfiles.map(p => ({ id: p.id, name: p.name }))
   const childMap: Record<string, string> = {}
   children.forEach(c => { childMap[c.id] = c.name })
@@ -179,6 +189,8 @@ export function PortfolioPage() {
         hasActiveFilters={!!(filterSubjectId || filterType || filterStartDate || filterEndDate)}
         onUpdate={handleUpdate}
         onDelete={handleDelete}
+        onDeleteAttachment={handleDeleteAttachment}
+        onUploadAttachment={handleUploadAttachment}
         childOptions={children}
         subjects={subjectOptions}
         lessons={lessonOptions}

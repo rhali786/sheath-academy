@@ -396,3 +396,90 @@ describe('EvidenceListItem — attachments', () => {
     })
   })
 })
+
+// ── Edit mode — attachment management ─────────────────────────────────────────
+
+const mockCreateObjectURL = jest.fn(() => 'blob:http://localhost/fake-preview')
+const mockRevokeObjectURL = jest.fn()
+
+beforeAll(() => {
+  Object.defineProperty(URL, 'createObjectURL', { value: mockCreateObjectURL, writable: true, configurable: true })
+  Object.defineProperty(URL, 'revokeObjectURL', { value: mockRevokeObjectURL, writable: true, configurable: true })
+})
+beforeEach(() => { mockCreateObjectURL.mockClear(); mockRevokeObjectURL.mockClear() })
+
+describe('EvidenceListItem — edit mode attachment management', () => {
+  function renderEditing(
+    item: EvidenceItem,
+    onUploadAttachment = jest.fn().mockResolvedValue(undefined),
+    onDeleteAttachment = jest.fn().mockResolvedValue(undefined),
+  ) {
+    render(
+      <EvidenceListItem
+        item={item}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={jest.fn().mockResolvedValue(undefined)}
+        onDeleteAttachment={onDeleteAttachment}
+        onUploadAttachment={onUploadAttachment}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit evidence/i }))
+  }
+
+  it('shows existing attachments in edit mode', () => {
+    const attachment = makeAttachment({ filename: 'photo.png' })
+    renderEditing(makeItem({ attachments: [attachment] }))
+    expect(screen.getByText('photo.png')).toBeInTheDocument()
+  })
+
+  it('shows a file input in edit mode when onUploadAttachment is provided', () => {
+    renderEditing(makeItem())
+    expect(document.querySelector('input[type="file"]')).not.toBeNull()
+  })
+
+  it('shows inline error for oversized file, does not upload', async () => {
+    const onUpload = jest.fn()
+    renderEditing(makeItem(), onUpload)
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+    const bigFile = new File(['x'], 'big.png', { type: 'image/png' })
+    Object.defineProperty(bigFile, 'size', { value: 2_097_153 })
+    fireEvent.change(fileInput, { target: { files: [bigFile] } })
+    await waitFor(() => expect(screen.getByText(/file too large/i)).toBeInTheDocument())
+    expect(onUpload).not.toHaveBeenCalled()
+  })
+
+  it('shows inline error for disallowed MIME type, does not upload', async () => {
+    const onUpload = jest.fn()
+    renderEditing(makeItem(), onUpload)
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+    const badFile = new File(['data'], 'notes.txt', { type: 'text/plain' })
+    fireEvent.change(fileInput, { target: { files: [badFile] } })
+    await waitFor(() => expect(screen.getByText(/file type not allowed/i)).toBeInTheDocument())
+    expect(onUpload).not.toHaveBeenCalled()
+  })
+
+  it('calls onUploadAttachment with evidenceId and file when valid file selected', async () => {
+    const onUpload = jest.fn().mockResolvedValue(undefined)
+    renderEditing(makeItem({ id: 'evidence_001' }), onUpload)
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+    const imgFile = new File(['fake'], 'photo.png', { type: 'image/png' })
+    fireEvent.change(fileInput, { target: { files: [imgFile] } })
+    await waitFor(() => expect(onUpload).toHaveBeenCalledWith('evidence_001', imgFile))
+  })
+
+  it('shows a remove button per attachment in edit mode when onDeleteAttachment provided', () => {
+    const attachment = makeAttachment({ filename: 'photo.png' })
+    renderEditing(makeItem({ attachments: [attachment] }))
+    expect(screen.getByRole('button', { name: /remove photo\.png/i })).toBeInTheDocument()
+  })
+
+  it('clicking remove in edit mode calls onDeleteAttachment after confirmation', async () => {
+    const onDelete = jest.fn().mockResolvedValue(undefined)
+    const attachment = makeAttachment({ id: 'patt_edit_del', filename: 'photo.png' })
+    renderEditing(makeItem({ attachments: [attachment] }), jest.fn(), onDelete)
+    fireEvent.click(screen.getByRole('button', { name: /remove photo\.png/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith('patt_edit_del'))
+  })
+})

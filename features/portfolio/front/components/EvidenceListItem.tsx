@@ -1,9 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Pencil, Trash2, Check, X, FileText } from 'lucide-react'
 import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import type { EvidenceItem, EvidenceType, CreateEvidenceItemInput, EvidenceAttachmentMeta } from '@/features/portfolio/types'
+
+const MAX_ATTACHMENT_BYTES = 2_097_152
+const ALLOWED_ATTACHMENT_MIME = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf'])
 
 const TYPE_LABELS: Record<EvidenceType, string> = {
   note: 'Note',
@@ -46,6 +49,8 @@ interface Props {
   onDelete?: (id: string) => Promise<void>
   /** When provided, shows a remove button per attachment using InlineConfirm */
   onDeleteAttachment?: (attachmentId: string) => Promise<void>
+  /** When provided, shows a file input in edit mode to upload a new attachment */
+  onUploadAttachment?: (evidenceId: string, file: File) => Promise<void>
   /** Legacy: called when card is clicked (top-form pattern) — kept for backward compatibility when onUpdate not provided */
   onEdit?: (item: EvidenceItem) => void
   /** Options for the edit form dropdowns */
@@ -54,11 +59,19 @@ interface Props {
   lessons?: LessonOption[]
 }
 
-export function EvidenceListItem({ item, childName, subjectName, onUpdate, onDelete, onDeleteAttachment, onEdit, childOptions, subjects, lessons }: Props) {
+export function EvidenceListItem({ item, childName, subjectName, onUpdate, onDelete, onDeleteAttachment, onUploadAttachment, onEdit, childOptions, subjects, lessons }: Props) {
   const [isEditing, setIsEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmDeleteAttachmentId, setConfirmDeleteAttachmentId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+
+  const [localAttachments, setLocalAttachments] = useState<EvidenceAttachmentMeta[]>(item.attachments ?? [])
+  const [confirmDeleteAttachmentIdInEdit, setConfirmDeleteAttachmentIdInEdit] = useState<string | null>(null)
+  const [attachmentError, setAttachmentError] = useState('')
+
+  useEffect(() => {
+    if (!isEditing) setLocalAttachments(item.attachments ?? [])
+  }, [item.attachments, isEditing])
 
   // Edit form state
   const [editTitle, setEditTitle] = useState(item.title)
@@ -96,6 +109,23 @@ export function EvidenceListItem({ item, childName, subjectName, onUpdate, onDel
 
   function cancelEdit() {
     setIsEditing(false)
+    setAttachmentError('')
+    setConfirmDeleteAttachmentIdInEdit(null)
+  }
+
+  async function handleEditFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAttachmentError('')
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setAttachmentError('File too large (max 2 MB)')
+      return
+    }
+    if (!ALLOWED_ATTACHMENT_MIME.has(file.type)) {
+      setAttachmentError('File type not allowed (images and PDF only)')
+      return
+    }
+    if (onUploadAttachment) await onUploadAttachment(item.id, file)
   }
 
   async function saveEdit() {
@@ -238,6 +268,48 @@ export function EvidenceListItem({ item, childName, subjectName, onUpdate, onDel
               </select>
             </div>
           )}
+          {(localAttachments.length > 0 || onUploadAttachment) && (
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-600">Attachments</label>
+              {localAttachments.map(att =>
+                confirmDeleteAttachmentIdInEdit === att.id ? (
+                  <InlineConfirm
+                    key={att.id}
+                    message="Remove attachment?"
+                    detail={att.filename}
+                    onConfirm={() => onDeleteAttachment!(att.id)}
+                    onCancel={() => setConfirmDeleteAttachmentIdInEdit(null)}
+                  />
+                ) : (
+                  <div key={att.id} className="flex items-center gap-2 text-xs text-gray-600">
+                    <span className="break-all">{att.filename}</span>
+                    {onDeleteAttachment && (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteAttachmentIdInEdit(att.id)}
+                        aria-label={`Remove ${att.filename}`}
+                        className="ml-auto p-1 text-gray-300 hover:text-red-500 transition-colors shrink-0"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                )
+              )}
+              {onUploadAttachment && (
+                <div>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+                    onChange={handleEditFileChange}
+                    className="text-xs"
+                  />
+                  {attachmentError && <p className="text-xs text-red-600 mt-1">{attachmentError}</p>}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-2 justify-end">
             <button
               onClick={cancelEdit}
