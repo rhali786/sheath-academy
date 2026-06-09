@@ -8,14 +8,20 @@
       "id": "phase-1",
       "title": "Schema + repository (gated: migration)",
       "gated": true,
-      "status": "in_progress",
+      "status": "complete",
       "model": "claude-sonnet-4-6",
       "startedAt": "2026-06-09T00:00:00.000Z",
-      "completedAt": null,
+      "completedAt": "2026-06-09T00:00:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "db/schema.ts",
+          "db/migrations/0019_tense_peter_parker.sql",
+          "features/portfolio/server/attachments-repository.ts",
+          "features/portfolio/types.ts",
+          "features/portfolio/__tests__/api/attachments-repository.test.ts"
+        ],
+        "testsRun": ["features/portfolio/__tests__/api/attachments-repository.test.ts (9 tests, skipped without DB)"],
+        "notes": "Added portfolioEvidenceAttachments table (bytea, cascade FK to portfolio_evidence, index on evidence_item_id). Migration 0019 applied to dev DB. Repository: insertEvidenceAttachment (MAX_EVIDENCE_ATTACHMENT_BYTES=2097152, MIME allowlist: image/png|jpeg|webp|gif + application/pdf), getEvidenceAttachment (returns row with bytes), listEvidenceAttachments (metadata only, no bytes), deleteEvidenceAttachment. EvidenceAttachmentMeta type added to features/portfolio/types.ts; EvidenceItem.attachments?: EvidenceAttachmentMeta[] added."
       },
       "failureReason": null
     },
@@ -23,33 +29,58 @@
       "id": "phase-2",
       "title": "Upload + serve + delete routes",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-09T00:00:00.000Z",
+      "completedAt": "2026-06-09T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/portfolio/api/routes/evidence-attachments.ts",
+          "features/portfolio/api/router.ts",
+          "features/portfolio/__tests__/api/evidence-attachments.test.ts"
+        ],
+        "testsRun": ["features/portfolio/__tests__/api/evidence-attachments.test.ts (11 tests, all pass)"],
+        "notes": "POST /evidence/:id/attachments, GET /evidence/attachments/:attachmentId, DELETE /evidence/attachments/:attachmentId implemented in evidence-attachments.ts. Ownership checked via getEvidenceRow(id, householdId). Upload returns EvidenceAttachmentMeta (no bytes). Wired into router.ts at slug positions [evidence, :id, attachments] and [evidence, attachments, :attachmentId]."
+      },
       "failureReason": null
     },
     {
       "id": "phase-3",
       "title": "EvidenceForm upload UI",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-09T00:00:00.000Z",
+      "completedAt": "2026-06-09T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/portfolio/front/components/EvidenceForm.tsx",
+          "features/portfolio/front/services/api.ts",
+          "features/portfolio/front/pages/PortfolioPage.tsx",
+          "features/portfolio/front/components/PortfolioTab.tsx",
+          "features/portfolio/__tests__/integration/EvidenceForm.test.tsx"
+        ],
+        "testsRun": ["features/portfolio/__tests__/integration/EvidenceForm.test.tsx (18 tests, all pass)"],
+        "notes": "EvidenceForm: file input (image/png|jpeg|webp|gif + PDF), client-side size/MIME check (errors.attachment), createObjectURL preview (revoked on unmount/replace via useRef), two-step submit (onSave -> uploadEvidenceAttachment on success). onSave prop changed to return Promise<EvidenceItem>. portfolioApi gained uploadEvidenceAttachment and deleteEvidenceAttachment. PortfolioPage.handleCreate and PortfolioTab.handleSave updated to return EvidenceItem."
+      },
       "failureReason": null
     },
     {
       "id": "phase-4",
       "title": "EvidenceListItem rendering + delete",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-09T00:00:00.000Z",
+      "completedAt": "2026-06-09T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/portfolio/front/components/EvidenceListItem.tsx",
+          "features/portfolio/__tests__/integration/EvidenceListItem.test.tsx"
+        ],
+        "testsRun": ["features/portfolio/__tests__/integration/EvidenceListItem.test.tsx (24 tests, all pass)"],
+        "notes": "EvidenceListItem: renders item.attachments as image thumbnails (img tag + link to GET route) or PDF filename/icon links; each visually distinct from url link. Remove button per attachment when onDeleteAttachment prop provided; uses InlineConfirm pattern with confirmingId state. AttachmentRow extracted as local component."
+      },
       "failureReason": null
     }
   ]
