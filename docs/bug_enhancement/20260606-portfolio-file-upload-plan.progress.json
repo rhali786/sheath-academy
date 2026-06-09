@@ -1,0 +1,56 @@
+{
+  "plan": "docs/bug_enhancement/20260606-portfolio-file-upload-plan.json",
+  "createdAt": "2026-06-09T00:00:00.000Z",
+  "updatedAt": "2026-06-09T00:00:00.000Z",
+  "branch": "feature/portfolio-evidence-file-upload",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Schema + repository (gated: migration)",
+      "gated": true,
+      "status": "in_progress",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-09T00:00:00.000Z",
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-2",
+      "title": "Upload + serve + delete routes",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "phase-3",
+      "title": "EvidenceForm upload UI",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "phase-4",
+      "title": "EvidenceListItem rendering + delete",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    }
+  ]
+}
