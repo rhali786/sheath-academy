@@ -9,6 +9,7 @@ import { useHousehold } from '@/features/household/front/context'
 import { getCalendarRange } from '@/features/schedule/front/lib/calendarRange'
 import { CalendarNav } from '@/features/schedule/front/components/CalendarNav'
 import { WeekCalendarView } from '@/features/schedule/front/components/WeekCalendarView'
+import { MonthCalendarView } from '@/features/schedule/front/components/MonthCalendarView'
 import type { ViewMode } from '@/features/schedule/front/lib/calendarRange'
 import type { LessonTask } from '@/features/plan/types'
 import type { DaySchedule } from '@/features/schedule/types'
@@ -121,6 +122,15 @@ export function SchedulePage() {
         <WeekCalendarView
           days={range.days}
           lessonsByDate={lessonsByDate}
+          loading={loading}
+        />
+      )}
+
+      {viewMode === 'month' && (
+        <MonthCalendarView
+          days={range.days}
+          lessonsByDate={lessonsByDate}
+          focusedMonth={range.focusedMonth}
           loading={loading}
         />
       )}

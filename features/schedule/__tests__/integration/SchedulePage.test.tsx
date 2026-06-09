@@ -26,6 +26,10 @@ jest.mock('@/features/schedule/front/components/WeekCalendarView', () => ({
   WeekCalendarView: () => <div data-testid="week-calendar-view" />,
 }))
 
+jest.mock('@/features/schedule/front/components/MonthCalendarView', () => ({
+  MonthCalendarView: () => <div data-testid="month-calendar-view" />,
+}))
+
 jest.mock('@/features/schedule/front/components/ScheduleTimeline', () => ({
   ScheduleTimeline: ({ schedule }: { schedule: { blocks: { lesson: { title: string }; startTime: string }[] } }) => (
     <div data-testid="schedule-timeline">
@@ -214,5 +218,16 @@ describe('SchedulePage', () => {
       expect(screen.getByTestId('week-calendar-view')).toBeInTheDocument()
     })
     expect(screen.queryByTestId('schedule-timeline')).not.toBeInTheDocument()
+  })
+
+  it('month mode renders MonthCalendarView', async () => {
+    mockUseSearchParams.mockReturnValue(new URLSearchParams('date=2026-03-18&view=month'))
+    mockGetLessons.mockResolvedValue([])
+    render(<SchedulePage />)
+    await waitFor(() => {
+      expect(screen.getByTestId('month-calendar-view')).toBeInTheDocument()
+    })
+    expect(screen.queryByTestId('schedule-timeline')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('week-calendar-view')).not.toBeInTheDocument()
   })
 })
