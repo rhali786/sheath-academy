@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from 'drizzle-orm'
+import { and, eq, inArray, isNull, or } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
 import { subjects, subjectLearners } from '@/db/schema'
 
@@ -99,11 +99,16 @@ export async function listSubjectRows(
   householdId: string,
   learnerId?: string,
   includeInactive = false,
+  options?: { schoolYearId?: string },
 ): Promise<SubjectRowWithLearners[]> {
   const db = getDb()
   const conditions = [eq(subjects.householdId, householdId)]
   if (!includeInactive) conditions.push(eq(subjects.isActive, true))
   if (learnerId) conditions.push(eq(subjects.learnerId, learnerId))
+  if (options?.schoolYearId) {
+    const yearId = options.schoolYearId
+    conditions.push(or(eq(subjects.schoolYearId, yearId), isNull(subjects.schoolYearId))!)
+  }
   const rows = await db.select().from(subjects).where(and(...conditions))
   return hydrateMany(rows)
 }

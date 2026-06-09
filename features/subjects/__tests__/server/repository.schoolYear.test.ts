@@ -127,4 +127,66 @@ describe('subjects repository — schoolYearId', () => {
     expect(refetchedA?.schoolYearId).toBe(activeYearId)
     expect(refetchedB?.schoolYearId).toBe(activeYearId)
   })
+
+  itDb('listSubjectRows with schoolYearId returns matching year and NULL rows, excludes other years', async () => {
+    const otherYear = await createSchoolYearRow(householdId, {
+      name: '2024-2025',
+      startDate: '2024-08-01',
+      endDate: '2025-06-30',
+      isActive: false,
+    })
+
+    const activeCourse = await createSubjectRow(householdId, {
+      name: 'Active Year Course',
+      category: 'Math',
+      learnerId,
+      schoolYearId: activeYearId,
+    })
+
+    const otherYearCourse = await createSubjectRow(householdId, {
+      name: 'Old Year Course',
+      category: 'Science',
+      learnerId,
+      schoolYearId: otherYear.id,
+    })
+
+    const { getDb } = await import('@/features/lib/server/db')
+    const { subjects } = await import('@/db/schema')
+    const db = getDb()
+    const now = new Date()
+    const [nullYearCourse] = await db
+      .insert(subjects)
+      .values({
+        id: `subject_null_year_${Date.now()}`,
+        householdId,
+        learnerId,
+        name: 'Null Year Course',
+        category: 'History',
+        sortOrder: 0,
+        isActive: true,
+        schoolYearId: null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning()
+
+    const filtered = await listSubjectRows(householdId, undefined, false, {
+      schoolYearId: activeYearId,
+    })
+    const ids = filtered.map((r) => r.id)
+
+    expect(ids).toContain(activeCourse.id)
+    expect(ids).toContain(nullYearCourse.id)
+    expect(ids).not.toContain(otherYearCourse.id)
+  })
+
+  itDb('createSubjectRow with explicit schoolYearId from caller persists active year id', async () => {
+    const row = await createSubjectRow(householdId, {
+      name: 'Default Year Course',
+      category: 'EnglishELA',
+      learnerId,
+      schoolYearId: activeYearId,
+    })
+    expect(row.schoolYearId).toBe(activeYearId)
+  })
 })
