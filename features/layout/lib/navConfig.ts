@@ -89,6 +89,72 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'about', label: 'About', href: '/about', section: 'footer' },
 ]
 
+/** Module config IDs for the module-grouped sidebar (re-homed IA). */
+export type NavModuleId = 'home' | 'planbook' | 'records' | 'progress' | 'people' | 'messages' | 'settings'
+
+export type NavModuleConfig = {
+  id: NavModuleId
+  label: string
+  defaultHref: string
+  /** NAV_ITEMS ids belonging to this module's sub-nav, in display order. */
+  itemIds: string[]
+  section: NavSection
+  adminOnly?: boolean
+}
+
+export const NAV_MODULES: NavModuleConfig[] = [
+  { id: 'home', label: 'Home', defaultHref: '/dashboard', itemIds: [], section: 'main' },
+  {
+    id: 'planbook',
+    label: 'Planbook',
+    defaultHref: '/plan/schedule',
+    itemIds: ['calendar', 'lesson-planner', 'courses', 'quran', 'resources'],
+    section: 'main',
+  },
+  {
+    id: 'records',
+    label: 'Records & Compliance',
+    defaultHref: '/attendance',
+    itemIds: ['attendance', 'reports-records', 'compliance'],
+    section: 'main',
+  },
+  {
+    id: 'progress',
+    label: 'Growth & Reflection',
+    defaultHref: '/growth',
+    itemIds: ['grades-progress'],
+    section: 'main',
+  },
+  { id: 'people', label: 'People', defaultHref: '/people', itemIds: [], section: 'main' },
+  { id: 'messages', label: 'Messages', defaultHref: '/messages', itemIds: [], section: 'main' },
+  {
+    id: 'settings',
+    label: 'Settings',
+    defaultHref: '/settings',
+    itemIds: ['finances'],
+    section: 'footer',
+  },
+]
+
+export function getModuleItems(module: NavModuleConfig): NavItem[] {
+  return module.itemIds
+    .map((id) => NAV_ITEMS.find((item) => item.id === id))
+    .filter((item): item is NavItem => item !== undefined)
+}
+
+export function isNavModuleActive(
+  pathname: string,
+  module: NavModuleConfig,
+  settingsTab: string | null = null,
+): boolean {
+  if (getModuleItems(module).some((item) => isNavItemActive(pathname, item, settingsTab))) {
+    return true
+  }
+
+  const defaultPath = module.defaultHref.split('?')[0]
+  return pathname === defaultPath || pathname.startsWith(`${defaultPath}/`)
+}
+
 const MODULE_ORDER: NavModule[] = ['Home', 'Planbook', 'Records', 'Compliance', 'People', 'Settings']
 
 export function getNavModules(): NavModuleGroup[] {
