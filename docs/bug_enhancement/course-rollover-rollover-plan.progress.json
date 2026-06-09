@@ -1,0 +1,68 @@
+{
+  "plan": "docs/bug_enhancement/course-rollover-rollover-plan.json",
+  "createdAt": "2026-06-09T00:00:00Z",
+  "updatedAt": "2026-06-09T00:00:00Z",
+  "branch": "feat/course-rollover-year-scoped",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Schema: add subjects.school_year_id FK + additive migration + backfill to active year",
+      "gated": true,
+      "status": "in_progress",
+      "model": null,
+      "startedAt": "2026-06-09T00:00:00Z",
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-2",
+      "title": "Read path filters subjects by active school year; new courses default to active year",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-3",
+      "title": "rolloverCourses service + thin API route",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-4",
+      "title": "UI: Roll over courses on Settings School year tab",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    }
+  ]
+}

@@ -12,6 +12,8 @@ export interface CreateSubjectInput {
   learnerId?: string
   /** Full set of enrolled learners. When provided, learnerId is used as first element. */
   learnerIds?: string[]
+  /** Optional school year association. Caller defaults to active year in phase-2 routes. */
+  schoolYearId?: string
   color?: string
   description?: string
   sortOrder?: number
@@ -137,6 +139,7 @@ export async function upsertSubjectRow(
       id: subjectId,
       householdId,
       learnerId: primaryLearnerId,
+      schoolYearId: input.schoolYearId ?? null,
       name: input.name,
       category: input.category,
       description: input.description ?? null,
@@ -166,6 +169,7 @@ export async function createSubjectRow(
       id: `subject_${Date.now()}`,
       householdId,
       learnerId: primaryLearnerId,
+      schoolYearId: input.schoolYearId ?? null,
       name: input.name,
       category: input.category,
       description: input.description ?? null,
