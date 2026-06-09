@@ -155,4 +155,26 @@ describe('SubjectForm', () => {
     })
     expect(onSuccess).toHaveBeenCalled()
   })
+
+  it('sends full learnerIds array when multiple learners are selected (regression: no silent truncation to [0])', async () => {
+    childrenApi.getChildren.mockResolvedValue({ data: twoChildren })
+    subjectsApi.createSubject.mockResolvedValue({ data: {}, status: 'success' })
+    render(<SubjectForm householdId={householdId} />)
+    await waitFor(() => expect(screen.getByTestId('subject-form')).toBeInTheDocument())
+
+    // Check both Ada and Ben
+    const checkboxes = screen.getAllByRole('checkbox')
+    expect(checkboxes).toHaveLength(2)
+    await userEvent.click(checkboxes[0]) // Ada
+    await userEvent.click(checkboxes[1]) // Ben
+
+    await userEvent.type(screen.getByPlaceholderText(/Algebra/i), 'Family Arabic')
+    await userEvent.click(screen.getByRole('button', { name: /Add course/i }))
+
+    await waitFor(() => expect(subjectsApi.createSubject).toHaveBeenCalled())
+    const callArg = subjectsApi.createSubject.mock.calls[0][0]
+    expect(callArg.learnerIds).toHaveLength(2)
+    expect(callArg.learnerIds).toContain('k1')
+    expect(callArg.learnerIds).toContain('k2')
+  })
 })

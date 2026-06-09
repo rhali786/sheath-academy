@@ -2,7 +2,7 @@ import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { SubjectCourse, SubjectCourseCategory } from '@/features/subjects/types'
 import { getSubjectRow, updateSubjectRow, archiveSubjectRow } from '@/features/subjects/server/repository'
-import type { SubjectRow } from '@/features/subjects/server/repository'
+import type { SubjectRowWithLearners } from '@/features/subjects/server/repository'
 
 interface ApiResponse<T> {
   status: 'success' | 'error'
@@ -11,11 +11,11 @@ interface ApiResponse<T> {
   timestamp: string
 }
 
-function rowToSubject(r: SubjectRow): SubjectCourse {
+function rowToSubject(r: SubjectRowWithLearners): SubjectCourse {
   return {
     id: r.id,
-    childId: r.learnerId ?? '',
-    learnerIds: r.learnerId ? [r.learnerId] : [],
+    childId: r.learnerIds[0] ?? r.learnerId ?? '',
+    learnerIds: r.learnerIds,
     name: r.name,
     category: (r.category as SubjectCourseCategory) ?? 'core',
     isActive: r.isActive,
@@ -37,10 +37,17 @@ export async function PUT(id: string, request: Request): Promise<NextResponse> {
   const body = await request.json()
   try {
     const { householdId } = getRequestAuthCtx()
+    const learnerIds: string[] | undefined =
+      body.learnerIds?.length > 0
+        ? body.learnerIds
+        : body.childId
+          ? [String(body.childId)]
+          : undefined
     const updated = await updateSubjectRow(id, householdId, {
       name: body.name !== undefined ? String(body.name).trim() : undefined,
       category: body.category as SubjectCourseCategory | undefined,
       sortOrder: body.order !== undefined ? Number(body.order) : undefined,
+      learnerIds,
     })
     if (!updated) return NextResponse.json({ status: 'error', data: null, message: 'Subject not found', timestamp: new Date().toISOString() }, { status: 404 })
     return NextResponse.json({ status: 'success', data: rowToSubject(updated), message: 'Subject updated', timestamp: new Date().toISOString() })

@@ -78,7 +78,6 @@ export function SettingsPage() {
 
   const [subjectChildren, setSubjectChildren] = useState<StudentProfile[]>([])
   const [subjectChildrenLoading, setSubjectChildrenLoading] = useState(false)
-  const [selectedChildId, setSelectedChildId] = useState('')
   const [subjectRefreshKey, setSubjectRefreshKey] = useState(0)
 
   useEffect(() => {
@@ -109,16 +108,9 @@ export function SettingsPage() {
         if (cancelled) return
         const list = (res.data ?? []).filter((c) => c.isActive !== false)
         setSubjectChildren(list)
-        setSelectedChildId((prev) => {
-          if (prev && list.some((c) => c.id === prev)) return prev
-          return list[0]?.id ?? ''
-        })
       })
       .catch(() => {
-        if (!cancelled) {
-          setSubjectChildren([])
-          setSelectedChildId('')
-        }
+        if (!cancelled) setSubjectChildren([])
       })
       .finally(() => {
         if (!cancelled) setSubjectChildrenLoading(false)
@@ -339,33 +331,9 @@ export function SettingsPage() {
             <p className="text-sm text-amber-700">Add a child in the Children tab first, then return here.</p>
           ) : (
             <>
-              {subjectChildren.length >= 1 && (
-                <div className="flex flex-wrap gap-2 mb-4" role="tablist" aria-label="Child">
-                  {subjectChildren.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={selectedChildId === c.id}
-                      data-testid={`settings-subject-child-${c.id}`}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        selectedChildId === c.id
-                          ? 'bg-forest-900 text-white'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                      }`}
-                      onClick={() => setSelectedChildId(c.id)}
-                    >
-                      {c.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-
               <div className="bg-white rounded-xl border border-slate-200 p-6 max-w-md mb-2">
                 <SubjectForm
                   householdId={householdId}
-                  defaultChildId={selectedChildId || undefined}
-                  hideChildSelect
                   onSuccess={() => setSubjectRefreshKey((k) => k + 1)}
                 />
               </div>

@@ -192,6 +192,17 @@ export const subjects = pgTable(
   (t) => [index('subjects_household_active_idx').on(t.householdId, t.isActive)],
 )
 
+// ─── Subject Learners (join table: one row per enrolled learner per course) ───
+
+export const subjectLearners = pgTable(
+  'subject_learners',
+  {
+    subjectId: text('subject_id').notNull().references(() => subjects.id, { onDelete: 'cascade' }),
+    learnerId: text('learner_id').notNull().references(() => learners.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.subjectId, t.learnerId] })],
+)
+
 // ─── Personal Todos ───────────────────────────────────────────────────────────
 
 export const personalTodos = pgTable(

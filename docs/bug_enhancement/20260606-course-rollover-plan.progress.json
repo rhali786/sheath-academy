@@ -1,0 +1,38 @@
+{
+  "plan": "docs/bug_enhancement/20260606-course-rollover-plan.json",
+  "createdAt": "2026-06-09T00:00:00.000Z",
+  "updatedAt": "2026-06-09T00:00:00.000Z",
+  "branch": "feat/course-rollover-multi-learner",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Persist multi-learner course assignment (e1815332)",
+      "gated": true,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-09T00:00:00.000Z",
+      "completedAt": "2026-06-09T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "db/schema.ts",
+          "db/migrations/0020_graceful_micromax.sql",
+          "db/migrations/meta/0020_snapshot.json",
+          "db/migrations/meta/_journal.json",
+          "features/subjects/server/repository.ts",
+          "features/subjects/api/routes/subjects.ts",
+          "features/subjects/api/routes/subject.ts",
+          "features/subjects/__tests__/api/repository.test.ts",
+          "features/subjects/__tests__/integration/SubjectForm.test.tsx",
+          "features/subjects/__tests__/integration/SubjectsAllTable.test.tsx"
+        ],
+        "testsRun": [
+          "features/subjects/__tests__/api/repository.test.ts — 7/7 passed (with DATABASE_URL)",
+          "features/subjects/__tests__/integration/SubjectForm.test.tsx — passed",
+          "features/subjects/__tests__/integration/SubjectsAllTable.test.tsx — passed"
+        ],
+        "notes": "Added subject_learners join table (migration 0020). SubjectRowWithLearners type exported from repository — routes import this instead of SubjectRow. createSubjectRow/listSubjectRows/getSubjectRow all hydrate learnerIds[] from the join table; single-learner back-compat via fallback to subjects.learnerId. PR #29 open against dev."
+      },
+      "failureReason": null
+    }
+  ]
+}

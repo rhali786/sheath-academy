@@ -213,9 +213,9 @@ describe('SettingsPage', () => {
     expect(screen.getByText(/2025–2026/)).toBeInTheDocument()
   })
 
-  it('subjects tab lists a shortcut per child when one child exists', async () => {
+  it('subjects tab shows the SubjectForm with a learner checkbox when one child exists', async () => {
     mockSearchParams = new URLSearchParams('tab=subjects')
-    childrenApi.getChildren.mockResolvedValueOnce({
+    childrenApi.getChildren.mockResolvedValue({
       data: [
         {
           id: 'c1',
@@ -234,13 +234,14 @@ describe('SettingsPage', () => {
     })
     render(<SettingsPage />)
     await waitFor(() => {
-      expect(screen.getByTestId('settings-subject-child-c1')).toBeInTheDocument()
+      expect(screen.getByTestId('subject-form')).toBeInTheDocument()
     })
+    expect(screen.getByText('Only')).toBeInTheDocument()
   })
 
-  it('subjects tab lists a button per child when multiple children exist', async () => {
+  it('subjects tab shows the SubjectForm with checkboxes for each child when multiple children exist', async () => {
     mockSearchParams = new URLSearchParams('tab=subjects')
-    childrenApi.getChildren.mockResolvedValueOnce({
+    childrenApi.getChildren.mockResolvedValue({
       data: [
         {
           id: 'c1',
@@ -269,9 +270,12 @@ describe('SettingsPage', () => {
     })
     render(<SettingsPage />)
     await waitFor(() => {
-      expect(screen.getByTestId('settings-subject-child-c1')).toBeInTheDocument()
+      expect(screen.getByTestId('subject-form')).toBeInTheDocument()
     })
-    expect(screen.getByTestId('settings-subject-child-c2')).toBeInTheDocument()
+    expect(screen.getByText('Ada')).toBeInTheDocument()
+    expect(screen.getByText('Ben')).toBeInTheDocument()
+    const checkboxes = screen.getAllByRole('checkbox')
+    expect(checkboxes).toHaveLength(2)
   })
 })
 

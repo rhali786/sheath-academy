@@ -67,6 +67,7 @@ export const subjectsApi = {
       name?: string
       category?: SubjectCourseCategory
       childId?: string
+      learnerIds?: string[]
       order?: number
     }
   ): Promise<ApiResponse<SubjectCourse>> =>

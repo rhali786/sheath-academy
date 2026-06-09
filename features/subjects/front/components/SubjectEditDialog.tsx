@@ -26,7 +26,7 @@ export function SubjectEditDialog({
   onSaved,
 }: SubjectEditDialogProps) {
   const [name, setName] = useState('')
-  const [childId, setChildId] = useState('')
+  const [selectedLearnerIds, setSelectedLearnerIds] = useState<string[]>([])
   const [category, setCategory] = useState<SubjectCourseCategory>('Math')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -34,26 +34,32 @@ export function SubjectEditDialog({
   useEffect(() => {
     if (!open || !subject) return
     setName(subject.name)
-    setChildId(subject.childId)
+    setSelectedLearnerIds(subject.learnerIds?.length ? [...subject.learnerIds] : subject.childId ? [subject.childId] : [])
     setCategory(subject.category)
     setError(null)
   }, [open, subject])
 
   if (!open || !subject) return null
 
+  function toggleLearner(id: string) {
+    setSelectedLearnerIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!subject) return
     setError(null)
-    if (!name.trim() || !childId) {
-      setError('Name and child are required.')
+    if (!name.trim() || selectedLearnerIds.length === 0) {
+      setError('Name and at least one learner are required.')
       return
     }
     setSaving(true)
     try {
       await subjectsApi.updateSubject(subject.id, {
         name: name.trim(),
-        childId,
+        learnerIds: selectedLearnerIds,
         category,
       })
       onSaved()
@@ -81,12 +87,12 @@ export function SubjectEditDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="subject-edit-title" className="text-lg font-semibold text-slate-900 mb-4">
-          Edit subject
+          Edit course
         </h2>
         <form onSubmit={handleSubmit} className="space-y-3" data-testid="subject-edit-form">
           <div>
             <label htmlFor="edit-subject-name" className="block text-xs font-medium text-slate-600 mb-1">
-              Subject name
+              Course name
             </label>
             <input
               id="edit-subject-name"
@@ -98,21 +104,20 @@ export function SubjectEditDialog({
             />
           </div>
           <div>
-            <label htmlFor="edit-subject-child" className="block text-xs font-medium text-slate-600 mb-1">
-              Child
-            </label>
-            <select
-              id="edit-subject-child"
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
-              value={childId}
-              onChange={(e) => setChildId(e.target.value)}
-            >
+            <p className="block text-xs font-medium text-slate-600 mb-1.5">Learner(s)</p>
+            <div className="flex flex-wrap gap-2" data-testid="edit-subject-learners">
               {childrenList.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
+                <label key={c.id} className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedLearnerIds.includes(c.id)}
+                    onChange={() => toggleLearner(c.id)}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-slate-700">{c.name}</span>
+                </label>
               ))}
-            </select>
+            </div>
           </div>
           <div>
             <label htmlFor="edit-subject-category" className="block text-xs font-medium text-slate-600 mb-1">
@@ -144,7 +149,7 @@ export function SubjectEditDialog({
             <button
               type="submit"
               className="px-4 py-2 text-sm rounded-lg bg-forest-900 text-white hover:bg-forest-800 disabled:opacity-50"
-              disabled={saving || !name.trim() || !childId}
+              disabled={saving || !name.trim() || selectedLearnerIds.length === 0}
             >
               {saving ? 'Saving…' : 'Save'}
             </button>
