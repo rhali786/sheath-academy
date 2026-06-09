@@ -37,10 +37,17 @@ export async function PUT(id: string, request: Request): Promise<NextResponse> {
   const body = await request.json()
   try {
     const { householdId } = getRequestAuthCtx()
+    const learnerIds: string[] | undefined =
+      body.learnerIds?.length > 0
+        ? body.learnerIds
+        : body.childId
+          ? [String(body.childId)]
+          : undefined
     const updated = await updateSubjectRow(id, householdId, {
       name: body.name !== undefined ? String(body.name).trim() : undefined,
       category: body.category as SubjectCourseCategory | undefined,
       sortOrder: body.order !== undefined ? Number(body.order) : undefined,
+      learnerIds,
     })
     if (!updated) return NextResponse.json({ status: 'error', data: null, message: 'Subject not found', timestamp: new Date().toISOString() }, { status: 404 })
     return NextResponse.json({ status: 'success', data: rowToSubject(updated), message: 'Subject updated', timestamp: new Date().toISOString() })

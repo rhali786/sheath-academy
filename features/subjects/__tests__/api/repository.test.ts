@@ -130,4 +130,42 @@ describe('subjects repository — multi-learner via subject_learners join table'
       }
     }
   })
+
+  itDb('updateSubjectRow with learnerIds syncs subject_learners enrollment', async () => {
+    const { createLearner } = await import('@/features/children/server/repository')
+    const { getDb } = await import('@/features/lib/server/db')
+    const { subjects: subjectsTable, subjectLearners } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    const l2 = await createLearner(householdId, { name: 'Edit Learner Two' })
+    let subjectId = ''
+    try {
+      const created = await createSubjectRow(householdId, {
+        name: 'Editable Solo',
+        category: 'Math',
+        learnerId,
+      })
+      subjectId = created.id
+      expect(created.learnerIds).toEqual([learnerId])
+
+      const updated = await updateSubjectRow(subjectId, householdId, {
+        learnerIds: [learnerId, l2.id],
+      })
+      expect(updated?.learnerIds).toHaveLength(2)
+      expect(updated?.learnerIds).toContain(learnerId)
+      expect(updated?.learnerIds).toContain(l2.id)
+      expect(updated?.learnerId).toBe(learnerId)
+
+      const listed = await listSubjectRows(householdId)
+      const found = listed.find((r) => r.id === subjectId)
+      expect(found?.learnerIds).toHaveLength(2)
+    } finally {
+      if (subjectId) {
+        await getDb().delete(subjectLearners).where(eq(subjectLearners.subjectId, subjectId))
+        await getDb().delete(subjectsTable).where(eq(subjectsTable.id, subjectId))
+      }
+      const { learners: learnersTable } = await import('@/db/schema')
+      await getDb().delete(learnersTable).where(eq(learnersTable.id, l2.id))
+    }
+  })
 })

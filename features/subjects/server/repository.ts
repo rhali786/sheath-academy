@@ -23,6 +23,8 @@ export interface UpdateSubjectInput {
   color?: string
   description?: string
   sortOrder?: number
+  /** Replace enrolled learners when provided. Primary learner = learnerIds[0]. */
+  learnerIds?: string[]
 }
 
 /** Attach subject_learners rows for a subject, deduplicating. */
@@ -33,6 +35,23 @@ async function writeLearnerRows(subjectId: string, learnerIdList: string[]): Pro
     .insert(subjectLearners)
     .values(learnerIdList.map((lid) => ({ subjectId, learnerId: lid })))
     .onConflictDoNothing()
+}
+
+/** Replace subject_learners enrollment to match learnerIdList exactly. */
+async function syncLearnerRows(subjectId: string, learnerIdList: string[]): Promise<void> {
+  const db = getDb()
+  const existing = await db
+    .select({ learnerId: subjectLearners.learnerId })
+    .from(subjectLearners)
+    .where(eq(subjectLearners.subjectId, subjectId))
+  const next = [...new Set(learnerIdList)]
+  const toRemove = existing.map((r) => r.learnerId).filter((id) => !next.includes(id))
+  if (toRemove.length > 0) {
+    await db
+      .delete(subjectLearners)
+      .where(and(eq(subjectLearners.subjectId, subjectId), inArray(subjectLearners.learnerId, toRemove)))
+  }
+  await writeLearnerRows(subjectId, next.filter((id) => !existing.some((r) => r.learnerId === id)))
 }
 
 /** Read all learner IDs enrolled in a subject, in insertion order. */
@@ -175,6 +194,9 @@ export async function updateSubjectRow(
   if (input.color !== undefined) patch.color = input.color
   if (input.description !== undefined) patch.description = input.description
   if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder
+  if (input.learnerIds !== undefined) {
+    patch.learnerId = input.learnerIds[0] ?? null
+  }
 
   const result = await db
     .update(subjects)
@@ -182,6 +204,11 @@ export async function updateSubjectRow(
     .where(and(eq(subjects.id, id), eq(subjects.householdId, householdId)))
     .returning()
   if (!result[0]) return null
+
+  if (input.learnerIds !== undefined) {
+    await syncLearnerRows(id, input.learnerIds)
+  }
+
   return hydrate(result[0])
 }
 
