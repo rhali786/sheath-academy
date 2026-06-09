@@ -4,9 +4,11 @@ import type { ApiResponse } from '@/features/lib/types'
 import type { EvidenceItem, EvidenceType } from '@/features/portfolio/types'
 import { listEvidenceRows, createEvidenceRow } from '@/features/portfolio/server/repository'
 import type { EvidenceRow } from '@/features/portfolio/server/repository'
+import { listEvidenceAttachmentsForItems } from '@/features/portfolio/server/attachments-repository'
+import type { EvidenceAttachmentMeta } from '@/features/portfolio/types'
 import { guardOwnership, assertSessionOwnership } from '@/features/auth/server/routeOwnership'
 
-function rowToEvidence(r: EvidenceRow): EvidenceItem {
+function rowToEvidence(r: EvidenceRow, attachments: EvidenceAttachmentMeta[] = []): EvidenceItem {
   const item: EvidenceItem = {
     id: r.id,
     title: r.title,
@@ -21,6 +23,7 @@ function rowToEvidence(r: EvidenceRow): EvidenceItem {
   if (r.description !== null) item.notes = r.description
   if (r.url !== null) item.url = r.url
   if (r.lessonTaskId !== null) item.lessonTaskId = r.lessonTaskId
+  item.attachments = attachments
   return item
 }
 
@@ -37,7 +40,17 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Ev
     const { householdId } = getRequestAuthCtx()
     const rows = await listEvidenceRows(householdId, { learnerId: childId, subjectId, lessonTaskId, startDate, endDate })
     const filtered = type ? rows.filter(r => r.evidenceType === type) : rows
-    return NextResponse.json({ status: 'success', data: filtered.map(rowToEvidence), message: 'Evidence items retrieved', timestamp: new Date().toISOString() })
+
+    const attachmentsByItem: Record<string, EvidenceAttachmentMeta[]> = {}
+    if (filtered.length > 0) {
+      const allAttachments = await listEvidenceAttachmentsForItems(filtered.map(r => r.id))
+      for (const att of allAttachments) {
+        if (!attachmentsByItem[att.evidenceItemId]) attachmentsByItem[att.evidenceItemId] = []
+        attachmentsByItem[att.evidenceItemId].push(att)
+      }
+    }
+
+    return NextResponse.json({ status: 'success', data: filtered.map(r => rowToEvidence(r, attachmentsByItem[r.id] ?? [])), message: 'Evidence items retrieved', timestamp: new Date().toISOString() })
   } catch {
     return NextResponse.json({ status: 'success', data: [], message: 'Evidence items retrieved', timestamp: new Date().toISOString() })
   }

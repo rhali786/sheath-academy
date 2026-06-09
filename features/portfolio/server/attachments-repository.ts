@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
 import { portfolioEvidenceAttachments } from '@/db/schema'
 import type { EvidenceAttachmentMeta } from '../types'
@@ -76,6 +76,28 @@ export async function listEvidenceAttachments(
     })
     .from(portfolioEvidenceAttachments)
     .where(eq(portfolioEvidenceAttachments.evidenceItemId, evidenceItemId))
+  return rows.map((r) => ({
+    ...r,
+    createdAt: r.createdAt.toISOString(),
+  }))
+}
+
+export async function listEvidenceAttachmentsForItems(
+  evidenceItemIds: string[],
+): Promise<EvidenceAttachmentMeta[]> {
+  if (evidenceItemIds.length === 0) return []
+  const db = getDb()
+  const rows = await db
+    .select({
+      id: portfolioEvidenceAttachments.id,
+      evidenceItemId: portfolioEvidenceAttachments.evidenceItemId,
+      filename: portfolioEvidenceAttachments.filename,
+      mimeType: portfolioEvidenceAttachments.mimeType,
+      sizeBytes: portfolioEvidenceAttachments.sizeBytes,
+      createdAt: portfolioEvidenceAttachments.createdAt,
+    })
+    .from(portfolioEvidenceAttachments)
+    .where(inArray(portfolioEvidenceAttachments.evidenceItemId, evidenceItemIds))
   return rows.map((r) => ({
     ...r,
     createdAt: r.createdAt.toISOString(),

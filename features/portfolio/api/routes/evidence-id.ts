@@ -4,8 +4,10 @@ import type { ApiResponse } from '@/features/lib/types'
 import type { EvidenceItem, EvidenceType } from '@/features/portfolio/types'
 import { getEvidenceRow, updateEvidenceRow, deleteEvidenceRow } from '@/features/portfolio/server/repository'
 import type { EvidenceRow } from '@/features/portfolio/server/repository'
+import { listEvidenceAttachments } from '@/features/portfolio/server/attachments-repository'
+import type { EvidenceAttachmentMeta } from '@/features/portfolio/types'
 
-function rowToEvidence(r: EvidenceRow): EvidenceItem {
+function rowToEvidence(r: EvidenceRow, attachments: EvidenceAttachmentMeta[] = []): EvidenceItem {
   const item: EvidenceItem = {
     id: r.id,
     title: r.title,
@@ -20,6 +22,7 @@ function rowToEvidence(r: EvidenceRow): EvidenceItem {
   if (r.description !== null) item.notes = r.description
   if (r.url !== null) item.url = r.url
   if (r.lessonTaskId !== null) item.lessonTaskId = r.lessonTaskId
+  item.attachments = attachments
   return item
 }
 
@@ -28,7 +31,8 @@ export async function GET(id: string): Promise<NextResponse<ApiResponse<Evidence
     const { householdId } = getRequestAuthCtx()
     const row = await getEvidenceRow(id, householdId)
     if (!row) return NextResponse.json({ status: 'error', data: null, message: 'Evidence item not found', timestamp: new Date().toISOString() }, { status: 404 })
-    return NextResponse.json({ status: 'success', data: rowToEvidence(row), message: 'Evidence item retrieved', timestamp: new Date().toISOString() })
+    const attachments = await listEvidenceAttachments(id)
+    return NextResponse.json({ status: 'success', data: rowToEvidence(row, attachments), message: 'Evidence item retrieved', timestamp: new Date().toISOString() })
   } catch { return NextResponse.json({ status: 'error', data: null, message: 'Evidence item not found', timestamp: new Date().toISOString() }, { status: 404 }) }
 }
 
