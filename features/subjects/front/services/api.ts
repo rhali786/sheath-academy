@@ -75,4 +75,10 @@ export const subjectsApi = {
 
   archiveSubject: (id: string): Promise<ApiResponse<SubjectCourse>> =>
     patch(`/api/subjects/${encodeURIComponent(id)}/archive`),
+
+  rolloverCourses: (body: {
+    fromYearId: string
+    toYearId: string
+    courseIds?: string[]
+  }): Promise<ApiResponse<SubjectCourse[]>> => post('/api/subjects/rollover', body),
 }

@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server'
 import * as subjectsHandler from './routes/subjects'
 import * as subjectHandler from './routes/subject'
+import * as rolloverHandler from './routes/rollover'
 
 export async function handleSubjectsRoute(
   slug: string[],
   request: Request
 ): Promise<NextResponse | null> {
   const method = request.method
+
+  // POST /subjects/rollover — roll courses into a target school year
+  if (slug.length === 1 && slug[0] === 'rollover' && method === 'POST') {
+    return rolloverHandler.POST(request)
+  }
 
   // GET /subjects — list subjects (with optional ?childId= filter)
   if (slug.length === 0 && method === 'GET') {
