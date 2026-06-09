@@ -147,4 +147,14 @@ describe('WeeklyList (mobile)', () => {
 
     expect(mockPush).toHaveBeenCalledWith('/lessons?editId=lesson_001')
   })
+
+  it('lesson card shows a tap-to-edit/reschedule affordance', () => {
+    renderList(mockLessons)
+
+    const buttons = screen.getAllByRole('button')
+    const tuesdayButton = buttons.find(btn => btn.textContent?.includes('Tuesday'))
+    fireEvent.click(tuesdayButton!)
+
+    expect(screen.getByLabelText(/tap to edit or reschedule/i)).toBeInTheDocument()
+  })
 })

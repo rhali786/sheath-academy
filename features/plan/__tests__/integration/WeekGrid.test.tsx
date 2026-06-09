@@ -158,6 +158,12 @@ describe('WeekGrid (desktop)', () => {
     expect(mockPush).toHaveBeenCalledWith('/lessons?editId=lesson_001')
   })
 
+  it('lesson card shows a drag-to-reschedule affordance', () => {
+    renderGrid(mockLessons)
+
+    expect(screen.getByLabelText(/drag to reschedule/i)).toBeInTheDocument()
+  })
+
   it('weekends columns have de-emphasis class', () => {
     const { container } = renderGrid()
 

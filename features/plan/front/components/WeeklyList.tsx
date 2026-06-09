@@ -1,5 +1,6 @@
 'use client'
 
+import { Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePlanner } from '../context/PlannerContext'
@@ -136,9 +137,14 @@ export function WeeklyList() {
                     <div key={lesson.id} onClick={() => router.push(`/lessons?editId=${lesson.id}`)} className="p-4 bg-white rounded-lg border border-forest-200 hover:shadow-md transition-shadow cursor-pointer">
                       <div className="flex items-start justify-between gap-2">
                         <div className="font-semibold text-forest-900">{lesson.title}</div>
-                        <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_BADGE[lesson.status]}`}>
-                          {STATUS_LABEL[lesson.status]}
-                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_BADGE[lesson.status]}`}>
+                            {STATUS_LABEL[lesson.status]}
+                          </span>
+                          <span aria-label="Tap to edit or reschedule" title="Tap to edit or reschedule" className="text-slate-300">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </span>
+                        </div>
                       </div>
                       <div className="text-sm text-slate-600 mt-2 space-y-1">
                         <div>Child: <span className="font-medium text-slate-900">{resolveChildName(lesson.childId)}</span></div>
