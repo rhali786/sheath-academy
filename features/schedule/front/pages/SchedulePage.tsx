@@ -8,6 +8,7 @@ import { ScheduleTimeline } from '@/features/schedule/front/components/ScheduleT
 import { useHousehold } from '@/features/household/front/context'
 import { getCalendarRange } from '@/features/schedule/front/lib/calendarRange'
 import { CalendarNav } from '@/features/schedule/front/components/CalendarNav'
+import { WeekCalendarView } from '@/features/schedule/front/components/WeekCalendarView'
 import type { ViewMode } from '@/features/schedule/front/lib/calendarRange'
 import type { LessonTask } from '@/features/plan/types'
 import type { DaySchedule } from '@/features/schedule/types'
@@ -101,18 +102,28 @@ export function SchedulePage() {
         <CalendarNav />
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-5">
-        {loading ? (
-          <p className="text-sm text-slate-400 py-4">Loading…</p>
-        ) : (
-          <ScheduleTimeline
-            schedule={schedule}
-            currentTime={getCurrentTime()}
-            subjects={allSubjects}
-            showAdjustDay
-          />
-        )}
-      </div>
+      {viewMode === 'day' && (
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          {loading ? (
+            <p className="text-sm text-slate-400 py-4">Loading…</p>
+          ) : (
+            <ScheduleTimeline
+              schedule={schedule}
+              currentTime={getCurrentTime()}
+              subjects={allSubjects}
+              showAdjustDay
+            />
+          )}
+        </div>
+      )}
+
+      {viewMode === 'week' && (
+        <WeekCalendarView
+          days={range.days}
+          lessonsByDate={lessonsByDate}
+          loading={loading}
+        />
+      )}
     </div>
   )
 }

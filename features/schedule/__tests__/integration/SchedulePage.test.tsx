@@ -22,6 +22,10 @@ jest.mock('@/features/schedule/front/components/CalendarNav', () => ({
   CalendarNav: () => <div data-testid="calendar-nav" />,
 }))
 
+jest.mock('@/features/schedule/front/components/WeekCalendarView', () => ({
+  WeekCalendarView: () => <div data-testid="week-calendar-view" />,
+}))
+
 jest.mock('@/features/schedule/front/components/ScheduleTimeline', () => ({
   ScheduleTimeline: ({ schedule }: { schedule: { blocks: { lesson: { title: string }; startTime: string }[] } }) => (
     <div data-testid="schedule-timeline">
@@ -200,5 +204,15 @@ describe('SchedulePage', () => {
     // Day mode must still use ScheduleTimeline — no other view is rendered
     expect(screen.queryByTestId('week-calendar-view')).not.toBeInTheDocument()
     expect(screen.queryByTestId('month-calendar-view')).not.toBeInTheDocument()
+  })
+
+  it('week mode renders WeekCalendarView', async () => {
+    mockUseSearchParams.mockReturnValue(new URLSearchParams('date=2026-03-18&view=week'))
+    mockGetLessons.mockResolvedValue([])
+    render(<SchedulePage />)
+    await waitFor(() => {
+      expect(screen.getByTestId('week-calendar-view')).toBeInTheDocument()
+    })
+    expect(screen.queryByTestId('schedule-timeline')).not.toBeInTheDocument()
   })
 })
