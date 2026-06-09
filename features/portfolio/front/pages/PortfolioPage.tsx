@@ -104,8 +104,9 @@ export function PortfolioPage() {
   }
 
   async function handleCreate(input: CreateEvidenceItemInput) {
-    await portfolioApi.createEvidence(input)
+    const res = await portfolioApi.createEvidence(input)
     await refreshItems()
+    return res.data
   }
 
   async function handleUpdate(id: string, patch: Partial<CreateEvidenceItemInput>) {
