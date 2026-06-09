@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Pencil, Trash2, Check, X } from 'lucide-react'
+import { Pencil, Trash2, Check, X, FileText } from 'lucide-react'
 import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
-import type { EvidenceItem, EvidenceType, CreateEvidenceItemInput } from '@/features/portfolio/types'
+import type { EvidenceItem, EvidenceType, CreateEvidenceItemInput, EvidenceAttachmentMeta } from '@/features/portfolio/types'
 
 const TYPE_LABELS: Record<EvidenceType, string> = {
   note: 'Note',
@@ -44,6 +44,8 @@ interface Props {
   onUpdate?: (id: string, patch: Partial<CreateEvidenceItemInput>) => Promise<void>
   /** When provided, enables delete confirmation */
   onDelete?: (id: string) => Promise<void>
+  /** When provided, shows a remove button per attachment using InlineConfirm */
+  onDeleteAttachment?: (attachmentId: string) => Promise<void>
   /** Legacy: called when card is clicked (top-form pattern) — kept for backward compatibility when onUpdate not provided */
   onEdit?: (item: EvidenceItem) => void
   /** Options for the edit form dropdowns */
@@ -52,9 +54,10 @@ interface Props {
   lessons?: LessonOption[]
 }
 
-export function EvidenceListItem({ item, childName, subjectName, onUpdate, onDelete, onEdit, childOptions, subjects, lessons }: Props) {
+export function EvidenceListItem({ item, childName, subjectName, onUpdate, onDelete, onDeleteAttachment, onEdit, childOptions, subjects, lessons }: Props) {
   const [isEditing, setIsEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmDeleteAttachmentId, setConfirmDeleteAttachmentId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   // Edit form state
@@ -329,6 +332,82 @@ export function EvidenceListItem({ item, childName, subjectName, onUpdate, onDel
 
       {item.lessonTaskId && (
         <div className="text-xs text-gray-400 italic">Linked to lesson</div>
+      )}
+
+      {item.attachments && item.attachments.length > 0 && (
+        <div className="space-y-1 pt-1">
+          {item.attachments.map(att => (
+            <AttachmentRow
+              key={att.id}
+              attachment={att}
+              onDeleteAttachment={onDeleteAttachment}
+              confirmingId={confirmDeleteAttachmentId}
+              onRequestDelete={setConfirmDeleteAttachmentId}
+              onCancelDelete={() => setConfirmDeleteAttachmentId(null)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AttachmentRow({
+  attachment,
+  onDeleteAttachment,
+  confirmingId,
+  onRequestDelete,
+  onCancelDelete,
+}: {
+  attachment: EvidenceAttachmentMeta
+  onDeleteAttachment?: (id: string) => Promise<void>
+  confirmingId: string | null
+  onRequestDelete: (id: string) => void
+  onCancelDelete: () => void
+}) {
+  const href = `/api/portfolio/evidence/attachments/${attachment.id}`
+  const isImage = attachment.mimeType.startsWith('image/')
+
+  if (confirmingId === attachment.id) {
+    return (
+      <InlineConfirm
+        message="Remove attachment?"
+        detail={attachment.filename}
+        onConfirm={() => onDeleteAttachment!(attachment.id)}
+        onCancel={onCancelDelete}
+      />
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={attachment.filename}
+        className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
+      >
+        {isImage ? (
+          <img
+            src={href}
+            alt={attachment.filename}
+            className="w-10 h-10 object-cover rounded border border-gray-200 shrink-0"
+          />
+        ) : (
+          <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+        )}
+        <span className="break-all">{attachment.filename}</span>
+      </a>
+      {onDeleteAttachment && (
+        <button
+          type="button"
+          onClick={() => onRequestDelete(attachment.id)}
+          aria-label={`Remove ${attachment.filename}`}
+          className="ml-auto p-1 text-gray-300 hover:text-red-500 transition-colors shrink-0"
+        >
+          <X className="w-3 h-3" />
+        </button>
       )}
     </div>
   )

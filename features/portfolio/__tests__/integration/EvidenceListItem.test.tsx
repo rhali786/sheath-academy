@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { EvidenceListItem } from '@/features/portfolio/front/components/EvidenceListItem'
-import type { EvidenceItem } from '@/features/portfolio/types'
+import type { EvidenceItem, EvidenceAttachmentMeta } from '@/features/portfolio/types'
 
 function makeItem(overrides: Partial<EvidenceItem> = {}): EvidenceItem {
   return {
@@ -18,6 +18,20 @@ function makeItem(overrides: Partial<EvidenceItem> = {}): EvidenceItem {
     ...overrides,
   }
 }
+
+function makeAttachment(overrides: Partial<EvidenceAttachmentMeta> = {}): EvidenceAttachmentMeta {
+  return {
+    id: 'patt_001',
+    evidenceItemId: 'evidence_001',
+    filename: 'photo.png',
+    mimeType: 'image/png',
+    sizeBytes: 512,
+    createdAt: '2026-05-12T09:00:00Z',
+    ...overrides,
+  }
+}
+
+// ── Original tests (preserved) ─────────────────────────────────────────────────
 
 describe('EvidenceListItem — read state', () => {
   it('renders the title in read state', () => {
@@ -106,7 +120,6 @@ describe('EvidenceListItem — edit expansion (inline)', () => {
     fireEvent.click(screen.getByRole('button', { name: /edit evidence/i }))
     expect(screen.getByRole('button', { name: /save evidence/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /cancel edit/i })).toBeInTheDocument()
-    // Read state Pencil should not be visible while editing
     expect(screen.queryByRole('button', { name: /edit evidence/i })).not.toBeInTheDocument()
   })
 
@@ -169,7 +182,6 @@ describe('EvidenceListItem — edit expansion (inline)', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: /edit evidence/i }))
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 'ev_legacy' }))
-    // No inline form should open
     expect(screen.queryByRole('button', { name: /save evidence/i })).not.toBeInTheDocument()
   })
 })
@@ -239,6 +251,148 @@ describe('EvidenceListItem — delete confirmation', () => {
     await waitFor(() => {
       expect(screen.getByRole('alert')).toBeInTheDocument()
       expect(screen.getByRole('group', { name: /delete this evidence item/i })).toBeInTheDocument()
+    })
+  })
+})
+
+// ── Attachment rendering ───────────────────────────────────────────────────────
+
+describe('EvidenceListItem — attachments', () => {
+  it('renders an image thumbnail for an image attachment', () => {
+    const attachment = makeAttachment({ id: 'patt_img', mimeType: 'image/png', filename: 'photo.png' })
+    render(
+      <EvidenceListItem
+        item={makeItem({ attachments: [attachment] })}
+        childName="Adam"
+        subjectName="Math"
+      />
+    )
+    const img = screen.getByRole('img', { name: /photo\.png/i })
+    expect(img).toBeInTheDocument()
+    expect(img).toHaveAttribute('src', expect.stringContaining('patt_img'))
+  })
+
+  it('image thumbnail link opens the GET serve route', () => {
+    const attachment = makeAttachment({ id: 'patt_img', mimeType: 'image/png' })
+    render(
+      <EvidenceListItem
+        item={makeItem({ attachments: [attachment] })}
+        childName="Adam"
+        subjectName="Math"
+      />
+    )
+    const link = screen.getByRole('link', { name: /photo\.png/i })
+    expect(link).toHaveAttribute('href', expect.stringContaining('/api/portfolio/evidence/attachments/patt_img'))
+  })
+
+  it('renders a filename link for a PDF attachment (no thumbnail)', () => {
+    const attachment = makeAttachment({
+      id: 'patt_pdf',
+      mimeType: 'application/pdf',
+      filename: 'essay.pdf',
+    })
+    render(
+      <EvidenceListItem
+        item={makeItem({ attachments: [attachment] })}
+        childName="Adam"
+        subjectName="Math"
+      />
+    )
+    const link = screen.getByRole('link', { name: /essay\.pdf/i })
+    expect(link).toHaveAttribute('href', expect.stringContaining('/api/portfolio/evidence/attachments/patt_pdf'))
+    // PDF should not render an img element
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  })
+
+  it('attachment links are visually distinct from the url link', () => {
+    const attachment = makeAttachment({ id: 'patt_img' })
+    render(
+      <EvidenceListItem
+        item={makeItem({ url: 'https://example.com', attachments: [attachment] })}
+        childName="Adam"
+        subjectName="Math"
+      />
+    )
+    const urlLink = screen.getByRole('link', { name: /https:\/\/example\.com/i })
+    const attachLink = screen.getByRole('link', { name: /photo\.png/i })
+    expect(urlLink).toBeInTheDocument()
+    expect(attachLink).toBeInTheDocument()
+    // They are separate links
+    expect(urlLink).not.toBe(attachLink)
+  })
+
+  it('shows no attachment section when item has no attachments', () => {
+    render(
+      <EvidenceListItem
+        item={makeItem({ attachments: [] })}
+        childName="Adam"
+        subjectName="Math"
+      />
+    )
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  })
+
+  it('shows remove button per attachment when onDeleteAttachment is provided', () => {
+    const attachment = makeAttachment()
+    render(
+      <EvidenceListItem
+        item={makeItem({ attachments: [attachment] })}
+        childName="Adam"
+        subjectName="Math"
+        onDeleteAttachment={jest.fn()}
+      />
+    )
+    expect(screen.getByRole('button', { name: /remove photo\.png/i })).toBeInTheDocument()
+  })
+
+  it('clicking remove opens InlineConfirm for that attachment', () => {
+    const attachment = makeAttachment({ filename: 'photo.png' })
+    render(
+      <EvidenceListItem
+        item={makeItem({ attachments: [attachment] })}
+        childName="Adam"
+        subjectName="Math"
+        onDeleteAttachment={jest.fn()}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /remove photo\.png/i }))
+    expect(screen.getByRole('group', { name: /remove attachment/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+  })
+
+  it('Cancel from attachment InlineConfirm closes panel without calling onDeleteAttachment', () => {
+    const onDeleteAttachment = jest.fn()
+    const attachment = makeAttachment()
+    render(
+      <EvidenceListItem
+        item={makeItem({ attachments: [attachment] })}
+        childName="Adam"
+        subjectName="Math"
+        onDeleteAttachment={onDeleteAttachment}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /remove photo\.png/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(onDeleteAttachment).not.toHaveBeenCalled()
+    expect(screen.queryByRole('group', { name: /remove attachment/i })).not.toBeInTheDocument()
+  })
+
+  it('Confirming attachment delete calls onDeleteAttachment with attachmentId', async () => {
+    const onDeleteAttachment = jest.fn().mockResolvedValue(undefined)
+    const attachment = makeAttachment({ id: 'patt_del_001' })
+    render(
+      <EvidenceListItem
+        item={makeItem({ attachments: [attachment] })}
+        childName="Adam"
+        subjectName="Math"
+        onDeleteAttachment={onDeleteAttachment}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /remove photo\.png/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await waitFor(() => {
+      expect(onDeleteAttachment).toHaveBeenCalledWith('patt_del_001')
     })
   })
 })
