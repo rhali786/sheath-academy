@@ -144,6 +144,20 @@ describe('LessonCard display', () => {
     expect(screen.getByRole('button', { name: /delete lesson/i })).toBeInTheDocument()
   })
 
+  it('renders a saved resourceLink as a clickable link', () => {
+    render(
+      <LessonCard
+        lesson={makeLesson({ resourceLink: 'https://example.com/video' })}
+        childName="Adam"
+        subjectName="Math"
+      />
+    )
+    const link = screen.getByRole('link')
+    expect(link).toHaveAttribute('href', 'https://example.com/video')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(link).toHaveAttribute('target', '_blank')
+  })
+
   it('shows description excerpt when description is present', () => {
     render(
       <LessonCard

@@ -41,6 +41,31 @@ describe('lesson tasks repository', () => {
     expect(row.householdId).toBe(householdId)
   })
 
+  itDb('createLessonTaskRow round-trips resourceLink/lessonType/estimatedDuration', async () => {
+    const row = await createLessonTaskRow(householdId, {
+      learnerId,
+      title: 'Watch video',
+      dueDate: '2026-06-02',
+      resourceLink: 'https://example.com/video',
+      lessonType: 'Video',
+      estimatedDuration: '30min',
+    })
+    expect(row.resourceLink).toBe('https://example.com/video')
+    expect(row.lessonType).toBe('Video')
+    expect(row.estimatedDuration).toBe('30min')
+
+    const updated = await updateLessonTaskRow(row.id, householdId, {
+      resourceLink: 'https://example.com/updated',
+      lessonType: 'Reading',
+      estimatedDuration: '1hr',
+    })
+    expect(updated?.resourceLink).toBe('https://example.com/updated')
+    expect(updated?.lessonType).toBe('Reading')
+    expect(updated?.estimatedDuration).toBe('1hr')
+
+    await deleteLessonTaskRow(row.id, householdId)
+  })
+
   itDb('listLessonTaskRows returns tasks for household', async () => {
     const rows = await listLessonTaskRows(householdId)
     expect(rows.some(r => r.id === taskId)).toBe(true)

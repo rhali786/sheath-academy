@@ -10,6 +10,9 @@ export interface CreateLessonTaskInput {
   title: string
   description?: string
   notes?: string
+  resourceLink?: string
+  lessonType?: string
+  estimatedDuration?: string
   dueDate?: string
   status?: string
   sortOrder?: number
@@ -19,6 +22,9 @@ export interface UpdateLessonTaskInput {
   title?: string
   description?: string
   notes?: string
+  resourceLink?: string
+  lessonType?: string
+  estimatedDuration?: string
   dueDate?: string
   status?: string
   sortOrder?: number
@@ -75,6 +81,9 @@ export async function createLessonTaskRow(
       title: input.title,
       description: input.description ?? null,
       notes: input.notes ?? null,
+      resourceLink: input.resourceLink ?? null,
+      lessonType: input.lessonType ?? null,
+      estimatedDuration: input.estimatedDuration ?? null,
       dueDate: input.dueDate ?? null,
       status: input.status ?? 'not_started',
       sortOrder: input.sortOrder ?? 0,
@@ -139,6 +148,9 @@ export async function updateLessonTaskRow(
   if (input.title !== undefined) patch.title = input.title
   if (input.description !== undefined) patch.description = input.description
   if (input.notes !== undefined) patch.notes = input.notes
+  if (input.resourceLink !== undefined) patch.resourceLink = input.resourceLink
+  if (input.lessonType !== undefined) patch.lessonType = input.lessonType
+  if (input.estimatedDuration !== undefined) patch.estimatedDuration = input.estimatedDuration
   if (input.dueDate !== undefined) patch.dueDate = input.dueDate
   if (input.status !== undefined) patch.status = input.status
   if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder

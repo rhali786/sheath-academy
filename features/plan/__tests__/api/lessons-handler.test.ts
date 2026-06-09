@@ -26,8 +26,8 @@ import { GET, POST } from '@/features/plan/api/routes/lessons'
 const mockList = listLessonTaskRows as jest.Mock
 const mockCreate = createLessonTaskRow as jest.Mock
 
-function makeRow(id = 'lt_1', status = 'not_started') {
-  return { id, householdId: 'hh_test', learnerId: 'l1', subjectId: 's1', title: 'Task', dueDate: '2026-05-17', status, sortOrder: 0, description: null, notes: null, completedAt: null, skippedAt: null, createdAt: new Date(), updatedAt: new Date() }
+function makeRow(id = 'lt_1', status = 'not_started', overrides: Record<string, unknown> = {}) {
+  return { id, householdId: 'hh_test', learnerId: 'l1', subjectId: 's1', title: 'Task', dueDate: '2026-05-17', status, sortOrder: 0, description: null, notes: null, resourceLink: null, lessonType: null, estimatedDuration: null, completedAt: null, skippedAt: null, createdAt: new Date(), updatedAt: new Date(), ...overrides }
 }
 
 beforeEach(() => { mockList.mockReset(); mockCreate.mockReset() })
@@ -85,5 +85,36 @@ describe('POST /api/plan/lessons', () => {
     const body = await res.json()
     expect(body.status).toBe('success')
     expect(body.data.id).toBe('lt_new')
+  })
+
+  it('passes resourceLink/lessonType/estimatedDuration through to the repository', async () => {
+    mockCreate.mockResolvedValue(makeRow('lt_new', 'not_started', {
+      resourceLink: 'https://example.com/video',
+      lessonType: 'Video',
+      estimatedDuration: '30min',
+    }))
+    const req = new Request('http://localhost/api/plan/lessons', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        childId: 'l1',
+        title: 'New task',
+        dueDate: '2026-05-17',
+        resourceLink: 'https://example.com/video',
+        lessonType: 'Video',
+        estimatedDuration: '30min',
+      }),
+    })
+    const res = await POST(req)
+    const body = await res.json()
+
+    expect(mockCreate).toHaveBeenCalledWith('hh_test', expect.objectContaining({
+      resourceLink: 'https://example.com/video',
+      lessonType: 'Video',
+      estimatedDuration: '30min',
+    }))
+    expect(body.data.resourceLink).toBe('https://example.com/video')
+    expect(body.data.lessonType).toBe('Video')
+    expect(body.data.estimatedDuration).toBe('30min')
   })
 })
