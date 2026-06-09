@@ -11,9 +11,19 @@ export interface EvidenceItem {
   reflection?: string
   url?: string
   lessonTaskId?: string
+  attachments?: EvidenceAttachmentMeta[]
   createdBy: string
   createdAt: string
   updatedAt: string
+}
+
+export interface EvidenceAttachmentMeta {
+  id: string
+  evidenceItemId: string
+  filename: string
+  mimeType: string
+  sizeBytes: number
+  createdAt: string
 }
 
 export interface CreateEvidenceItemInput {

@@ -611,3 +611,21 @@ export const messageAttachments = pgTable(
   },
   (t) => [index('message_attachments_message_idx').on(t.messageId)],
 )
+
+// ─── Portfolio Evidence Attachments ───────────────────────────────────────────
+
+export const portfolioEvidenceAttachments = pgTable(
+  'portfolio_evidence_attachments',
+  {
+    id: text('id').primaryKey(),
+    evidenceItemId: text('evidence_item_id')
+      .notNull()
+      .references(() => portfolioEvidence.id, { onDelete: 'cascade' }),
+    filename: text('filename').notNull(),
+    mimeType: text('mime_type').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    data: bytea('data').notNull(),
+    createdAt: timestamp('created_at').notNull(),
+  },
+  (t) => [index('portfolio_evidence_attachments_evidence_item_idx').on(t.evidenceItemId)],
+)
