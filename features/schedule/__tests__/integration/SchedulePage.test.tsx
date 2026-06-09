@@ -18,6 +18,10 @@ jest.mock('@/features/household/front/context', () => ({
   useHousehold: jest.fn(),
 }))
 
+jest.mock('@/features/schedule/front/components/CalendarNav', () => ({
+  CalendarNav: () => <div data-testid="calendar-nav" />,
+}))
+
 jest.mock('@/features/schedule/front/components/ScheduleTimeline', () => ({
   ScheduleTimeline: ({ schedule }: { schedule: { blocks: { lesson: { title: string }; startTime: string }[] } }) => (
     <div data-testid="schedule-timeline">

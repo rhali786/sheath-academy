@@ -7,6 +7,7 @@ import { buildDailySchedule } from '@/features/schedule/server/service'
 import { ScheduleTimeline } from '@/features/schedule/front/components/ScheduleTimeline'
 import { useHousehold } from '@/features/household/front/context'
 import { getCalendarRange } from '@/features/schedule/front/lib/calendarRange'
+import { CalendarNav } from '@/features/schedule/front/components/CalendarNav'
 import type { ViewMode } from '@/features/schedule/front/lib/calendarRange'
 import type { LessonTask } from '@/features/plan/types'
 import type { DaySchedule } from '@/features/schedule/types'
@@ -89,12 +90,18 @@ export function SchedulePage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8" data-testid="schedule-page">
-      <h1 className="page-title">
-        Today&apos;s Schedule
-        <span className="text-sm font-normal text-slate-400 ml-2">{selectedDate}</span>
-      </h1>
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="page-title mb-0">
+          Schedule
+          <span className="text-sm font-normal text-slate-400 ml-2">{selectedDate}</span>
+        </h1>
+      </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-5 mt-6">
+      <div className="mt-4 mb-6">
+        <CalendarNav />
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-200 p-5">
         {loading ? (
           <p className="text-sm text-slate-400 py-4">Loading…</p>
         ) : (
