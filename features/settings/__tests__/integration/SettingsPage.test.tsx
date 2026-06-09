@@ -55,6 +55,7 @@ jest.mock('@/features/subjects/front/services/api', () => ({
 jest.mock('@/features/school-year/front/services/api', () => ({
   schoolYearApi: {
     getActiveSchoolYear: jest.fn(() => Promise.resolve({ data: null })),
+    getSchoolYears: jest.fn(() => Promise.resolve({ data: [] })),
   },
 }))
 
@@ -67,7 +68,7 @@ const { childrenApi } = jest.requireMock('@/features/children/front/services/api
   }
 }
 const { schoolYearApi } = jest.requireMock('@/features/school-year/front/services/api') as {
-  schoolYearApi: { getActiveSchoolYear: jest.Mock }
+  schoolYearApi: { getActiveSchoolYear: jest.Mock; getSchoolYears: jest.Mock }
 }
 const { householdApi } = jest.requireMock('@/features/household/front/services/api') as {
   householdApi: { updateUserProfile: jest.Mock; updateProfile: jest.Mock; getProfile: jest.Mock }
@@ -211,6 +212,52 @@ describe('SettingsPage', () => {
     })
     expect(await screen.findByText(/Active school year/i)).toBeInTheDocument()
     expect(screen.getByText(/2025–2026/)).toBeInTheDocument()
+  })
+
+  it('school year tab renders rollover entry point when active year and a target year exist', async () => {
+    mockSearchParams = new URLSearchParams('tab=school-year')
+    schoolYearApi.getActiveSchoolYear.mockResolvedValue({
+      data: {
+        id: 'sy_2025',
+        workspaceId: 'household_001',
+        name: '2025-2026',
+        startDate: '2025-08-01',
+        endDate: '2026-05-31',
+        isActive: true,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+      status: 'success',
+      message: 'ok',
+      timestamp: '',
+    })
+    schoolYearApi.getSchoolYears.mockResolvedValue({
+      data: [
+        {
+          id: 'sy_2025',
+          workspaceId: 'household_001',
+          name: '2025-2026',
+          startDate: '2025-08-01',
+          endDate: '2026-05-31',
+          isActive: true,
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+        {
+          id: 'sy_2026',
+          workspaceId: 'household_001',
+          name: '2026-2027',
+          startDate: '2026-08-01',
+          endDate: '2027-05-31',
+          isActive: false,
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+      status: 'success',
+      message: 'ok',
+      timestamp: '',
+    })
+    render(<SettingsPage />)
+    expect(await screen.findByTestId('rollover-panel')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /roll over courses to 2026-2027/i })).toBeInTheDocument()
   })
 
   it('subjects tab shows the SubjectForm with a learner checkbox when one child exists', async () => {

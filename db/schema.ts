@@ -180,6 +180,7 @@ export const subjects = pgTable(
     id: text('id').primaryKey(),
     householdId: text('household_id').notNull().references(() => households.id),
     learnerId: text('learner_id').references(() => learners.id),
+    schoolYearId: text('school_year_id').references(() => schoolYears.id),
     name: text('name').notNull(),
     category: text('category').notNull().default('core'),
     description: text('description'),
@@ -189,7 +190,10 @@ export const subjects = pgTable(
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),
   },
-  (t) => [index('subjects_household_active_idx').on(t.householdId, t.isActive)],
+  (t) => [
+    index('subjects_household_active_idx').on(t.householdId, t.isActive),
+    index('subjects_household_school_year_idx').on(t.householdId, t.schoolYearId),
+  ],
 )
 
 // ─── Subject Learners (join table: one row per enrolled learner per course) ───

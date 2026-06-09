@@ -18,6 +18,7 @@ function rowToSubject(r: SubjectRowWithLearners): SubjectCourse {
     learnerIds: r.learnerIds,
     name: r.name,
     category: (r.category as SubjectCourseCategory) ?? 'core',
+    schoolYearId: r.schoolYearId ?? undefined,
     isActive: r.isActive,
     order: r.sortOrder,
     createdAt: r.createdAt?.toISOString() ?? new Date().toISOString(),

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import type { SubjectCourse, SubjectCourseCategory } from '@/features/subjects/types'
 import { listSubjectRows, createSubjectRow } from '@/features/subjects/server/repository'
 import type { SubjectRowWithLearners } from '@/features/subjects/server/repository'
+import { getActiveSchoolYear } from '@/features/school-year/server/service'
 
 interface ApiResponse<T> { status: 'success' | 'error'; data: T; message: string; timestamp: string }
 
@@ -13,6 +14,7 @@ function rowToSubject(r: SubjectRowWithLearners): SubjectCourse {
     learnerIds: r.learnerIds,
     name: r.name,
     category: (r.category as SubjectCourseCategory) ?? 'core',
+    schoolYearId: r.schoolYearId ?? undefined,
     isActive: r.isActive,
     order: r.sortOrder,
     createdAt: r.createdAt?.toISOString() ?? new Date().toISOString(),
@@ -25,7 +27,13 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Su
 
   try {
     const { householdId } = getRequestAuthCtx()
-    const rows = await listSubjectRows(householdId, childId)
+    const activeYear = await getActiveSchoolYear(householdId)
+    const rows = await listSubjectRows(
+      householdId,
+      childId,
+      false,
+      activeYear ? { schoolYearId: activeYear.id } : undefined,
+    )
     return NextResponse.json({ status: 'success', data: rows.map(rowToSubject), message: 'Subjects retrieved', timestamp: new Date().toISOString() })
   } catch {
     return NextResponse.json({ status: 'success', data: [], message: 'Subjects retrieved', timestamp: new Date().toISOString() })
@@ -43,8 +51,14 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   try {
     const { householdId } = getRequestAuthCtx()
+    const activeYear = await getActiveSchoolYear(householdId)
     const allLearnerIds: string[] = learnerIds?.length > 0 ? learnerIds : childId ? [childId] : []
-    const row = await createSubjectRow(householdId, { name: name.trim(), category, learnerIds: allLearnerIds })
+    const row = await createSubjectRow(householdId, {
+      name: name.trim(),
+      category,
+      learnerIds: allLearnerIds,
+      schoolYearId: activeYear?.id,
+    })
     return NextResponse.json({ status: 'success', data: rowToSubject(row), message: 'Subject created', timestamp: new Date().toISOString() }, { status: 201 })
   } catch {
     return NextResponse.json({ status: 'error', data: null, message: 'Failed to create subject', timestamp: new Date().toISOString() }, { status: 500 })

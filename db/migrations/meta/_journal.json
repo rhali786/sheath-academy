@@ -148,6 +148,13 @@
       "when": 1781035691943,
       "tag": "0020_graceful_micromax",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1781043010498,
+      "tag": "0021_wooden_satana",
+      "breakpoints": true
     }
   ]
 }

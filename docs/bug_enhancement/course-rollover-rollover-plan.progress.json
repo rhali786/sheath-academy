@@ -1,0 +1,68 @@
+{
+  "plan": "docs/bug_enhancement/course-rollover-rollover-plan.json",
+  "createdAt": "2026-06-09T00:00:00Z",
+  "updatedAt": "2026-06-09T12:00:00Z",
+  "branch": "feat/course-rollover-year-scoped",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Schema: add subjects.school_year_id FK + additive migration + backfill to active year",
+      "gated": true,
+      "status": "complete",
+      "model": null,
+      "startedAt": "2026-06-09T00:00:00Z",
+      "completedAt": "2026-06-09T10:00:00Z",
+      "outputs": {
+        "filesChanged": ["db/schema.ts", "db/migrations/0021_wooden_satana.sql", "features/subjects/server/repository.ts", "features/subjects/__tests__/server/repository.schoolYear.test.ts"],
+        "testsRun": ["features/subjects/__tests__/server/repository.schoolYear.test.ts"],
+        "notes": "Migration 0021 adds nullable subjects.school_year_id FK + index + backfill UPDATE. CreateSubjectInput.schoolYearId persisted in create/upsert. db:generate produces no further migration after apply."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-2",
+      "title": "Read path filters subjects by active school year; new courses default to active year",
+      "gated": false,
+      "status": "complete",
+      "model": null,
+      "startedAt": "2026-06-09T10:00:00Z",
+      "completedAt": "2026-06-09T11:00:00Z",
+      "outputs": {
+        "filesChanged": ["features/subjects/server/repository.ts", "features/subjects/api/routes/subjects.ts", "features/subjects/__tests__/api/subjects.test.ts"],
+        "testsRun": ["features/subjects/__tests__/server/repository.schoolYear.test.ts", "features/subjects/__tests__/api/subjects.test.ts"],
+        "notes": "listSubjectRows filters schoolYearId OR NULL. GET/POST use getActiveSchoolYear service. rowToSubject returns schoolYearId. No active year => unfiltered fallback."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-3",
+      "title": "rolloverCourses service + thin API route",
+      "gated": false,
+      "status": "complete",
+      "model": null,
+      "startedAt": "2026-06-09T11:00:00Z",
+      "completedAt": "2026-06-09T11:30:00Z",
+      "outputs": {
+        "filesChanged": ["features/subjects/server/rollover.ts", "features/subjects/api/routes/rollover.ts", "features/subjects/api/router.ts", "features/subjects/front/services/api.ts"],
+        "testsRun": ["features/subjects/__tests__/server/rollover.test.ts", "features/subjects/__tests__/api/rollover.test.ts"],
+        "notes": "rolloverCourses clones active source-year courses + subject_learners rows. POST /api/subjects/rollover wired before generic slug handlers. subjectsApi.rolloverCourses added."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-4",
+      "title": "UI: Roll over courses on Settings School year tab",
+      "gated": false,
+      "status": "complete",
+      "model": null,
+      "startedAt": "2026-06-09T11:30:00Z",
+      "completedAt": "2026-06-09T12:00:00Z",
+      "outputs": {
+        "filesChanged": ["features/subjects/front/components/RolloverCoursesPanel.tsx", "features/settings/front/pages/SettingsPage.tsx"],
+        "testsRun": ["features/subjects/__tests__/integration/RolloverCoursesPanel.test.tsx", "features/settings/__tests__/integration/SettingsPage.test.tsx"],
+        "notes": "RolloverCoursesPanel on Settings school-year tab. InlineConfirm for rollover (no window.confirm). Target year from existing school_years only. Closes 6347ab95."
+      },
+      "failureReason": null
+    }
+  ]
+}
