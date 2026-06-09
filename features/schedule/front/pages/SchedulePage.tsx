@@ -6,6 +6,8 @@ import { plannerApi } from '@/features/plan/front/services/api'
 import { buildDailySchedule } from '@/features/schedule/server/service'
 import { ScheduleTimeline } from '@/features/schedule/front/components/ScheduleTimeline'
 import { useHousehold } from '@/features/household/front/context'
+import { getCalendarRange } from '@/features/schedule/front/lib/calendarRange'
+import type { ViewMode } from '@/features/schedule/front/lib/calendarRange'
 import type { LessonTask } from '@/features/plan/types'
 import type { DaySchedule } from '@/features/schedule/types'
 
@@ -21,14 +23,29 @@ function isValidDateParam(s: string | null): s is string {
   return `${p.getFullYear()}-${String(p.getMonth() + 1).padStart(2, '0')}-${String(p.getDate()).padStart(2, '0')}` === s
 }
 
+function isValidViewMode(s: string | null): s is ViewMode {
+  return s === 'day' || s === 'week' || s === 'month'
+}
+
 function getCurrentTime(): string {
   const n = new Date()
   return `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`
 }
 
+function groupByDate(lessons: LessonTask[]): Map<string, LessonTask[]> {
+  const map = new Map<string, LessonTask[]>()
+  for (const lesson of lessons) {
+    const key = lesson.dueDate
+    const existing = map.get(key) ?? []
+    existing.push(lesson)
+    map.set(key, existing)
+  }
+  return map
+}
+
 export function SchedulePage() {
   const searchParams = useSearchParams()
-  const { allSubjects } = useHousehold()
+  const { allSubjects, householdProfile } = useHousehold()
   const [lessons, setLessons] = useState<LessonTask[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -37,24 +54,38 @@ export function SchedulePage() {
     return isValidDateParam(p) ? p : todayStr()
   }, [searchParams])
 
+  const viewMode: ViewMode = useMemo(() => {
+    const v = searchParams.get('view')
+    return isValidViewMode(v) ? v : 'day'
+  }, [searchParams])
+
+  const weekStartDay = householdProfile?.weekStartDay === 'Sunday' ? 'Sunday' : 'Monday'
+
+  const range = useMemo(
+    () => getCalendarRange(selectedDate, viewMode, weekStartDay),
+    [selectedDate, viewMode, weekStartDay],
+  )
+
   useEffect(() => {
     setLoading(true)
     plannerApi
-      .getLessons(undefined, undefined, undefined, selectedDate, selectedDate)
+      .getLessons(undefined, undefined, undefined, range.startDate, range.endDate)
       .then(data => setLessons(data))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [selectedDate])
+  }, [range.startDate, range.endDate])
+
+  const lessonsByDate = useMemo(() => groupByDate(lessons), [lessons])
 
   const schedule: DaySchedule = useMemo(() => ({
-    ...buildDailySchedule(lessons, {
+    ...buildDailySchedule(lessonsByDate.get(selectedDate) ?? [], {
       startTime: '08:30',
       transitionMinutes: 10,
       defaultDurationMinutes: 30,
       includeSyntheticBreaks: true,
     }),
     date: selectedDate,
-  }), [lessons, selectedDate])
+  }), [lessonsByDate, selectedDate])
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8" data-testid="schedule-page">
