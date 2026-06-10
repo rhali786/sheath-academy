@@ -79,7 +79,7 @@ export function PortfolioTab() {
   }, [filterChildId, filterSubjectId, filterType, filterStartDate, filterEndDate])
 
   async function handleSave(input: CreateEvidenceItemInput) {
-    await portfolioApi.createEvidence(input)
+    const createRes = await portfolioApi.createEvidence(input)
     const res = await portfolioApi.listEvidence({
       childId: filterChildId ?? undefined,
       subjectId: filterSubjectId ?? undefined,
@@ -88,6 +88,7 @@ export function PortfolioTab() {
       endDate: filterEndDate ?? undefined,
     })
     setItems(Array.isArray(res.data) ? res.data : [])
+    return createRes.data
   }
 
   const childMap: Record<string, string> = {}

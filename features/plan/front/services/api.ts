@@ -75,12 +75,15 @@ export const plannerApi = {
     }
   },
 
-  createLesson: async (data: Omit<LessonTask, 'id' | 'createdAt' | 'updatedAt'>): Promise<LessonTask> => {
+  createLesson: async (data: Omit<LessonTask, 'id' | 'createdAt' | 'updatedAt'> & {
+    childIds?: string[]
+    assignments?: { childId: string; subjectId: string }[]
+  }): Promise<LessonTask> => {
     const response = await post<LessonTask>('/api/plan/lessons', data)
     return response.data
   },
 
-  updateLesson: async (id: string, patch: Partial<LessonTask>): Promise<LessonTask> => {
+  updateLesson: async (id: string, patch: Partial<LessonTask> & { applyToGroup?: boolean }): Promise<LessonTask> => {
     const response = await put<LessonTask>(`/api/plan/lessons/${id}`, patch)
     return response.data
   },

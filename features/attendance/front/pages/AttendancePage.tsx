@@ -12,6 +12,7 @@ import { emptyAttendanceSummary } from '@/features/attendance/types'
 import { STATUS_LABELS } from '@/features/attendance/types'
 import type { StudentProfile } from '@/features/lib/types'
 import { useHousehold } from '@/features/household/front/context'
+import { useLearner } from '@/features/layout/front/context/LearnerContext'
 
 type DateSort = 'desc' | 'asc'
 type Mode = 'individual' | 'batch'
@@ -30,7 +31,7 @@ const DEFAULT_SUMMARY: SummaryType = emptyAttendanceSummary('')
 export function AttendancePage() {
   const { householdProfile, studentProfiles: children } = useHousehold()
   const searchParams = useSearchParams()
-  const [selectedChildId, setSelectedChildId] = useState<string>('')
+  const { selectedChildId, setSelectedChildId } = useLearner()
   const [date, setDate] = useState<string>(todayLocal())
   const [notes, setNotes] = useState<string>('')
   const [hours, setHours] = useState<string>('')
@@ -40,20 +41,21 @@ export function AttendancePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState<AttendanceStatus | ''>('')
-  const [filterChildId, setFilterChildId] = useState<string>('')
   const [dateSort, setDateSort] = useState<DateSort>('desc')
   const [mode, setMode] = useState<Mode>('individual')
   const [batchLoading, setBatchLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
 
 
-  // Sync URL childId → selectedChildId after children load and on URL changes
+  // Seed shared learner selection from ?childId= when present
   useEffect(() => {
     if (children.length === 0) return
     const urlChildId = searchParams.get('childId')
-    const matched = urlChildId ? children.find(c => c.id === urlChildId) : null
-    setSelectedChildId(matched ? matched.id : children[0].id)
-  }, [searchParams, children])
+    const matched = urlChildId ? children.find((c) => c.id === urlChildId) : null
+    if (matched) {
+      setSelectedChildId(matched.id)
+    }
+  }, [searchParams, children, setSelectedChildId])
 
   async function fetchRecords() {
     try {
@@ -68,7 +70,7 @@ export function AttendancePage() {
     }
   }
 
-  async function fetchSummary(childId: string) {
+  async function fetchSummary(childId: string | null) {
     if (!childId) return
     try {
       const sum = await attendanceApi.getSummary(childId)
@@ -130,16 +132,17 @@ export function AttendancePage() {
   }
 
   const activeChildren = useMemo(() => children.filter(c => c.isActive), [children])
+  const selectedChild = children.find(c => c.id === selectedChildId)
 
   const filteredRecords = useMemo(() => {
     let list = records
     if (filterStatus) list = list.filter(r => r.status === filterStatus)
-    if (filterChildId) list = list.filter(r => r.childId === filterChildId)
+    if (selectedChildId) list = list.filter(r => r.childId === selectedChildId)
     return [...list].sort((a, b) => {
       const cmp = a.date.localeCompare(b.date)
       return dateSort === 'asc' ? cmp : -cmp
     })
-  }, [records, filterStatus, filterChildId, dateSort])
+  }, [records, filterStatus, selectedChildId, dateSort])
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-8">
@@ -184,7 +187,7 @@ export function AttendancePage() {
                     <label htmlFor="learner-select" className="block text-sm font-medium text-slate-700 mb-1">Learner</label>
                     <select
                       id="learner-select"
-                      value={selectedChildId}
+                      value={selectedChildId ?? ''}
                       onChange={e => setSelectedChildId(e.target.value)}
                       className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
                     >
@@ -248,7 +251,9 @@ export function AttendancePage() {
         </>
       )}
       <div>
-        <h2 className="text-lg font-bold text-slate-900 mb-3">Summary</h2>
+        <h2 className="text-lg font-bold text-slate-900 mb-3">
+          Summary{selectedChild ? ` — ${selectedChild.name}` : ''}
+        </h2>
         <AttendanceSummary summary={summary} />
       </div>
 
@@ -257,8 +262,8 @@ export function AttendancePage() {
           <h2 className="text-lg font-bold text-slate-900">Records</h2>
           <div className="flex flex-wrap gap-2">
             <select
-              value={filterChildId}
-              onChange={e => setFilterChildId(e.target.value)}
+              value={selectedChildId ?? ''}
+              onChange={e => setSelectedChildId(e.target.value === '' ? null : e.target.value)}
               aria-label="Filter by learner"
               className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
             >

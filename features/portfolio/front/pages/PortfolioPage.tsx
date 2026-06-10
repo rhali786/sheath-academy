@@ -27,7 +27,7 @@ export function PortfolioPage() {
   const [filterEndDate, setFilterEndDate] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showForm, setShowForm] = useState(true)
+  const [showForm, setShowForm] = useState(false)
 
   // Fetch children when household is ready
   useEffect(() => {
@@ -104,8 +104,9 @@ export function PortfolioPage() {
   }
 
   async function handleCreate(input: CreateEvidenceItemInput) {
-    await portfolioApi.createEvidence(input)
+    const res = await portfolioApi.createEvidence(input)
     await refreshItems()
+    return res.data
   }
 
   async function handleUpdate(id: string, patch: Partial<CreateEvidenceItemInput>) {
@@ -115,6 +116,16 @@ export function PortfolioPage() {
 
   async function handleDelete(id: string) {
     await portfolioApi.deleteEvidence(id)
+    await refreshItems()
+  }
+
+  async function handleDeleteAttachment(attachmentId: string) {
+    await portfolioApi.deleteEvidenceAttachment(attachmentId)
+    await refreshItems()
+  }
+
+  async function handleUploadAttachment(evidenceId: string, file: File) {
+    await portfolioApi.uploadEvidenceAttachment(evidenceId, file)
     await refreshItems()
   }
 
@@ -178,6 +189,8 @@ export function PortfolioPage() {
         hasActiveFilters={!!(filterSubjectId || filterType || filterStartDate || filterEndDate)}
         onUpdate={handleUpdate}
         onDelete={handleDelete}
+        onDeleteAttachment={handleDeleteAttachment}
+        onUploadAttachment={handleUploadAttachment}
         childOptions={children}
         subjects={subjectOptions}
         lessons={lessonOptions}

@@ -3,7 +3,13 @@
 const hasDb = !!process.env.DATABASE_URL
 const itDb = hasDb ? it : it.skip
 
-import { createSubjectRow, listSubjectRows, updateSubjectRow, archiveSubjectRow } from '../../server/repository'
+import {
+  archiveSubjectsByLearner,
+  createSubjectRow,
+  listSubjectRows,
+  updateSubjectRow,
+  archiveSubjectRow,
+} from '../../server/repository'
 import { createTestHousehold } from '@/features/lib/__tests__/fixtures/testDb'
 
 let householdId: string
@@ -17,8 +23,11 @@ beforeAll(async () => {
   learnerId = fixtures.learner.id
   cleanup = async () => {
     const { getDb } = await import('@/features/lib/server/db')
-    const { subjects } = await import('@/db/schema')
+    const { subjects, subjectLearners } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
+    await getDb().delete(subjectLearners).where(
+      eq(subjectLearners.subjectId, householdId)  // cleaned via subject cascade
+    )
     await getDb().delete(subjects).where(eq(subjects.householdId, householdId))
     await fixtures.cleanup()
   }
@@ -58,5 +67,179 @@ describe('subjects repository', () => {
   itDb('archiveSubjectRow sets isActive = false', async () => {
     const archived = await archiveSubjectRow(subjectId, householdId)
     expect(archived?.isActive).toBe(false)
+  })
+})
+
+describe('subjects repository — multi-learner via subject_learners join table', () => {
+  itDb('createSubjectRow with learnerIds persists all learners and round-trips via listSubjectRows', async () => {
+    const { createLearner } = await import('@/features/children/server/repository')
+    const { getDb } = await import('@/features/lib/server/db')
+    const { subjects: subjectsTable, subjectLearners } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    const l2 = await createLearner(householdId, { name: 'Learner Two' })
+    const l3 = await createLearner(householdId, { name: 'Learner Three' })
+    let subjectId = ''
+    try {
+      const row = await createSubjectRow(householdId, {
+        name: 'Shared Science',
+        category: 'Science',
+        learnerIds: [learnerId, l2.id, l3.id],
+      })
+      subjectId = row.id
+
+      // learnerIds[] must contain all 3
+      expect(row.learnerIds).toHaveLength(3)
+      expect(row.learnerIds).toContain(learnerId)
+      expect(row.learnerIds).toContain(l2.id)
+      expect(row.learnerIds).toContain(l3.id)
+
+      // back-compat: subjects.learnerId === learnerIds[0] (primary)
+      expect(row.learnerId).toBe(learnerId)
+
+      // listSubjectRows also returns all 3
+      const listed = await listSubjectRows(householdId)
+      const found = listed.find(r => r.id === subjectId)
+      expect(found).toBeDefined()
+      expect(found!.learnerIds).toHaveLength(3)
+    } finally {
+      if (subjectId) {
+        await getDb().delete(subjectLearners).where(eq(subjectLearners.subjectId, subjectId))
+        await getDb().delete(subjectsTable).where(eq(subjectsTable.id, subjectId))
+      }
+      const { learners: learnersTable } = await import('@/db/schema')
+      await getDb().delete(learnersTable).where(eq(learnersTable.id, l2.id))
+      await getDb().delete(learnersTable).where(eq(learnersTable.id, l3.id))
+    }
+  })
+
+  itDb('single-learner course (learnerId only) back-compat — learnerIds has exactly 1 element', async () => {
+    const { getDb } = await import('@/features/lib/server/db')
+    const { subjects: subjectsTable, subjectLearners } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    let subjectId = ''
+    try {
+      const row = await createSubjectRow(householdId, {
+        name: 'Solo Math',
+        category: 'Math',
+        learnerId,
+      })
+      subjectId = row.id
+      expect(row.learnerIds).toHaveLength(1)
+      expect(row.learnerIds[0]).toBe(learnerId)
+      expect(row.learnerId).toBe(learnerId)
+    } finally {
+      if (subjectId) {
+        await getDb().delete(subjectLearners).where(eq(subjectLearners.subjectId, subjectId))
+        await getDb().delete(subjectsTable).where(eq(subjectsTable.id, subjectId))
+      }
+    }
+  })
+
+  itDb('updateSubjectRow with learnerIds syncs subject_learners enrollment', async () => {
+    const { createLearner } = await import('@/features/children/server/repository')
+    const { getDb } = await import('@/features/lib/server/db')
+    const { subjects: subjectsTable, subjectLearners } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    const l2 = await createLearner(householdId, { name: 'Edit Learner Two' })
+    let subjectId = ''
+    try {
+      const created = await createSubjectRow(householdId, {
+        name: 'Editable Solo',
+        category: 'Math',
+        learnerId,
+      })
+      subjectId = created.id
+      expect(created.learnerIds).toEqual([learnerId])
+
+      const updated = await updateSubjectRow(subjectId, householdId, {
+        learnerIds: [learnerId, l2.id],
+      })
+      expect(updated?.learnerIds).toHaveLength(2)
+      expect(updated?.learnerIds).toContain(learnerId)
+      expect(updated?.learnerIds).toContain(l2.id)
+      expect(updated?.learnerId).toBe(learnerId)
+
+      const listed = await listSubjectRows(householdId)
+      const found = listed.find((r) => r.id === subjectId)
+      expect(found?.learnerIds).toHaveLength(2)
+    } finally {
+      if (subjectId) {
+        await getDb().delete(subjectLearners).where(eq(subjectLearners.subjectId, subjectId))
+        await getDb().delete(subjectsTable).where(eq(subjectsTable.id, subjectId))
+      }
+      const { learners: learnersTable } = await import('@/db/schema')
+      await getDb().delete(learnersTable).where(eq(learnersTable.id, l2.id))
+    }
+  })
+})
+
+describe('archiveSubjectsByLearner', () => {
+  itDb('removes archived learner from group course but keeps course active for others', async () => {
+    const { createLearner } = await import('@/features/children/server/repository')
+    const { getDb } = await import('@/features/lib/server/db')
+    const { subjects: subjectsTable, subjectLearners } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    const safiya = await createLearner(householdId, { name: 'Safiya' })
+    let subjectId = ''
+    try {
+      const row = await createSubjectRow(householdId, {
+        name: 'Algebra',
+        category: 'Math',
+        learnerIds: [learnerId, safiya.id],
+      })
+      subjectId = row.id
+
+      await archiveSubjectsByLearner(safiya.id, householdId)
+
+      const listed = await listSubjectRows(householdId)
+      const found = listed.find((r) => r.id === subjectId)
+      expect(found).toBeDefined()
+      expect(found!.isActive).toBe(true)
+      expect(found!.learnerIds).toEqual([learnerId])
+      expect(found!.learnerId).toBe(learnerId)
+    } finally {
+      if (subjectId) {
+        await getDb().delete(subjectLearners).where(eq(subjectLearners.subjectId, subjectId))
+        await getDb().delete(subjectsTable).where(eq(subjectsTable.id, subjectId))
+      }
+      const { learners: learnersTable } = await import('@/db/schema')
+      await getDb().delete(learnersTable).where(eq(learnersTable.id, safiya.id))
+    }
+  })
+
+  itDb('archives solo course owned only by the archived learner', async () => {
+    const { createLearner } = await import('@/features/children/server/repository')
+    const { getDb } = await import('@/features/lib/server/db')
+    const { subjects: subjectsTable, subjectLearners } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    const safiya = await createLearner(householdId, { name: 'Safiya Solo' })
+    let subjectId = ''
+    try {
+      const row = await createSubjectRow(householdId, {
+        name: 'Safiya Reading',
+        category: 'Reading',
+        learnerIds: [safiya.id],
+      })
+      subjectId = row.id
+
+      await archiveSubjectsByLearner(safiya.id, householdId)
+
+      const listed = await listSubjectRows(householdId, undefined, true)
+      const found = listed.find((r) => r.id === subjectId)
+      expect(found?.isActive).toBe(false)
+      expect(found?.learnerIds).toEqual([])
+    } finally {
+      if (subjectId) {
+        await getDb().delete(subjectLearners).where(eq(subjectLearners.subjectId, subjectId))
+        await getDb().delete(subjectsTable).where(eq(subjectsTable.id, subjectId))
+      }
+      const { learners: learnersTable } = await import('@/db/schema')
+      await getDb().delete(learnersTable).where(eq(learnersTable.id, safiya.id))
+    }
   })
 })

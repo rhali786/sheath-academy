@@ -158,7 +158,7 @@ describe('ReportsPage', () => {
       expect(screen.getAllByText('Mathematics').length).toBeGreaterThan(0)
     }, { timeout: 3000 })
 
-    expect(screen.getByText('Records summary')).toBeInTheDocument()
+    expect(screen.getAllByText('Records summary').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Adam').length).toBeGreaterThan(0)
     expect(screen.getByText('Portfolio evidence')).toBeInTheDocument()
     expect(screen.getByText('This shows steady growth.')).toBeInTheDocument()

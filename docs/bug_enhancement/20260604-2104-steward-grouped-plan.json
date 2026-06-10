@@ -1,0 +1,205 @@
+{
+  "version": 1,
+  "generatedAt": "2026-06-04T21:10:00.000Z",
+  "feedbackIds": [
+    "1131d003-f5a1-4ccd-a2af-0a953d48c641",
+    "e1c3f3db-27c7-4978-a7ac-f40160c2d0df",
+    "1e365a22-06c7-4bf6-b28b-3d4a73c0faa4",
+    "f674588f-7f9a-4e9f-a7e2-cc1d4621de95",
+    "ad71a81f-6bc8-4463-9d1a-0f8f3c11951e",
+    "533ecbb1-bc49-4795-b8fe-3d579fc96076",
+    "1831c99f-8e92-43be-8274-6d1189d8bbe5",
+    "103eaba1-67d8-4fde-addc-86228a3860e0",
+    "3dc815ad-a973-4672-a4ee-39553008f324",
+    "a2a7a0b6-9751-4967-91f8-8daf9e8a5955"
+  ],
+  "eligibilitySnapshot": {
+    "autoEligibleIds": [
+      "1131d003-f5a1-4ccd-a2af-0a953d48c641",
+      "ad71a81f-6bc8-4463-9d1a-0f8f3c11951e",
+      "533ecbb1-bc49-4795-b8fe-3d579fc96076",
+      "1831c99f-8e92-43be-8274-6d1189d8bbe5",
+      "103eaba1-67d8-4fde-addc-86228a3860e0",
+      "3dc815ad-a973-4672-a4ee-39553008f324",
+      "a2a7a0b6-9751-4967-91f8-8daf9e8a5955"
+    ],
+    "approvedIds": [
+      "e1c3f3db-27c7-4978-a7ac-f40160c2d0df",
+      "1e365a22-06c7-4bf6-b28b-3d4a73c0faa4",
+      "f674588f-7f9a-4e9f-a7e2-cc1d4621de95"
+    ]
+  },
+  "workstreams": [
+    {
+      "featureArea": "feedback",
+      "summary": "Add filtered feedback count display and reject action button to admin feedback page",
+      "owningComponent": "features/feedback/front/pages/AdminFeedbackPage.tsx",
+      "allowedFiles": [
+        "features/feedback/front/pages/AdminFeedbackPage.tsx",
+        "features/feedback/__tests__/integration/AdminFeedbackPage.test.tsx"
+      ],
+      "testPlan": [
+        "NEW TEST: features/feedback/__tests__/integration/AdminFeedbackPage.test.tsx — displays filtered count below Filters heading when filters are applied",
+        "NEW TEST: features/feedback/__tests__/integration/AdminFeedbackPage.test.tsx — reject button appears for classified items and updates status to cancelled",
+        "RUN: npm test -- features/feedback/__tests__/integration/AdminFeedbackPage.test.tsx"
+      ],
+      "blastRadiusNotes": "",
+      "uatByFeedbackId": {
+        "1131d003-f5a1-4ccd-a2af-0a953d48c641": [
+          "Navigate to /admin/feedback",
+          "Apply a filter (e.g., select 'classified' status)",
+          "Verify count appears below the Filters heading showing number of filtered results"
+        ],
+        "ad71a81f-6bc8-4463-9d1a-0f8f3c11951e": [
+          "Navigate to /admin/feedback",
+          "Find a feedback item with 'classified' status",
+          "Verify a 'Reject' button is visible alongside other actions",
+          "Click Reject and verify status changes to 'cancelled'"
+        ]
+      }
+    },
+    {
+      "featureArea": "layout",
+      "summary": "Center version number and Hijri calendar in sidebar, add collapsible toggle",
+      "owningComponent": "features/layout/front/components/Sidebar.tsx",
+      "allowedFiles": [
+        "features/layout/front/components/Sidebar.tsx",
+        "features/layout/__tests__/Sidebar.test.tsx",
+        "features/layout/front/components/AppShell.tsx"
+      ],
+      "testPlan": [
+        "NEW TEST: features/layout/__tests__/Sidebar.test.tsx — version number is centered in sidebar footer",
+        "NEW TEST: features/layout/__tests__/Sidebar.test.tsx — Hijri calendar date is centered below tagline",
+        "NEW TEST: features/layout/__tests__/Sidebar.test.tsx — sidebar collapse toggle button is visible and toggles sidebar width",
+        "RUN: npm test -- features/layout/__tests__/Sidebar.test.tsx"
+      ],
+      "blastRadiusNotes": "Collapsible sidebar requires state management in AppShell to persist collapsed state across navigation.",
+      "uatByFeedbackId": {
+        "1831c99f-8e92-43be-8274-6d1189d8bbe5": [
+          "Navigate to any page with sidebar visible (e.g., /dashboard)",
+          "Locate collapse toggle icon (square with partial square inside)",
+          "Click toggle and verify sidebar collapses to icons-only mode",
+          "Click again to verify sidebar expands back"
+        ],
+        "103eaba1-67d8-4fde-addc-86228a3860e0": [
+          "Navigate to any page with sidebar visible",
+          "Scroll to bottom of sidebar if needed",
+          "Verify version number (e.g., v2.15.4) is horizontally centered"
+        ],
+        "3dc815ad-a973-4672-a4ee-39553008f324": [
+          "Navigate to any page with sidebar visible",
+          "Look at sidebar header below 'Faith. Learning. Purpose.' tagline",
+          "Verify Arabic Hijri date is horizontally centered under the tagline"
+        ]
+      }
+    },
+    {
+      "featureArea": "layout",
+      "summary": "Update header greeting to show Arabic salutation with user name and rotating greetings",
+      "owningComponent": "features/layout/front/components/Header.tsx",
+      "allowedFiles": [
+        "features/layout/front/components/Header.tsx",
+        "features/layout/__tests__/Header.test.tsx",
+        "features/layout/lib/arabicGreetings.ts"
+      ],
+      "testPlan": [
+        "NEW TEST: features/layout/__tests__/Header.test.tsx — displays Arabic greeting with user name when session has name",
+        "NEW TEST: features/layout/__tests__/Header.test.tsx — shows email in grey parentheses below greeting",
+        "NEW TEST: features/layout/__tests__/Header.test.tsx — uses one of 5-8 predefined Arabic greetings",
+        "RUN: npm test -- features/layout/__tests__/Header.test.tsx"
+      ],
+      "blastRadiusNotes": "",
+      "uatByFeedbackId": {
+        "a2a7a0b6-9751-4967-91f8-8daf9e8a5955": [
+          "Sign in to the app",
+          "Navigate to dashboard (/)",
+          "Verify header shows Arabic greeting (e.g., 'Marhaba Rasheed')",
+          "Verify email appears in grey parentheses below the name",
+          "Refresh page multiple times to see different greetings rotate"
+        ]
+      }
+    },
+    {
+      "featureArea": "feedback",
+      "summary": "Rename 'classified' status to 'reviewed' throughout the feedback system",
+      "owningComponent": "features/feedback/types.ts",
+      "allowedFiles": [
+        "features/feedback/types.ts",
+        "features/feedback/front/pages/AdminFeedbackPage.tsx",
+        "features/feedback/front/pages/FeedbackHubPage.tsx",
+        "features/feedback/front/pages/FeedbackDetailPage.tsx",
+        "features/feedback/server/service.ts",
+        "features/feedback/server/repository.ts",
+        "features/feedback/__tests__/**/*.ts",
+        "scripts/feedback-steward/**/*.ts"
+      ],
+      "testPlan": [
+        "NEW TEST: features/feedback/__tests__/api/service.test.ts — classification sets status to 'reviewed' not 'classified'",
+        "RUN: npm test -- features/feedback",
+        "RUN: npm test -- scripts/feedback-steward",
+        "RUN: npm run build"
+      ],
+      "blastRadiusNotes": "HIGH BLAST RADIUS: The 'classified' status value is used in 38+ files including db/schema.ts default, steward scripts, admin filters, and user-facing pages. This rename requires: (1) database migration to update existing rows, (2) coordinated changes across features/feedback and scripts/feedback-steward, (3) updating all filter dropdowns and display labels. Recommend splitting into separate PR with migration script.",
+      "uatByFeedbackId": {
+        "533ecbb1-bc49-4795-b8fe-3d579fc96076": [
+          "Navigate to /admin/feedback",
+          "Use status filter dropdown",
+          "Verify 'Reviewed' option exists instead of 'Classified'",
+          "Filter by 'Reviewed' and verify items previously marked 'classified' appear",
+          "Check status badge on feedback cards shows 'reviewed' not 'classified'"
+        ]
+      }
+    },
+    {
+      "featureArea": "navigation",
+      "summary": "DEFERRED: Module-based navigation restructure requires separate architecture planning",
+      "owningComponent": "features/layout/lib/navConfig.ts",
+      "allowedFiles": [
+        "features/layout/lib/navConfig.ts"
+      ],
+      "testPlan": [
+        "This workstream requires separate architecture planning due to scope"
+      ],
+      "blastRadiusNotes": "DEFERRED - HIGH RISK: This feedback requests a complete navigation restructure from feature-per-tab to module-based navigation (Home, Planbook, Records, Compliance, People, Settings). This affects: sidebar, routing, hover menus, learner context persistence, and introduces new 'In-session mode'. Recommend creating a separate feature-wave plan per docs/feature-waves.md before implementation.",
+      "uatByFeedbackId": {
+        "e1c3f3db-27c7-4978-a7ac-f40160c2d0df": [
+          "DEFERRED - requires separate architecture planning and feature-wave breakdown"
+        ]
+      }
+    },
+    {
+      "featureArea": "household",
+      "summary": "DEFERRED: Multiple teachers per household requires auth/permissions architecture review",
+      "owningComponent": "features/household/server/service.ts",
+      "allowedFiles": [
+        "features/household/server/service.ts"
+      ],
+      "testPlan": [
+        "This workstream requires architecture review before implementation"
+      ],
+      "blastRadiusNotes": "DEFERRED - MEDIUM RISK: Adding multiple teachers per household touches auth, permissions, and multi-tenant data isolation. Requires: (1) schema changes to model teacher-household relationships, (2) permission scoping rules, (3) UI for teacher management. Recommend architecture review document before implementation.",
+      "uatByFeedbackId": {
+        "1e365a22-06c7-4bf6-b28b-3d4a73c0faa4": [
+          "DEFERRED - requires architecture review for auth and permissions"
+        ]
+      }
+    },
+    {
+      "featureArea": "messaging",
+      "summary": "DEFERRED: Cross-household messaging requires security and data-isolation review",
+      "owningComponent": "features/messaging/server/service.ts",
+      "allowedFiles": [
+        "features/messaging/server/service.ts"
+      ],
+      "testPlan": [
+        "This workstream requires security review before implementation"
+      ],
+      "blastRadiusNotes": "DEFERRED - HIGH RISK: Cross-household messaging breaks the current single-household data isolation model. Per the classification recommendation, this requires a security and data-isolation review before any implementation. Concerns include: message privacy, consent, blocking, moderation, and compliance.",
+      "uatByFeedbackId": {
+        "f674588f-7f9a-4e9f-a7e2-cc1d4621de95": [
+          "DEFERRED - requires security and data-isolation review per classification recommendation"
+        ]
+      }
+    }
+  ]
+}

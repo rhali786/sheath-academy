@@ -1,0 +1,180 @@
+{
+  "version": 1,
+  "generatedAt": "2026-06-04T18:38:25.199Z",
+  "feedbackIds": [
+    "f674588f-7f9a-4e9f-a7e2-cc1d4621de95",
+    "ad71a81f-6bc8-4463-9d1a-0f8f3c11951e",
+    "533ecbb1-bc49-4795-b8fe-3d579fc96076",
+    "1831c99f-8e92-43be-8274-6d1189d8bbe5",
+    "103eaba1-67d8-4fde-addc-86228a3860e0",
+    "3dc815ad-a973-4672-a4ee-39553008f324",
+    "a2a7a0b6-9751-4967-91f8-8daf9e8a5955"
+  ],
+  "eligibilitySnapshot": {
+    "autoEligibleIds": [
+      "ad71a81f-6bc8-4463-9d1a-0f8f3c11951e",
+      "533ecbb1-bc49-4795-b8fe-3d579fc96076",
+      "1831c99f-8e92-43be-8274-6d1189d8bbe5",
+      "103eaba1-67d8-4fde-addc-86228a3860e0",
+      "3dc815ad-a973-4672-a4ee-39553008f324",
+      "a2a7a0b6-9751-4967-91f8-8daf9e8a5955"
+    ],
+    "approvedIds": [
+      "f674588f-7f9a-4e9f-a7e2-cc1d4621de95"
+    ]
+  },
+  "workstreams": [
+    {
+      "featureArea": "feedback",
+      "summary": "Add reject button and rename 'classified' status to 'reviewed' in admin feedback workflow",
+      "allowedFiles": [
+        "features/feedback/server/**/*.ts",
+        "features/feedback/api/routes/**/*.ts",
+        "features/feedback/__tests__/api/**/*.ts",
+        "features/feedback/front/components/**/*.tsx"
+      ],
+      "testPlan": [
+        "npm test -- features/feedback/__tests__/api/repository.test.ts to verify reject action updates database",
+        "npm test -- features/feedback/__tests__/api/service.test.ts to verify status renamed to 'reviewed' after daily process",
+        "npm test -- features/feedback/__tests__ to run all feedback tests",
+        "npm run dev and navigate to /admin/feedback",
+        "Verify reject button appears on each feedback row",
+        "Click reject button on feedback row and verify it is removed from list",
+        "Verify feedback status shows 'reviewed' after daily process completion"
+      ],
+      "uatByFeedbackId": {
+        "ad71a81f-6bc8-4463-9d1a-0f8f3c11951e": [
+          "Open Render preview and navigate to /admin/feedback",
+          "Locate a feedback row in the list",
+          "Click the reject button on the row",
+          "Verify feedback is removed from list immediately",
+          "Refresh page and confirm rejected feedback does not reappear"
+        ],
+        "533ecbb1-bc49-4795-b8fe-3d579fc96076": [
+          "Navigate to /admin/feedback",
+          "Verify status label reads 'reviewed' for processed feedback",
+          "Check that label is consistent across all rows after daily process",
+          "Reload page and confirm status persists as 'reviewed'"
+        ]
+      }
+    },
+    {
+      "featureArea": "dashboard",
+      "summary": "Add sidebar collapse toggle, center version number in sidebar footer, and update header greeting to display user name with rotating Arabic salutations",
+      "allowedFiles": [
+        "features/layout/front/components/**/*.tsx",
+        "features/dashboard/front/components/**/*.tsx",
+        "features/dashboard/__tests__/integration/**/*.tsx",
+        "features/dashboard/front/**/*.css",
+        "app/globals.css"
+      ],
+      "testPlan": [
+        "npm run dev and load the dashboard home page",
+        "Verify sidebar collapse button appears in the sidebar header",
+        "Click toggle and verify sidebar collapses to icon-only state",
+        "Verify version number in sidebar footer is center-aligned",
+        "Click toggle to expand and verify version remains centered",
+        "Test sidebar toggle behavior on mobile viewport (375px width)",
+        "Verify header displays Arabic greeting format: '[Greeting] [UserName]' with email in grey parentheses",
+        "Logout and login multiple times to verify greeting rotates through 5-8 different Arabic salutations",
+        "npm test -- features/dashboard/__tests__/integration to verify component tests pass"
+      ],
+      "uatByFeedbackId": {
+        "1831c99f-8e92-43be-8274-6d1189d8bbe5": [
+          "Open Render preview and navigate to dashboard",
+          "Locate sidebar collapse/expand toggle button (icon: square with partial square inside)",
+          "Click toggle button to collapse sidebar",
+          "Verify sidebar collapses to icon-only view and main content expands",
+          "Click toggle again to expand sidebar",
+          "Test on mobile width (375px) and verify sidebar toggle improves space usage",
+          "Verify navigation links remain functional in collapsed state"
+        ],
+        "103eaba1-67d8-4fde-addc-86228a3860e0": [
+          "Navigate to dashboard and view sidebar footer",
+          "Verify version number is center-aligned horizontally on the page",
+          "Collapse sidebar using toggle button",
+          "Verify version number is still centered in collapsed state",
+          "Expand sidebar and confirm centering persists",
+          "Test on mobile, tablet, and desktop viewports to verify alignment"
+        ],
+        "a2a7a0b6-9751-4967-91f8-8daf9e8a5955": [
+          "Navigate to dashboard and view header",
+          "Verify header displays greeting in Arabic (e.g., 'Marhaban Rasheed')",
+          "Verify user's full name appears instead of email address",
+          "Verify email appears in grey text in parentheses below the name",
+          "Logout and login multiple times, reloading dashboard each time",
+          "Verify greeting cycles through 5-8 different Arabic salutations",
+          "Test header layout on mobile and desktop viewports"
+        ]
+      }
+    },
+    {
+      "featureArea": "settings",
+      "summary": "Center-align Hijri calendar display under Faith.Learning.Purpose tagline on settings page",
+      "allowedFiles": [
+        "features/settings/front/components/**/*.tsx",
+        "features/settings/front/**/*.css",
+        "features/settings/__tests__/**/*.tsx",
+        "app/globals.css"
+      ],
+      "testPlan": [
+        "npm run dev and navigate to /settings page",
+        "Verify Hijri calendar displays below Faith.Learning.Purpose tagline",
+        "Verify calendar is center-aligned horizontally",
+        "Resize browser to tablet width (768px) and confirm centering persists",
+        "Resize to mobile width (375px) and confirm calendar is centered",
+        "npm test -- features/settings/__tests__ to verify component tests pass",
+        "Verify calendar does not overflow or break layout in centered state"
+      ],
+      "uatByFeedbackId": {
+        "3dc815ad-a973-4672-a4ee-39553008f324": [
+          "Open Render preview and navigate to /settings",
+          "Locate the 'Faith.Learning.Purpose' text/tagline",
+          "Locate Hijri calendar positioned below the tagline",
+          "Verify calendar is center-aligned on the page",
+          "Resize browser to tablet width (768px) and verify centering is maintained",
+          "Resize to mobile width (375px) and verify calendar stays centered",
+          "Verify all calendar dates display correctly and calendar is not truncated",
+          "Verify spacing between tagline and calendar is visually balanced"
+        ]
+      }
+    },
+    {
+      "featureArea": "messaging",
+      "summary": "Implement cross-household user messaging system with strict data-isolation enforcement (security review required)",
+      "allowedFiles": [
+        "features/messaging/server/**/*.ts",
+        "features/messaging/api/**/*.ts",
+        "features/messaging/__tests__/**/*.ts",
+        "features/messaging/front/**/*.tsx",
+        "db/schema.ts"
+      ],
+      "testPlan": [
+        "GATE: Conduct security and data-isolation review of cross-household messaging design",
+        "GATE: Obtain security approval confirming household boundaries are enforced",
+        "Design message database schema with household-scoping constraints",
+        "npm run db:generate to create migration from schema changes",
+        "npm run db:migrate to apply schema",
+        "npm test -- features/messaging/__tests__/api/repository.test.ts to verify message queries enforce household isolation",
+        "npm test -- features/messaging/__tests__/api/service.test.ts to verify business logic prevents cross-boundary message access",
+        "npm test -- features/messaging/__tests__/integration to verify end-to-end messaging flow respects households",
+        "npm run build to verify compilation succeeds",
+        "npm test to run full test suite"
+      ],
+      "uatByFeedbackId": {
+        "f674588f-7f9a-4e9f-a7e2-cc1d4621de95": [
+          "SECURITY GATE: Verify cross-household messaging design has been reviewed and approved",
+          "Login as user from Household A",
+          "Locate user from Household B in the messaging interface",
+          "Send a message to user from Household B",
+          "Verify message is delivered and appears in user B's inbox",
+          "Login as user from Household B and reply to the message",
+          "Verify user from Household A receives the reply",
+          "Login as user from Household C and verify they cannot see the message thread between A and B",
+          "Attempt to access message thread via API with Household C credentials and verify access is denied",
+          "Verify admin dashboard shows message statistics aggregated correctly by household"
+        ]
+      }
+    }
+  ]
+}

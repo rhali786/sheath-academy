@@ -9,6 +9,7 @@ import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { useHousehold } from '@/features/household/front/context'
+import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { TodayLessonCard } from '@/features/plan/front/components/TodayLessonCard'
 
 function todayLocal(): string {
@@ -23,6 +24,7 @@ type DateSort = 'asc' | 'desc'
 
 export function LessonsPage() {
   const { householdProfile, studentProfiles: children, allSubjects: subjects } = useHousehold()
+  const { selectedChildId } = useLearner()
   const searchParams = useSearchParams()
   const [lessons, setLessons] = useState<LessonTask[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -33,15 +35,36 @@ export function LessonsPage() {
   const [filterStatus, setFilterStatus] = useState<LessonTaskStatus | ''>('')
   const [dateSort, setDateSort] = useState<DateSort>('desc')
   const [showForm, setShowForm] = useState(false)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
-
-  // Sync URL childId → filterChildId after children load and on URL changes
+  // Keep page filter in sync with header learner (null = All children)
   useEffect(() => {
-    if (children.length === 0) return
-    const urlChildId = searchParams.get('childId')
-    const matched = urlChildId ? children.find((c: StudentProfile) => c.id === urlChildId) : null
-    setFilterChildId(matched ? matched.id : '')
-  }, [searchParams, children])
+    setFilterChildId(selectedChildId ?? '')
+  }, [selectedChildId])
+
+  useEffect(() => {
+    if (searchParams.get('add') === '1') {
+      setShowForm(true)
+    }
+  }, [searchParams])
+
+  const editingLessonId = searchParams.get('editId')
+
+  // Ensure deep-linked lesson is visible in the list
+  useEffect(() => {
+    if (!editingLessonId || lessons.length === 0) return
+    const lesson = lessons.find(l => l.id === editingLessonId)
+    if (lesson) {
+      setFilterChildId(lesson.childId)
+    }
+  }, [editingLessonId, lessons])
+
+  // Scroll to the lesson card when opened from /plan
+  useEffect(() => {
+    if (!editingLessonId || isLoading) return
+    const el = document.querySelector(`[data-lesson-id="${editingLessonId}"]`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [editingLessonId, isLoading, lessons])
 
   async function fetchLessons() {
     try {
@@ -75,6 +98,8 @@ export function LessonsPage() {
     const householdId = householdProfile?.id ?? ''
     await plannerApi.createLesson({ ...data, householdId })
     await fetchLessons()
+    setShowForm(false)
+    setSuccessMsg('Lesson added!')
   }
 
   async function handleUpdate(id: string, patch: Partial<LessonTask>) {
@@ -89,11 +114,16 @@ export function LessonsPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-8">
+      {successMsg && (
+        <div role="alert" className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
+          {successMsg}
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h1 className="page-title mb-0">Lessons</h1>
         <button
           type="button"
-          onClick={() => setShowForm(v => !v)}
+          onClick={() => { setShowForm(v => !v); setSuccessMsg(null) }}
           className="px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800"
         >
           {showForm ? 'Cancel' : 'Add lesson'}
@@ -106,6 +136,7 @@ export function LessonsPage() {
             <LessonTaskForm
               children={children}
               subjects={subjects}
+              defaultSelectedChildIds={selectedChildId ? [selectedChildId] : undefined}
               onSubmit={handleSubmit}
             />
           </div>
@@ -170,6 +201,7 @@ export function LessonsPage() {
             error={error}
             onUpdate={handleUpdate}
             onDelete={handleDelete}
+            editingLessonId={editingLessonId}
           />
         )}
       </div>

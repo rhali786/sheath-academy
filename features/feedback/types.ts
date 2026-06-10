@@ -2,7 +2,7 @@ export type FeedbackSentiment = 'bad' | 'poor' | 'okay' | 'good' | 'great'
 
 export type FeedbackStatus =
   | 'submitted'
-  | 'classified'
+  | 'reviewed'
   | 'awaiting_approval'
   | 'in_pr'
   | 'in_qa'

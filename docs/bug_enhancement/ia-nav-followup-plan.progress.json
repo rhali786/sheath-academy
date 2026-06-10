@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "planPath": "docs/bug_enhancement/ia-nav-followup-plan.json",
+  "branch": "fix/ia-nav-followup",
+  "updatedAt": "2026-06-09T22:00:00Z",
+  "phases": [
+    { "id": "phase-1", "status": "complete", "notes": "Courses→Lessons label; grades-progress under Records module; progress module removed." },
+    { "id": "phase-2", "status": "complete", "notes": "LearnerSwitcher All children option; Attendance no longer forces first child." },
+    { "id": "phase-3", "status": "complete", "notes": "Schedule/Quran/Attendance records filter by header learner." },
+    { "id": "phase-4", "status": "complete", "notes": "Lessons syncs header learner; ?add=1; Plan inline Add lesson near Today." },
+    { "id": "phase-5", "status": "complete", "notes": "Schedule attendance InlineSuccess on save." }
+  ]
+}

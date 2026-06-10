@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react'
 import type { LessonTask, LessonTaskStatus, LessonDuration } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
+import {
+  filterSubjectsForLearners,
+  subjectEnrollsLearner,
+} from '@/features/subjects/lib/enrollment'
 
 const GENERAL_LESSON_TYPES = ['Lesson', 'Assignment', 'Reading', 'Practice', 'Review', 'Project', 'Assessment', 'Other']
 const QURAN_LESSON_TYPES   = ['Memorisation', 'Revision', 'Recitation', 'Tajweed', 'Listening']
@@ -24,12 +28,39 @@ function todayLocal(): string {
   return `${y}-${m}-${dd}`
 }
 
+export interface LessonLearnerAssignment {
+  childId: string
+  subjectId: string
+}
+
+function resolveAssignments(
+  selectedChildIds: string[],
+  subjectId: string,
+  allSubjects: SubjectCourse[],
+): LessonLearnerAssignment[] {
+  const template = allSubjects.find(s => s.id === subjectId)
+  return selectedChildIds.map(childId => {
+    if (template && subjectEnrollsLearner(template, childId)) {
+      return { childId, subjectId: template.id }
+    }
+    const match = template
+      ? allSubjects.find(
+          (s) => s.name === template.name && subjectEnrollsLearner(s, childId),
+        )
+      : allSubjects.find((s) => s.id === subjectId && subjectEnrollsLearner(s, childId))
+    return { childId, subjectId: match?.id ?? subjectId }
+  })
+}
+
 export interface LessonFormData {
   childId: string
+  childIds?: string[]
+  assignments?: LessonLearnerAssignment[]
   subjectId: string
   title: string
   description?: string
   resourceLink?: string
+  plannedStartDate?: string
   dueDate: string
   status: LessonTaskStatus
   order: number
@@ -41,6 +72,7 @@ interface LessonTaskFormProps {
   children: StudentProfile[]
   subjects: SubjectCourse[]
   editingLesson?: LessonTask
+  defaultSelectedChildIds?: string[]
   onSubmit: (data: LessonFormData) => Promise<void>
   onCancel?: () => void
 }
@@ -49,16 +81,21 @@ export function LessonTaskForm({
   children,
   subjects,
   editingLesson,
+  defaultSelectedChildIds,
   onSubmit,
   onCancel,
 }: LessonTaskFormProps) {
   const isEdit = Boolean(editingLesson)
 
-  const [childId, setChildId] = useState(editingLesson?.childId ?? '')
+  const [selectedChildIds, setSelectedChildIds] = useState<string[]>(
+    editingLesson ? [editingLesson.childId] : (defaultSelectedChildIds ?? []),
+  )
+  const childId = selectedChildIds[0] ?? ''
   const [subjectId, setSubjectId] = useState(editingLesson?.subjectId ?? '')
   const [title, setTitle] = useState(editingLesson?.title ?? '')
   const [description, setDescription] = useState(editingLesson?.description ?? '')
   const [resourceLink, setResourceLink] = useState(editingLesson?.resourceLink ?? '')
+  const [plannedStartDate, setPlannedStartDate] = useState(editingLesson?.plannedStartDate ?? '')
   const [dueDate, setDueDate] = useState(editingLesson?.dueDate ?? todayLocal())
   const [status, setStatus] = useState<LessonTaskStatus>(editingLesson?.status ?? 'not_started')
   const [estimatedDuration, setEstimatedDuration] = useState<LessonDuration | ''>(editingLesson?.estimatedDuration ?? '')
@@ -66,16 +103,25 @@ export function LessonTaskForm({
   const [titleError, setTitleError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Reset subject when child changes (except on initial load in edit mode)
-  const [prevChildId, setPrevChildId] = useState(editingLesson?.childId ?? '')
+  // Reset subject when selected learners change (except on initial load in edit mode)
+  const [prevChildKey, setPrevChildKey] = useState(selectedChildIds.join(','))
   useEffect(() => {
-    if (childId !== prevChildId) {
+    const key = selectedChildIds.join(',')
+    if (key !== prevChildKey) {
       setSubjectId('')
-      setPrevChildId(childId)
+      setPrevChildKey(key)
     }
-  }, [childId, prevChildId])
+  }, [selectedChildIds, prevChildKey])
 
-  const filteredSubjects = subjects.filter(s => s.childId === childId)
+  function toggleChild(id: string) {
+    setSelectedChildIds(prev =>
+      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id],
+    )
+  }
+
+  const filteredSubjects = isEdit
+    ? filterSubjectsForLearners(subjects, [childId])
+    : filterSubjectsForLearners(subjects, selectedChildIds)
   const selectedSubject = filteredSubjects.find(s => s.id === subjectId)
   const lessonTypes = selectedSubject?.category === 'Quran' ? QURAN_LESSON_TYPES : GENERAL_LESSON_TYPES
 
@@ -92,15 +138,23 @@ export function LessonTaskForm({
       setTitleError('Title must be 120 characters or fewer')
       return
     }
+    if (selectedChildIds.length === 0) {
+      setTitleError('Select at least one learner')
+      return
+    }
 
     setIsSubmitting(true)
     try {
+      const assignments = resolveAssignments(selectedChildIds, subjectId, subjects)
       await onSubmit({
-        childId,
+        childId: selectedChildIds[0],
+        childIds: selectedChildIds.length > 1 ? selectedChildIds : undefined,
+        assignments: selectedChildIds.length > 1 ? assignments : undefined,
         subjectId,
         title: trimmedTitle,
         description: description.trim() || undefined,
         resourceLink: resourceLink.trim() || undefined,
+        plannedStartDate: plannedStartDate.trim() || undefined,
         dueDate,
         status,
         order: editingLesson?.order ?? 0,
@@ -116,20 +170,29 @@ export function LessonTaskForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="childId" className="block text-sm font-medium text-slate-700 mb-1">
+          <span className="block text-sm font-medium text-slate-700 mb-1">
             Learner(s)
-          </label>
-          <select
-            id="childId"
-            value={childId}
-            onChange={e => setChildId(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
-          >
-            <option value="">Select child</option>
-            {children.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+          </span>
+          {isEdit ? (
+            <p className="text-sm text-slate-900 py-2">
+              {children.find(c => c.id === childId)?.name ?? childId}
+            </p>
+          ) : (
+            <div className="space-y-2 rounded-lg border border-slate-200 px-3 py-2">
+              {children.map(c => (
+                <label key={c.id} className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedChildIds.includes(c.id)}
+                    onChange={() => toggleChild(c.id)}
+                    aria-label={c.name}
+                    className="rounded border-slate-300 text-forest-900 focus:ring-forest-500"
+                  />
+                  {c.name}
+                </label>
+              ))}
+            </div>
+          )}
         </div>
 
         <div>
@@ -140,10 +203,10 @@ export function LessonTaskForm({
             id="subjectId"
             value={subjectId}
             onChange={e => { setSubjectId(e.target.value); setLessonType('') }}
-            disabled={!childId}
+            disabled={selectedChildIds.length === 0}
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 disabled:opacity-50"
           >
-            <option value="">{!childId ? 'Choose a learner first to see active courses.' : 'Select course/subject'}</option>
+            <option value="">{selectedChildIds.length === 0 ? 'Choose a learner first to see active courses.' : 'Select course/subject'}</option>
             {filteredSubjects.map(s => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
@@ -168,6 +231,19 @@ export function LessonTaskForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
+          <label htmlFor="plannedStartDate" className="block text-sm font-medium text-slate-700 mb-1">
+            Start date <span className="text-slate-400 font-normal">(optional)</span>
+          </label>
+          <input
+            id="plannedStartDate"
+            type="date"
+            value={plannedStartDate}
+            onChange={e => setPlannedStartDate(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+          />
+        </div>
+
+        <div>
           <label htmlFor="dueDate" className="block text-sm font-medium text-slate-700 mb-1">
             Planned date
           </label>
@@ -179,7 +255,9 @@ export function LessonTaskForm({
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
           />
         </div>
+      </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="status" className="block text-sm font-medium text-slate-700 mb-1">
             Status

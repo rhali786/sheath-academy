@@ -1,10 +1,14 @@
 export type NavSection = 'main' | 'footer'
+export type NavModule = 'Home' | 'Planbook' | 'Records' | 'Compliance' | 'People' | 'Settings'
+export type NavModuleGroup = { label: NavModule; items: NavItem[] }
 
 export type NavItem = {
   id: string
   label: string
   href?: string
   section: NavSection
+  /** Module group this item belongs to (main nav items only). */
+  module?: NavModule
   /** When true, item is visible but not clickable (Messages, Finances). */
   disabled?: boolean
   /** Grayed badge next to label (Messages). */
@@ -16,12 +20,13 @@ export type NavItem = {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', href: '/', section: 'main', activePrefixes: ['/'] },
+  { id: 'dashboard', label: 'Home', href: '/dashboard', section: 'main', module: 'Home', activePrefixes: ['/dashboard'] },
   {
     id: 'calendar',
     label: 'Calendar',
     href: '/plan/schedule',
     section: 'main',
+    module: 'Planbook',
     activePrefixes: ['/plan/schedule', '/calendar'],
   },
   {
@@ -29,15 +34,17 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Lesson Planner',
     href: '/plan',
     section: 'main',
+    module: 'Planbook',
     activePrefixes: ['/plan'],
   },
-  { id: 'courses', label: 'Courses', href: '/lessons', section: 'main', activePrefixes: ['/lessons'] },
-  { id: 'attendance', label: 'Attendance', href: '/attendance', section: 'main' },
+  { id: 'courses', label: 'Lessons', href: '/lessons', section: 'main', module: 'Planbook', activePrefixes: ['/lessons'] },
+  { id: 'attendance', label: 'Attendance', href: '/attendance', section: 'main', module: 'Records' },
   {
     id: 'grades-progress',
-    label: 'Grades & Progress',
+    label: 'Growth & Reflection',
     href: '/growth',
     section: 'main',
+    module: 'Records',
     activePrefixes: ['/growth', '/portfolio'],
   },
   {
@@ -45,38 +52,113 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Reports & Records',
     href: '/records',
     section: 'main',
+    module: 'Records',
     activePrefixes: ['/records', '/reports'],
   },
   {
     id: 'people',
     label: 'People',
-    href: '/settings?tab=children',
+    href: '/people',
     section: 'main',
-    activePrefixes: ['/settings'],
+    module: 'People',
+    activePrefixes: ['/people'],
   },
-  { id: 'resources', label: 'Resources', href: '/resources', section: 'main' },
-  { id: 'quran', label: 'Quran', href: '/quran', section: 'main' },
+  { id: 'resources', label: 'Resources', href: '/resources', section: 'main', module: 'Planbook' },
+  { id: 'quran', label: 'Quran', href: '/quran', section: 'main', module: 'Planbook' },
   {
     id: 'messages',
     label: 'Messages',
+    href: '/messages',
     section: 'main',
-    disabled: true,
-    showDisabledBadge: true,
+    module: 'Planbook',
+    activePrefixes: ['/messages'],
   },
-  { id: 'finances', label: 'Finances', section: 'main', disabled: true },
+  { id: 'finances', label: 'Finances', section: 'main', module: 'People', disabled: true },
   {
     id: 'compliance',
     label: 'Compliance',
-    href: '/settings?tab=records-compliance',
+    href: '/compliance',
     section: 'main',
-    activePrefixes: ['/settings'],
+    module: 'Compliance',
+    activePrefixes: ['/compliance'],
   },
-  { id: 'my-feedback', label: 'My feedback', href: '/feedback', section: 'main', activePrefixes: ['/feedback'] },
+  { id: 'my-feedback', label: 'My feedback', href: '/feedback', section: 'main', module: 'Settings', activePrefixes: ['/feedback'] },
   { id: 'settings', label: 'Settings', href: '/settings', section: 'footer' },
   { id: 'admin', label: 'Admin', href: '/admin/metrics', section: 'footer', adminOnly: true, activePrefixes: ['/admin'] },
   { id: 'feedback-queue', label: 'Feedback queue', href: '/admin/feedback', section: 'footer', adminOnly: true, activePrefixes: ['/admin/feedback'] },
   { id: 'about', label: 'About', href: '/about', section: 'footer' },
 ]
+
+/** Module config IDs for the module-grouped sidebar (re-homed IA). */
+export type NavModuleId = 'home' | 'planbook' | 'records' | 'people' | 'messages' | 'settings'
+
+export type NavModuleConfig = {
+  id: NavModuleId
+  label: string
+  defaultHref: string
+  /** NAV_ITEMS ids belonging to this module's sub-nav, in display order. */
+  itemIds: string[]
+  section: NavSection
+  adminOnly?: boolean
+}
+
+export const NAV_MODULES: NavModuleConfig[] = [
+  { id: 'home', label: 'Home', defaultHref: '/dashboard', itemIds: [], section: 'main' },
+  {
+    id: 'planbook',
+    label: 'Planbook',
+    defaultHref: '/plan/schedule',
+    itemIds: ['calendar', 'lesson-planner', 'courses', 'quran', 'resources'],
+    section: 'main',
+  },
+  {
+    id: 'records',
+    label: 'Records',
+    defaultHref: '/attendance',
+    itemIds: ['attendance', 'grades-progress', 'reports-records', 'compliance'],
+    section: 'main',
+  },
+  { id: 'people', label: 'People', defaultHref: '/people', itemIds: [], section: 'main' },
+  { id: 'messages', label: 'Messages', defaultHref: '/messages', itemIds: [], section: 'main' },
+  {
+    id: 'settings',
+    label: 'Settings',
+    defaultHref: '/settings',
+    itemIds: ['finances'],
+    section: 'footer',
+  },
+]
+
+export function getModuleItems(module: NavModuleConfig): NavItem[] {
+  return module.itemIds
+    .map((id) => NAV_ITEMS.find((item) => item.id === id))
+    .filter((item): item is NavItem => item !== undefined)
+}
+
+export function isNavModuleActive(
+  pathname: string,
+  module: NavModuleConfig,
+  settingsTab: string | null = null,
+): boolean {
+  if (getModuleItems(module).some((item) => isNavItemActive(pathname, item, settingsTab))) {
+    return true
+  }
+
+  const defaultPath = module.defaultHref.split('?')[0]
+  return pathname === defaultPath || pathname.startsWith(`${defaultPath}/`)
+}
+
+const MODULE_ORDER: NavModule[] = ['Home', 'Planbook', 'Records', 'Compliance', 'People', 'Settings']
+
+export function getNavModules(): NavModuleGroup[] {
+  const map = new Map<NavModule, NavItem[]>(MODULE_ORDER.map(m => [m, []]))
+  for (const item of NAV_ITEMS) {
+    if (item.section === 'main' && item.module) {
+      map.get(item.module)?.push(item)
+    }
+  }
+  return MODULE_ORDER.map(label => ({ label, items: map.get(label) ?? [] }))
+}
 
 export function getNavItemsBySection(section: NavSection): NavItem[] {
   return NAV_ITEMS.filter((item) => item.section === section)
@@ -92,7 +174,7 @@ export function isNavItemActive(
   const prefixes = item.activePrefixes ?? [item.href.split('?')[0]]
 
   if (item.id === 'dashboard') {
-    return pathname === '/'
+    return pathname === '/dashboard'
   }
 
   if (item.id === 'lesson-planner') {
@@ -105,8 +187,6 @@ export function isNavItemActive(
 
   if (pathname.startsWith('/settings')) {
     const tab = settingsTab ?? 'household'
-    if (item.id === 'people') return tab === 'children'
-    if (item.id === 'compliance') return tab === 'records-compliance'
     if (item.id === 'settings') {
       return tab !== 'children' && tab !== 'records-compliance'
     }

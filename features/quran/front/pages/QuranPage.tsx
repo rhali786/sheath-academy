@@ -3,8 +3,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Pencil, Trash2, X, Check } from 'lucide-react'
+import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import { quranApi } from '@/features/quran/front/services/api'
+import { QuranProgressChart } from '@/features/quran/front/components/QuranProgressChart'
 import { useHousehold } from '@/features/household/front/context'
+import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { SURAHS } from '@/features/quran/front/constants/surahs'
 import type { QuranSession } from '@/features/lib/types'
 import type { StudentProfile } from '@/features/lib/types'
@@ -47,6 +50,7 @@ function emptyAdd(defaultChildId = ''): AddState {
 
 export default function QuranPage() {
   const { studentProfiles: children } = useHousehold()
+  const { selectedChildId, setSelectedChildId } = useLearner()
   const searchParams = useSearchParams()
   const [sessions, setSessions] = useState<QuranSession[]>([])
   const [loading, setLoading] = useState(true)
@@ -57,9 +61,7 @@ export default function QuranPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<EditState | null>(null)
   const [saving, setSaving] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const [filterChildId, setFilterChildId] = useState<string>('')
   const [filterType, setFilterType] = useState<string>('')
   const [dateSort, setDateSort] = useState<DateSort>('desc')
 
@@ -102,23 +104,25 @@ export default function QuranPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  // Sync URL childId → filterChildId after children load and on URL changes
+  // Seed shared learner from ?childId= when present
   useEffect(() => {
     if (children.length === 0) return
     const urlChildId = searchParams.get('childId')
     const matched = urlChildId ? children.find(c => c.id === urlChildId) : null
-    setFilterChildId(matched ? matched.id : '')
-  }, [searchParams, children])
+    if (matched) {
+      setSelectedChildId(matched.id)
+    }
+  }, [searchParams, children, setSelectedChildId])
 
   const displayedSessions = useMemo(() => {
     let list = sessions
-    if (filterChildId) list = list.filter(s => s.childId === filterChildId)
+    if (selectedChildId) list = list.filter(s => s.childId === selectedChildId)
     if (filterType)    list = list.filter(s => s.type === filterType)
     return [...list].sort((a, b) => {
       const cmp = a.date.localeCompare(b.date)
       return dateSort === 'asc' ? cmp : -cmp
     })
-  }, [sessions, filterChildId, filterType, dateSort])
+  }, [sessions, selectedChildId, filterType, dateSort])
 
   function startEdit(session: QuranSession) {
     setConfirmDeleteId(null)
@@ -163,19 +167,6 @@ export default function QuranPage() {
     setConfirmDeleteId(null)
   }
 
-  async function confirmDelete(id: string) {
-    setDeletingId(id)
-    try {
-      await quranApi.deleteSession(id)
-      setSessions(prev => prev.filter(s => s.id !== id))
-      setConfirmDeleteId(null)
-    } catch {
-      // keep confirmation open on error
-    } finally {
-      setDeletingId(null)
-    }
-  }
-
   return (
     <div className="max-w-5xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
       <div className="flex items-center justify-between mb-2">
@@ -189,6 +180,10 @@ export default function QuranPage() {
         </button>
       </div>
       <p className="text-sm text-slate-500 mb-8">Track Quran memorisation and recitation sessions.</p>
+
+      <div className="mb-8">
+        <QuranProgressChart sessions={displayedSessions} students={children} loading={loading} />
+      </div>
 
       {/* Add session form */}
       {showAddForm && <div className="mb-8">
@@ -280,8 +275,9 @@ export default function QuranPage() {
       {!loading && sessions.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-6">
           <select
-            value={filterChildId}
-            onChange={e => setFilterChildId(e.target.value)}
+            value={selectedChildId ?? ''}
+            onChange={e => setSelectedChildId(e.target.value === '' ? null : e.target.value)}
+            aria-label="Filter by learner"
             className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
           >
             <option value="">All children</option>
@@ -406,30 +402,16 @@ export default function QuranPage() {
                   </div>
                 </div>
               ) : confirmDeleteId === s.id ? (
-                /* Delete confirmation panel */
-                <div className="p-4 bg-red-50 border-t border-red-100">
-                  <p className="text-sm text-red-700 font-medium mb-3">Delete this session?</p>
-                  <p className="text-xs text-red-600 mb-3">
-                    {s.surah} · {s.type} · {s.date}
-                  </p>
-                  <div className="flex gap-2 justify-end">
-                    <button
-                      onClick={cancelDelete}
-                      aria-label="Cancel delete"
-                      className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 border border-slate-200 rounded-lg bg-white transition-colors"
-                    >
-                      <X className="w-3 h-3" /> Cancel
-                    </button>
-                    <button
-                      onClick={() => confirmDelete(s.id)}
-                      disabled={deletingId === s.id}
-                      aria-label="Confirm delete session"
-                      className="flex items-center gap-1 text-xs text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      <Trash2 className="w-3 h-3" /> {deletingId === s.id ? 'Deleting…' : 'Delete'}
-                    </button>
-                  </div>
-                </div>
+                <InlineConfirm
+                  message="Delete this session?"
+                  detail={`${s.surah} · ${s.type} · ${s.date}`}
+                  onConfirm={async () => {
+                    await quranApi.deleteSession(s.id)
+                    setSessions(prev => prev.filter(session => session.id !== s.id))
+                    setConfirmDeleteId(null)
+                  }}
+                  onCancel={cancelDelete}
+                />
               ) : (
                 /* Read state */
                 <div className="flex items-center justify-between gap-4 p-4">

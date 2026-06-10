@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "branch": "feat/course-rollover-multi-learner",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Persist multi-learner course assignment (e1815332)",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": ["Confirm join-table vs fan-out association model with the user before writing the migration (plan recommends join table — courses carry no per-completion state requiring fan-out independence)"],
+      "fileScope": [
+        "db/schema.ts",
+        "features/subjects/server/repository.ts",
+        "features/subjects/api/routes/subjects.ts",
+        "features/subjects/api/routes/subject.ts",
+        "db/migrations/**",
+        "features/subjects/__tests__/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: repository test — a course created with 3 learnerIds round-trips all 3 via the subject_learners join table",
+        "UPDATE TEST: SubjectForm integration test — a multi-select submission persists more than one learner (regression for the silent learnerIds[0]-only drop)",
+        "UPDATE TEST: SubjectsAllTable test — a shared course displays/links correctly for each enrolled learner, not just the first"
+      ],
+      "implementationSteps": [
+        "Add subject_learners join table (subject_id, learner_id, composite PK or unique index) to db/schema.ts",
+        "Update createSubjectRow/repository to write all selected learners to the join table",
+        "Update mapSubjectRow/the read path to populate learnerIds from the join table, keeping childId as learnerIds[0] for back-compat per the existing type comment",
+        "Pass the full learnerIds array through subjects.ts/subject.ts route handlers instead of truncating to learnerIds[0]"
+      ],
+      "doneWhen": [
+        "RUN: npm run db:generate (review generated SQL before proceeding)",
+        "RUN: npm test -- features/subjects/__tests__",
+        "RUN: npm run build",
+        "CONFIRM with user, then RUN: npm run db:migrate"
+      ],
+      "invariants": [
+        "npm run db:generate produces no further migration after the subject_learners join table is added",
+        "npm run db:migrate applies cleanly with no gap",
+        "existing single-learner courses continue to read/write via childId as learnerIds[0] for back-compat"
+      ],
+      "writeBack": "Added subject_learners join table (subject_id, learner_id); repository and routes now write/read all selected learners through it, with childId preserved as learnerIds[0] for back-compat — multi-select course assignment persists fully, closing feedback e1815332. instructorName/level/customCategory persistence remains a separate out-of-scope follow-up (flagged, not fixed here). Year-scoping/rollover (6347ab95) is no longer part of this plan — it is owned by docs/course-rollover-rollover-plan.json (Option A, year-scoped), which depends on this phase-1 join table landing first."
+    }
+  ]
+}

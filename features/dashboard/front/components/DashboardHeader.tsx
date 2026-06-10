@@ -7,8 +7,6 @@ import { useSession } from 'next-auth/react'
 import { useHousehold } from '@/features/household/front/context'
 import { ChildSelector } from './ChildSelector'
 import { DashboardDatePicker } from './DashboardDatePicker'
-import { NotificationBellDropdown } from './NotificationBellDropdown'
-import type { Alert } from '@/features/alerts/types'
 
 function greetingName(sessionName: string | null | undefined, familyName: string): string {
   if (sessionName?.trim()) {
@@ -21,10 +19,10 @@ function greetingName(sessionName: string | null | undefined, familyName: string
 interface DashboardHeaderProps {
   selectedDate: string
   onDateChange: (dateStr: string) => void
-  alerts: Alert[]
+  alerts?: unknown[]
 }
 
-export function DashboardHeader({ selectedDate, onDateChange, alerts }: DashboardHeaderProps) {
+export function DashboardHeader({ selectedDate, onDateChange, alerts: _alerts }: DashboardHeaderProps) {
   const { data: session } = useSession()
   const { familyName } = useHousehold()
   const [quickAddOpen, setQuickAddOpen] = useState(false)
@@ -60,7 +58,6 @@ export function DashboardHeader({ selectedDate, onDateChange, alerts }: Dashboar
           <DashboardDatePicker selectedDate={selectedDate} onDateChange={onDateChange} />
 
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-            <NotificationBellDropdown alerts={alerts} />
             <div className="relative" ref={quickAddRef}>
               <button
                 type="button"

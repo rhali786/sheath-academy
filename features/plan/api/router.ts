@@ -37,7 +37,7 @@ export async function handlePlanRoute(
 
   // DELETE /lessons/:id — delete lesson
   if (slug.length === 2 && slug[0] === 'lessons' && method === 'DELETE') {
-    return lessonHandler.DELETE(slug[1])
+    return lessonHandler.DELETE(slug[1], request)
   }
 
   // GET /progress — progress by subject

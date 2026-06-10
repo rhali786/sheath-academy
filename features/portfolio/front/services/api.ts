@@ -1,6 +1,6 @@
 'use client'
 
-import type { EvidenceItem, CreateEvidenceItemInput, EvidenceType } from '@/features/portfolio/types'
+import type { EvidenceItem, CreateEvidenceItemInput, EvidenceType, EvidenceAttachmentMeta } from '@/features/portfolio/types'
 import type { ApiResponse } from '@/features/lib/types'
 
 function getBase(): string {
@@ -66,5 +66,21 @@ export const portfolioApi = {
 
   listEvidenceByLessonTask(lessonTaskId: string): Promise<ApiResponse<EvidenceItem[]>> {
     return this.listEvidence({ lessonTaskId })
+  },
+
+  uploadEvidenceAttachment(
+    evidenceItemId: string,
+    file: File,
+  ): Promise<ApiResponse<EvidenceAttachmentMeta>> {
+    const fd = new FormData()
+    fd.append('file', file)
+    return apiFetch(`/api/portfolio/evidence/${evidenceItemId}/attachments`, {
+      method: 'POST',
+      body: fd,
+    })
+  },
+
+  deleteEvidenceAttachment(attachmentId: string): Promise<ApiResponse<null>> {
+    return apiFetch(`/api/portfolio/evidence/attachments/${attachmentId}`, { method: 'DELETE' })
   },
 }

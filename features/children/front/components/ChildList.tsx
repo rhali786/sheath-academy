@@ -5,12 +5,15 @@ import type { StudentProfile } from '@/features/lib/types'
 import { useChildren } from '../context'
 import { ChildCard } from './ChildCard'
 import { ChildForm } from './ChildForm'
+import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
+import { InlineSuccess } from '@/features/lib/front/components/InlineSuccess'
 
 export function ChildList() {
   const { children, allChildren, householdId, showArchived, setShowArchived, loading, createChild, updateChild, archiveChild, restoreChild } = useChildren()
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingChild, setEditingChild] = useState<StudentProfile | null>(null)
   const [archiveConfirm, setArchiveConfirm] = useState<{ id: string; name: string } | null>(null)
+  const [archiveSuccess, setArchiveSuccess] = useState<{ id: string; name: string } | null>(null)
 
   async function handleCreateChild(data: Parameters<typeof createChild>[0]) {
     try {
@@ -31,18 +34,8 @@ export function ChildList() {
     }
   }
 
-  async function handleArchiveChild(child: StudentProfile) {
+  function handleArchiveChild(child: StudentProfile) {
     setArchiveConfirm({ id: child.id, name: child.name })
-  }
-
-  async function confirmArchive() {
-    if (!archiveConfirm) return
-    try {
-      await archiveChild(archiveConfirm.id)
-      setArchiveConfirm(null)
-    } catch (err) {
-      console.error('Failed to archive child:', err)
-    }
   }
 
   async function handleRestoreChild(child: StudentProfile) {
@@ -107,26 +100,11 @@ export function ChildList() {
         </div>
       )}
 
-      {archiveConfirm && (
-        <div className="border-l-4 border-amber-500 bg-amber-50 p-3 rounded">
-          <p className="text-sm text-amber-900 mb-2">
-            Archive <strong>{archiveConfirm.name}</strong>? They'll be hidden from active lists but can be restored.
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={confirmArchive}
-              className="text-xs px-3 py-1 rounded bg-amber-600 text-white hover:bg-amber-700 transition-colors"
-            >
-              Confirm archive
-            </button>
-            <button
-              onClick={() => setArchiveConfirm(null)}
-              className="text-xs px-3 py-1 rounded border border-amber-300 text-amber-700 hover:bg-amber-100 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+      {archiveSuccess && (
+        <InlineSuccess
+          message={`${archiveSuccess.name} archived`}
+          onDismiss={() => setArchiveSuccess(null)}
+        />
       )}
 
       {children.length === 0 ? (
@@ -136,13 +114,29 @@ export function ChildList() {
       ) : (
         <div className="grid gap-3">
           {children.map(child => (
-            <ChildCard
-              key={child.id}
-              child={child}
-              onEdit={(c) => setEditingChild(c)}
-              onArchive={handleArchiveChild}
-              onRestore={handleRestoreChild}
-            />
+            <div key={child.id}>
+              {archiveConfirm?.id === child.id ? (
+                <InlineConfirm
+                  tone="warning"
+                  message={`Archive ${child.name}?`}
+                  detail="They'll be hidden from active lists but can be restored."
+                  confirmLabel="Archive"
+                  onConfirm={async () => {
+                    await archiveChild(child.id)
+                    setArchiveConfirm(null)
+                    setArchiveSuccess({ id: child.id, name: child.name })
+                  }}
+                  onCancel={() => setArchiveConfirm(null)}
+                />
+              ) : (
+                <ChildCard
+                  child={child}
+                  onEdit={(c) => setEditingChild(c)}
+                  onArchive={handleArchiveChild}
+                  onRestore={handleRestoreChild}
+                />
+              )}
+            </div>
           ))}
         </div>
       )}

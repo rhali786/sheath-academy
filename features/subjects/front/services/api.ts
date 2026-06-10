@@ -67,6 +67,7 @@ export const subjectsApi = {
       name?: string
       category?: SubjectCourseCategory
       childId?: string
+      learnerIds?: string[]
       order?: number
     }
   ): Promise<ApiResponse<SubjectCourse>> =>
@@ -74,4 +75,10 @@ export const subjectsApi = {
 
   archiveSubject: (id: string): Promise<ApiResponse<SubjectCourse>> =>
     patch(`/api/subjects/${encodeURIComponent(id)}/archive`),
+
+  rolloverCourses: (body: {
+    fromYearId: string
+    toYearId: string
+    courseIds?: string[]
+  }): Promise<ApiResponse<SubjectCourse[]>> => post('/api/subjects/rollover', body),
 }

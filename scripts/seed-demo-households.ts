@@ -3,8 +3,10 @@
  *
  * Run with: npm run db:seed:demo
  *
- * Prerequisite: wipe first (`npm run db:wipe` or db/wipe_app_data.sql).
- * Demo seed assumes an empty database; it does not update existing rows.
+ * Prerequisite: an EMPTY database. The seed uses ON CONFLICT DO NOTHING and does
+ * not update existing rows, so re-seeding a populated DB is a no-op. The wipe/reset
+ * scripts were removed (2026-06-08, after db:reset:demo truncated prod) — for a clean
+ * re-seed, point DATABASE_URL at a fresh/empty database, and never at prod.
  *
  * Strategy: build all rows in memory, then load via chunked multi-row INSERTs
  * in a single transaction. See docs/database-seeding.md.

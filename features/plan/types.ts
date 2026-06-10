@@ -10,12 +10,16 @@ export interface LessonTask {
   title: string
   description?: string
   resourceLink?: string
+  /** Completion window start; when omitted, dueDate alone defines the lesson day. */
+  plannedStartDate?: string
   dueDate: string
   status: LessonTaskStatus
   order: number
   estimatedDuration?: LessonDuration
   lessonType?: string
   completedAt?: string
+  /** Shared link when one lesson was assigned to multiple learners (fan-out rows). */
+  groupId?: string
   createdAt: string
   updatedAt: string
 }

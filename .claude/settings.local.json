@@ -23,7 +23,11 @@
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(k,':',v\\) for k,v in d.get\\('scripts',{}\\).items\\(\\)]\")",
       "Bash(git check-ignore *)",
       "Bash(type .gitignore)",
-      "Bash(echo \"check-ignore exit: $? \\(1 = not ignored, good\\)\")"
+      "Bash(echo \"check-ignore exit: $? \\(1 = not ignored, good\\)\")",
+      "Bash(gh run *)",
+      "Bash(gh pr *)",
+      "Bash(echo \"EXITCODE=$?\")",
+      "Read(//c/Users/rashe/AppData/Local/Temp/claude/**)"
     ]
   }
 }

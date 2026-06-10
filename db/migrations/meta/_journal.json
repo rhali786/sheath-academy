@@ -120,6 +120,62 @@
       "when": 1780522462736,
       "tag": "0016_fresh_cassandra_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1780667931887,
+      "tag": "0017_daily_matthew_murdock",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1780942456353,
+      "tag": "0018_short_stranger",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1781022552059,
+      "tag": "0019_tense_peter_parker",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1781035691943,
+      "tag": "0020_graceful_micromax",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1781043010498,
+      "tag": "0021_wooden_satana",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1781047609504,
+      "tag": "0022_bumpy_vargas",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1781050005723,
+      "tag": "0023_eminent_zaladane",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1781050365562,
+      "tag": "0024_overconfident_eddie_brock",
+      "breakpoints": true
     }
   ]
 }

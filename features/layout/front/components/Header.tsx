@@ -1,11 +1,14 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useSyncAppHeaderHeight } from '@/features/layout/front/hooks/useSyncAppHeaderHeight'
 import { HouseholdSwitcher } from '@/features/household/front/components/HouseholdSwitcher'
+import { LearnerSwitcher } from '@/features/layout/front/components/LearnerSwitcher'
+import { pickGreeting } from '@/features/layout/lib/greetings'
+import { NotificationBellDropdown } from '@/features/dashboard/front/components/NotificationBellDropdown'
+import type { Alert } from '@/features/alerts/types'
 
 interface HeaderProps {
   onMenuOpen?: () => void
@@ -13,11 +16,19 @@ interface HeaderProps {
 
 export function Header({ onMenuOpen }: HeaderProps) {
   const headerRef = useRef<HTMLElement>(null)
-  const pathname = usePathname()
   const { data: session } = useSession()
-  const isDashboard = pathname === '/'
+  const greeting = useMemo(() => pickGreeting(), [])
+  const displayName = session?.user?.name ?? null
+  const [alerts, setAlerts] = useState<Alert[]>([])
 
   useSyncAppHeaderHeight(headerRef)
+
+  useEffect(() => {
+    fetch('/api/alerts')
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then(res => setAlerts(Array.isArray(res.data) ? res.data : []))
+      .catch(() => {})
+  }, [])
 
   return (
     <header
@@ -39,29 +50,18 @@ export function Header({ onMenuOpen }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          {!isDashboard && (
-            <button
-              type="button"
-              className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors"
-              aria-label="Notifications"
-              data-testid="notification-bell-stub"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                />
-              </svg>
-            </button>
-          )}
+          <NotificationBellDropdown alerts={alerts} />
 
           {session ? (
             <div className="flex items-center gap-2">
               <HouseholdSwitcher />
-              <span className="hidden sm:inline text-xs text-slate-500 max-w-[160px] truncate">
-                {session.user?.name ?? session.user?.email}
-              </span>
+              <LearnerSwitcher />
+              <div className="hidden sm:flex flex-col items-end" data-testid="user-greeting-line">
+                <span className="text-xs font-medium text-slate-700">
+                  {greeting} {displayName ?? 'there'}
+                </span>
+                <span className="text-xs text-slate-400">({session.user?.email})</span>
+              </div>
               <button
                 onClick={() => signOut({ callbackUrl: `${window.location.origin}/login` })}
                 className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"

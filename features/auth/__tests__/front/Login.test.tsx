@@ -113,7 +113,7 @@ describe('Login page — magic link flow', () => {
       expect(mockSignIn).toHaveBeenCalledWith('resend', {
         email: 'parent@example.com',
         redirect: false,
-        callbackUrl: '/',
+        callbackUrl: '/dashboard',
       })
     })
   })

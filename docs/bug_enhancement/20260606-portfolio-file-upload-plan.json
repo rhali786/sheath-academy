@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/bug_enhancement/20260606-portfolio-file-upload-plan.md",
+  "branch": "feature/portfolio-evidence-file-upload",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Schema + repository (gated: migration)",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": [
+        "Read features/messaging/__tests__/repository/messaging.repository.test.ts to match its repository-boundary mocking style before writing the new attachment-repository tests",
+        "Confirm the generated migration SQL with the user before running db:migrate"
+      ],
+      "fileScope": [
+        "db/schema.ts",
+        "features/portfolio/server/repository.ts",
+        "features/portfolio/server/attachments-repository.ts",
+        "features/portfolio/__tests__/api/**",
+        "db/migrations/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: insertEvidenceAttachment — rejects files over 2MB (MAX_EVIDENCE_ATTACHMENT_BYTES) and disallowed MIME types, inserts valid image/png|jpeg|webp|gif and application/pdf files",
+        "NEW TEST: getEvidenceAttachment / listEvidenceAttachments / deleteEvidenceAttachment — round-trip persistence and deletion, modeled on messaging.repository.test.ts"
+      ],
+      "implementationSteps": [
+        "Add portfolioEvidenceAttachments table to db/schema.ts mirroring messageAttachments: id, evidenceItemId (FK to portfolioEvidence.id, onDelete cascade), filename, mimeType, sizeBytes, data (bytea notNull), createdAt, index on evidenceItemId",
+        "Implement insertEvidenceAttachment (authoritative size/MIME validation), getEvidenceAttachment, listEvidenceAttachments, deleteEvidenceAttachment in the repository (split into a sibling attachments-repository.ts only if repository.ts is judged too large)",
+        "Run npm run db:generate, review the generated SQL, present to the user for confirmation before npm run db:migrate"
+      ],
+      "doneWhen": [
+        "RUN: npm run db:generate (review generated SQL before proceeding)",
+        "RUN: npm test -- features/portfolio/__tests__/api",
+        "RUN: npm run build",
+        "CONFIRM with user, then RUN: npm run db:migrate"
+      ],
+      "invariants": [
+        "npm run db:generate produces exactly one new migration adding portfolio_evidence_attachments with a cascade FK to portfolio_evidence and an index on evidence_item_id",
+        "npm run db:migrate applies cleanly with no gap",
+        "the existing listEvidenceRows hot-path query is unaffected — the new table is separate and never joined/selected into the list query"
+      ],
+      "writeBack": "Added portfolioEvidenceAttachments table (bytea data, cascade FK to portfolio_evidence, index on evidenceItemId, mirrors messageAttachments); repository functions insertEvidenceAttachment (enforces MAX_EVIDENCE_ATTACHMENT_BYTES=2097152 and the image+PDF MIME allowlist), getEvidenceAttachment, listEvidenceAttachments, deleteEvidenceAttachment implemented and round-trip tested."
+    },
+    {
+      "id": "phase-2",
+      "title": "Upload + serve + delete routes",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "Phase 1 repository functions implemented and migration applied",
+        "Read features/portfolio/api/router.ts current dispatch/slug-matching pattern before adding the three new route cases"
+      ],
+      "fileScope": [
+        "features/portfolio/api/routes/**",
+        "features/portfolio/api/router.ts",
+        "features/portfolio/__tests__/api/**"
+      ],
+      "testsFirst": [
+        "NEW TEST: POST /api/portfolio/evidence/:id/attachments — happy path persists metadata and returns EvidenceAttachmentMeta; oversized file → 400; disallowed MIME → 400; wrong household or missing evidence item → 404",
+        "NEW TEST: GET /api/portfolio/evidence/attachments/:attachmentId — serves bytes with correct Content-Type and Content-Disposition (inline; filename=...); wrong-household request → 404",
+        "NEW TEST: DELETE /api/portfolio/evidence/attachments/:attachmentId — removes the row on owner request; ownership-checked 404 for a different household"
+      ],
+      "implementationSteps": [
+        "Implement POST .../attachments: getRequestAuthCtx → getEvidenceRow(id, householdId) ownership check → request.formData() → file.arrayBuffer() → Buffer.from(...) → insertEvidenceAttachment → return { status:'success', data: EvidenceAttachmentMeta } (metadata only, never echo bytes)",
+        "Implement GET .../attachments/:attachmentId: resolve attachment → resolve owning evidence row → confirm householdId matches session via getEvidenceRow → 404 on any missing/unowned link → return new Response(new Uint8Array(row.data), { headers: { 'Content-Type': row.mimeType, 'Content-Disposition': `inline; filename=\"${row.filename}\"` } })",
+        "Implement DELETE .../attachments/:attachmentId using the same ownership resolution, calling deleteEvidenceAttachment",
+        "Wire all three into router.ts alongside the existing /evidence and /evidence/:id cases, matching its exact dispatch pattern"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/portfolio/__tests__/api",
+        "RUN: npm run build"
+      ],
+      "writeBack": "POST/GET/DELETE attachment routes implemented and wired into router.ts; all three ownership-checked via getEvidenceRow(id, householdId) — portfolio's own primitive, not messaging's assertConversationParticipant; upload returns EvidenceAttachmentMeta only."
+    },
+    {
+      "id": "phase-3",
+      "title": "EvidenceForm upload UI",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["Phase 2 POST .../attachments route is live and returns EvidenceAttachmentMeta"],
+      "fileScope": [
+        "features/portfolio/front/components/EvidenceForm.tsx",
+        "features/portfolio/types.ts",
+        "features/portfolio/front/services/api.ts",
+        "features/portfolio/__tests__/integration/EvidenceForm.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE TEST: EvidenceForm.test.tsx — selecting a valid file uploads only after the record create/update succeeds; an oversized or disallowed file shows an inline error and never attempts an upload; an image preview renders via createObjectURL and is revoked on replace/unmount"
+      ],
+      "implementationSteps": [
+        "Add EvidenceAttachmentMeta type (id, evidenceItemId, filename, mimeType, sizeBytes, createdAt) to features/portfolio/types.ts and an optional EvidenceItem.attachments?: EvidenceAttachmentMeta[] field",
+        "Add a file input (accept image/png,image/jpeg,image/webp,image/gif,application/pdf) below the URL field with client-side size/MIME pre-check mirroring validate() (errors.attachment)",
+        "Add a local image preview via URL.createObjectURL(file), revoked on unmount/replacement",
+        "Implement two-step submit: call onSave(input) to create/update the record first, then — only on success — POST the file to the new multipart/form-data route using the saved record's id",
+        "Add an uploadEvidenceAttachment helper to portfolioApi (FormData POST, not JSON.stringify)"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/portfolio/__tests__/integration/EvidenceForm.test.tsx",
+        "RUN: npm run build"
+      ],
+      "writeBack": "EvidenceForm gained a file input with client-side size/MIME validation, local image preview (createObjectURL, revoked on unmount/replace), and two-step submit (create/update record, then POST the file on success). EvidenceAttachmentMeta type added to features/portfolio/types.ts; EvidenceItem gained attachments?: EvidenceAttachmentMeta[]; portfolioApi gained uploadEvidenceAttachment."
+    },
+    {
+      "id": "phase-4",
+      "title": "EvidenceListItem rendering + delete",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "Phase 3 ships EvidenceItem.attachments populated by the form/save flow",
+        "Read EvidenceListItem's current url-rendering and confirmDelete pattern before adding attachment rendering alongside it; the shared InlineConfirm component (project-confirmation-standard) is the destructive-confirm pattern to reuse"
+      ],
+      "fileScope": [
+        "features/portfolio/front/components/EvidenceListItem.tsx",
+        "features/portfolio/__tests__/integration/EvidenceListItem.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE TEST: EvidenceListItem.test.tsx — an attachment renders as an image thumbnail or a PDF filename/icon link distinct from the url link; clicking opens/downloads via the GET serve route; removing an attachment uses the shared InlineConfirm pattern and calls DELETE on confirm"
+      ],
+      "implementationSteps": [
+        "Render EvidenceItem.attachments as image thumbnails or filename/icon links (PDF), each linking to GET /api/portfolio/evidence/attachments/:attachmentId, visually distinct from the existing url link",
+        "Add a remove-attachment action using the shared InlineConfirm pattern, calling DELETE /api/portfolio/evidence/attachments/:attachmentId on confirm"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/portfolio/__tests__/integration/EvidenceListItem.test.tsx",
+        "RUN: npm run build"
+      ],
+      "writeBack": "EvidenceListItem now renders attachments as image thumbnails / PDF filename-icon links (each opening the GET serve route), visually distinct from the existing url link; removal uses the shared InlineConfirm pattern and calls DELETE .../attachments/:attachmentId on confirm."
+    }
+  ]
+}

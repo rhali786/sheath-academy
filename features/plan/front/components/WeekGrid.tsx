@@ -1,11 +1,14 @@
 'use client'
 
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useDraggable, useDroppable } from '@dnd-kit/core'
+import { GripVertical } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { usePlanner } from '../context/PlannerContext'
 import { plannerApi } from '../services/api'
 import type { LessonTask, LessonTaskStatus, LessonDuration } from '../../types'
+import { subjectEnrollsLearner } from '@/features/subjects/lib/enrollment'
+import { formatCompletionWindow, lessonSpansDate } from '../../utils/lessonCompletionWindow'
 
 const STATUS_BADGE: Record<LessonTaskStatus, string | null> = {
   not_started: null,
@@ -68,6 +71,7 @@ function DraggableLesson({ lesson, onEdit }: DraggableLessonProps) {
     id: lesson.id,
     data: { lesson },
   })
+  const windowLabel = formatCompletionWindow(lesson)
 
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, opacity: 0 as const }
@@ -77,20 +81,42 @@ function DraggableLesson({ lesson, onEdit }: DraggableLessonProps) {
     <div
       ref={setNodeRef}
       style={style}
-      {...listeners}
-      {...attributes}
+      role="button"
+      tabIndex={0}
       onClick={() => onEdit(lesson.id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onEdit(lesson.id)
+        }
+      }}
       className={`p-2.5 rounded-md border hover:shadow-md transition-shadow cursor-pointer select-none ${isDragging ? 'opacity-0' : ''} ${lesson.status === 'completed' ? 'bg-green-50 border-green-200' : lesson.status === 'skipped' ? 'bg-amber-50 border-amber-200' : 'bg-forest-50 border-forest-200'}`}
     >
-      <div className="flex items-start justify-between gap-1 pointer-events-none">
-        <div className={`font-medium text-sm ${lesson.status === 'completed' ? 'line-through text-slate-400' : 'text-forest-900'}`}>{lesson.title}</div>
-        {STATUS_BADGE[lesson.status] && (
-          <span className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full ${STATUS_BADGE[lesson.status]}`}>
-            {STATUS_LABEL[lesson.status]}
-          </span>
-        )}
+      <div className="flex items-start justify-between gap-1">
+        <div className={`font-medium text-sm pointer-events-none ${lesson.status === 'completed' ? 'line-through text-slate-400' : 'text-forest-900'}`}>{lesson.title}</div>
+        <div className="flex items-center gap-1 shrink-0">
+          {STATUS_BADGE[lesson.status] && (
+            <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full pointer-events-none ${STATUS_BADGE[lesson.status]}`}>
+              {STATUS_LABEL[lesson.status]}
+            </span>
+          )}
+          <button
+            type="button"
+            aria-label="Drag to reschedule"
+            title="Drag to reschedule"
+            className="text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing p-0.5"
+            onClick={(e) => e.stopPropagation()}
+            {...listeners}
+            {...attributes}
+          >
+            <GripVertical className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
       {lesson.description && <div className="text-xs text-forest-700 mt-1 pointer-events-none">{lesson.description}</div>}
+      {windowLabel && (
+        <div className="text-xs text-forest-600 mt-1 pointer-events-none">{windowLabel}</div>
+      )}
       {lesson.estimatedDuration && (
         <div className="text-xs text-slate-400 mt-1 pointer-events-none">{DURATION_LABEL[lesson.estimatedDuration]}</div>
       )}
@@ -143,12 +169,14 @@ export function WeekGrid() {
     return date
   })
 
-  // BUG-009 fix: filter subjects to only those belonging to each child
   const rows = children
     .filter(child => selectedChildIds.includes(child.id))
     .flatMap(child =>
       subjects
-        .filter(subject => selectedSubjectIds.includes(subject.id) && subject.childId === child.id)
+        .filter(
+          (subject) =>
+            selectedSubjectIds.includes(subject.id) && subjectEnrollsLearner(subject, child.id),
+        )
         .map(subject => ({ childId: child.id, childName: child.name, subjectId: subject.id, subjectName: subject.name }))
     )
 
@@ -159,7 +187,9 @@ export function WeekGrid() {
   }
 
   function getLessonForCell(dateStr: string, childId: string, subjectId: string) {
-    return lessons.find(l => l.dueDate === dateStr && l.childId === childId && l.subjectId === subjectId)
+    return lessons.find(
+      l => l.childId === childId && l.subjectId === subjectId && lessonSpansDate(l, dateStr),
+    )
   }
 
   function handleEdit(lessonId: string) {

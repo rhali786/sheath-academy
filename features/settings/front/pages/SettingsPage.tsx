@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SchoolYear } from '@/features/school-year/types'
 import { useHousehold } from '@/features/household/front/context'
+import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { householdApi } from '@/features/household/front/services/api'
 import { HouseholdSettings } from '@/features/household/front/components/HouseholdSettings'
 import { ChildrenProvider } from '@/features/children/front/context'
@@ -13,6 +14,7 @@ import { ChildList } from '@/features/children/front/components/ChildList'
 import { SubjectForm } from '@/features/subjects/front/components/SubjectForm'
 import { SubjectsAllTable } from '@/features/subjects/front/components/SubjectsAllTable'
 import { SchoolYearForm } from '@/features/school-year/front/components/SchoolYearForm'
+import { RolloverCoursesPanel } from '@/features/subjects/front/components/RolloverCoursesPanel'
 import { schoolYearApi } from '@/features/school-year/front/services/api'
 import { childrenApi } from '@/features/children/front/services/api'
 import { PlanningDefaultsTab } from '@/features/settings/front/components/PlanningDefaultsTab'
@@ -41,6 +43,7 @@ export function parseSettingsTab(raw: string | null): SettingsTabId {
 
 export function SettingsPage() {
   const { householdProfile, familyName, refetch, loading: householdLoading } = useHousehold()
+  const { selectedChildId } = useLearner()
   const householdId = householdProfile?.id ?? ''
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -78,7 +81,6 @@ export function SettingsPage() {
 
   const [subjectChildren, setSubjectChildren] = useState<StudentProfile[]>([])
   const [subjectChildrenLoading, setSubjectChildrenLoading] = useState(false)
-  const [selectedChildId, setSelectedChildId] = useState('')
   const [subjectRefreshKey, setSubjectRefreshKey] = useState(0)
 
   useEffect(() => {
@@ -109,16 +111,9 @@ export function SettingsPage() {
         if (cancelled) return
         const list = (res.data ?? []).filter((c) => c.isActive !== false)
         setSubjectChildren(list)
-        setSelectedChildId((prev) => {
-          if (prev && list.some((c) => c.id === prev)) return prev
-          return list[0]?.id ?? ''
-        })
       })
       .catch(() => {
-        if (!cancelled) {
-          setSubjectChildren([])
-          setSelectedChildId('')
-        }
+        if (!cancelled) setSubjectChildren([])
       })
       .finally(() => {
         if (!cancelled) setSubjectChildrenLoading(false)
@@ -310,6 +305,10 @@ export function SettingsPage() {
               loadActiveYear()
             }}
           />
+
+          {activeYear && householdId ? (
+            <RolloverCoursesPanel householdId={householdId} activeYear={activeYear} />
+          ) : null}
         </section>
       )}
 
@@ -339,33 +338,10 @@ export function SettingsPage() {
             <p className="text-sm text-amber-700">Add a child in the Children tab first, then return here.</p>
           ) : (
             <>
-              {subjectChildren.length >= 1 && (
-                <div className="flex flex-wrap gap-2 mb-4" role="tablist" aria-label="Child">
-                  {subjectChildren.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={selectedChildId === c.id}
-                      data-testid={`settings-subject-child-${c.id}`}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        selectedChildId === c.id
-                          ? 'bg-forest-900 text-white'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                      }`}
-                      onClick={() => setSelectedChildId(c.id)}
-                    >
-                      {c.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-
               <div className="bg-white rounded-xl border border-slate-200 p-6 max-w-md mb-2">
                 <SubjectForm
                   householdId={householdId}
-                  defaultChildId={selectedChildId || undefined}
-                  hideChildSelect
+                  defaultChildId={selectedChildId ?? undefined}
                   onSuccess={() => setSubjectRefreshKey((k) => k + 1)}
                 />
               </div>

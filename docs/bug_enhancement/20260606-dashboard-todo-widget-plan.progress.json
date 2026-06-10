@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/bug_enhancement/20260606-dashboard-todo-widget-plan.md",
+  "branch": "feature/personal-todos",
+  "phases": [
+    {
+      "id": "phase-1",
+      "status": "complete",
+      "commit": "2aa0b313e0f96b266a48a9f00ca153dbd0dc79af",
+      "filesChanged": [
+        "db/schema.ts",
+        "db/migrations/0018_short_stranger.sql",
+        "db/migrations/meta/0018_snapshot.json",
+        "db/migrations/meta/_journal.json",
+        "features/todos/types.ts",
+        "features/todos/server/ids.ts",
+        "features/todos/server/repository.ts",
+        "features/todos/server/service.ts",
+        "features/todos/__tests__/api/repository.test.ts"
+      ],
+      "writeBack": "personal_todos table (householdId FK, text, done, dueDate, sortOrder, completedAt, timestamps, index on (householdId,done)) added via migration 0018; types PersonalTodo/CreateTodoInput/UpdateTodoInput in types.ts; repository (listTodoRows/getTodoRow/insertTodoRow/updateTodoRow/deleteTodoRow) and service (listTodos/createTodo/updateTodo/toggleTodoDone/deleteTodo/reorderTodos) implemented and unit-tested at the repository boundary."
+    },
+    {
+      "id": "phase-2",
+      "status": "complete",
+      "commit": "758362e49407e4ed0c3146378a5e8929c0c23117",
+      "filesChanged": [
+        "features/todos/api/router.ts",
+        "features/todos/api/routes/todo.ts",
+        "features/todos/api/routes/todos.ts",
+        "features/todos/front/services/api.ts",
+        "features/todos/server/service.ts",
+        "features/todos/__tests__/api/todo.test.ts",
+        "features/todos/__tests__/api/todos.test.ts",
+        "app/api/[...slug]/route.ts"
+      ],
+      "writeBack": "GET/POST /api/todos and PATCH/DELETE /api/todos/:id implemented in features/todos/api/{router,routes/todos,routes/todo}.ts, registered as handleTodosRoute in app/api/[...slug]/route.ts; todosApi front client (list/create/update/toggle/remove/reorder) added at features/todos/front/services/api.ts."
+    },
+    {
+      "id": "phase-3",
+      "status": "complete",
+      "model": "claude-sonnet-4-6 (standard tier, inline session)",
+      "filesChanged": [
+        "features/todos/front/components/PersonalTodoList.tsx",
+        "features/todos/__tests__/integration/PersonalTodoList.test.tsx",
+        "features/dashboard/front/pages/Dashboard.tsx",
+        "features/dashboard/__tests__/integration/Dashboard.test.tsx",
+        "features/dashboard/__tests__/integration/TabSwitching.test.tsx"
+      ],
+      "testsRun": [
+        "npx jest --testPathIgnorePatterns \"/node_modules/\" --testPathPattern \"features/(todos|dashboard)/__tests__/integration\" (18 suites, 112 tests — 1 pre-existing failure unrelated to this work, see notes)",
+        "npm run build (passed — 27/27 static pages, no type errors)"
+      ],
+      "notes": "PersonalTodoList built with loading/empty/error/populated states (CardShell matches SchoolYearProgressCard/QuranStreak shell pattern), checkbox toggle, inline always-visible add-input, and InlineConfirm-based destructive delete (the confirmation-consistency plan's shared component had already merged, so no placeholder/follow-up needed). Final placement decided live against the rendered dashboard: moved into the hero `dashboard-alerts-rail` aside (next to PersonalAssistantPanel and NeedsAttention, with `space-y-6`) rather than the lower `dashboard-more-insights` rail — a daily action widget belongs above the fold next to NeedsAttention, not two scrolls down below RecordsProof/SchoolYearProgressCard. Dashboard.test.tsx updated: replaced the old 'renders in more-insights rail' assertion with one confirming alerts-rail placement and one confirming the lower rail no longer contains it. While running the full integration suite, found and fixed an unrelated pre-existing failure in TabSwitching.test.tsx — it asserted the stale sidebar nav label 'Grades & Progress' which had been renamed to 'Growth & Reflection' in commit e31c39c (feedback-steward track 1) without updating the test; confirmed via git stash that the failure predates this branch's changes."
+    },
+    {
+      "id": "phase-4",
+      "status": "pending",
+      "notes": "Full build/test/smoke verification — covered inline during phase-3 (build + integration suites green); npm run smoke not yet run."
+    }
+  ]
+}

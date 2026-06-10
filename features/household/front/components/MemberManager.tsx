@@ -14,6 +14,7 @@ export function MemberManager() {
   const [invitations, setInvitations] = useState<HouseholdInvitationRow[]>([])
   const [loading, setLoading] = useState(true)
   const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState('member')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -45,7 +46,7 @@ export function MemberManager() {
       const res = await fetch('/api/household/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail }),
+        body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
       })
       if (!res.ok) {
         const body = await res.json()
@@ -100,6 +101,9 @@ export function MemberManager() {
                 {m.role === 'owner' && (
                   <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">owner</span>
                 )}
+                {m.role === 'teacher' && (
+                  <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">teacher</span>
+                )}
                 {m.userId !== currentUserId && (
                   <button
                     type="button"
@@ -137,7 +141,7 @@ export function MemberManager() {
 
       <section>
         <h3 className="text-sm font-semibold mb-3">Invite someone</h3>
-        <form onSubmit={handleInvite} className="flex gap-2">
+        <form onSubmit={handleInvite} className="flex flex-col gap-2 sm:flex-row">
           <label htmlFor="invite-email" className="sr-only">Email</label>
           <input
             id="invite-email"
@@ -148,6 +152,16 @@ export function MemberManager() {
             className="flex-1 border rounded px-3 py-1.5 text-sm"
             aria-label="Email"
           />
+          <select
+            value={inviteRole}
+            onChange={e => setInviteRole(e.target.value)}
+            className="border rounded px-3 py-1.5 text-sm"
+            aria-label="Role"
+            data-testid="invite-role-select"
+          >
+            <option value="member">Member</option>
+            <option value="teacher">Teacher</option>
+          </select>
           <button
             type="submit"
             disabled={submitting || !inviteEmail}

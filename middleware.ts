@@ -1,5 +1,8 @@
-import { auth } from '@/features/auth/auth'
+import NextAuth from 'next-auth'
+import { authConfig } from '@/features/auth/auth.config'
 import { NextResponse } from 'next/server'
+
+const { auth } = NextAuth(authConfig)
 
 export default auth((req) => {
   if (!process.env.AUTH_SECRET) {

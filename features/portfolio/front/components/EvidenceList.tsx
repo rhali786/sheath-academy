@@ -18,6 +18,10 @@ interface Props {
   onUpdate?: (id: string, patch: Partial<CreateEvidenceItemInput>) => Promise<void>
   /** When provided, enables inline delete confirmation on each card */
   onDelete?: (id: string) => Promise<void>
+  /** When provided, shows attachment remove button on each card */
+  onDeleteAttachment?: (attachmentId: string) => Promise<void>
+  /** When provided, shows file input in edit mode on each card */
+  onUploadAttachment?: (evidenceId: string, file: File) => Promise<void>
   /** Legacy: called when card is clicked (top-form pattern) */
   onEdit?: (item: EvidenceItem) => void
   /** Options for the edit form dropdowns */
@@ -26,7 +30,7 @@ interface Props {
   lessons?: LessonOption[]
 }
 
-export function EvidenceList({ items, childMap, subjectMap, loading, error, hasActiveFilters, onUpdate, onDelete, onEdit, childOptions, subjects, lessons }: Props) {
+export function EvidenceList({ items, childMap, subjectMap, loading, error, hasActiveFilters, onUpdate, onDelete, onDeleteAttachment, onUploadAttachment, onEdit, childOptions, subjects, lessons }: Props) {
   if (loading) {
     return <p className="text-gray-500 text-sm py-4">Loading portfolio...</p>
   }
@@ -59,6 +63,8 @@ export function EvidenceList({ items, childMap, subjectMap, loading, error, hasA
           subjectName={subjectMap[item.subjectId] ?? item.subjectId}
           onUpdate={onUpdate}
           onDelete={onDelete}
+          onDeleteAttachment={onDeleteAttachment}
+          onUploadAttachment={onUploadAttachment}
           onEdit={onEdit}
           childOptions={childOptions}
           subjects={subjects}

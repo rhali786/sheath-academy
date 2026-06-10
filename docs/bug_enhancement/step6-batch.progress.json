@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "startedAt": "2026-06-07T00:00:00Z",
+  "updatedAt": "2026-06-09T20:05:00Z",
+  "currentPlanIndex": 8,
+
+  "plans": [
+    { "id": "confirmation-consistency", "path": "docs/bug_enhancement/20260606-confirmation-consistency-plan.json", "branch": "feat/confirmation-consistency", "status": "pr_open", "prNumber": 25 },
+    { "id": "quran-progress-chart",      "path": "docs/bug_enhancement/20260606-quran-progress-chart-plan.json",      "branch": "feat/quran-progress-chart",      "status": "pr_open", "prNumber": 26 },
+    { "id": "dashboard-todo-widget",     "path": "docs/bug_enhancement/20260606-dashboard-todo-widget-plan.json",     "branch": "feature/personal-todos",           "status": "pending", "prNumber": null },
+    { "id": "portfolio-file-upload",     "path": "docs/bug_enhancement/20260606-portfolio-file-upload-plan.json",     "branch": "feature/portfolio-evidence-file-upload", "status": "pr_open", "prNumber": 27 },
+    { "id": "schedule-calendar-views",   "path": "docs/bug_enhancement/20260606-schedule-calendar-views-plan.json",   "branch": "feat/schedule-calendar-views",     "status": "pending", "prNumber": null },
+    { "id": "course-rollover-multi",     "path": "docs/bug_enhancement/20260606-course-rollover-plan.json",           "branch": "feat/course-rollover-multi-learner", "status": "pr_open", "prNumber": 29, "currentPlanIndex": 5 },
+    { "id": "course-rollover-year",      "path": "docs/bug_enhancement/course-rollover-rollover-plan.json",           "branch": "feat/course-rollover-year-scoped",   "status": "pr_open", "prNumber": 30, "currentPlanIndex": 6 },
+    { "id": "lesson-data-model",         "path": "docs/bug_enhancement/20260606-lesson-data-model-plan.json",         "branch": "feat/lesson-data-model",           "status": "pr_open", "prNumber": 32, "currentPlanIndex": 7 },
+    { "id": "ia-nav-restructure",        "path": "docs/bug_enhancement/ia-nav-restructure-plan.json",                 "branch": "refactor/ia-nav-restructure",      "status": "pending", "prNumber": null }
+  ]
+}

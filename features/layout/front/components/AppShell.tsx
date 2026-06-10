@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { HouseholdProvider } from '@/features/household/front/context'
+import { LearnerProvider } from '@/features/layout/front/context/LearnerContext'
 import { FeedbackButton } from '@/features/feedback/front/components/FeedbackButton'
 import { ShellAuthGuard } from './ShellAuthGuard'
 import { Header } from './Header'
@@ -28,6 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <ShellAuthGuard>
       <HouseholdProvider>
+        <LearnerProvider>
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-forest-900 focus:text-white focus:rounded-lg focus:text-sm"
@@ -35,6 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           Skip to content
         </a>
         <ShellLayout>{children}</ShellLayout>
+        </LearnerProvider>
       </HouseholdProvider>
     </ShellAuthGuard>
   )

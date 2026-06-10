@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { CreateEvidenceItemInput, EvidenceItem, EvidenceType } from '@/features/portfolio/types'
+import { portfolioApi } from '../services/api'
 
 const EVIDENCE_TYPES: { value: EvidenceType; label: string }[] = [
   { value: 'note', label: 'Note' },
@@ -31,11 +32,16 @@ interface LessonOption {
   subjectId: string
 }
 
+const MAX_ATTACHMENT_BYTES = 2_097_152
+const ALLOWED_ATTACHMENT_MIME = new Set([
+  'image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf',
+])
+
 interface Props {
   children: ChildOption[]
   subjects: SubjectOption[]
   lessons: LessonOption[]
-  onSave(input: CreateEvidenceItemInput): Promise<void>
+  onSave(input: CreateEvidenceItemInput): Promise<EvidenceItem>
   initialChildId?: string | null
   editingItem?: EvidenceItem | null
   onCancelEdit?: () => void
@@ -49,6 +55,7 @@ interface FormErrors {
   type?: string
   url?: string
   notes?: string
+  attachment?: string
 }
 
 function todayStr(): string {
@@ -75,6 +82,18 @@ export function EvidenceForm({
   const [lessonTaskId, setLessonTaskId] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
   const [submitting, setSubmitting] = useState(false)
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const previewUrlRef = useRef<string | null>(null)
+
+  // Sync childId when initialChildId prop changes (handles async child load)
+  useEffect(() => {
+    if (!editingItem) {
+      setChildId(initialChildId ?? '')
+      setSubjectId('')
+      setLessonTaskId('')
+    }
+  }, [initialChildId])
 
   // Pre-fill form when editingItem changes
   useEffect(() => {
@@ -101,6 +120,42 @@ export function EvidenceForm({
     }
     setErrors({})
   }, [editingItem])
+
+  // Revoke preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+    }
+  }, [])
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    if (!file) return
+
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setErrors(prev => ({ ...prev, attachment: 'File too large (max 2 MB)' }))
+      return
+    }
+    if (!ALLOWED_ATTACHMENT_MIME.has(file.type)) {
+      setErrors(prev => ({ ...prev, attachment: 'File type not allowed (images and PDF only)' }))
+      return
+    }
+
+    setErrors(prev => ({ ...prev, attachment: undefined }))
+    setAttachmentFile(file)
+
+    // Revoke previous preview before creating a new one
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+
+    if (file.type.startsWith('image/')) {
+      const url = URL.createObjectURL(file)
+      previewUrlRef.current = url
+      setPreviewUrl(url)
+    } else {
+      previewUrlRef.current = null
+      setPreviewUrl(null)
+    }
+  }
 
   const filteredSubjects = childId
     ? subjects.filter(s => s.childId === childId)
@@ -145,7 +200,13 @@ export function EvidenceForm({
         url: url.trim() || undefined,
         lessonTaskId: lessonTaskId || undefined,
       }
-      await onSave(input)
+      const savedItem = await onSave(input)
+
+      // Step 2: upload file only after record is saved
+      if (attachmentFile && savedItem?.id) {
+        await portfolioApi.uploadEvidenceAttachment(savedItem.id, attachmentFile)
+      }
+
       if (!editingItem) {
         setTitle('')
         setChildId(initialChildId ?? '')
@@ -156,7 +217,15 @@ export function EvidenceForm({
         setReflection('')
         setUrl('')
         setLessonTaskId('')
+        setAttachmentFile(null)
+        if (previewUrlRef.current) {
+          URL.revokeObjectURL(previewUrlRef.current)
+          previewUrlRef.current = null
+        }
+        setPreviewUrl(null)
       }
+    } catch (_err) {
+      // save or upload failed — caller handles its own error display
     } finally {
       setSubmitting(false)
     }
@@ -319,6 +388,30 @@ export function EvidenceForm({
           placeholder="https://..."
         />
         {errors.url && <p className="text-red-600 text-xs mt-1">{errors.url}</p>}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="ev-attachment">
+          Attach file (optional)
+        </label>
+        <input
+          id="ev-attachment"
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+          onChange={handleFileChange}
+          className="w-full text-sm text-gray-700"
+        />
+        {errors.attachment && <p className="text-red-600 text-xs mt-1">{errors.attachment}</p>}
+        {previewUrl && (
+          <img
+            src={previewUrl}
+            alt="Preview"
+            className="mt-2 max-h-32 rounded border border-gray-200 object-contain"
+          />
+        )}
+        {attachmentFile && !previewUrl && (
+          <p className="text-xs text-gray-500 mt-1">{attachmentFile.name}</p>
+        )}
       </div>
 
       {filteredLessons.length > 0 && (

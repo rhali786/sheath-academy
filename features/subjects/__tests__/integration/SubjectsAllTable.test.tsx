@@ -119,6 +119,30 @@ describe('SubjectsAllTable — Wave 8 FB-003', () => {
     expect(screen.getByText('Ben')).toBeInTheDocument()
   })
 
+  it('renders learner names for each enrolled learner when learnerIds has 3 entries', async () => {
+    const childrenList3 = [
+      { id: 'c1', name: 'Ada' },
+      { id: 'c2', name: 'Ben' },
+      { id: 'c3', name: 'Cara' },
+    ]
+    const sharedCourse3: SubjectCourse = {
+      id: 'shared_3',
+      childId: 'c1',
+      learnerIds: ['c1', 'c2', 'c3'],
+      name: 'Group Quran',
+      category: 'Quran',
+      isActive: true,
+      order: 0,
+      createdAt: '2026-01-01',
+    }
+    subjectsApi.getSubjects.mockResolvedValue({ data: [sharedCourse3], status: 'success', message: '', timestamp: '' })
+    render(<SubjectsAllTable childrenList={childrenList3} refreshKey={0} />)
+    await waitFor(() => expect(screen.getByTestId('subjects-all-table')).toBeInTheDocument())
+    expect(screen.getByText('Ada')).toBeInTheDocument()
+    expect(screen.getByText('Ben')).toBeInTheDocument()
+    expect(screen.getByText('Cara')).toBeInTheDocument()
+  })
+
   it('displays "Islamic Studies" not "IslamicStudies" in category column', async () => {
     const islamicRow: SubjectCourse = {
       id: 'isk_1',

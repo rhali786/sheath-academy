@@ -73,7 +73,7 @@ Important current-state notes:
 1. Open a terminal on the automation host in the project root.
 2. Run:
    ```
-   dotenv -e .env.local -- tsx scripts/feedback-requeue.ts
+   dotenv -e .env.local -- tsx scripts/feedback-steward/feedback-requeue.ts
    ```
 3. **Expected output:**
    - JSON with an `items` array
@@ -82,7 +82,7 @@ Important current-state notes:
 
 4. Run:
    ```
-   dotenv -e .env.local -- tsx scripts/run-classify.ts
+   dotenv -e .env.local -- tsx scripts/feedback-steward/run-classify.ts
    ```
 5. **Expected output:**
    - A line like `Processing <id>...`

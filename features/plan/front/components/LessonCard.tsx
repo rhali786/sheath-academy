@@ -1,10 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
+import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
+import { formatCompletionWindow } from '@/features/plan/utils/lessonCompletionWindow'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
+import { filterSubjectsForLearner } from '@/features/subjects/lib/enrollment'
 
 const STATUS_LABELS: Record<LessonTaskStatus, string> = {
   not_started: 'Not started',
@@ -35,13 +38,15 @@ interface LessonCardProps {
   /** If provided, list of all subjects (for edit form selects) */
   subjects?: SubjectCourse[]
   /** Called with the updated patch when save is pressed */
-  onUpdate?: (id: string, patch: Partial<LessonTask>) => Promise<void>
+  onUpdate?: (id: string, patch: Partial<LessonTask> & { applyToGroup?: boolean }) => Promise<void>
   /** Legacy: called when Edit button is clicked (top-form pattern) — kept for backward compatibility */
   onEdit?: (lesson: LessonTask) => void
   onDelete?: (id: string) => void
+  /** Open inline edit on mount (e.g. deep-linked from /plan). */
+  defaultEditing?: boolean
 }
 
-export function LessonCard({ lesson, childName, subjectName, children, subjects, onUpdate, onEdit, onDelete }: LessonCardProps) {
+export function LessonCard({ lesson, childName, subjectName, children, subjects, onUpdate, onEdit, onDelete, defaultEditing = false }: LessonCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -54,6 +59,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
   const [editStatus, setEditStatus] = useState<LessonTaskStatus>(lesson.status)
   const [editDescription, setEditDescription] = useState(lesson.description ?? '')
   const [editResourceLink, setEditResourceLink] = useState(lesson.resourceLink ?? '')
+  const [applyToGroup, setApplyToGroup] = useState(false)
   const [titleError, setTitleError] = useState('')
 
   const dateFormatted = new Date(`${lesson.dueDate}T00:00:00`).toLocaleDateString('en-US', {
@@ -61,6 +67,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     month: 'short',
     day: 'numeric',
   })
+  const windowLabel = formatCompletionWindow(lesson)
 
   const today = todayLocal()
   const isOverdue = lesson.status === 'not_started' && lesson.dueDate < today
@@ -80,6 +87,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     setEditStatus(lesson.status)
     setEditDescription(lesson.description ?? '')
     setEditResourceLink(lesson.resourceLink ?? '')
+    setApplyToGroup(false)
     setTitleError('')
     // If inline edit is available (onUpdate provided), use it; otherwise fall back to legacy onEdit
     if (onUpdate) {
@@ -88,6 +96,14 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
       onEdit(lesson)
     }
   }
+
+  useEffect(() => {
+    if (defaultEditing && onUpdate) {
+      startEdit()
+    }
+    // Only run when deep-linked to this card
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultEditing, lesson.id])
 
   function cancelEdit() {
     setIsEditing(false)
@@ -111,6 +127,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
         status: editStatus,
         description: editDescription.trim() || undefined,
         resourceLink: editResourceLink.trim() || undefined,
+        ...(lesson.groupId && applyToGroup ? { applyToGroup: true } : {}),
       })
       setIsEditing(false)
       setTitleError('')
@@ -121,13 +138,13 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     }
   }
 
-  const filteredSubjects = subjects
-    ? subjects.filter(s => s.childId === editChildId)
+  const filteredSubjects = subjects && editChildId
+    ? filterSubjectsForLearner(subjects, editChildId)
     : []
 
   if (isEditing) {
     return (
-      <div className="bg-white rounded-lg border border-forest-200 shadow-sm overflow-hidden">
+      <div data-lesson-id={lesson.id} className="bg-white rounded-lg border border-forest-200 shadow-sm overflow-hidden">
         <div className="p-4 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {children && children.length > 0 && (
@@ -214,6 +231,18 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
               className="w-full text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-forest-500"
             />
           </div>
+          {lesson.groupId && (
+            <label className="flex items-center gap-2 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={applyToGroup}
+                onChange={e => setApplyToGroup(e.target.checked)}
+                aria-label="Apply to all learners in group"
+                className="rounded border-slate-300 text-forest-900 focus:ring-forest-500"
+              />
+              Apply changes to all learners in this group
+            </label>
+          )}
           <div className="flex gap-2 justify-end">
             <button
               onClick={cancelEdit}
@@ -238,39 +267,30 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
 
   if (confirmDelete) {
     return (
-      <div className="p-4 bg-white rounded-lg border border-red-200 shadow-sm">
-        <p className="text-sm font-medium text-red-700 mb-1">Delete this lesson?</p>
-        <p className="text-xs text-slate-500 mb-3">{lesson.title}</p>
-        <div className="flex gap-2 justify-end">
-          <button
-            onClick={() => setConfirmDelete(false)}
-            aria-label="Cancel delete"
-            className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 border border-slate-200 rounded-lg transition-colors"
-          >
-            <X className="w-3 h-3" /> Cancel
-          </button>
-          <button
-            onClick={() => { if (onDelete) onDelete(lesson.id); setConfirmDelete(false) }}
-            aria-label="Confirm delete lesson"
-            className="flex items-center gap-1 text-xs text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <Trash2 className="w-3 h-3" /> Delete
-          </button>
-        </div>
-      </div>
+      <InlineConfirm
+        message="Delete this lesson?"
+        detail={lesson.title}
+        onConfirm={() => { if (onDelete) onDelete(lesson.id) }}
+        onCancel={() => setConfirmDelete(false)}
+      />
     )
   }
 
   return (
-    <div className="p-4 bg-white rounded-lg border border-slate-200 space-y-2">
+    <div data-lesson-id={lesson.id} className="p-4 bg-white rounded-lg border border-slate-200 space-y-2">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-slate-900">{lesson.title}</div>
           <div className="text-xs text-slate-500 mt-0.5">
-            {childName} · {subjectName} · {dateFormatted}
+            {childName} · {subjectName} · {windowLabel ?? dateFormatted}
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          {lesson.groupId && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-forest-100 text-forest-700">
+              Group lesson
+            </span>
+          )}
           {isOverdue && (
             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">
               Overdue
