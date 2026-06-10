@@ -1,11 +1,13 @@
 'use client'
 
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useDraggable, useDroppable } from '@dnd-kit/core'
+import { GripVertical } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { usePlanner } from '../context/PlannerContext'
 import { plannerApi } from '../services/api'
 import type { LessonTask, LessonTaskStatus, LessonDuration } from '../../types'
+import { formatCompletionWindow, lessonSpansDate } from '../../utils/lessonCompletionWindow'
 
 const STATUS_BADGE: Record<LessonTaskStatus, string | null> = {
   not_started: null,
@@ -68,6 +70,7 @@ function DraggableLesson({ lesson, onEdit }: DraggableLessonProps) {
     id: lesson.id,
     data: { lesson },
   })
+  const windowLabel = formatCompletionWindow(lesson)
 
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, opacity: 0 as const }
@@ -84,13 +87,21 @@ function DraggableLesson({ lesson, onEdit }: DraggableLessonProps) {
     >
       <div className="flex items-start justify-between gap-1 pointer-events-none">
         <div className={`font-medium text-sm ${lesson.status === 'completed' ? 'line-through text-slate-400' : 'text-forest-900'}`}>{lesson.title}</div>
-        {STATUS_BADGE[lesson.status] && (
-          <span className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full ${STATUS_BADGE[lesson.status]}`}>
-            {STATUS_LABEL[lesson.status]}
+        <div className="flex items-center gap-1 shrink-0">
+          {STATUS_BADGE[lesson.status] && (
+            <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${STATUS_BADGE[lesson.status]}`}>
+              {STATUS_LABEL[lesson.status]}
+            </span>
+          )}
+          <span aria-label="Drag to reschedule" title="Drag to reschedule" className="text-slate-300">
+            <GripVertical className="w-3.5 h-3.5" />
           </span>
-        )}
+        </div>
       </div>
       {lesson.description && <div className="text-xs text-forest-700 mt-1 pointer-events-none">{lesson.description}</div>}
+      {windowLabel && (
+        <div className="text-xs text-forest-600 mt-1 pointer-events-none">{windowLabel}</div>
+      )}
       {lesson.estimatedDuration && (
         <div className="text-xs text-slate-400 mt-1 pointer-events-none">{DURATION_LABEL[lesson.estimatedDuration]}</div>
       )}
@@ -159,7 +170,9 @@ export function WeekGrid() {
   }
 
   function getLessonForCell(dateStr: string, childId: string, subjectId: string) {
-    return lessons.find(l => l.dueDate === dateStr && l.childId === childId && l.subjectId === subjectId)
+    return lessons.find(
+      l => l.childId === childId && l.subjectId === subjectId && lessonSpansDate(l, dateStr),
+    )
   }
 
   function handleEdit(lessonId: string) {
