@@ -76,16 +76,18 @@ describe('navConfig', () => {
     expect(isNavItemActive('/portfolio', grades)).toBe(true)
   })
 
-  test('people is active on /settings with tab=children', () => {
+  test('people is active on /people', () => {
     const people = NAV_ITEMS.find((i) => i.id === 'people')!
-    expect(isNavItemActive('/settings', people, 'children')).toBe(true)
-    expect(isNavItemActive('/settings', people, 'household')).toBe(false)
+    expect(people.href).toBe('/people')
+    expect(isNavItemActive('/people', people)).toBe(true)
+    expect(isNavItemActive('/settings', people, 'children')).toBe(false)
   })
 
-  test('compliance is active on /settings with tab=records-compliance', () => {
+  test('compliance is active on /compliance', () => {
     const compliance = NAV_ITEMS.find((i) => i.id === 'compliance')!
-    expect(isNavItemActive('/settings', compliance, 'records-compliance')).toBe(true)
-    expect(isNavItemActive('/settings', compliance, 'children')).toBe(false)
+    expect(compliance.href).toBe('/compliance')
+    expect(isNavItemActive('/compliance', compliance)).toBe(true)
+    expect(isNavItemActive('/settings', compliance, 'records-compliance')).toBe(false)
   })
 
   test('footer settings is active on default household tab only', () => {

@@ -58,10 +58,10 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'people',
     label: 'People',
-    href: '/settings?tab=children',
+    href: '/people',
     section: 'main',
     module: 'People',
-    activePrefixes: ['/settings'],
+    activePrefixes: ['/people'],
   },
   { id: 'resources', label: 'Resources', href: '/resources', section: 'main', module: 'Planbook' },
   { id: 'quran', label: 'Quran', href: '/quran', section: 'main', module: 'Planbook' },
@@ -77,10 +77,10 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'compliance',
     label: 'Compliance',
-    href: '/settings?tab=records-compliance',
+    href: '/compliance',
     section: 'main',
     module: 'Compliance',
-    activePrefixes: ['/settings'],
+    activePrefixes: ['/compliance'],
   },
   { id: 'my-feedback', label: 'My feedback', href: '/feedback', section: 'main', module: 'Settings', activePrefixes: ['/feedback'] },
   { id: 'settings', label: 'Settings', href: '/settings', section: 'footer' },
@@ -194,8 +194,6 @@ export function isNavItemActive(
 
   if (pathname.startsWith('/settings')) {
     const tab = settingsTab ?? 'household'
-    if (item.id === 'people') return tab === 'children'
-    if (item.id === 'compliance') return tab === 'records-compliance'
     if (item.id === 'settings') {
       return tab !== 'children' && tab !== 'records-compliance'
     }

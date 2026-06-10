@@ -160,11 +160,11 @@ describe('Sidebar', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  test('highlights People when settings tab is children', () => {
-    mockUsePathname.mockReturnValue('/settings')
-    mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=children'))
+  test('highlights People when pathname is /people', () => {
+    mockUsePathname.mockReturnValue('/people')
     render(<Sidebar />)
     const people = screen.getByRole('link', { name: 'People' })
+    expect(people).toHaveAttribute('href', '/people')
     expect(people.className).toContain('bg-forest-100')
   })
 })
