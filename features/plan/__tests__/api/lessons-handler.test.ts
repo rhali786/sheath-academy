@@ -14,23 +14,25 @@ jest.mock('@/features/auth/server/routeOwnership', () => ({
 jest.mock('@/features/plan/server/repository', () => ({
   listLessonTaskRows: jest.fn(),
   createLessonTaskRow: jest.fn(),
+  createLessonTasksFanOut: jest.fn(),
 }))
 
 jest.mock('@/features/admin-metrics/server/instrument', () => ({
   trackSessionStarted: jest.fn(),
 }))
 
-import { listLessonTaskRows, createLessonTaskRow } from '@/features/plan/server/repository'
+import { listLessonTaskRows, createLessonTaskRow, createLessonTasksFanOut } from '@/features/plan/server/repository'
 import { GET, POST } from '@/features/plan/api/routes/lessons'
 
 const mockList = listLessonTaskRows as jest.Mock
 const mockCreate = createLessonTaskRow as jest.Mock
+const mockFanOut = createLessonTasksFanOut as jest.Mock
 
 function makeRow(id = 'lt_1', status = 'not_started', overrides: Record<string, unknown> = {}) {
-  return { id, householdId: 'hh_test', learnerId: 'l1', subjectId: 's1', title: 'Task', dueDate: '2026-05-17', status, sortOrder: 0, description: null, notes: null, resourceLink: null, lessonType: null, estimatedDuration: null, completedAt: null, skippedAt: null, createdAt: new Date(), updatedAt: new Date(), ...overrides }
+  return { id, householdId: 'hh_test', learnerId: 'l1', subjectId: 's1', title: 'Task', dueDate: '2026-05-17', status, sortOrder: 0, description: null, notes: null, resourceLink: null, lessonType: null, estimatedDuration: null, plannedStartDate: null, groupId: null, completedAt: null, skippedAt: null, createdAt: new Date(), updatedAt: new Date(), ...overrides }
 }
 
-beforeEach(() => { mockList.mockReset(); mockCreate.mockReset() })
+beforeEach(() => { mockList.mockReset(); mockCreate.mockReset(); mockFanOut.mockReset() })
 
 describe('GET /api/plan/lessons', () => {
   it('returns empty array when no lessons', async () => {
@@ -116,5 +118,28 @@ describe('POST /api/plan/lessons', () => {
     expect(body.data.resourceLink).toBe('https://example.com/video')
     expect(body.data.lessonType).toBe('Video')
     expect(body.data.estimatedDuration).toBe('30min')
+  })
+
+  it('fans out to createLessonTasksFanOut when childIds has 2+ learners', async () => {
+    mockFanOut.mockResolvedValue([
+      makeRow('lt_a', 'not_started', { learnerId: 'l1', groupId: 'group_1' }),
+      makeRow('lt_b', 'not_started', { learnerId: 'l2', groupId: 'group_1' }),
+    ])
+    const req = new Request('http://localhost/api/plan/lessons', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        childIds: ['l1', 'l2'],
+        assignments: [{ learnerId: 'l1', subjectId: 's1' }, { learnerId: 'l2', subjectId: 's2' }],
+        title: 'Shared task',
+        dueDate: '2026-05-17',
+      }),
+    })
+    const res = await POST(req)
+    const body = await res.json()
+
+    expect(mockFanOut).toHaveBeenCalled()
+    expect(mockCreate).not.toHaveBeenCalled()
+    expect(body.data.groupId).toBe('group_1')
   })
 })

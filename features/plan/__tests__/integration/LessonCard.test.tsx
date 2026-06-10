@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { LessonCard } from '@/features/plan/front/components/LessonCard'
 import type { LessonTask } from '@/features/plan/types'
 
@@ -228,5 +228,78 @@ describe('LessonCard — FB-011 overdue badge', () => {
       />
     )
     expect(screen.queryByText('Overdue')).not.toBeInTheDocument()
+  })
+})
+
+describe('LessonCard — grouped lessons', () => {
+  it('shows a group affordance when groupId is set', () => {
+    render(
+      <LessonCard
+        lesson={makeLesson({ groupId: 'group_001' })}
+        childName="Adam"
+        subjectName="Math"
+      />
+    )
+    expect(screen.getByText(/group lesson/i)).toBeInTheDocument()
+  })
+
+  it('offers apply-to-group when editing a grouped lesson with onUpdate', () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ groupId: 'group_001', title: 'Shared task' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(screen.getByRole('checkbox', { name: /apply to all learners in group/i })).toBeInTheDocument()
+  })
+
+  it('passes applyToGroup when saving with checkbox checked', async () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ groupId: 'group_001', title: 'Shared task' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /apply to all learners in group/i }))
+    fireEvent.change(screen.getByDisplayValue('Shared task'), { target: { value: 'Updated title' } })
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => {
+      expect(onUpdate).toHaveBeenCalledWith(
+        'lesson_001',
+        expect.objectContaining({ title: 'Updated title', applyToGroup: true }),
+      )
+    })
+  })
+
+  it('does not pass applyToGroup when saving without checkbox', async () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ groupId: 'group_001', title: 'Shared task' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    fireEvent.change(screen.getByDisplayValue('Shared task'), { target: { value: 'Solo edit' } })
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => {
+      expect(onUpdate).toHaveBeenCalledWith(
+        'lesson_001',
+        expect.objectContaining({ title: 'Solo edit' }),
+      )
+      expect(onUpdate.mock.calls[0][1].applyToGroup).toBeUndefined()
+    })
   })
 })

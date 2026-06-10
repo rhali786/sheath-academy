@@ -13,6 +13,7 @@ const mockChildren: StudentProfile[] = [
 const mockSubjects: SubjectCourse[] = [
   { id: 'subj_adam_math', childId: 'child_001', name: 'Mathematics', category: 'Math', isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
   { id: 'subj_adam_quran', childId: 'child_001', name: 'Quran', category: 'Islamic', isActive: true, order: 2, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'subj_khad_math', childId: 'child_002', name: 'Mathematics', category: 'Math', isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
   { id: 'subj_khad_reading', childId: 'child_002', name: 'Reading', category: 'English', isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
 ]
 
@@ -31,7 +32,7 @@ const editingLesson: LessonTask = {
 }
 
 describe('LessonTaskForm — create mode', () => {
-  it('renders child dropdown with all children', () => {
+  it('renders learner checkboxes with all children', () => {
     render(
       <LessonTaskForm
         children={mockChildren}
@@ -39,8 +40,8 @@ describe('LessonTaskForm — create mode', () => {
         onSubmit={jest.fn()}
       />
     )
-    expect(screen.getByText('Adam')).toBeInTheDocument()
-    expect(screen.getByText('Khadijah')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: /adam/i })).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: /khadijah/i })).toBeInTheDocument()
   })
 
   it('date input defaults to today', () => {
@@ -102,8 +103,7 @@ describe('LessonTaskForm — create mode', () => {
       />
     )
     // Select Adam (first child)
-    const childSelect = screen.getByLabelText(/learner/i)
-    fireEvent.change(childSelect, { target: { value: 'child_001' } })
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
 
     // Adam's subjects should appear in the subject select
     const subjectSelect = screen.getByLabelText(/course\/subject/i) as HTMLSelectElement
@@ -123,14 +123,13 @@ describe('LessonTaskForm — create mode', () => {
       />
     )
     // Select Adam and choose a subject
-    const childSelect = screen.getByLabelText(/learner/i)
-    fireEvent.change(childSelect, { target: { value: 'child_001' } })
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
     const subjectSelect = screen.getByLabelText(/course\/subject/i) as HTMLSelectElement
     fireEvent.change(subjectSelect, { target: { value: 'subj_adam_math' } })
     expect(subjectSelect.value).toBe('subj_adam_math')
 
-    // Change to Khadijah — subject should reset
-    fireEvent.change(childSelect, { target: { value: 'child_002' } })
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /khadijah/i }))
     expect((screen.getByLabelText(/course\/subject/i) as HTMLSelectElement).value).toBe('')
   })
 
@@ -159,7 +158,7 @@ describe('LessonTaskForm — create mode', () => {
         onSubmit={onSubmit}
       />
     )
-    fireEvent.change(screen.getByLabelText(/learner/i), { target: { value: 'child_001' } })
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
     fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'New Lesson' } })
 
@@ -229,7 +228,7 @@ describe('LessonTaskForm — FB-011 label renames', () => {
     render(
       <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
     )
-    expect(screen.getByLabelText(/learner/i)).toBeInTheDocument()
+    expect(screen.getByText(/learner\(s\)/i)).toBeInTheDocument()
     expect(screen.queryByLabelText(/^child$/i)).not.toBeInTheDocument()
   })
 
@@ -271,7 +270,7 @@ describe('LessonTaskForm — FB-011 label renames', () => {
     render(
       <LessonTaskForm children={mockChildren} subjects={quranSubjects} onSubmit={jest.fn()} />
     )
-    fireEvent.change(screen.getByLabelText(/learner/i), { target: { value: 'child_001' } })
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
     fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_quran' } })
     expect(screen.getByText('Memorisation')).toBeInTheDocument()
     expect(screen.getByText('Tajweed')).toBeInTheDocument()
@@ -299,7 +298,7 @@ describe('LessonTaskForm — completion window (plannedStartDate)', () => {
     render(
       <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={onSubmit} />
     )
-    fireEvent.change(screen.getByLabelText(/learner/i), { target: { value: 'child_001' } })
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
     fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Window lesson' } })
     fireEvent.change(screen.getByLabelText(/start date/i), { target: { value: '2026-05-10' } })
@@ -322,7 +321,7 @@ describe('LessonTaskForm — completion window (plannedStartDate)', () => {
     render(
       <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={onSubmit} />
     )
-    fireEvent.change(screen.getByLabelText(/learner/i), { target: { value: 'child_001' } })
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
     fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Single-day lesson' } })
     fireEvent.change(screen.getByLabelText(/planned date/i), { target: { value: '2026-05-15' } })
@@ -336,6 +335,42 @@ describe('LessonTaskForm — completion window (plannedStartDate)', () => {
         })
       )
       expect(onSubmit.mock.calls[0][0].plannedStartDate).toBeUndefined()
+    })
+  })
+})
+
+describe('LessonTaskForm — multi-learner group assignment', () => {
+  it('allows selecting multiple learners via checkboxes', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    expect(screen.getByRole('checkbox', { name: /adam/i })).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: /khadijah/i })).toBeInTheDocument()
+  })
+
+  it('submits childIds and per-learner assignments when 2+ learners selected', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={onSubmit} />
+    )
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /khadijah/i }))
+    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Shared lesson' } })
+    fireEvent.change(screen.getByLabelText(/planned date/i), { target: { value: '2026-05-15' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          childIds: ['child_001', 'child_002'],
+          assignments: [
+            { childId: 'child_001', subjectId: 'subj_adam_math' },
+            { childId: 'child_002', subjectId: 'subj_khad_math' },
+          ],
+        })
+      )
     })
   })
 })

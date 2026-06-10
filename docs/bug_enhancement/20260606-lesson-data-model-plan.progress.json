@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "planPath": "docs/bug_enhancement/20260606-lesson-data-model-plan.json",
+  "branch": "feat/lesson-data-model",
+  "updatedAt": "2026-06-09T00:00:00Z",
+  "phases": [
+    {
+      "id": "phase-1",
+      "status": "completed",
+      "commit": "69e487e",
+      "writeBack": "Added visible reschedule affordance (GripVertical/Pencil icons) to WeekGrid/WeeklyList; drag-and-drop and click-through-to-edit paths unchanged."
+    },
+    {
+      "id": "phase-2",
+      "status": "completed",
+      "commit": "c78e4e8",
+      "migration": "0022_bumpy_vargas.sql",
+      "writeBack": "lesson_tasks gained nullable resource_link/lesson_type/estimated_duration; fields round-trip create→read and update→read."
+    },
+    {
+      "id": "phase-3",
+      "status": "completed",
+      "commit": "8a6bfa3",
+      "migration": "0023_eminent_zaladane.sql",
+      "writeBack": "Completion-window model: nullable planned_start_date; window [planned_start_date, due_date]; NULL = legacy single-due-date."
+    },
+    {
+      "id": "phase-4",
+      "status": "completed",
+      "migration": "0024_overconfident_eddie_brock.sql",
+      "writeBack": "Fan-out + group_id: N learners → N rows sharing group_id; group update/delete; multi-select form; LessonCard group affordance."
+    }
+  ]
+}

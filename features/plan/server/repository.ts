@@ -17,6 +17,22 @@ export interface CreateLessonTaskInput {
   dueDate?: string
   status?: string
   sortOrder?: number
+  groupId?: string | null
+}
+
+export interface LessonAssignmentInput {
+  learnerId: string
+  subjectId?: string
+}
+
+export type SharedLessonTaskFields = Omit<CreateLessonTaskInput, 'learnerId' | 'subjectId' | 'groupId'>
+
+export interface UpdateLessonTaskOptions {
+  applyToGroup?: boolean
+}
+
+export interface DeleteLessonTaskOptions {
+  deleteGroup?: boolean
 }
 
 export interface UpdateLessonTaskInput {
@@ -94,11 +110,60 @@ export async function createLessonTaskRow(
       dueDate: input.dueDate ?? null,
       status: input.status ?? 'not_started',
       sortOrder: input.sortOrder ?? 0,
+      groupId: input.groupId ?? null,
       createdAt: now,
       updatedAt: now,
     })
     .returning()
   return inserted[0]
+}
+
+function buildSharedInsertValues(
+  householdId: string,
+  base: SharedLessonTaskFields,
+  assignment: LessonAssignmentInput,
+  groupId: string | null,
+  now: Date,
+  index: number,
+) {
+  return {
+    id: `lesson_${Date.now()}_${index}`,
+    householdId,
+    learnerId: assignment.learnerId,
+    subjectId: assignment.subjectId ?? null,
+    groupId,
+    title: base.title,
+    description: base.description ?? null,
+    notes: base.notes ?? null,
+    resourceLink: base.resourceLink ?? null,
+    lessonType: base.lessonType ?? null,
+    estimatedDuration: base.estimatedDuration ?? null,
+    plannedStartDate: base.plannedStartDate ?? null,
+    dueDate: base.dueDate ?? null,
+    status: base.status ?? 'not_started',
+    sortOrder: base.sortOrder ?? 0,
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
+/** Creates one row per assignment; 2+ learners share a generated group_id. */
+export async function createLessonTasksFanOut(
+  householdId: string,
+  base: SharedLessonTaskFields,
+  assignments: LessonAssignmentInput[],
+): Promise<LessonTaskRow[]> {
+  if (assignments.length === 0) {
+    throw new Error('At least one learner assignment is required')
+  }
+  const db = getDb()
+  const now = new Date()
+  const groupId =
+    assignments.length > 1 ? `group_${Date.now()}_${Math.random().toString(36).slice(2, 9)}` : null
+  const values = assignments.map((assignment, index) =>
+    buildSharedInsertValues(householdId, base, assignment, groupId, now, index),
+  )
+  return db.insert(lessonTasks).values(values).returning()
 }
 
 /** Inserts a lesson task with a caller-supplied id. Updates status/timestamps on conflict. For seed scripts only. */
@@ -149,8 +214,12 @@ export async function updateLessonTaskRow(
   id: string,
   householdId: string,
   input: UpdateLessonTaskInput,
+  options: UpdateLessonTaskOptions = {},
 ): Promise<LessonTaskRow | null> {
   const db = getDb()
+  const existing = await getLessonTaskRow(id, householdId)
+  if (!existing) return null
+
   const patch: Partial<LessonTaskRow> = { updatedAt: new Date() }
   if (input.title !== undefined) patch.title = input.title
   if (input.description !== undefined) patch.description = input.description
@@ -160,8 +229,18 @@ export async function updateLessonTaskRow(
   if (input.estimatedDuration !== undefined) patch.estimatedDuration = input.estimatedDuration
   if (input.plannedStartDate !== undefined) patch.plannedStartDate = input.plannedStartDate
   if (input.dueDate !== undefined) patch.dueDate = input.dueDate
-  if (input.status !== undefined) patch.status = input.status
   if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder
+
+  if (options.applyToGroup && existing.groupId) {
+    const result = await db
+      .update(lessonTasks)
+      .set(patch)
+      .where(and(eq(lessonTasks.householdId, householdId), eq(lessonTasks.groupId, existing.groupId)))
+      .returning()
+    return result.find(r => r.id === id) ?? result[0] ?? null
+  }
+
+  if (input.status !== undefined) patch.status = input.status
 
   const result = await db
     .update(lessonTasks)
@@ -195,8 +274,20 @@ export async function completeLessonTaskRow(
 export async function deleteLessonTaskRow(
   id: string,
   householdId: string,
+  options: DeleteLessonTaskOptions = {},
 ): Promise<boolean> {
   const db = getDb()
+  const existing = await getLessonTaskRow(id, householdId)
+  if (!existing) return false
+
+  if (options.deleteGroup && existing.groupId) {
+    const result = await db
+      .delete(lessonTasks)
+      .where(and(eq(lessonTasks.householdId, householdId), eq(lessonTasks.groupId, existing.groupId)))
+      .returning()
+    return result.length > 0
+  }
+
   const result = await db
     .delete(lessonTasks)
     .where(and(eq(lessonTasks.id, id), eq(lessonTasks.householdId, householdId)))

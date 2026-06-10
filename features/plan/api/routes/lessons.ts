@@ -2,7 +2,7 @@ import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { LessonTask } from '@/features/plan/types'
-import { listLessonTaskRows, createLessonTaskRow } from '@/features/plan/server/repository'
+import { listLessonTaskRows, createLessonTaskRow, createLessonTasksFanOut, type LessonAssignmentInput } from '@/features/plan/server/repository'
 import { mapLessonTaskRow } from '@/features/plan/api/mapLessonTaskRow'
 import { guardOwnership, assertSessionOwnership } from '@/features/auth/server/routeOwnership'
 
@@ -72,18 +72,23 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Le
 
 export async function POST(request: Request): Promise<NextResponse<ApiResponse<LessonTask | null>>> {
   const body = await request.json()
-  const { childId, subjectId, title, dueDate, description } = body
+  const { childId, childIds, assignments, subjectId, title, dueDate, description } = body
+  const learnerIds: string[] = Array.isArray(childIds) && childIds.length > 0
+    ? childIds
+    : childId
+      ? [childId]
+      : []
 
-  if (!childId || !title?.trim() || !dueDate) {
+  if (learnerIds.length === 0 || !title?.trim() || !dueDate) {
     return NextResponse.json({ status: 'error', data: null, message: 'childId, title, and dueDate are required', timestamp: new Date().toISOString() }, { status: 400 })
   }
 
   return guardOwnership(async () => {
-    await assertSessionOwnership('learner', childId)
+    for (const learnerId of learnerIds) {
+      await assertSessionOwnership('learner', learnerId)
+    }
     const { householdId, userId } = getRequestAuthCtx()
-    const row = await createLessonTaskRow(householdId, {
-      learnerId: childId,
-      subjectId,
+    const shared = {
       title: title.trim(),
       description: description?.trim(),
       resourceLink: body.resourceLink?.trim() || undefined,
@@ -93,9 +98,34 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<L
       dueDate,
       status: body.status ?? 'not_started',
       sortOrder: body.order || 0,
+    }
+
+    if (learnerIds.length >= 2) {
+      const rawAssignments = Array.isArray(assignments) && assignments.length > 0
+        ? assignments.map((a: { learnerId?: string; childId?: string; subjectId?: string }) => ({
+            learnerId: a.learnerId ?? a.childId ?? '',
+            subjectId: a.subjectId,
+          }))
+        : learnerIds.map((learnerId: string) => ({ learnerId, subjectId }))
+      const assignmentRows: LessonAssignmentInput[] = rawAssignments.filter(a => a.learnerId)
+      const rows = await createLessonTasksFanOut(householdId, shared, assignmentRows)
+      const { trackSessionStarted } = await import('@/features/admin-metrics/server/instrument')
+      for (const row of rows) {
+        void trackSessionStarted(userId, householdId, row.learnerId, row.id, 'planner')
+      }
+      return NextResponse.json(
+        { status: 'success', data: mapLessonTaskRow(rows[0]), message: 'Lessons created', timestamp: new Date().toISOString() },
+        { status: 201 },
+      )
+    }
+
+    const row = await createLessonTaskRow(householdId, {
+      learnerId: learnerIds[0],
+      subjectId,
+      ...shared,
     })
     const { trackSessionStarted } = await import('@/features/admin-metrics/server/instrument')
-    void trackSessionStarted(userId, householdId, childId, row.id, 'planner')
+    void trackSessionStarted(userId, householdId, learnerIds[0], row.id, 'planner')
     return NextResponse.json(
       { status: 'success', data: mapLessonTaskRow(row), message: 'Lesson created', timestamp: new Date().toISOString() },
       { status: 201 },

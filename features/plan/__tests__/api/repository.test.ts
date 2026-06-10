@@ -136,4 +136,56 @@ describe('lesson tasks repository', () => {
     await deleteLessonTaskRow(windowRow.id, householdId)
     await deleteLessonTaskRow(legacyRow.id, householdId)
   })
+
+  itDb('createLessonTasksFanOut inserts one row per learner with shared group_id', async () => {
+    const { createLearner } = await import('@/features/children/server/repository')
+    const learner2 = await createLearner(householdId, { name: 'Learner Two' })
+    const learner3 = await createLearner(householdId, { name: 'Learner Three' })
+
+    const { createLessonTasksFanOut } = await import('../../server/repository')
+    const rows = await createLessonTasksFanOut(
+      householdId,
+      { title: 'Group lesson', dueDate: '2026-06-20' },
+      [
+        { learnerId, subjectId: undefined },
+        { learnerId: learner2.id },
+        { learnerId: learner3.id },
+      ],
+    )
+
+    expect(rows).toHaveLength(3)
+    expect(rows.every(r => r.groupId === rows[0].groupId)).toBe(true)
+    expect(rows[0].groupId).toBeTruthy()
+    expect(new Set(rows.map(r => r.learnerId)).size).toBe(3)
+    expect(rows.every(r => r.status === 'not_started')).toBe(true)
+
+    const { updateLessonTaskRow, deleteLessonTaskRow: deleteRow } = await import('../../server/repository')
+    await updateLessonTaskRow(rows[0].id, householdId, { title: 'Updated group title' }, { applyToGroup: true })
+    const afterUpdate = await listLessonTaskRows(householdId)
+    const groupRows = afterUpdate.filter(r => r.groupId === rows[0].groupId)
+    expect(groupRows.every(r => r.title === 'Updated group title')).toBe(true)
+
+    await completeLessonTaskRow(rows[1].id, householdId, 'completed')
+    const afterComplete = await listLessonTaskRows(householdId)
+    const completedRow = afterComplete.find(r => r.id === rows[1].id)
+    const pendingRow = afterComplete.find(r => r.id === rows[2].id)
+    expect(completedRow?.status).toBe('completed')
+    expect(pendingRow?.status).toBe('not_started')
+
+    await deleteRow(rows[0].id, householdId, { deleteGroup: true })
+    const afterDelete = await listLessonTaskRows(householdId)
+    expect(afterDelete.some(r => r.groupId === rows[0].groupId)).toBe(false)
+  })
+
+  itDb('createLessonTasksFanOut with one learner leaves group_id NULL', async () => {
+    const { createLessonTasksFanOut } = await import('../../server/repository')
+    const rows = await createLessonTasksFanOut(
+      householdId,
+      { title: 'Solo lesson', dueDate: '2026-06-21' },
+      [{ learnerId }],
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0].groupId).toBeNull()
+    await deleteLessonTaskRow(rows[0].id, householdId)
+  })
 })

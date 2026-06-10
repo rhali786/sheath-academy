@@ -37,7 +37,7 @@ interface LessonCardProps {
   /** If provided, list of all subjects (for edit form selects) */
   subjects?: SubjectCourse[]
   /** Called with the updated patch when save is pressed */
-  onUpdate?: (id: string, patch: Partial<LessonTask>) => Promise<void>
+  onUpdate?: (id: string, patch: Partial<LessonTask> & { applyToGroup?: boolean }) => Promise<void>
   /** Legacy: called when Edit button is clicked (top-form pattern) — kept for backward compatibility */
   onEdit?: (lesson: LessonTask) => void
   onDelete?: (id: string) => void
@@ -56,6 +56,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
   const [editStatus, setEditStatus] = useState<LessonTaskStatus>(lesson.status)
   const [editDescription, setEditDescription] = useState(lesson.description ?? '')
   const [editResourceLink, setEditResourceLink] = useState(lesson.resourceLink ?? '')
+  const [applyToGroup, setApplyToGroup] = useState(false)
   const [titleError, setTitleError] = useState('')
 
   const dateFormatted = new Date(`${lesson.dueDate}T00:00:00`).toLocaleDateString('en-US', {
@@ -83,6 +84,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     setEditStatus(lesson.status)
     setEditDescription(lesson.description ?? '')
     setEditResourceLink(lesson.resourceLink ?? '')
+    setApplyToGroup(false)
     setTitleError('')
     // If inline edit is available (onUpdate provided), use it; otherwise fall back to legacy onEdit
     if (onUpdate) {
@@ -114,6 +116,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
         status: editStatus,
         description: editDescription.trim() || undefined,
         resourceLink: editResourceLink.trim() || undefined,
+        ...(lesson.groupId && applyToGroup ? { applyToGroup: true } : {}),
       })
       setIsEditing(false)
       setTitleError('')
@@ -217,6 +220,18 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
               className="w-full text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-forest-500"
             />
           </div>
+          {lesson.groupId && (
+            <label className="flex items-center gap-2 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={applyToGroup}
+                onChange={e => setApplyToGroup(e.target.checked)}
+                aria-label="Apply to all learners in group"
+                className="rounded border-slate-300 text-forest-900 focus:ring-forest-500"
+              />
+              Apply changes to all learners in this group
+            </label>
+          )}
           <div className="flex gap-2 justify-end">
             <button
               onClick={cancelEdit}
@@ -260,6 +275,11 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          {lesson.groupId && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-forest-100 text-forest-700">
+              Group lesson
+            </span>
+          )}
           {isOverdue && (
             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">
               Overdue

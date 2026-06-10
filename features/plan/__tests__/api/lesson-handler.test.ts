@@ -85,7 +85,7 @@ describe('PUT /api/plan/lessons/:id', () => {
       resourceLink: 'https://example.com/updated',
       lessonType: 'Reading',
       estimatedDuration: '1hr',
-    }))
+    }), { applyToGroup: false })
     expect(body.data.resourceLink).toBe('https://example.com/updated')
     expect(body.data.lessonType).toBe('Reading')
     expect(body.data.estimatedDuration).toBe('1hr')

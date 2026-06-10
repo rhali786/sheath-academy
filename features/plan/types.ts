@@ -18,6 +18,8 @@ export interface LessonTask {
   estimatedDuration?: LessonDuration
   lessonType?: string
   completedAt?: string
+  /** Shared link when one lesson was assigned to multiple learners (fan-out rows). */
+  groupId?: string
   createdAt: string
   updatedAt: string
 }
