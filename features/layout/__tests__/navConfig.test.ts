@@ -1,8 +1,11 @@
 import {
   NAV_ITEMS,
+  NAV_MODULES,
   getNavItemsBySection,
   getNavModules,
+  getModuleItems,
   isNavItemActive,
+  isNavModuleActive,
   validateNavConfig,
 } from '@/features/layout/lib/navConfig'
 
@@ -73,16 +76,18 @@ describe('navConfig', () => {
     expect(isNavItemActive('/portfolio', grades)).toBe(true)
   })
 
-  test('people is active on /settings with tab=children', () => {
+  test('people is active on /people', () => {
     const people = NAV_ITEMS.find((i) => i.id === 'people')!
-    expect(isNavItemActive('/settings', people, 'children')).toBe(true)
-    expect(isNavItemActive('/settings', people, 'household')).toBe(false)
+    expect(people.href).toBe('/people')
+    expect(isNavItemActive('/people', people)).toBe(true)
+    expect(isNavItemActive('/settings', people, 'children')).toBe(false)
   })
 
-  test('compliance is active on /settings with tab=records-compliance', () => {
+  test('compliance is active on /compliance', () => {
     const compliance = NAV_ITEMS.find((i) => i.id === 'compliance')!
-    expect(isNavItemActive('/settings', compliance, 'records-compliance')).toBe(true)
-    expect(isNavItemActive('/settings', compliance, 'children')).toBe(false)
+    expect(compliance.href).toBe('/compliance')
+    expect(isNavItemActive('/compliance', compliance)).toBe(true)
+    expect(isNavItemActive('/settings', compliance, 'records-compliance')).toBe(false)
   })
 
   test('footer settings is active on default household tab only', () => {
@@ -114,6 +119,52 @@ describe('Module grouping', () => {
     expect(planbookIds).toContain('calendar')
     expect(planbookIds).toContain('lesson-planner')
     expect(planbookIds).toContain('courses')
+  })
+})
+
+describe('NAV_MODULES (module config)', () => {
+  test('isNavModuleActive: planbook module active on /plan/schedule, not on /attendance', () => {
+    const planbook = NAV_MODULES.find(m => m.id === 'planbook')!
+    expect(isNavModuleActive('/plan/schedule', planbook)).toBe(true)
+    expect(isNavModuleActive('/attendance', planbook)).toBe(false)
+  })
+
+  test('getModuleItems(records) returns attendance, reports-records, compliance in order', () => {
+    const records = NAV_MODULES.find(m => m.id === 'records')!
+    const ids = getModuleItems(records).map(i => i.id)
+    expect(ids).toEqual(['attendance', 'reports-records', 'compliance'])
+  })
+
+  test('quran and resources are members of the planbook module', () => {
+    const planbook = NAV_MODULES.find(m => m.id === 'planbook')!
+    expect(planbook.itemIds).toContain('quran')
+    expect(planbook.itemIds).toContain('resources')
+  })
+
+  test('finances is a member of the settings module and remains disabled with no href', () => {
+    const settings = NAV_MODULES.find(m => m.id === 'settings')!
+    expect(settings.itemIds).toContain('finances')
+    const finances = NAV_ITEMS.find(i => i.id === 'finances')!
+    expect(finances.disabled).toBe(true)
+    expect(finances.href).toBeUndefined()
+  })
+
+  test('leaf hrefs unchanged for known nav items', () => {
+    const expectedHrefs: Record<string, string> = {
+      dashboard: '/dashboard',
+      'lesson-planner': '/plan',
+      calendar: '/plan/schedule',
+      courses: '/lessons',
+      quran: '/quran',
+      resources: '/resources',
+      attendance: '/attendance',
+      'reports-records': '/records',
+      'grades-progress': '/growth',
+      messages: '/messages',
+    }
+    for (const [id, href] of Object.entries(expectedHrefs)) {
+      expect(NAV_ITEMS.find(i => i.id === id)?.href).toBe(href)
+    }
   })
 })
 

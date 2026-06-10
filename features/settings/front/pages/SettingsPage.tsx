@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SchoolYear } from '@/features/school-year/types'
 import { useHousehold } from '@/features/household/front/context'
+import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { householdApi } from '@/features/household/front/services/api'
 import { HouseholdSettings } from '@/features/household/front/components/HouseholdSettings'
 import { ChildrenProvider } from '@/features/children/front/context'
@@ -42,6 +43,7 @@ export function parseSettingsTab(raw: string | null): SettingsTabId {
 
 export function SettingsPage() {
   const { householdProfile, familyName, refetch, loading: householdLoading } = useHousehold()
+  const { selectedChildId } = useLearner()
   const householdId = householdProfile?.id ?? ''
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -339,6 +341,7 @@ export function SettingsPage() {
               <div className="bg-white rounded-xl border border-slate-200 p-6 max-w-md mb-2">
                 <SubjectForm
                   householdId={householdId}
+                  defaultChildId={selectedChildId ?? undefined}
                   onSuccess={() => setSubjectRefreshKey((k) => k + 1)}
                 />
               </div>

@@ -4,6 +4,7 @@
 
 import { render, screen, waitFor } from '@testing-library/react'
 import { HouseholdProvider } from '@/features/household/front/context'
+import { LearnerProvider } from '@/features/layout/front/context/LearnerContext'
 import { DashboardProvider } from '@/features/dashboard/front/context'
 import { Sidebar } from '@/features/layout/front/components/Sidebar'
 import Dashboard from '@/features/dashboard/front/pages/Dashboard'
@@ -107,10 +108,12 @@ jest.mock('@/features/household/front/services/api', () => ({
 function renderWithShell() {
   return render(
     <HouseholdProvider>
-      <Sidebar />
-      <DashboardProvider>
-        <Dashboard />
-      </DashboardProvider>
+      <LearnerProvider>
+        <Sidebar />
+        <DashboardProvider>
+          <Dashboard />
+        </DashboardProvider>
+      </LearnerProvider>
     </HouseholdProvider>
   )
 }

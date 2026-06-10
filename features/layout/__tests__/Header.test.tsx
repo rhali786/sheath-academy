@@ -13,6 +13,14 @@ jest.mock('@/features/dashboard/front/components/NotificationBellDropdown', () =
   ),
 }))
 
+jest.mock('@/features/layout/front/components/LearnerSwitcher', () => ({
+  LearnerSwitcher: () => null,
+}))
+
+jest.mock('@/features/household/front/components/HouseholdSwitcher', () => ({
+  HouseholdSwitcher: () => null,
+}))
+
 import { useSession, signOut } from 'next-auth/react'
 
 const mockUseSession = useSession as jest.Mock

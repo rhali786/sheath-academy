@@ -44,11 +44,11 @@ describe('Sidebar', () => {
     expect(screen.getByTestId('sheath-logo')).toBeInTheDocument()
   })
 
-  test('renders icon badge for each nav item', () => {
+  test('renders module icons for main nav modules', () => {
     render(<Sidebar />)
-    expect(screen.getByTestId('nav-icon-dashboard')).toBeInTheDocument()
-    expect(screen.getByTestId('nav-icon-lesson-planner')).toBeInTheDocument()
-    expect(screen.getByTestId('nav-icon-messages')).toBeInTheDocument()
+    expect(screen.getByTestId('nav-module-icon-home')).toBeInTheDocument()
+    expect(screen.getByTestId('nav-module-icon-planbook')).toBeInTheDocument()
+    expect(screen.getByTestId('nav-module-icon-messages')).toBeInTheDocument()
     expect(screen.getByTestId('nav-icon-settings')).toBeInTheDocument()
   })
 
@@ -57,12 +57,12 @@ describe('Sidebar', () => {
     expect(screen.getByTestId('sidebar-hijri-date')).toBeInTheDocument()
   })
 
-  test('renders main nav links', () => {
+  test('renders main module header links', () => {
     render(<Sidebar />)
-    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/dashboard')
-    expect(screen.getByRole('link', { name: 'Lesson Planner' })).toHaveAttribute('href', '/plan')
-    expect(screen.getByRole('link', { name: 'Courses' })).toHaveAttribute('href', '/lessons')
-    expect(screen.getByRole('link', { name: 'Quran' })).toHaveAttribute('href', '/quran')
+    expect(screen.getByTestId('nav-module-link-home')).toHaveAttribute('href', '/dashboard')
+    expect(screen.getByTestId('nav-module-link-planbook')).toHaveAttribute('href', '/plan/schedule')
+    expect(screen.getByTestId('nav-module-link-people')).toHaveAttribute('href', '/people')
+    expect(screen.getByTestId('nav-module-link-messages')).toHaveAttribute('href', '/messages')
   })
 
   test('renders footer nav links for non-admin', () => {
@@ -101,26 +101,25 @@ describe('Sidebar', () => {
 
   test('collapse toggle is present and collapses then expands the sidebar panel', () => {
     render(<Sidebar />)
-    // Panel is expanded — nav links visible
-    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument()
-    // Click collapse
+    expect(screen.getByTestId('nav-module-link-home')).toBeInTheDocument()
+    expect(screen.queryByTestId('sidebar-collapsed-rail')).not.toBeInTheDocument()
     fireEvent.click(screen.getByTestId('sidebar-collapse-toggle'))
-    // Nav links gone from expanded panel
-    expect(screen.queryByRole('link', { name: 'Home' })).not.toBeInTheDocument()
-    // Expand again
+    expect(screen.queryByTestId('sidebar')).not.toBeInTheDocument()
+    expect(screen.getByTestId('sidebar-collapsed-rail')).toBeInTheDocument()
+    expect(screen.getByTestId('nav-module-collapsed-link-home')).toBeInTheDocument()
     fireEvent.click(screen.getByTestId('sidebar-collapse-toggle'))
-    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument()
+    expect(screen.getByTestId('nav-module-link-home')).toBeInTheDocument()
   })
 
-  test('disabled Finances is not a link', () => {
+  test('Finances is not shown in main nav (footer settings module only)', () => {
     render(<Sidebar />)
     expect(screen.queryByRole('link', { name: /finances/i })).not.toBeInTheDocument()
-    expect(screen.getByTestId('nav-disabled-finances')).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.queryByTestId('nav-disabled-finances')).not.toBeInTheDocument()
   })
 
-  test('Messages nav item is enabled and is a link to /messages', () => {
+  test('Messages module header is a link to /messages', () => {
     render(<Sidebar />)
-    const link = screen.getByRole('link', { name: /messages/i })
+    const link = screen.getByTestId('nav-module-link-messages')
     expect(link).toHaveAttribute('href', '/messages')
     expect(screen.queryByTestId('nav-disabled-messages')).not.toBeInTheDocument()
   })
@@ -138,18 +137,21 @@ describe('Sidebar', () => {
     expect(screen.queryByTestId('nav-badge-messages')).not.toBeInTheDocument()
   })
 
-  test('highlights active route', () => {
+  test('highlights active planbook sub-nav route', () => {
     mockUsePathname.mockReturnValue('/plan')
     render(<Sidebar />)
-    const planner = screen.getByRole('link', { name: 'Lesson Planner' })
-    expect(planner.className).toContain('bg-forest-100')
+    const planbook = screen.getByTestId('nav-module-link-planbook')
+    expect(planbook.className).toContain('bg-forest-100')
+    fireEvent.focus(screen.getByTestId('nav-module-planbook'))
+    const planner = within(screen.getByTestId('nav-module-subnav-planbook')).getByTestId('nav-item-lesson-planner')
+    expect(planner).toHaveAttribute('aria-current', 'page')
   })
 
   test('mobile drawer closes when a link is clicked', () => {
     const onClose = jest.fn()
     render(<Sidebar mobileOpen onClose={onClose} />)
     const drawer = screen.getByTestId('sidebar-mobile-drawer')
-    fireEvent.click(within(drawer).getByRole('link', { name: 'Courses' }))
+    fireEvent.click(within(drawer).getByTestId('nav-item-courses'))
     expect(onClose).toHaveBeenCalled()
   })
 
@@ -160,41 +162,56 @@ describe('Sidebar', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  test('highlights People when settings tab is children', () => {
-    mockUsePathname.mockReturnValue('/settings')
-    mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=children'))
+  test('highlights People when pathname is /people', () => {
+    mockUsePathname.mockReturnValue('/people')
     render(<Sidebar />)
-    const people = screen.getByRole('link', { name: 'People' })
+    const people = screen.getByTestId('nav-module-link-people')
+    expect(people).toHaveAttribute('href', '/people')
     expect(people.className).toContain('bg-forest-100')
   })
 })
 
-describe('Sidebar — module grouping headings', () => {
-  test('sidebar renders module group headings in main nav', () => {
+describe('Sidebar — module grouping', () => {
+  test('planbook module links to default /plan/schedule when no last destination stored', () => {
+    sessionStorage.clear()
+    render(<Sidebar />)
+    expect(screen.getByTestId('nav-module-link-planbook')).toHaveAttribute('href', '/plan/schedule')
+  })
+
+  test('planbook module links to last destination after sub-nav visit', () => {
+    sessionStorage.setItem('sheath.module.lastHref.planbook', '/lessons')
+    render(<Sidebar />)
+    expect(screen.getByTestId('nav-module-link-planbook')).toHaveAttribute('href', '/lessons')
+  })
+
+  test('non-active module reveals sub-nav on focus', () => {
+    mockUsePathname.mockReturnValue('/dashboard')
+    render(<Sidebar />)
+    const subNav = screen.getByTestId('nav-module-subnav-planbook')
+    expect(subNav.className).toContain('hidden')
+    fireEvent.focus(screen.getByTestId('nav-module-planbook'))
+    expect(subNav.className).toContain('group-focus-within:block')
+  })
+
+  test('sub-nav links carry aria-current when active', () => {
+    mockUsePathname.mockReturnValue('/lessons')
+    render(<Sidebar />)
+    fireEvent.focus(screen.getByTestId('nav-module-planbook'))
+    expect(screen.getByTestId('nav-item-courses')).toHaveAttribute('aria-current', 'page')
+  })
+
+  test('sidebar renders module header labels', () => {
     render(<Sidebar />)
     expect(screen.getByText('Planbook')).toBeInTheDocument()
-    expect(screen.getByText('Records')).toBeInTheDocument()
-    // Settings heading: multiple "Settings" exist (heading + footer link); verify at least 2
-    expect(screen.getAllByText('Settings').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('Records & Compliance')).toBeInTheDocument()
+    expect(screen.getAllByText('Settings').length).toBeGreaterThanOrEqual(1)
   })
 
-  test('Home module does not get a redundant heading since the single item is named Home', () => {
-    render(<Sidebar />)
-    const homeTexts = screen.getAllByText('Home')
-    // Only the nav link itself — no separate heading element
-    expect(homeTexts).toHaveLength(1)
-  })
-
-  test('Compliance module does not get a redundant heading since the single item is named Compliance', () => {
-    render(<Sidebar />)
-    const complianceTexts = screen.getAllByText('Compliance')
-    expect(complianceTexts).toHaveLength(1)
-  })
-
-  test('all existing main nav items are still rendered', () => {
-    render(<Sidebar />)
-    expect(screen.getByRole('link', { name: /lesson planner/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /attendance/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /reports & records/i })).toBeInTheDocument()
+  test('planbook sub-nav items are reachable on mobile inline layout', () => {
+    render(<Sidebar mobileOpen onClose={jest.fn()} />)
+    const drawer = screen.getByTestId('sidebar-mobile-drawer')
+    expect(within(drawer).getByTestId('nav-item-lesson-planner')).toBeInTheDocument()
+    expect(within(drawer).getByTestId('nav-item-courses')).toBeInTheDocument()
+    expect(within(drawer).getByTestId('nav-item-attendance')).toBeInTheDocument()
   })
 })

@@ -1,8 +1,9 @@
 {
   "version": 1,
   "startedAt": "2026-06-07T00:00:00Z",
-  "updatedAt": "2026-06-09T00:00:00Z",
-  "currentPlanIndex": 7,
+  "updatedAt": "2026-06-09T20:05:00Z",
+  "currentPlanIndex": 8,
+
   "plans": [
     { "id": "confirmation-consistency", "path": "docs/bug_enhancement/20260606-confirmation-consistency-plan.json", "branch": "feat/confirmation-consistency", "status": "pr_open", "prNumber": 25 },
     { "id": "quran-progress-chart",      "path": "docs/bug_enhancement/20260606-quran-progress-chart-plan.json",      "branch": "feat/quran-progress-chart",      "status": "pr_open", "prNumber": 26 },

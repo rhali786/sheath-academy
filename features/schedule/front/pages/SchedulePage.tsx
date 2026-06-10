@@ -10,6 +10,7 @@ import { getCalendarRange } from '@/features/schedule/front/lib/calendarRange'
 import { CalendarNav } from '@/features/schedule/front/components/CalendarNav'
 import { WeekCalendarView } from '@/features/schedule/front/components/WeekCalendarView'
 import { MonthCalendarView } from '@/features/schedule/front/components/MonthCalendarView'
+import { ScheduleAttendanceCapture } from '@/features/schedule/front/components/ScheduleAttendanceCapture'
 import type { ViewMode } from '@/features/schedule/front/lib/calendarRange'
 import type { LessonTask } from '@/features/plan/types'
 import type { DaySchedule } from '@/features/schedule/types'
@@ -48,7 +49,7 @@ function groupByDate(lessons: LessonTask[]): Map<string, LessonTask[]> {
 
 export function SchedulePage() {
   const searchParams = useSearchParams()
-  const { allSubjects, householdProfile } = useHousehold()
+  const { allSubjects, householdProfile, studentProfiles } = useHousehold()
   const [lessons, setLessons] = useState<LessonTask[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -104,18 +105,27 @@ export function SchedulePage() {
       </div>
 
       {viewMode === 'day' && (
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          {loading ? (
-            <p className="text-sm text-slate-400 py-4">Loading…</p>
-          ) : (
-            <ScheduleTimeline
-              schedule={schedule}
-              currentTime={getCurrentTime()}
-              subjects={allSubjects}
-              showAdjustDay
+        <>
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            {loading ? (
+              <p className="text-sm text-slate-400 py-4">Loading…</p>
+            ) : (
+              <ScheduleTimeline
+                schedule={schedule}
+                currentTime={getCurrentTime()}
+                subjects={allSubjects}
+                showAdjustDay
+              />
+            )}
+          </div>
+          {householdProfile?.id && (
+            <ScheduleAttendanceCapture
+              selectedDate={selectedDate}
+              householdId={householdProfile.id}
+              studentProfiles={studentProfiles}
             />
           )}
-        </div>
+        </>
       )}
 
       {viewMode === 'week' && (

@@ -44,3 +44,18 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
 export function getNavIcon(id: string): LucideIcon | undefined {
   return NAV_ICONS[id]
 }
+
+/** Icons for NAV_MODULES sidebar headers (module id, not leaf item id). */
+export const MODULE_ICONS: Record<string, LucideIcon> = {
+  home: Home,
+  planbook: BookOpen,
+  records: ClipboardCheck,
+  progress: BarChart3,
+  people: Users,
+  messages: MessageSquare,
+  settings: Settings,
+}
+
+export function getModuleIcon(moduleId: string): LucideIcon | undefined {
+  return MODULE_ICONS[moduleId]
+}

@@ -5,15 +5,19 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import {
+  NAV_MODULES,
+  NAV_ITEMS,
   getNavItemsBySection,
-  getNavModules,
+  getModuleItems,
   isNavItemActive,
+  isNavModuleActive,
   type NavItem,
-  type NavModule,
+  type NavModuleConfig,
 } from '@/features/layout/lib/navConfig'
-import { getNavIcon } from '@/features/layout/lib/navIcons'
+import { getNavIcon, getModuleIcon } from '@/features/layout/lib/navIcons'
 import { formatHeaderDates, type HeaderDateDisplay } from '@/features/layout/lib/formatHeaderDates'
 import { useUnreadMessages } from '@/features/messaging/front/hooks/useUnreadMessages'
+import { useModuleLastDestination } from '@/features/layout/front/hooks/useModuleLastDestination'
 import { SheathLogo } from './SheathLogo'
 
 interface SidebarProps {
@@ -50,18 +54,36 @@ function NavIcon({ itemId, active }: { itemId: string; active: boolean }) {
   )
 }
 
+function ModuleIcon({ moduleId, active }: { moduleId: string; active: boolean }) {
+  const Icon = getModuleIcon(moduleId) ?? getNavIcon(moduleId)
+  if (!Icon) return null
+
+  return (
+    <span
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+        active ? 'bg-forest-200/80 text-forest-900' : 'bg-white text-slate-500 shadow-sm'
+      }`}
+      data-testid={`nav-module-icon-${moduleId}`}
+    >
+      <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden="true" />
+    </span>
+  )
+}
+
 function NavRow({
   item,
   pathname,
   settingsTab,
   onNavigate,
   unreadCount = 0,
+  onSubNavClick,
 }: {
   item: NavItem
   pathname: string
   settingsTab: string | null
   onNavigate?: () => void
   unreadCount?: number
+  onSubNavClick?: (href: string) => void
 }) {
   const active = isNavItemActive(pathname, item, settingsTab)
 
@@ -89,15 +111,6 @@ function NavRow({
           <NavIcon itemId={item.id} active={false} />
           <span className="truncate">{item.label}</span>
         </span>
-        {item.showDisabledBadge && (
-          <span
-            data-testid="nav-badge-messages"
-            className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-400 opacity-40"
-            aria-hidden="true"
-          >
-            3
-          </span>
-        )}
       </div>
     )
   }
@@ -105,9 +118,13 @@ function NavRow({
   return (
     <Link
       href={item.href!}
-      onClick={onNavigate}
+      onClick={() => {
+        onSubNavClick?.(item.href!)
+        onNavigate?.()
+      }}
       className={`${baseClass} ${activeClass}`}
       aria-current={active ? 'page' : undefined}
+      data-testid={`nav-item-${item.id}`}
     >
       {labelRow}
       {unreadCount > 0 && (
@@ -119,6 +136,131 @@ function NavRow({
         </span>
       )}
     </Link>
+  )
+}
+
+function ModuleNavGroup({
+  module,
+  pathname,
+  settingsTab,
+  onNavigate,
+  inlineSubNav,
+  unreadMessages,
+}: {
+  module: NavModuleConfig
+  pathname: string
+  settingsTab: string | null
+  onNavigate?: () => void
+  inlineSubNav: boolean
+  unreadMessages: number
+}) {
+  const [lastHref, setDestination] = useModuleLastDestination(module.id)
+  const items = getModuleItems(module)
+  const moduleActive = isNavModuleActive(pathname, module, settingsTab)
+  const headerHref = lastHref ?? module.defaultHref
+
+  const baseClass =
+    'flex items-center gap-3 px-2.5 py-2 rounded-xl text-sm font-medium transition-colors w-full'
+  const activeClass = moduleActive
+    ? 'bg-forest-100 text-forest-900 shadow-sm'
+    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+
+  const subNav = items.length > 0 && (
+    <div
+      className={
+        inlineSubNav
+          ? 'mt-0.5 ml-3 space-y-0.5 border-l border-slate-200 pl-2'
+          : 'hidden group-hover:block group-focus-within:block absolute left-full top-0 ml-1 min-w-[11rem] rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg z-20'
+      }
+      data-testid={`nav-module-subnav-${module.id}`}
+    >
+      {items.map((item) => (
+        <NavRow
+          key={item.id}
+          item={item}
+          pathname={pathname}
+          settingsTab={settingsTab}
+          onNavigate={onNavigate}
+          unreadCount={item.id === 'messages' ? unreadMessages : 0}
+          onSubNavClick={setDestination}
+        />
+      ))}
+    </div>
+  )
+
+  return (
+    <div className={`relative ${items.length > 0 && !inlineSubNav ? 'group' : ''}`} data-testid={`nav-module-${module.id}`}>
+      <Link
+        href={headerHref}
+        onClick={onNavigate}
+        className={`${baseClass} ${activeClass}`}
+        aria-current={moduleActive && items.length === 0 ? 'page' : undefined}
+        data-testid={`nav-module-link-${module.id}`}
+      >
+        <ModuleIcon moduleId={module.id} active={moduleActive} />
+        <span className="truncate">{module.label}</span>
+        {module.id === 'messages' && unreadMessages > 0 && (
+          <span
+            data-testid="nav-badge-messages"
+            className="ml-auto text-xs font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700"
+          >
+            {unreadMessages}
+          </span>
+        )}
+      </Link>
+      {subNav}
+    </div>
+  )
+}
+
+function CollapsedModuleFlyout({
+  module,
+  pathname,
+  settingsTab,
+  onNavigate,
+  unreadMessages,
+}: {
+  module: NavModuleConfig
+  pathname: string
+  settingsTab: string | null
+  onNavigate?: () => void
+  unreadMessages: number
+}) {
+  const [lastHref, setDestination] = useModuleLastDestination(module.id)
+  const items = getModuleItems(module)
+  const moduleActive = isNavModuleActive(pathname, module, settingsTab)
+  const headerHref = lastHref ?? module.defaultHref
+
+  return (
+    <div className="relative group" data-testid={`nav-module-collapsed-${module.id}`}>
+      <Link
+        href={headerHref}
+        onClick={onNavigate}
+        className="flex items-center justify-center p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white/60 transition-colors"
+        aria-label={module.label}
+        data-testid={`nav-module-collapsed-link-${module.id}`}
+      >
+        <ModuleIcon moduleId={module.id} active={moduleActive} />
+      </Link>
+      {items.length > 0 && (
+        <div
+          className="hidden group-hover:block group-focus-within:block absolute left-full top-0 ml-1 min-w-[11rem] rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg z-20"
+          data-testid={`nav-module-subnav-${module.id}`}
+        >
+          {items.map((item) => (
+            <NavRow
+              key={item.id}
+              item={item}
+              pathname={pathname}
+              settingsTab={settingsTab}
+              onNavigate={onNavigate}
+              unreadCount={item.id === 'messages' ? unreadMessages : 0}
+              onSubNavClick={setDestination}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -137,15 +279,15 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     setHeaderDates(formatHeaderDates(new Date()))
   }, [])
 
-  const filterByRole = (items: NavItem[]) => items.filter(item => !item.adminOnly || isAdmin)
+  const filterByRole = (items: NavItem[]) => items.filter((item) => !item.adminOnly || isAdmin)
 
-  const mainItems = filterByRole(getNavItemsBySection('main'))
+  const mainModules = NAV_MODULES.filter((m) => m.section === 'main').filter(
+    (m) => !m.adminOnly || isAdmin,
+  )
   const footerItems = filterByRole(getNavItemsBySection('footer'))
-  const navModules = getNavModules().map(m => ({ ...m, items: filterByRole(m.items) }))
-
-  function shouldShowModuleHeading(moduleLabel: NavModule, items: NavItem[]): boolean {
-    return !items.some(item => item.label === moduleLabel)
-  }
+  const standaloneMainItems = filterByRole(
+    NAV_ITEMS.filter((item) => item.section === 'main' && item.id === 'my-feedback'),
+  )
 
   const handleCollapse = useCallback(() => setCollapsed(true), [])
   const handleExpand = useCallback(() => setCollapsed(false), [])
@@ -185,30 +327,27 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
-        {navModules.map(({ label, items }) =>
-          items.length === 0 ? null : (
-            <div key={label}>
-              {shouldShowModuleHeading(label, items) && (
-                <p className="px-1 mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                  {label}
-                </p>
-              )}
-              <div className="space-y-0.5">
-                {items.map(item => (
-                  <NavRow
-                    key={item.id}
-                    item={item}
-                    pathname={pathname}
-                    settingsTab={settingsTab}
-                    onNavigate={onClose}
-                    unreadCount={item.id === 'messages' ? unreadMessages : 0}
-                  />
-                ))}
-              </div>
-            </div>
-          )
-        )}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+        {mainModules.map((module) => (
+          <ModuleNavGroup
+            key={module.id}
+            module={module}
+            pathname={pathname}
+            settingsTab={settingsTab}
+            onNavigate={onClose}
+            inlineSubNav={mobileOpen}
+            unreadMessages={unreadMessages}
+          />
+        ))}
+        {standaloneMainItems.map((item) => (
+          <NavRow
+            key={item.id}
+            item={item}
+            pathname={pathname}
+            settingsTab={settingsTab}
+            onNavigate={onClose}
+          />
+        ))}
       </nav>
 
       <nav className="px-3 py-4 border-t border-slate-100 space-y-0.5">
@@ -226,18 +365,29 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
 
   const collapsedRail = (
     <aside
-      className="flex flex-col h-full w-12 bg-slate-50 border-r border-slate-200/80 items-center pt-4"
+      className="flex flex-col h-full w-12 bg-slate-50 border-r border-slate-200/80 items-center py-4 gap-1"
       aria-label="Navigation (collapsed)"
+      data-testid="sidebar-collapsed-rail"
     >
       <button
         type="button"
         onClick={handleExpand}
         data-testid="sidebar-collapse-toggle"
         aria-label="Expand navigation"
-        className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+        className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors mb-2"
       >
         <SquishedPanelIcon direction="expand" />
       </button>
+      {mainModules.map((module) => (
+        <CollapsedModuleFlyout
+          key={module.id}
+          module={module}
+          pathname={pathname}
+          settingsTab={settingsTab}
+          onNavigate={onClose}
+          unreadMessages={unreadMessages}
+        />
+      ))}
     </aside>
   )
 

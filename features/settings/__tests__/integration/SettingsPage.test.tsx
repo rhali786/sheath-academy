@@ -3,7 +3,9 @@
  */
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import React from 'react'
 import { SettingsPage, parseSettingsTab } from '@/features/settings/front/pages/SettingsPage'
+import { LearnerProvider } from '@/features/layout/front/context/LearnerContext'
 import type { HouseholdContextType } from '@/features/household/front/context/HouseholdContext'
 
 let mockSearchParams = new URLSearchParams()
@@ -76,6 +78,14 @@ const { householdApi } = jest.requireMock('@/features/household/front/services/a
 import { useSession } from 'next-auth/react'
 const mockUseSession = useSession as jest.Mock
 
+function renderSettings() {
+  return render(
+    <LearnerProvider>
+      <SettingsPage />
+    </LearnerProvider>,
+  )
+}
+
 const loadedHousehold: HouseholdContextType = {
   householdProfile: {
     id: 'household_001',
@@ -105,7 +115,7 @@ describe('IslamicRemindersSection toggle', () => {
   })
 
   it('unchecking "Ramadan" persists the change to localStorage', async () => {
-    render(<SettingsPage />)
+    renderSettings()
     // Household tab is active by default and contains the IslamicRemindersSection
     const checkbox = screen.getByRole('checkbox', { name: /Ramadan/ })
     expect(checkbox).toBeChecked()
@@ -126,7 +136,7 @@ describe('Wave 9 — SettingsPage tab restructure', () => {
   })
 
   it('tab labels include "Learners", "Courses", "Planning Defaults", "Records & Compliance", "Access & Privacy"', () => {
-    render(<SettingsPage />)
+    renderSettings()
     expect(screen.getByRole('tab', { name: 'Learners' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Courses' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Planning Defaults' })).toBeInTheDocument()
@@ -135,7 +145,7 @@ describe('Wave 9 — SettingsPage tab restructure', () => {
   })
 
   it('does NOT show "Children" or "Subjects" as tab labels', () => {
-    render(<SettingsPage />)
+    renderSettings()
     const tabs = screen.getAllByRole('tab')
     const tabLabels = tabs.map(t => t.textContent)
     expect(tabLabels).not.toContain('Children')
@@ -170,12 +180,12 @@ describe('SettingsPage', () => {
       householdProfile: null,
       loading: true,
     })
-    render(<SettingsPage />)
+    renderSettings()
     expect(screen.getByText('Loading...')).toBeInTheDocument()
   })
 
   it('renders tab list and household panel by default', () => {
-    render(<SettingsPage />)
+    renderSettings()
     expect(screen.getByTestId('settings-page')).toBeInTheDocument()
     expect(screen.getByTestId('settings-tab-household')).toBeInTheDocument()
     expect(screen.getByTestId('settings-tab-school-year')).toBeInTheDocument()
@@ -185,7 +195,7 @@ describe('SettingsPage', () => {
   })
 
   it('navigates via router.replace when a tab is selected', async () => {
-    render(<SettingsPage />)
+    renderSettings()
     await userEvent.click(screen.getByTestId('settings-tab-school-year'))
     expect(mockReplace).toHaveBeenCalledWith('/settings?tab=school-year', { scroll: false })
   })
@@ -206,7 +216,7 @@ describe('SettingsPage', () => {
       message: 'ok',
       timestamp: '',
     })
-    render(<SettingsPage />)
+    renderSettings()
     await waitFor(() => {
       expect(screen.getByTestId('settings-panel-school-year')).toBeInTheDocument()
     })
@@ -255,7 +265,7 @@ describe('SettingsPage', () => {
       message: 'ok',
       timestamp: '',
     })
-    render(<SettingsPage />)
+    renderSettings()
     expect(await screen.findByTestId('rollover-panel')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /roll over courses to 2026-2027/i })).toBeInTheDocument()
   })
@@ -279,7 +289,7 @@ describe('SettingsPage', () => {
       message: 'ok',
       timestamp: '',
     })
-    render(<SettingsPage />)
+    renderSettings()
     await waitFor(() => {
       expect(screen.getByTestId('subject-form')).toBeInTheDocument()
     })
@@ -315,7 +325,7 @@ describe('SettingsPage', () => {
       message: 'ok',
       timestamp: '',
     })
-    render(<SettingsPage />)
+    renderSettings()
     await waitFor(() => {
       expect(screen.getByTestId('subject-form')).toBeInTheDocument()
     })
@@ -336,7 +346,7 @@ describe('Display name — Your profile section', () => {
   })
 
   it('renders display name form in household tab', () => {
-    render(<SettingsPage />)
+    renderSettings()
     expect(screen.getByTestId('display-name-form')).toBeInTheDocument()
     expect(screen.getByTestId('display-name-input')).toBeInTheDocument()
   })
@@ -346,7 +356,7 @@ describe('Display name — Your profile section', () => {
       data: { user: { name: 'Existing Name', email: 'test@example.com' } },
       update: mockUpdateSession,
     })
-    render(<SettingsPage />)
+    renderSettings()
     expect(screen.getByTestId('display-name-input')).toHaveValue('Existing Name')
   })
 
@@ -355,12 +365,12 @@ describe('Display name — Your profile section', () => {
       data: { user: { email: 'test@example.com' } },
       update: mockUpdateSession,
     })
-    render(<SettingsPage />)
+    renderSettings()
     expect(screen.getByTestId('display-name-input')).toHaveValue('')
   })
 
   it('saves display name and shows success message', async () => {
-    render(<SettingsPage />)
+    renderSettings()
     const input = screen.getByTestId('display-name-input')
     await userEvent.clear(input)
     await userEvent.type(input, 'Fatima Ali')
@@ -374,7 +384,7 @@ describe('Display name — Your profile section', () => {
 
   it('shows error message when save fails', async () => {
     householdApi.updateUserProfile.mockRejectedValue(new Error('Network error'))
-    render(<SettingsPage />)
+    renderSettings()
     const input = screen.getByTestId('display-name-input')
     await userEvent.clear(input)
     await userEvent.type(input, 'Fatima Ali')
