@@ -6,6 +6,7 @@ import { plannerApi } from '@/features/plan/front/services/api'
 import { buildDailySchedule } from '@/features/schedule/server/service'
 import { ScheduleTimeline } from '@/features/schedule/front/components/ScheduleTimeline'
 import { useHousehold } from '@/features/household/front/context'
+import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { getCalendarRange } from '@/features/schedule/front/lib/calendarRange'
 import { CalendarNav } from '@/features/schedule/front/components/CalendarNav'
 import { WeekCalendarView } from '@/features/schedule/front/components/WeekCalendarView'
@@ -50,6 +51,7 @@ function groupByDate(lessons: LessonTask[]): Map<string, LessonTask[]> {
 export function SchedulePage() {
   const searchParams = useSearchParams()
   const { allSubjects, householdProfile, studentProfiles } = useHousehold()
+  const { selectedChildId } = useLearner()
   const [lessons, setLessons] = useState<LessonTask[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -72,12 +74,13 @@ export function SchedulePage() {
 
   useEffect(() => {
     setLoading(true)
+    const childIds = selectedChildId ? [selectedChildId] : undefined
     plannerApi
-      .getLessons(undefined, undefined, undefined, range.startDate, range.endDate)
+      .getLessons(undefined, childIds, undefined, range.startDate, range.endDate)
       .then(data => setLessons(data))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [range.startDate, range.endDate])
+  }, [range.startDate, range.endDate, selectedChildId])
 
   const lessonsByDate = useMemo(() => groupByDate(lessons), [lessons])
 

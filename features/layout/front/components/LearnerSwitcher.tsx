@@ -15,9 +15,10 @@ export function LearnerSwitcher() {
       aria-label="Viewing learner"
       data-testid="learner-switcher"
       className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-slate-800 min-w-[8rem] max-w-[12rem]"
-      value={selectedChildId ?? activeLearners[0].id}
-      onChange={(e) => setSelectedChildId(e.target.value)}
+      value={selectedChildId ?? ''}
+      onChange={(e) => setSelectedChildId(e.target.value === '' ? null : e.target.value)}
     >
+      <option value="">All children</option>
       {activeLearners.map((c) => (
         <option key={c.id} value={c.id}>
           {c.name}

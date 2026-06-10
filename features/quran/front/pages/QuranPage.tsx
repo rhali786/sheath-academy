@@ -7,6 +7,7 @@ import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import { quranApi } from '@/features/quran/front/services/api'
 import { QuranProgressChart } from '@/features/quran/front/components/QuranProgressChart'
 import { useHousehold } from '@/features/household/front/context'
+import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { SURAHS } from '@/features/quran/front/constants/surahs'
 import type { QuranSession } from '@/features/lib/types'
 import type { StudentProfile } from '@/features/lib/types'
@@ -49,6 +50,7 @@ function emptyAdd(defaultChildId = ''): AddState {
 
 export default function QuranPage() {
   const { studentProfiles: children } = useHousehold()
+  const { selectedChildId, setSelectedChildId } = useLearner()
   const searchParams = useSearchParams()
   const [sessions, setSessions] = useState<QuranSession[]>([])
   const [loading, setLoading] = useState(true)
@@ -60,7 +62,6 @@ export default function QuranPage() {
   const [editForm, setEditForm] = useState<EditState | null>(null)
   const [saving, setSaving] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const [filterChildId, setFilterChildId] = useState<string>('')
   const [filterType, setFilterType] = useState<string>('')
   const [dateSort, setDateSort] = useState<DateSort>('desc')
 
@@ -103,23 +104,25 @@ export default function QuranPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  // Sync URL childId → filterChildId after children load and on URL changes
+  // Seed shared learner from ?childId= when present
   useEffect(() => {
     if (children.length === 0) return
     const urlChildId = searchParams.get('childId')
     const matched = urlChildId ? children.find(c => c.id === urlChildId) : null
-    setFilterChildId(matched ? matched.id : '')
-  }, [searchParams, children])
+    if (matched) {
+      setSelectedChildId(matched.id)
+    }
+  }, [searchParams, children, setSelectedChildId])
 
   const displayedSessions = useMemo(() => {
     let list = sessions
-    if (filterChildId) list = list.filter(s => s.childId === filterChildId)
+    if (selectedChildId) list = list.filter(s => s.childId === selectedChildId)
     if (filterType)    list = list.filter(s => s.type === filterType)
     return [...list].sort((a, b) => {
       const cmp = a.date.localeCompare(b.date)
       return dateSort === 'asc' ? cmp : -cmp
     })
-  }, [sessions, filterChildId, filterType, dateSort])
+  }, [sessions, selectedChildId, filterType, dateSort])
 
   function startEdit(session: QuranSession) {
     setConfirmDeleteId(null)
@@ -272,8 +275,9 @@ export default function QuranPage() {
       {!loading && sessions.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-6">
           <select
-            value={filterChildId}
-            onChange={e => setFilterChildId(e.target.value)}
+            value={selectedChildId ?? ''}
+            onChange={e => setSelectedChildId(e.target.value === '' ? null : e.target.value)}
+            aria-label="Filter by learner"
             className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
           >
             <option value="">All children</option>

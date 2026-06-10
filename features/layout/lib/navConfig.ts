@@ -37,7 +37,7 @@ export const NAV_ITEMS: NavItem[] = [
     module: 'Planbook',
     activePrefixes: ['/plan'],
   },
-  { id: 'courses', label: 'Courses', href: '/lessons', section: 'main', module: 'Planbook', activePrefixes: ['/lessons'] },
+  { id: 'courses', label: 'Lessons', href: '/lessons', section: 'main', module: 'Planbook', activePrefixes: ['/lessons'] },
   { id: 'attendance', label: 'Attendance', href: '/attendance', section: 'main', module: 'Records' },
   {
     id: 'grades-progress',
@@ -90,7 +90,7 @@ export const NAV_ITEMS: NavItem[] = [
 ]
 
 /** Module config IDs for the module-grouped sidebar (re-homed IA). */
-export type NavModuleId = 'home' | 'planbook' | 'records' | 'progress' | 'people' | 'messages' | 'settings'
+export type NavModuleId = 'home' | 'planbook' | 'records' | 'people' | 'messages' | 'settings'
 
 export type NavModuleConfig = {
   id: NavModuleId
@@ -113,16 +113,9 @@ export const NAV_MODULES: NavModuleConfig[] = [
   },
   {
     id: 'records',
-    label: 'Records & Compliance',
+    label: 'Records',
     defaultHref: '/attendance',
-    itemIds: ['attendance', 'reports-records', 'compliance'],
-    section: 'main',
-  },
-  {
-    id: 'progress',
-    label: 'Growth & Reflection',
-    defaultHref: '/growth',
-    itemIds: ['grades-progress'],
+    itemIds: ['attendance', 'grades-progress', 'reports-records', 'compliance'],
     section: 'main',
   },
   { id: 'people', label: 'People', defaultHref: '/people', itemIds: [], section: 'main' },

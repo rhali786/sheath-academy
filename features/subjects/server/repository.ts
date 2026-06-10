@@ -240,8 +240,49 @@ export async function archiveSubjectsByLearner(
   householdId: string,
 ): Promise<void> {
   const db = getDb()
+  const now = new Date()
+
+  const enrolledRows = await db
+    .select({ subjectId: subjectLearners.subjectId })
+    .from(subjectLearners)
+    .innerJoin(subjects, eq(subjectLearners.subjectId, subjects.id))
+    .where(
+      and(eq(subjectLearners.learnerId, learnerId), eq(subjects.householdId, householdId)),
+    )
+
+  for (const { subjectId } of enrolledRows) {
+    await db
+      .delete(subjectLearners)
+      .where(
+        and(eq(subjectLearners.subjectId, subjectId), eq(subjectLearners.learnerId, learnerId)),
+      )
+
+    const remaining = await readLearnerIds(subjectId)
+    if (remaining.length === 0) {
+      await db
+        .update(subjects)
+        .set({ isActive: false, updatedAt: now })
+        .where(and(eq(subjects.id, subjectId), eq(subjects.householdId, householdId)))
+      continue
+    }
+
+    const [subjectRow] = await db
+      .select({ learnerId: subjects.learnerId })
+      .from(subjects)
+      .where(eq(subjects.id, subjectId))
+      .limit(1)
+
+    if (subjectRow?.learnerId === learnerId) {
+      await db
+        .update(subjects)
+        .set({ learnerId: remaining[0], updatedAt: now })
+        .where(and(eq(subjects.id, subjectId), eq(subjects.householdId, householdId)))
+    }
+  }
+
+  // Solo-primary courses (including legacy rows without subject_learners entries).
   await db
     .update(subjects)
-    .set({ isActive: false, updatedAt: new Date() })
+    .set({ isActive: false, updatedAt: now })
     .where(and(eq(subjects.learnerId, learnerId), eq(subjects.householdId, householdId)))
 }

@@ -4,6 +4,7 @@ import type { DaySchedule, ScheduleBlock } from '@/features/schedule/types'
 import type { LessonTask } from '@/features/plan/types'
 import { ScheduleNowNextCard } from '@/features/schedule/front/components/ScheduleNowNextCard'
 import { SchedulePage } from '@/features/schedule/front/pages/SchedulePage'
+import { LearnerProvider } from '@/features/layout/front/context/LearnerContext'
 
 const mockUseSearchParams = jest.fn(() => new URLSearchParams())
 jest.mock('next/navigation', () => ({
@@ -105,6 +106,14 @@ const threeBlockSchedule: DaySchedule = {
   isPaused: false,
 }
 
+function renderSchedulePage() {
+  return render(
+    <LearnerProvider>
+      <SchedulePage />
+    </LearnerProvider>,
+  )
+}
+
 describe('ScheduleNowNextCard', () => {
   it('shows current and next lesson titles', () => {
     render(<ScheduleNowNextCard schedule={twoBlockSchedule} currentTime="08:45" />)
@@ -159,13 +168,13 @@ describe('SchedulePage', () => {
 
   it('shows loading state initially', () => {
     mockGetLessons.mockReturnValue(new Promise(() => {}))
-    render(<SchedulePage />)
+    renderSchedulePage()
     expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })
 
   it('renders schedule timeline after lessons load', async () => {
     mockGetLessons.mockResolvedValue([])
-    render(<SchedulePage />)
+    renderSchedulePage()
     await waitFor(() => {
       expect(screen.getByTestId('schedule-timeline')).toBeInTheDocument()
     })
@@ -178,7 +187,7 @@ describe('SchedulePage', () => {
       { id: 'l1', childId: 'c1', subjectId: 's1', householdId: 'h1', title: 'Quran', dueDate: todayStr, status: 'not_started', order: 1, estimatedDuration: '30min', createdAt: '', updatedAt: '' },
       { id: 'l2', childId: 'c1', subjectId: 's1', householdId: 'h1', title: 'Math', dueDate: todayStr, status: 'not_started', order: 2, estimatedDuration: '30min', createdAt: '', updatedAt: '' },
     ])
-    render(<SchedulePage />)
+    renderSchedulePage()
     await waitFor(() => {
       expect(screen.getByText(/Quran/i)).toBeInTheDocument()
       expect(screen.getByText(/Math/i)).toBeInTheDocument()
@@ -186,22 +195,30 @@ describe('SchedulePage', () => {
   })
 
   it('day mode: fetch uses [selectedDate, selectedDate] as the window', async () => {
-    render(<SchedulePage />)
+    renderSchedulePage()
     await waitFor(() => expect(mockGetLessons).toHaveBeenCalled())
     const [,,,startDate, endDate] = mockGetLessons.mock.calls[0]
     expect(startDate).toBe(endDate)
     expect(startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
+  it('passes selectedChildId to getLessons when header learner is set', async () => {
+    sessionStorage.setItem('sheath.selectedChildId', 'child_b')
+    renderSchedulePage()
+    await waitFor(() => expect(mockGetLessons).toHaveBeenCalled())
+    const [, childIds] = mockGetLessons.mock.calls[mockGetLessons.mock.calls.length - 1]
+    expect(childIds).toEqual(['child_b'])
+  })
+
   it('deep-linked ?date= param is honoured and shown in the heading', async () => {
     mockUseSearchParams.mockReturnValue(new URLSearchParams('date=2026-06-01'))
-    render(<SchedulePage />)
+    renderSchedulePage()
     await waitFor(() => expect(screen.getByText(/2026-06-01/)).toBeInTheDocument())
   })
 
   it('day mode renders ScheduleTimeline (regression — identical to pre-calendar-range behaviour)', async () => {
     mockGetLessons.mockResolvedValue([])
-    render(<SchedulePage />)
+    renderSchedulePage()
     await waitFor(() => {
       expect(screen.getByTestId('schedule-timeline')).toBeInTheDocument()
     })
@@ -213,7 +230,7 @@ describe('SchedulePage', () => {
   it('week mode renders WeekCalendarView', async () => {
     mockUseSearchParams.mockReturnValue(new URLSearchParams('date=2026-03-18&view=week'))
     mockGetLessons.mockResolvedValue([])
-    render(<SchedulePage />)
+    renderSchedulePage()
     await waitFor(() => {
       expect(screen.getByTestId('week-calendar-view')).toBeInTheDocument()
     })
@@ -223,7 +240,7 @@ describe('SchedulePage', () => {
   it('month mode renders MonthCalendarView', async () => {
     mockUseSearchParams.mockReturnValue(new URLSearchParams('date=2026-03-18&view=month'))
     mockGetLessons.mockResolvedValue([])
-    render(<SchedulePage />)
+    renderSchedulePage()
     await waitFor(() => {
       expect(screen.getByTestId('month-calendar-view')).toBeInTheDocument()
     })

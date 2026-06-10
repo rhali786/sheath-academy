@@ -244,7 +244,7 @@ function CollapsedModuleFlyout({
       </Link>
       {items.length > 0 && (
         <div
-          className="hidden group-hover:block group-focus-within:block absolute left-full top-0 ml-1 min-w-[11rem] rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg z-20"
+          className="hidden group-hover:block group-focus-within:block absolute left-full top-0 ml-1 min-w-[11rem] rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg z-50"
           data-testid={`nav-module-subnav-${module.id}`}
         >
           {items.map((item) => (
@@ -335,7 +335,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             pathname={pathname}
             settingsTab={settingsTab}
             onNavigate={onClose}
-            inlineSubNav={mobileOpen}
+            inlineSubNav
             unreadMessages={unreadMessages}
           />
         ))}
@@ -393,7 +393,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
 
   return (
     <>
-      <div className="hidden md:flex md:flex-shrink-0 md:sticky md:top-0 md:h-screen">
+      <div className="hidden md:flex md:flex-shrink-0 md:sticky md:top-0 md:h-screen md:z-30">
         {collapsed ? collapsedRail : panel}
       </div>
 

@@ -1,6 +1,7 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { PlannerProvider } from '@/features/plan/front/context/PlannerContext'
 import { WeeklyPlannerPage } from '@/features/plan/front/components/WeeklyPlannerPage'
+import { LearnerProvider } from '@/features/layout/front/context/LearnerContext'
 import type { StudentProfile, ApiResponse } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 
@@ -62,9 +63,11 @@ function mockChildrenAndSubjects() {
 
 function renderWithPlanner() {
   return render(
-    <PlannerProvider>
-      <WeeklyPlannerPage />
-    </PlannerProvider>
+    <LearnerProvider>
+      <PlannerProvider>
+        <WeeklyPlannerPage />
+      </PlannerProvider>
+    </LearnerProvider>,
   )
 }
 
@@ -181,7 +184,7 @@ describe('WeeklyPlannerPage', () => {
     expect(screen.getByRole('button', { name: /previous week/i })).toBeInTheDocument()
   })
 
-  it('renders an Add lesson link pointing to /lessons', async () => {
+  it('Add lesson toggles inline form near Today (not a link to /lessons)', async () => {
     mockChildrenAndSubjects()
     renderWithPlanner()
 
@@ -189,7 +192,8 @@ describe('WeeklyPlannerPage', () => {
       expect(screen.queryByText(/loading planner/i)).not.toBeInTheDocument()
     })
 
-    const addLink = screen.getByRole('link', { name: /add lesson/i })
-    expect(addLink).toHaveAttribute('href', '/lessons')
+    expect(screen.queryByRole('link', { name: /add lesson/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
+    expect(screen.getByRole('heading', { name: /add lesson/i })).toBeInTheDocument()
   })
 })

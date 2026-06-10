@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
 import { formatCompletionWindow } from '@/features/plan/utils/lessonCompletionWindow'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
+import { filterSubjectsForLearner } from '@/features/subjects/lib/enrollment'
 
 const STATUS_LABELS: Record<LessonTaskStatus, string> = {
   not_started: 'Not started',
@@ -41,9 +42,11 @@ interface LessonCardProps {
   /** Legacy: called when Edit button is clicked (top-form pattern) — kept for backward compatibility */
   onEdit?: (lesson: LessonTask) => void
   onDelete?: (id: string) => void
+  /** Open inline edit on mount (e.g. deep-linked from /plan). */
+  defaultEditing?: boolean
 }
 
-export function LessonCard({ lesson, childName, subjectName, children, subjects, onUpdate, onEdit, onDelete }: LessonCardProps) {
+export function LessonCard({ lesson, childName, subjectName, children, subjects, onUpdate, onEdit, onDelete, defaultEditing = false }: LessonCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -94,6 +97,14 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     }
   }
 
+  useEffect(() => {
+    if (defaultEditing && onUpdate) {
+      startEdit()
+    }
+    // Only run when deep-linked to this card
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultEditing, lesson.id])
+
   function cancelEdit() {
     setIsEditing(false)
     setTitleError('')
@@ -127,13 +138,13 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     }
   }
 
-  const filteredSubjects = subjects
-    ? subjects.filter(s => s.childId === editChildId)
+  const filteredSubjects = subjects && editChildId
+    ? filterSubjectsForLearner(subjects, editChildId)
     : []
 
   if (isEditing) {
     return (
-      <div className="bg-white rounded-lg border border-forest-200 shadow-sm overflow-hidden">
+      <div data-lesson-id={lesson.id} className="bg-white rounded-lg border border-forest-200 shadow-sm overflow-hidden">
         <div className="p-4 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {children && children.length > 0 && (
@@ -266,7 +277,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
   }
 
   return (
-    <div className="p-4 bg-white rounded-lg border border-slate-200 space-y-2">
+    <div data-lesson-id={lesson.id} className="p-4 bg-white rounded-lg border border-slate-200 space-y-2">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-slate-900">{lesson.title}</div>

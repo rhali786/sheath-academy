@@ -1,18 +1,23 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import { usePlanner } from '../context/PlannerContext'
 import { useHousehold } from '@/features/household/front/context'
+import { useLearner } from '@/features/layout/front/context/LearnerContext'
+import { plannerApi } from '@/features/plan/front/services/api'
 import { WeekNavigator } from './WeekNavigator'
 import { ChildSubjectFilter } from './ChildSubjectFilter'
 import { WeekGrid } from './WeekGrid'
 import { WeeklyList } from './WeeklyList'
 import { EmptyWeekState } from './EmptyWeekState'
+import { LessonTaskForm, type LessonFormData } from './LessonTaskForm'
+
 export function WeeklyPlannerPage() {
-  const { lessons, isInitializing, isLessonsLoading, error } = usePlanner()
-  const { loading: householdLoading } = useHousehold()
+  const { lessons, isInitializing, isLessonsLoading, error, refreshLessons } = usePlanner()
+  const { loading: householdLoading, householdProfile, studentProfiles, allSubjects } = useHousehold()
+  const { selectedChildId } = useLearner()
   const [isMobile, setIsMobile] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
 
   useEffect(() => {
     const handleResize = () => {
@@ -24,6 +29,12 @@ export function WeeklyPlannerPage() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  async function handleAddLesson(data: LessonFormData) {
+    const householdId = householdProfile?.id ?? ''
+    await plannerApi.createLesson({ ...data, householdId })
+    refreshLessons?.()
+    setShowAddForm(false)
+  }
 
   if (householdLoading || isInitializing) {
     return (
@@ -49,12 +60,24 @@ export function WeeklyPlannerPage() {
 
   return (
     <div className="flex flex-col h-screen bg-slate-50">
-      <div className="flex items-center justify-end px-4 sm:px-6 lg:px-8 pt-3">
-        <Link href="/lessons" className="px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800">
-          Add lesson
-        </Link>
-      </div>
-      <WeekNavigator />
+      <WeekNavigator
+        onToggleAddLesson={() => setShowAddForm(v => !v)}
+        showAddForm={showAddForm}
+      />
+      {showAddForm && (
+        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 border-b border-slate-200 bg-white">
+          <h2 className="form-section-heading">Add lesson</h2>
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+            <LessonTaskForm
+              children={studentProfiles.filter(c => c.isActive !== false)}
+              subjects={allSubjects}
+              defaultSelectedChildIds={selectedChildId ? [selectedChildId] : undefined}
+              onSubmit={handleAddLesson}
+              onCancel={() => setShowAddForm(false)}
+            />
+          </div>
+        </div>
+      )}
       <ChildSubjectFilter />
 
       {isLessonsLoading ? (

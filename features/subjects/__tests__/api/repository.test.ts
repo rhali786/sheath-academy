@@ -3,7 +3,13 @@
 const hasDb = !!process.env.DATABASE_URL
 const itDb = hasDb ? it : it.skip
 
-import { createSubjectRow, listSubjectRows, updateSubjectRow, archiveSubjectRow } from '../../server/repository'
+import {
+  archiveSubjectsByLearner,
+  createSubjectRow,
+  listSubjectRows,
+  updateSubjectRow,
+  archiveSubjectRow,
+} from '../../server/repository'
 import { createTestHousehold } from '@/features/lib/__tests__/fixtures/testDb'
 
 let householdId: string
@@ -166,6 +172,74 @@ describe('subjects repository — multi-learner via subject_learners join table'
       }
       const { learners: learnersTable } = await import('@/db/schema')
       await getDb().delete(learnersTable).where(eq(learnersTable.id, l2.id))
+    }
+  })
+})
+
+describe('archiveSubjectsByLearner', () => {
+  itDb('removes archived learner from group course but keeps course active for others', async () => {
+    const { createLearner } = await import('@/features/children/server/repository')
+    const { getDb } = await import('@/features/lib/server/db')
+    const { subjects: subjectsTable, subjectLearners } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    const safiya = await createLearner(householdId, { name: 'Safiya' })
+    let subjectId = ''
+    try {
+      const row = await createSubjectRow(householdId, {
+        name: 'Algebra',
+        category: 'Math',
+        learnerIds: [learnerId, safiya.id],
+      })
+      subjectId = row.id
+
+      await archiveSubjectsByLearner(safiya.id, householdId)
+
+      const listed = await listSubjectRows(householdId)
+      const found = listed.find((r) => r.id === subjectId)
+      expect(found).toBeDefined()
+      expect(found!.isActive).toBe(true)
+      expect(found!.learnerIds).toEqual([learnerId])
+      expect(found!.learnerId).toBe(learnerId)
+    } finally {
+      if (subjectId) {
+        await getDb().delete(subjectLearners).where(eq(subjectLearners.subjectId, subjectId))
+        await getDb().delete(subjectsTable).where(eq(subjectsTable.id, subjectId))
+      }
+      const { learners: learnersTable } = await import('@/db/schema')
+      await getDb().delete(learnersTable).where(eq(learnersTable.id, safiya.id))
+    }
+  })
+
+  itDb('archives solo course owned only by the archived learner', async () => {
+    const { createLearner } = await import('@/features/children/server/repository')
+    const { getDb } = await import('@/features/lib/server/db')
+    const { subjects: subjectsTable, subjectLearners } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    const safiya = await createLearner(householdId, { name: 'Safiya Solo' })
+    let subjectId = ''
+    try {
+      const row = await createSubjectRow(householdId, {
+        name: 'Safiya Reading',
+        category: 'Reading',
+        learnerIds: [safiya.id],
+      })
+      subjectId = row.id
+
+      await archiveSubjectsByLearner(safiya.id, householdId)
+
+      const listed = await listSubjectRows(householdId, undefined, true)
+      const found = listed.find((r) => r.id === subjectId)
+      expect(found?.isActive).toBe(false)
+      expect(found?.learnerIds).toEqual([])
+    } finally {
+      if (subjectId) {
+        await getDb().delete(subjectLearners).where(eq(subjectLearners.subjectId, subjectId))
+        await getDb().delete(subjectsTable).where(eq(subjectsTable.id, subjectId))
+      }
+      const { learners: learnersTable } = await import('@/db/schema')
+      await getDb().delete(learnersTable).where(eq(learnersTable.id, safiya.id))
     }
   })
 })

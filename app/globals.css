@@ -221,4 +221,21 @@ button {
     font-size: 9pt;
     color: #555 !important;
   }
+
+  /* Dashboard export: print only the loaded report, not the full page chrome */
+  body.dashboard-printing * {
+    visibility: hidden;
+  }
+
+  body.dashboard-printing .dashboard-print-report,
+  body.dashboard-printing .dashboard-print-report * {
+    visibility: visible;
+  }
+
+  body.dashboard-printing .dashboard-print-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
 }

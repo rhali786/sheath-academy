@@ -41,7 +41,6 @@ export function AttendancePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState<AttendanceStatus | ''>('')
-  const [filterChildId, setFilterChildId] = useState<string>('')
   const [dateSort, setDateSort] = useState<DateSort>('desc')
   const [mode, setMode] = useState<Mode>('individual')
   const [batchLoading, setBatchLoading] = useState(false)
@@ -55,10 +54,8 @@ export function AttendancePage() {
     const matched = urlChildId ? children.find((c) => c.id === urlChildId) : null
     if (matched) {
       setSelectedChildId(matched.id)
-    } else if (!selectedChildId && children[0]) {
-      setSelectedChildId(children[0].id)
     }
-  }, [searchParams, children, selectedChildId, setSelectedChildId])
+  }, [searchParams, children, setSelectedChildId])
 
   async function fetchRecords() {
     try {
@@ -140,12 +137,12 @@ export function AttendancePage() {
   const filteredRecords = useMemo(() => {
     let list = records
     if (filterStatus) list = list.filter(r => r.status === filterStatus)
-    if (filterChildId) list = list.filter(r => r.childId === filterChildId)
+    if (selectedChildId) list = list.filter(r => r.childId === selectedChildId)
     return [...list].sort((a, b) => {
       const cmp = a.date.localeCompare(b.date)
       return dateSort === 'asc' ? cmp : -cmp
     })
-  }, [records, filterStatus, filterChildId, dateSort])
+  }, [records, filterStatus, selectedChildId, dateSort])
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-8">
@@ -265,8 +262,8 @@ export function AttendancePage() {
           <h2 className="text-lg font-bold text-slate-900">Records</h2>
           <div className="flex flex-wrap gap-2">
             <select
-              value={filterChildId}
-              onChange={e => setFilterChildId(e.target.value)}
+              value={selectedChildId ?? ''}
+              onChange={e => setSelectedChildId(e.target.value === '' ? null : e.target.value)}
               aria-label="Filter by learner"
               className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
             >

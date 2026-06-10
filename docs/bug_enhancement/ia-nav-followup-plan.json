@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/bug_enhancement/ia-nav-followup-plan.md",
+  "branch": "fix/ia-nav-followup",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Nav: Lessons label + Growth under Records",
+      "gated": false,
+      "modelTier": "cheap",
+      "preconditions": [
+        "On branch fix/ia-nav-followup from dev",
+        "navConfig.ts owns NAV_ITEMS and NAV_MODULES"
+      ],
+      "fileScope": [
+        "features/layout/lib/navConfig.ts",
+        "features/layout/__tests__/navConfig.test.ts",
+        "features/layout/__tests__/Sidebar.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE navConfig.test.ts: courses nav item label is 'Lessons' (id stays courses)",
+        "UPDATE navConfig.test.ts: records module itemIds includes grades-progress after attendance; no separate progress module in NAV_MODULES",
+        "UPDATE navConfig.test.ts: isNavModuleActive('/growth', records) === true"
+      ],
+      "implementationSteps": [
+        "Rename NAV_ITEMS courses label from 'Courses' to 'Lessons'",
+        "Add grades-progress to records module itemIds (order: attendance, grades-progress, reports-records, compliance)",
+        "Remove the standalone progress module from NAV_MODULES",
+        "Remove progress from NavModuleId type if present",
+        "Rename records module label to 'Records' (drop '& Compliance' from module header — compliance remains a sub-item)"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/layout/__tests__/navConfig.test.ts features/layout/__tests__/Sidebar.test.tsx"
+      ],
+      "invariants": [],
+      "writeBack": "Nav: courses label=Lessons; grades-progress lives under records NAV_MODULES; progress module removed. No href changes."
+    },
+    {
+      "id": "phase-2",
+      "title": "Header learner switcher All children",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase-1 complete",
+        "LearnerProvider supports selectedChildId null (All children)"
+      ],
+      "fileScope": [
+        "features/layout/front/components/LearnerSwitcher.tsx",
+        "features/layout/__tests__/integration/LearnerSwitcher.test.tsx",
+        "features/attendance/front/pages/AttendancePage.tsx",
+        "features/attendance/__tests__/integration/AttendancePage.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE LearnerSwitcher.test.tsx: select includes 'All children' option with value ''; selecting it clears sessionStorage key",
+        "UPDATE AttendancePage.test.tsx: does NOT auto-set first child when selectedChildId is null and no ?childId= param"
+      ],
+      "implementationSteps": [
+        "LearnerSwitcher: add <option value=''>All children</option>; value={selectedChildId ?? ''}; onChange treats '' as setSelectedChildId(null)",
+        "AttendancePage: remove else branch that forces setSelectedChildId(children[0].id) when null — only seed from ?childId="
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/layout/__tests__/integration/LearnerSwitcher.test.tsx features/attendance/__tests__/integration/AttendancePage.test.tsx"
+      ],
+      "invariants": [],
+      "writeBack": "Header switcher supports All children (null). Attendance no longer overrides null with first child."
+    },
+    {
+      "id": "phase-3",
+      "title": "Global learner filtering: Schedule, Quran, Attendance records",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase-2 complete",
+        "plannerApi.getLessons accepts childIds[]",
+        "quranApi.getSessions accepts childId filter"
+      ],
+      "fileScope": [
+        "features/schedule/front/pages/SchedulePage.tsx",
+        "features/schedule/front/__tests__/integration/**",
+        "features/quran/front/pages/QuranPage.tsx",
+        "features/quran/__tests__/integration/QuranPage.test.tsx",
+        "features/attendance/front/pages/AttendancePage.tsx",
+        "features/attendance/__tests__/integration/AttendancePage.test.tsx"
+      ],
+      "testsFirst": [
+        "NEW/UPDATE SchedulePage test: when sessionStorage child set, getLessons called with that childIds",
+        "UPDATE QuranPage.test.tsx: changing useLearner selection filters displayed sessions",
+        "UPDATE AttendancePage.test.tsx: records list defaults filter to header selectedChildId when set"
+      ],
+      "implementationSteps": [
+        "SchedulePage: useLearner(); pass childIds=[selectedChildId] to getLessons when selectedChildId set",
+        "QuranPage: replace URL-only filterChildId with useLearner selectedChildId (null = all children); keep ?childId= seed into setSelectedChildId",
+        "AttendancePage: derive records filterChildId from selectedChildId when set (remove separate default empty when learner selected)"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/schedule features/quran features/attendance"
+      ],
+      "invariants": [],
+      "writeBack": "Schedule/Quran/Attendance records respect header learner. Null = all learners on list/chart views."
+    },
+    {
+      "id": "phase-4",
+      "title": "Lessons page learner sync + Plan inline add lesson",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase-2 complete",
+        "LessonsPage has collapsible LessonTaskForm; WeeklyPlannerPage has Link to /lessons for Add lesson"
+      ],
+      "fileScope": [
+        "features/plan/front/pages/LessonsPage.tsx",
+        "features/plan/front/components/WeeklyPlannerPage.tsx",
+        "features/plan/front/components/WeekNavigator.tsx",
+        "features/plan/__tests__/integration/LessonsPage.test.tsx",
+        "features/plan/__tests__/integration/WeeklyPlannerPage.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE LessonsPage.test.tsx: when useLearner has child selected, Add lesson form pre-checks that learner and subject dropdown populates",
+        "UPDATE LessonsPage.test.tsx: ?add=1 opens add form on load",
+        "UPDATE WeeklyPlannerPage.test.tsx: Add lesson toggles inline form (not link to /lessons); button lives in week nav row near Today"
+      ],
+      "implementationSteps": [
+        "LessonsPage: useLearner(); sync filterChildId and LessonTaskForm initial selectedChildIds when selectedChildId set",
+        "LessonsPage: if searchParams add=1, setShowForm(true) on mount",
+        "WeeklyPlannerPage: remove top-right Link; lift showAddForm state; render collapsible LessonTaskForm below WeekNavigator",
+        "WeekNavigator: accept optional onAddLesson toggle prop; render 'Add lesson' button adjacent to Today button",
+        "Wire createLesson + refresh via plannerApi and PlannerContext refreshLessons"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/plan/__tests__/integration/LessonsPage.test.tsx features/plan/__tests__/integration/WeeklyPlannerPage.test.tsx"
+      ],
+      "invariants": [],
+      "writeBack": "Lessons pre-selects header learner. Plan /plan has inline Add lesson near Today. /lessons?add=1 opens form."
+    },
+    {
+      "id": "phase-5",
+      "title": "Schedule attendance save confirmation",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase-3 complete",
+        "InlineSuccess component exists in features/lib"
+      ],
+      "fileScope": [
+        "features/schedule/front/components/ScheduleAttendanceCapture.tsx",
+        "features/schedule/front/__tests__/integration/ScheduleAttendanceCapture.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE ScheduleAttendanceCapture.test.tsx: after status select, InlineSuccess message appears (e.g. 'Attendance saved')"
+      ],
+      "implementationSteps": [
+        "ScheduleAttendanceCapture: on successful createRecord, set successMessage state and render InlineSuccess",
+        "Clear success on new status attempt or form collapse"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/schedule/front/__tests__/integration/ScheduleAttendanceCapture.test.tsx"
+      ],
+      "invariants": [],
+      "writeBack": "Schedule day-view attendance shows InlineSuccess after save."
+    }
+  ]
+}

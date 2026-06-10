@@ -11,10 +11,23 @@ const mockChildren: StudentProfile[] = [
 ]
 
 const mockSubjects: SubjectCourse[] = [
-  { id: 'subj_adam_math', childId: 'child_001', name: 'Mathematics', category: 'Math', isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
-  { id: 'subj_adam_quran', childId: 'child_001', name: 'Quran', category: 'Islamic', isActive: true, order: 2, createdAt: '2026-01-01T00:00:00Z' },
-  { id: 'subj_khad_math', childId: 'child_002', name: 'Mathematics', category: 'Math', isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
-  { id: 'subj_khad_reading', childId: 'child_002', name: 'Reading', category: 'English', isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'subj_adam_math', childId: 'child_001', learnerIds: ['child_001'], name: 'Mathematics', category: 'Math', isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'subj_adam_quran', childId: 'child_001', learnerIds: ['child_001'], name: 'Quran', category: 'Islamic', isActive: true, order: 2, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'subj_khad_math', childId: 'child_002', learnerIds: ['child_002'], name: 'Mathematics', category: 'Math', isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'subj_khad_reading', childId: 'child_002', learnerIds: ['child_002'], name: 'Reading', category: 'English', isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
+]
+
+const sharedAlgebraSubjects: SubjectCourse[] = [
+  {
+    id: 'subj_algebra_shared',
+    childId: 'child_001',
+    learnerIds: ['child_001', 'child_002'],
+    name: 'Algebra',
+    category: 'Math',
+    isActive: true,
+    order: 1,
+    createdAt: '2026-01-01T00:00:00Z',
+  },
 ]
 
 const editingLesson: LessonTask = {
@@ -92,6 +105,22 @@ describe('LessonTaskForm — create mode', () => {
       />
     )
     expect(screen.getByRole('button', { name: /add lesson/i })).toBeInTheDocument()
+  })
+
+  it('shows shared group course for a non-primary enrolled learner', () => {
+    render(
+      <LessonTaskForm
+        children={mockChildren}
+        subjects={sharedAlgebraSubjects}
+        onSubmit={jest.fn()}
+      />
+    )
+    fireEvent.click(screen.getByRole('checkbox', { name: /khadijah/i }))
+
+    const subjectOptions = Array.from(
+      (screen.getByLabelText(/course\/subject/i) as HTMLSelectElement).options,
+    ).map((o) => o.text)
+    expect(subjectOptions).toContain('Algebra')
   })
 
   it('subject dropdown is filtered to selected child', () => {
@@ -346,6 +375,34 @@ describe('LessonTaskForm — multi-learner group assignment', () => {
     )
     expect(screen.getByRole('checkbox', { name: /adam/i })).toBeInTheDocument()
     expect(screen.getByRole('checkbox', { name: /khadijah/i })).toBeInTheDocument()
+  })
+
+  it('submits the same subject id for a shared group course when 2+ learners selected', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskForm children={mockChildren} subjects={sharedAlgebraSubjects} onSubmit={onSubmit} />
+    )
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /khadijah/i }))
+    fireEvent.change(screen.getByLabelText(/course\/subject/i), {
+      target: { value: 'subj_algebra_shared' },
+    })
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Shared algebra' } })
+    fireEvent.change(screen.getByLabelText(/planned date/i), { target: { value: '2026-05-15' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          childIds: ['child_001', 'child_002'],
+          assignments: [
+            { childId: 'child_001', subjectId: 'subj_algebra_shared' },
+            { childId: 'child_002', subjectId: 'subj_algebra_shared' },
+          ],
+        }),
+      )
+    })
   })
 
   it('submits childIds and per-learner assignments when 2+ learners selected', async () => {

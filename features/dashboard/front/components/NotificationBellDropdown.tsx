@@ -2,8 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 import { Bell } from 'lucide-react'
 import type { Alert } from '@/features/alerts/types'
+import type { ConversationSummary } from '@/features/messaging/types'
+import { useUnreadMessages } from '@/features/messaging/front/hooks/useUnreadMessages'
+import { listConversations } from '@/features/messaging/front/services/api'
 
 interface NotificationBellDropdownProps {
   alerts: Alert[]
@@ -15,9 +19,23 @@ const SEVERITY_RANK: Record<Alert['severity'], number> = {
   low: 2,
 }
 
+function getConversationLabel(conv: ConversationSummary, currentUserId?: string): string {
+  if (conv.type === 'group' && conv.title) return conv.title
+  if (conv.type === 'direct') {
+    const other = conv.participants.find((p) => p.userId !== currentUserId)
+    return other?.userName || other?.userEmail || 'Unknown'
+  }
+  return conv.title || 'Unnamed'
+}
+
 export function NotificationBellDropdown({ alerts }: NotificationBellDropdownProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const { data: session } = useSession()
+  const currentUserId = session?.user?.userId
+  const { count: unreadMessageCount } = useUnreadMessages()
+  const [unreadConversations, setUnreadConversations] = useState<ConversationSummary[]>([])
+
   const openAlerts = alerts
     .filter(a => a.status === 'open')
     .sort((a, b) => {
@@ -27,6 +45,39 @@ export function NotificationBellDropdown({ alerts }: NotificationBellDropdownPro
       const dateB = b.date ?? b.createdAt
       return dateB.localeCompare(dateA)
     })
+
+  const notificationCount = openAlerts.length + unreadMessageCount
+  const hasNotifications = notificationCount > 0
+
+  useEffect(() => {
+    if (!currentUserId) {
+      setUnreadConversations([])
+      return
+    }
+
+    let active = true
+
+    const loadUnreadConversations = async () => {
+      try {
+        const res = await listConversations()
+        if (!active) return
+        const unread = res.data.conversations
+          .filter((c) => c.unreadCount > 0)
+          .sort((a, b) => (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? ''))
+        setUnreadConversations(unread)
+      } catch {
+        if (active) setUnreadConversations([])
+      }
+    }
+
+    void loadUnreadConversations()
+    const id = setInterval(() => void loadUnreadConversations(), 15000)
+
+    return () => {
+      active = false
+      clearInterval(id)
+    }
+  }, [currentUserId])
 
   useEffect(() => {
     if (!open) return
@@ -51,12 +102,12 @@ export function NotificationBellDropdown({ alerts }: NotificationBellDropdownPro
         data-testid="dashboard-notification-bell"
       >
         <Bell className="h-5 w-5" aria-hidden="true" />
-        {openAlerts.length > 0 && (
+        {hasNotifications && (
           <span
             className="absolute top-1 right-1 min-w-[1rem] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center"
             data-testid="notification-badge"
           >
-            {openAlerts.length}
+            {notificationCount > 99 ? '99+' : notificationCount}
           </span>
         )}
       </button>
@@ -69,7 +120,7 @@ export function NotificationBellDropdown({ alerts }: NotificationBellDropdownPro
           <p className="px-3 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wide">
             Notifications
           </p>
-          {openAlerts.length === 0 ? (
+          {!hasNotifications ? (
             <p className="px-3 py-3 text-sm text-slate-500" data-testid="notification-empty">
               No new notifications
             </p>
@@ -95,6 +146,36 @@ export function NotificationBellDropdown({ alerts }: NotificationBellDropdownPro
                   )}
                 </li>
               ))}
+              {unreadConversations.length > 0 && (
+                <>
+                  {openAlerts.length > 0 && (
+                    <li className="px-3 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                      Messages
+                    </li>
+                  )}
+                  {unreadConversations.map((conv) => {
+                    const label = getConversationLabel(conv, currentUserId)
+                    const title =
+                      conv.unreadCount === 1
+                        ? `New message from ${label}`
+                        : `${conv.unreadCount} new messages from ${label}`
+                    const preview = conv.lastMessage?.body ?? 'Open conversation'
+                    return (
+                      <li key={`msg-${conv.id}`}>
+                        <Link
+                          href={`/messages?c=${conv.id}`}
+                          className="block px-3 py-2 hover:bg-slate-50"
+                          role="menuitem"
+                          onClick={() => setOpen(false)}
+                        >
+                          <p className="text-sm font-medium text-slate-900">{title}</p>
+                          <p className="text-xs text-slate-500 line-clamp-2">{preview}</p>
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </>
+              )}
             </ul>
           )}
         </div>

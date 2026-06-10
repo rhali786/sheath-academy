@@ -3,8 +3,9 @@
 import { useMemo, useState } from 'react'
 import { attendanceApi } from '@/features/attendance/front/services/api'
 import { AttendanceStatusButtons } from '@/features/attendance/front/components/AttendanceStatusButtons'
-import type { AttendanceStatus } from '@/features/attendance/types'
+import { STATUS_LABELS, type AttendanceStatus } from '@/features/attendance/types'
 import type { StudentProfile } from '@/features/lib/types'
+import { InlineSuccess } from '@/features/lib/front/components/InlineSuccess'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
 
 function resolveFocusedLearner(
@@ -34,6 +35,7 @@ export function ScheduleAttendanceCapture({
   const { selectedChildId } = useLearner()
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const focusedLearner = useMemo(
     () => resolveFocusedLearner(studentProfiles, selectedChildId),
     [studentProfiles, selectedChildId],
@@ -42,6 +44,7 @@ export function ScheduleAttendanceCapture({
   async function handleSelect(status: AttendanceStatus) {
     if (!focusedLearner) return
     setError(null)
+    setSuccessMessage(null)
     try {
       await attendanceApi.createRecord({
         childId: focusedLearner.id,
@@ -49,6 +52,9 @@ export function ScheduleAttendanceCapture({
         date: selectedDate,
         status,
       })
+      setSuccessMessage(
+        `Saved ${STATUS_LABELS[status]} for ${focusedLearner.name}`,
+      )
     } catch {
       setError('Failed to save attendance')
     }
@@ -75,6 +81,9 @@ export function ScheduleAttendanceCapture({
             <span className="font-medium text-slate-900">{selectedDate}</span>
           </p>
           <AttendanceStatusButtons onSelect={handleSelect} />
+          {successMessage && (
+            <InlineSuccess message={successMessage} onDismiss={() => setSuccessMessage(null)} />
+          )}
           {error && (
             <p className="text-sm text-red-600" role="alert">
               {error}

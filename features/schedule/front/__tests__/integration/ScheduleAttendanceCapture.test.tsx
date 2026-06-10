@@ -102,6 +102,7 @@ describe('SchedulePage attendance capture (day view)', () => {
         status: 'present',
       })
     })
+    expect(screen.getByRole('status')).toHaveTextContent(/saved present for adam/i)
   })
 
   test('does not show attendance capture on week view', async () => {

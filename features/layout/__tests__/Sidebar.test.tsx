@@ -142,7 +142,6 @@ describe('Sidebar', () => {
     render(<Sidebar />)
     const planbook = screen.getByTestId('nav-module-link-planbook')
     expect(planbook.className).toContain('bg-forest-100')
-    fireEvent.focus(screen.getByTestId('nav-module-planbook'))
     const planner = within(screen.getByTestId('nav-module-subnav-planbook')).getByTestId('nav-item-lesson-planner')
     expect(planner).toHaveAttribute('aria-current', 'page')
   })
@@ -184,27 +183,33 @@ describe('Sidebar — module grouping', () => {
     expect(screen.getByTestId('nav-module-link-planbook')).toHaveAttribute('href', '/lessons')
   })
 
-  test('non-active module reveals sub-nav on focus', () => {
+  test('expanded sidebar shows sub-nav items inline without hover', () => {
     mockUsePathname.mockReturnValue('/dashboard')
     render(<Sidebar />)
     const subNav = screen.getByTestId('nav-module-subnav-planbook')
-    expect(subNav.className).toContain('hidden')
-    fireEvent.focus(screen.getByTestId('nav-module-planbook'))
-    expect(subNav.className).toContain('group-focus-within:block')
+    expect(subNav.className).not.toContain('hidden')
+    expect(subNav.className).toContain('border-l')
+    expect(within(subNav).getByTestId('nav-item-lesson-planner')).toBeInTheDocument()
   })
 
   test('sub-nav links carry aria-current when active', () => {
     mockUsePathname.mockReturnValue('/lessons')
     render(<Sidebar />)
-    fireEvent.focus(screen.getByTestId('nav-module-planbook'))
     expect(screen.getByTestId('nav-item-courses')).toHaveAttribute('aria-current', 'page')
   })
 
   test('sidebar renders module header labels', () => {
     render(<Sidebar />)
     expect(screen.getByText('Planbook')).toBeInTheDocument()
-    expect(screen.getByText('Records & Compliance')).toBeInTheDocument()
+    expect(screen.getByText('Records')).toBeInTheDocument()
     expect(screen.getAllByText('Settings').length).toBeGreaterThanOrEqual(1)
+  })
+
+  test('planbook sub-nav items are visible in expanded sidebar', () => {
+    render(<Sidebar />)
+    expect(screen.getByTestId('nav-item-lesson-planner')).toBeInTheDocument()
+    expect(screen.getByTestId('nav-item-courses')).toBeInTheDocument()
+    expect(screen.getByTestId('nav-item-attendance')).toBeInTheDocument()
   })
 
   test('planbook sub-nav items are reachable on mobile inline layout', () => {

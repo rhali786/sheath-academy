@@ -3,7 +3,12 @@
 import React, { useState } from 'react'
 import { usePlanner } from '../context/PlannerContext'
 
-export function WeekNavigator() {
+interface WeekNavigatorProps {
+  onToggleAddLesson?: () => void
+  showAddForm?: boolean
+}
+
+export function WeekNavigator({ onToggleAddLesson, showAddForm = false }: WeekNavigatorProps) {
   const { selectedWeek, setSelectedWeek, weekStartDay } = usePlanner()
   const [showDatePicker, setShowDatePicker] = useState(false)
 
@@ -101,6 +106,15 @@ export function WeekNavigator() {
             >
               Today
             </button>
+            {onToggleAddLesson && (
+              <button
+                type="button"
+                onClick={onToggleAddLesson}
+                className="px-4 py-2.5 text-sm font-medium text-white bg-forest-900 border border-forest-900 rounded-lg hover:bg-forest-800 hover:border-forest-800 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2 transition-colors"
+              >
+                {showAddForm ? 'Cancel' : 'Add lesson'}
+              </button>
+            )}
           </div>
         </div>
       </div>

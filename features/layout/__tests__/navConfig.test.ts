@@ -112,13 +112,14 @@ describe('Module grouping', () => {
     expect(labels).toEqual(['Home', 'Planbook', 'Records', 'Compliance', 'People', 'Settings'])
   })
 
-  test('getNavModules groups items correctly — Planbook includes Calendar, Lesson Planner, Courses', () => {
+  test('getNavModules groups items correctly — Planbook includes Calendar, Lesson Planner, Lessons', () => {
     const modules = getNavModules()
     const planbook = modules.find(m => m.label === 'Planbook')!
     const planbookIds = planbook.items.map(i => i.id)
     expect(planbookIds).toContain('calendar')
     expect(planbookIds).toContain('lesson-planner')
     expect(planbookIds).toContain('courses')
+    expect(NAV_ITEMS.find(i => i.id === 'courses')!.label).toBe('Lessons')
   })
 })
 
@@ -129,10 +130,19 @@ describe('NAV_MODULES (module config)', () => {
     expect(isNavModuleActive('/attendance', planbook)).toBe(false)
   })
 
-  test('getModuleItems(records) returns attendance, reports-records, compliance in order', () => {
+  test('getModuleItems(records) returns attendance, grades-progress, reports-records, compliance in order', () => {
     const records = NAV_MODULES.find(m => m.id === 'records')!
     const ids = getModuleItems(records).map(i => i.id)
-    expect(ids).toEqual(['attendance', 'reports-records', 'compliance'])
+    expect(ids).toEqual(['attendance', 'grades-progress', 'reports-records', 'compliance'])
+  })
+
+  test('isNavModuleActive: records module active on /growth', () => {
+    const records = NAV_MODULES.find(m => m.id === 'records')!
+    expect(isNavModuleActive('/growth', records)).toBe(true)
+  })
+
+  test('NAV_MODULES has no separate progress module', () => {
+    expect(NAV_MODULES.find(m => m.id === 'progress')).toBeUndefined()
   })
 
   test('quran and resources are members of the planbook module', () => {

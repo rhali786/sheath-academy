@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react'
 import type { LessonTask, LessonTaskStatus, LessonDuration } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
+import {
+  filterSubjectsForLearners,
+  subjectEnrollsLearner,
+} from '@/features/subjects/lib/enrollment'
 
 const GENERAL_LESSON_TYPES = ['Lesson', 'Assignment', 'Reading', 'Practice', 'Review', 'Project', 'Assessment', 'Other']
 const QURAN_LESSON_TYPES   = ['Memorisation', 'Revision', 'Recitation', 'Tajweed', 'Listening']
@@ -36,12 +40,14 @@ function resolveAssignments(
 ): LessonLearnerAssignment[] {
   const template = allSubjects.find(s => s.id === subjectId)
   return selectedChildIds.map(childId => {
-    if (template?.childId === childId) {
+    if (template && subjectEnrollsLearner(template, childId)) {
       return { childId, subjectId: template.id }
     }
     const match = template
-      ? allSubjects.find(s => s.childId === childId && s.name === template.name)
-      : allSubjects.find(s => s.childId === childId && s.id === subjectId)
+      ? allSubjects.find(
+          (s) => s.name === template.name && subjectEnrollsLearner(s, childId),
+        )
+      : allSubjects.find((s) => s.id === subjectId && subjectEnrollsLearner(s, childId))
     return { childId, subjectId: match?.id ?? subjectId }
   })
 }
@@ -66,6 +72,7 @@ interface LessonTaskFormProps {
   children: StudentProfile[]
   subjects: SubjectCourse[]
   editingLesson?: LessonTask
+  defaultSelectedChildIds?: string[]
   onSubmit: (data: LessonFormData) => Promise<void>
   onCancel?: () => void
 }
@@ -74,13 +81,14 @@ export function LessonTaskForm({
   children,
   subjects,
   editingLesson,
+  defaultSelectedChildIds,
   onSubmit,
   onCancel,
 }: LessonTaskFormProps) {
   const isEdit = Boolean(editingLesson)
 
   const [selectedChildIds, setSelectedChildIds] = useState<string[]>(
-    editingLesson ? [editingLesson.childId] : [],
+    editingLesson ? [editingLesson.childId] : (defaultSelectedChildIds ?? []),
   )
   const childId = selectedChildIds[0] ?? ''
   const [subjectId, setSubjectId] = useState(editingLesson?.subjectId ?? '')
@@ -111,13 +119,9 @@ export function LessonTaskForm({
     )
   }
 
-  const filteredSubjects = isEdit || selectedChildIds.length <= 1
-    ? subjects.filter(s => s.childId === childId)
-    : subjects
-        .filter(s => s.childId === selectedChildIds[0])
-        .filter(s => selectedChildIds.every(cid =>
-          subjects.some(other => other.childId === cid && other.name === s.name),
-        ))
+  const filteredSubjects = isEdit
+    ? filterSubjectsForLearners(subjects, [childId])
+    : filterSubjectsForLearners(subjects, selectedChildIds)
   const selectedSubject = filteredSubjects.find(s => s.id === subjectId)
   const lessonTypes = selectedSubject?.category === 'Quran' ? QURAN_LESSON_TYPES : GENERAL_LESSON_TYPES
 

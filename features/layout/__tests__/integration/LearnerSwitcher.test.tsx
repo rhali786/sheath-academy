@@ -54,6 +54,21 @@ beforeEach(() => {
 })
 
 describe('LearnerSwitcher', () => {
+  test('includes All children option and clears sessionStorage when selected', () => {
+    sessionStorage.setItem('sheath.selectedChildId', 'child_a')
+    renderWithLearner(
+      <>
+        <LearnerSwitcher />
+        <SelectionStub />
+      </>,
+    )
+    fireEvent.change(screen.getByLabelText('Viewing learner'), { target: { value: 'child_b' } })
+    expect(sessionStorage.getItem('sheath.selectedChildId')).toBe('child_b')
+    fireEvent.change(screen.getByLabelText('Viewing learner'), { target: { value: '' } })
+    expect(screen.getByTestId('selection-stub')).toHaveTextContent('none')
+    expect(sessionStorage.getItem('sheath.selectedChildId')).toBeNull()
+  })
+
   test('changes selection and persists to sessionStorage', () => {
     renderWithLearner(
       <>

@@ -27,7 +27,7 @@ export function PortfolioPage() {
   const [filterEndDate, setFilterEndDate] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showForm, setShowForm] = useState(true)
+  const [showForm, setShowForm] = useState(false)
 
   // Fetch children when household is ready
   useEffect(() => {

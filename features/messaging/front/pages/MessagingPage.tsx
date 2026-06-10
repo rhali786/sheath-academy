@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { useSearchParams } from 'next/navigation'
 import { MessageSquarePlus, Users } from 'lucide-react'
 import { MessagingProvider, useMessagingContext } from '@/features/messaging/front/context/MessagingContext'
 import { ConversationList } from '@/features/messaging/front/components/ConversationList'
@@ -18,6 +19,7 @@ const ThreadView = dynamic(
 function MessagingPageInner() {
   const { selectedConversationId, setSelectedConversationId } = useMessagingContext()
   const { data: session } = useSession()
+  const searchParams = useSearchParams()
   const currentUserId = session?.user?.userId ?? ''
 
   const [showNewMessage, setShowNewMessage] = useState(false)
@@ -32,6 +34,13 @@ function MessagingPageInner() {
   }
 
   const handleBack = () => setSelectedConversationId(null)
+
+  useEffect(() => {
+    const conversationId = searchParams.get('c')
+    if (conversationId) {
+      setSelectedConversationId(conversationId)
+    }
+  }, [searchParams, setSelectedConversationId])
 
   return (
     <div data-testid="messaging-page" className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
