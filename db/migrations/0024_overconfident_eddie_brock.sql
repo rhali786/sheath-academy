@@ -1,0 +1,1 @@
+ALTER TABLE "lesson_tasks" ADD COLUMN "group_id" text;

@@ -1,9 +1,11 @@
 'use client'
 
+import { Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePlanner } from '../context/PlannerContext'
 import type { LessonTaskStatus } from '@/features/plan/types'
+import { formatCompletionWindow, lessonSpansDate } from '@/features/plan/utils/lessonCompletionWindow'
 
 const STATUS_BADGE: Record<LessonTaskStatus, string> = {
   not_started: 'bg-slate-100 text-slate-600',
@@ -85,7 +87,7 @@ export function WeeklyList() {
     setExpandedDays(newExpanded)
   }
 
-  const lessonsForDay = (dateStr: string) => lessons.filter(l => l.dueDate === dateStr)
+  const lessonsForDay = (dateStr: string) => lessons.filter(l => lessonSpansDate(l, dateStr))
 
   function resolveChildName(childId: string): string {
     return children.find(c => c.id === childId)?.name ?? childId
@@ -136,15 +138,23 @@ export function WeeklyList() {
                     <div key={lesson.id} onClick={() => router.push(`/lessons?editId=${lesson.id}`)} className="p-4 bg-white rounded-lg border border-forest-200 hover:shadow-md transition-shadow cursor-pointer">
                       <div className="flex items-start justify-between gap-2">
                         <div className="font-semibold text-forest-900">{lesson.title}</div>
-                        <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_BADGE[lesson.status]}`}>
-                          {STATUS_LABEL[lesson.status]}
-                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_BADGE[lesson.status]}`}>
+                            {STATUS_LABEL[lesson.status]}
+                          </span>
+                          <span aria-label="Tap to edit or reschedule" title="Tap to edit or reschedule" className="text-slate-300">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </span>
+                        </div>
                       </div>
                       <div className="text-sm text-slate-600 mt-2 space-y-1">
                         <div>Child: <span className="font-medium text-slate-900">{resolveChildName(lesson.childId)}</span></div>
                         <div>Subject: <span className="font-medium text-slate-900">{resolveSubjectName(lesson.subjectId)}</span></div>
                       </div>
                       {lesson.description && <div className="text-sm text-slate-700 mt-3 p-3 bg-forest-50 rounded border border-forest-100">{lesson.description}</div>}
+                      {formatCompletionWindow(lesson) && (
+                        <div className="text-xs text-forest-600 mt-2">{formatCompletionWindow(lesson)}</div>
+                      )}
                     </div>
                   ))
                 ) : (

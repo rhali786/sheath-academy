@@ -23,7 +23,17 @@ export async function PUT(id: string, request: Request): Promise<NextResponse<Ap
   const body = await request.json()
   try {
     const { householdId } = getRequestAuthCtx()
-    const updated = await updateLessonTaskRow(id, householdId, { title: body.title?.trim(), description: body.description?.trim(), dueDate: body.dueDate, status: body.status, sortOrder: body.order })
+    const updated = await updateLessonTaskRow(id, householdId, {
+      title: body.title?.trim(),
+      description: body.description?.trim(),
+      resourceLink: body.resourceLink?.trim(),
+      lessonType: body.lessonType,
+      estimatedDuration: body.estimatedDuration,
+      plannedStartDate: body.plannedStartDate ?? null,
+      dueDate: body.dueDate,
+      status: body.status,
+      sortOrder: body.order,
+    }, { applyToGroup: body.applyToGroup === true })
     if (!updated) return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 })
     return NextResponse.json({ status: 'success', data: rowToLesson(updated), message: 'Lesson updated', timestamp: new Date().toISOString() })
   } catch { return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 }) }
@@ -46,10 +56,13 @@ export async function COMPLETE(id: string, request?: Request): Promise<NextRespo
   } catch { return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 }) }
 }
 
-export async function DELETE(id: string): Promise<NextResponse<ApiResponse<null>>> {
+export async function DELETE(id: string, request?: Request): Promise<NextResponse<ApiResponse<null>>> {
   try {
     const { householdId } = getRequestAuthCtx()
-    const deleted = await deleteLessonTaskRow(id, householdId)
+    const deleteGroup = request
+      ? new URL(request.url).searchParams.get('deleteGroup') === 'true'
+      : false
+    const deleted = await deleteLessonTaskRow(id, householdId, { deleteGroup })
     if (!deleted) return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 })
     return NextResponse.json({ status: 'success', data: null, message: 'Lesson deleted', timestamp: new Date().toISOString() })
   } catch { return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 }) }
