@@ -5,20 +5,17 @@ import { attendanceApi } from '@/features/attendance/front/services/api'
 import { AttendanceStatusButtons } from '@/features/attendance/front/components/AttendanceStatusButtons'
 import type { AttendanceStatus } from '@/features/attendance/types'
 import type { StudentProfile } from '@/features/lib/types'
+import { useLearner } from '@/features/layout/front/context/LearnerContext'
 
-const STORAGE_KEY = 'sheath.selectedChildId'
-
-function resolveFocusedLearner(children: StudentProfile[]): StudentProfile | null {
+function resolveFocusedLearner(
+  children: StudentProfile[],
+  selectedChildId: string | null,
+): StudentProfile | null {
   const active = children.filter((c) => c.isActive)
   if (active.length === 0) return null
-  try {
-    const stored = sessionStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      const match = active.find((c) => c.id === stored)
-      if (match) return match
-    }
-  } catch {
-    /* ignore private mode / quota */
+  if (selectedChildId) {
+    const match = active.find((c) => c.id === selectedChildId)
+    if (match) return match
   }
   return active[0]
 }
@@ -34,9 +31,13 @@ export function ScheduleAttendanceCapture({
   householdId,
   studentProfiles,
 }: ScheduleAttendanceCaptureProps) {
+  const { selectedChildId } = useLearner()
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const focusedLearner = useMemo(() => resolveFocusedLearner(studentProfiles), [studentProfiles])
+  const focusedLearner = useMemo(
+    () => resolveFocusedLearner(studentProfiles, selectedChildId),
+    [studentProfiles, selectedChildId],
+  )
 
   async function handleSelect(status: AttendanceStatus) {
     if (!focusedLearner) return

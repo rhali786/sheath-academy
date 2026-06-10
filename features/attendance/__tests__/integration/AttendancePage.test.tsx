@@ -1,6 +1,7 @@
 import React from 'react'
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { AttendancePage } from '@/features/attendance/front/pages/AttendancePage'
+import { LearnerProvider } from '@/features/layout/front/context/LearnerContext'
 import type { AttendanceRecord } from '@/features/attendance/types'
 import { emptyAttendanceStatusCounts } from '@/features/attendance/types'
 import type { StudentProfile, ApiResponse } from '@/features/lib/types'
@@ -71,6 +72,14 @@ async function openMarkForm() {
   })
 }
 
+function renderAttendance() {
+  return render(
+    <LearnerProvider>
+      <AttendancePage />
+    </LearnerProvider>,
+  )
+}
+
 beforeEach(() => {
   mockSearchParams = new URLSearchParams()
   mockUseHousehold.mockImplementation(() => ({
@@ -101,14 +110,14 @@ afterEach(() => {
 
 describe('AttendancePage', () => {
   it('renders the page heading', async () => {
-    render(<AttendancePage />)
+    renderAttendance()
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /^attendance$/i, level: 1 })).toBeInTheDocument()
     })
   })
 
   it('renders a learner selector with loaded children when form is open', async () => {
-    render(<AttendancePage />)
+    renderAttendance()
     await openMarkForm()
     await waitFor(() => {
       expect(screen.getByLabelText(/^learner$/i)).toBeInTheDocument()
@@ -117,7 +126,7 @@ describe('AttendancePage', () => {
   })
 
   it('renders all attendance status quick-mark buttons when form is open', async () => {
-    render(<AttendancePage />)
+    renderAttendance()
     await openMarkForm()
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^present$/i })).toBeInTheDocument()
@@ -130,7 +139,7 @@ describe('AttendancePage', () => {
 
   it('shows attendance records after load', async () => {
     mockGetRecords.mockResolvedValue(ok([makeRecord({ status: 'present', date: '2026-05-12' })]))
-    render(<AttendancePage />)
+    renderAttendance()
     await waitFor(() => {
       expect(screen.getAllByText('Present').length).toBeGreaterThan(0)
     })
@@ -141,7 +150,7 @@ describe('AttendancePage', () => {
     byStatus.present = 3
     byStatus.absent = 1
     mockGetSummary.mockResolvedValue(ok({ childId: 'child_001', totalRecorded: 4, byStatus }))
-    render(<AttendancePage />)
+    renderAttendance()
     await waitFor(() => {
       expect(screen.getByText('3')).toBeInTheDocument()
       expect(screen.getByTestId('attendance-summary-present')).toBeInTheDocument()
@@ -150,7 +159,7 @@ describe('AttendancePage', () => {
   })
 
   it('clicking Present button calls createRecord with status present', async () => {
-    render(<AttendancePage />)
+    renderAttendance()
     await openMarkForm()
     await waitFor(() => {
       expect(screen.getAllByText('Adam').length).toBeGreaterThan(0)
@@ -165,7 +174,7 @@ describe('AttendancePage', () => {
 
   it('shows empty state when no records', async () => {
     mockGetRecords.mockResolvedValue(ok([]))
-    render(<AttendancePage />)
+    renderAttendance()
     await waitFor(() => {
       expect(screen.getByText(/no attendance records/i)).toBeInTheDocument()
     })
@@ -173,7 +182,7 @@ describe('AttendancePage', () => {
 
   it('shows child name in each attendance record row', async () => {
     mockGetRecords.mockResolvedValue(ok([makeRecord({ childId: 'child_001', status: 'present' })]))
-    render(<AttendancePage />)
+    renderAttendance()
     await waitFor(() => {
       expect(screen.getAllByText('Adam').length).toBeGreaterThan(0)
     })
@@ -181,7 +190,7 @@ describe('AttendancePage', () => {
 
   it('shows hours when hours > 0', async () => {
     mockGetRecords.mockResolvedValue(ok([makeRecord({ hours: 2, minutes: 30 })]))
-    render(<AttendancePage />)
+    renderAttendance()
     await waitFor(() => {
       expect(screen.getByText(/2h/)).toBeInTheDocument()
       expect(screen.getByText(/30m/)).toBeInTheDocument()
@@ -190,7 +199,7 @@ describe('AttendancePage', () => {
 
   it('does not show time when hours and minutes are both 0', async () => {
     mockGetRecords.mockResolvedValue(ok([makeRecord({ hours: 0, minutes: 0 })]))
-    render(<AttendancePage />)
+    renderAttendance()
     await waitFor(() => {
       expect(screen.queryByText(/0h/)).not.toBeInTheDocument()
     })
@@ -198,7 +207,7 @@ describe('AttendancePage', () => {
 
   it('shows notes icon when notes are present', async () => {
     mockGetRecords.mockResolvedValue(ok([makeRecord({ notes: 'Worked on fractions' })]))
-    render(<AttendancePage />)
+    renderAttendance()
     await waitFor(() => {
       expect(screen.getByRole('img', { name: 'Has notes' })).toBeInTheDocument()
     })
@@ -206,7 +215,7 @@ describe('AttendancePage', () => {
 
   it('does not show notes icon when notes are absent', async () => {
     mockGetRecords.mockResolvedValue(ok([makeRecord({ notes: undefined })]))
-    render(<AttendancePage />)
+    renderAttendance()
     await waitFor(() => {
       expect(screen.queryByRole('img', { name: 'Has notes' })).not.toBeInTheDocument()
     })
@@ -215,14 +224,14 @@ describe('AttendancePage', () => {
   // FB-014 TDD tests
 
   it('date field defaults to today when form is open', async () => {
-    render(<AttendancePage />)
+    renderAttendance()
     await openMarkForm()
     const dateInput = screen.getByLabelText(/^date$/i) as HTMLInputElement
     expect(dateInput.value).toBe(todayLocal())
   })
 
   it('renders all active learners in batch mode', async () => {
-    render(<AttendancePage />)
+    renderAttendance()
     await openMarkForm()
     await waitFor(() => expect(screen.getAllByText('Adam').length).toBeGreaterThan(0))
     fireEvent.click(screen.getByRole('button', { name: /batch mode/i }))
@@ -236,7 +245,7 @@ describe('AttendancePage', () => {
   })
 
   it('clicking Mark all present sets all learner statuses to present', async () => {
-    render(<AttendancePage />)
+    renderAttendance()
     await openMarkForm()
     await waitFor(() => expect(screen.getAllByText('Adam').length).toBeGreaterThan(0))
     fireEvent.click(screen.getByRole('button', { name: /batch mode/i }))
@@ -252,7 +261,7 @@ describe('AttendancePage', () => {
   })
 
   it('status dropdown includes Field trip and Co-op day options in batch mode', async () => {
-    render(<AttendancePage />)
+    renderAttendance()
     await openMarkForm()
     await waitFor(() => expect(screen.getAllByText('Adam').length).toBeGreaterThan(0))
     fireEvent.click(screen.getByRole('button', { name: /batch mode/i }))
@@ -265,7 +274,7 @@ describe('AttendancePage', () => {
 
   it('Void icon button shows inline confirm UI and archives the record on confirm', async () => {
     mockGetRecords.mockResolvedValue(ok([makeRecord({ id: 'rec_001', status: 'present' })]))
-    render(<AttendancePage />)
+    renderAttendance()
     await waitFor(() => screen.getByRole('button', { name: /void record/i }))
     fireEvent.click(screen.getByRole('button', { name: /void record/i }))
     // Inline confirm UI should appear (no window.confirm)
@@ -278,7 +287,7 @@ describe('AttendancePage', () => {
 
   it('Void icon button does not archive when inline cancel is clicked', async () => {
     mockGetRecords.mockResolvedValue(ok([makeRecord({ id: 'rec_001', status: 'present' })]))
-    render(<AttendancePage />)
+    renderAttendance()
     await waitFor(() => screen.getByRole('button', { name: /void record/i }))
     fireEvent.click(screen.getByRole('button', { name: /void record/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /cancel void/i })).toBeInTheDocument())
@@ -293,7 +302,7 @@ describe('AttendancePage', () => {
       makeRecord({ id: 'rec_001', childId: 'child_001', status: 'present', date: '2026-05-12' }),
       makeRecord({ id: 'rec_002', childId: 'child_002', status: 'absent', date: '2026-05-13' }),
     ]))
-    render(<AttendancePage />)
+    renderAttendance()
     await waitFor(() => {
       expect(screen.getAllByRole('button', { name: /void record/i })).toHaveLength(2)
     })
@@ -306,7 +315,7 @@ describe('AttendancePage', () => {
   it('selects the child from ?childId query param after children load', async () => {
     mockSearchParams = new URLSearchParams('childId=child_002')
     mockGetSummary.mockResolvedValue(ok({ childId: 'child_002', totalRecorded: 0, byStatus: emptyAttendanceStatusCounts() }))
-    render(<AttendancePage />)
+    renderAttendance()
     await openMarkForm()
     await waitFor(() => {
       const selector = screen.getByLabelText(/^learner$/i)
@@ -316,7 +325,7 @@ describe('AttendancePage', () => {
 
   it('falls back to first child when ?childId is invalid', async () => {
     mockSearchParams = new URLSearchParams('childId=invalid_id')
-    render(<AttendancePage />)
+    renderAttendance()
     await openMarkForm()
     await waitFor(() => {
       const selector = screen.getByLabelText(/^learner$/i)
@@ -325,7 +334,7 @@ describe('AttendancePage', () => {
   })
 
   it('uses first child when no ?childId param', async () => {
-    render(<AttendancePage />)
+    renderAttendance()
     await openMarkForm()
     await waitFor(() => {
       const selector = screen.getByLabelText(/^learner$/i)
@@ -334,14 +343,14 @@ describe('AttendancePage', () => {
   })
 
   it('summary heading shows selected learner name', async () => {
-    render(<AttendancePage />)
+    renderAttendance()
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /summary — adam/i })).toBeInTheDocument()
     })
   })
 
   it('summary heading updates when learner selector changes', async () => {
-    render(<AttendancePage />)
+    renderAttendance()
     await openMarkForm()
     await waitFor(() => {
       const sel = screen.getByLabelText(/^learner$/i) as HTMLSelectElement
@@ -356,7 +365,7 @@ describe('AttendancePage', () => {
 
   it('summary heading still names the learner when attendance is empty', async () => {
     mockGetRecords.mockResolvedValue(ok([]))
-    render(<AttendancePage />)
+    renderAttendance()
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /summary — adam/i })).toBeInTheDocument()
     })
@@ -364,7 +373,11 @@ describe('AttendancePage', () => {
 
   it('updates selected learner when URL childId changes while component stays mounted', async () => {
     mockSearchParams = new URLSearchParams()
-    const { rerender } = render(<AttendancePage />)
+    const { rerender } = render(
+      <LearnerProvider>
+        <AttendancePage />
+      </LearnerProvider>,
+    )
 
     await openMarkForm()
     await waitFor(() => {
@@ -373,7 +386,11 @@ describe('AttendancePage', () => {
     })
 
     act(() => { mockSearchParams = new URLSearchParams('childId=child_002') })
-    rerender(<AttendancePage />)
+    rerender(
+      <LearnerProvider>
+        <AttendancePage />
+      </LearnerProvider>,
+    )
 
     await waitFor(() => {
       const sel = screen.getByLabelText(/^learner$/i) as HTMLSelectElement

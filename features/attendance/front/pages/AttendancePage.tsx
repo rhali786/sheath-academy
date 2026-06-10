@@ -12,6 +12,7 @@ import { emptyAttendanceSummary } from '@/features/attendance/types'
 import { STATUS_LABELS } from '@/features/attendance/types'
 import type { StudentProfile } from '@/features/lib/types'
 import { useHousehold } from '@/features/household/front/context'
+import { useLearner } from '@/features/layout/front/context/LearnerContext'
 
 type DateSort = 'desc' | 'asc'
 type Mode = 'individual' | 'batch'
@@ -30,7 +31,7 @@ const DEFAULT_SUMMARY: SummaryType = emptyAttendanceSummary('')
 export function AttendancePage() {
   const { householdProfile, studentProfiles: children } = useHousehold()
   const searchParams = useSearchParams()
-  const [selectedChildId, setSelectedChildId] = useState<string>('')
+  const { selectedChildId, setSelectedChildId } = useLearner()
   const [date, setDate] = useState<string>(todayLocal())
   const [notes, setNotes] = useState<string>('')
   const [hours, setHours] = useState<string>('')
@@ -47,13 +48,17 @@ export function AttendancePage() {
   const [showForm, setShowForm] = useState(false)
 
 
-  // Sync URL childId → selectedChildId after children load and on URL changes
+  // Seed shared learner selection from ?childId= when present
   useEffect(() => {
     if (children.length === 0) return
     const urlChildId = searchParams.get('childId')
-    const matched = urlChildId ? children.find(c => c.id === urlChildId) : null
-    setSelectedChildId(matched ? matched.id : children[0].id)
-  }, [searchParams, children])
+    const matched = urlChildId ? children.find((c) => c.id === urlChildId) : null
+    if (matched) {
+      setSelectedChildId(matched.id)
+    } else if (!selectedChildId && children[0]) {
+      setSelectedChildId(children[0].id)
+    }
+  }, [searchParams, children, selectedChildId, setSelectedChildId])
 
   async function fetchRecords() {
     try {
@@ -68,7 +73,7 @@ export function AttendancePage() {
     }
   }
 
-  async function fetchSummary(childId: string) {
+  async function fetchSummary(childId: string | null) {
     if (!childId) return
     try {
       const sum = await attendanceApi.getSummary(childId)
@@ -185,7 +190,7 @@ export function AttendancePage() {
                     <label htmlFor="learner-select" className="block text-sm font-medium text-slate-700 mb-1">Learner</label>
                     <select
                       id="learner-select"
-                      value={selectedChildId}
+                      value={selectedChildId ?? ''}
                       onChange={e => setSelectedChildId(e.target.value)}
                       className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
                     >

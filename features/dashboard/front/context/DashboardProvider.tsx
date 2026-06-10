@@ -5,7 +5,7 @@ import type { Alert, QuranSession, DashboardRecord, DashboardMetrics, NivoLineSe
 import { dashboardApi } from '@/features/dashboard/front/services/api'
 import { alertsApi } from '@/features/alerts/front/services/api'
 import { quranApi } from '@/features/quran/front/services/api'
-import { useSelectedChild } from '@/features/dashboard/front/hooks/useSelectedChild'
+import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { useHousehold } from '@/features/household/front/context'
 import type { StudentProfile } from '@/features/lib/types'
 
@@ -47,7 +47,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [initialLoadDone, setInitialLoadDone] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [selectedChildId, setSelectedChildId] = useSelectedChild()
+  const { selectedChildId, setSelectedChildId } = useLearner()
 
   useEffect(() => {
     if (householdLoading) return

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
 import { useSyncAppHeaderHeight } from '@/features/layout/front/hooks/useSyncAppHeaderHeight'
 import { HouseholdSwitcher } from '@/features/household/front/components/HouseholdSwitcher'
+import { LearnerSwitcher } from '@/features/layout/front/components/LearnerSwitcher'
 import { pickGreeting } from '@/features/layout/lib/greetings'
 import { NotificationBellDropdown } from '@/features/dashboard/front/components/NotificationBellDropdown'
 import type { Alert } from '@/features/alerts/types'
@@ -54,6 +55,7 @@ export function Header({ onMenuOpen }: HeaderProps) {
           {session ? (
             <div className="flex items-center gap-2">
               <HouseholdSwitcher />
+              <LearnerSwitcher />
               <div className="hidden sm:flex flex-col items-end" data-testid="user-greeting-line">
                 <span className="text-xs font-medium text-slate-700">
                   {greeting} {displayName ?? 'there'}

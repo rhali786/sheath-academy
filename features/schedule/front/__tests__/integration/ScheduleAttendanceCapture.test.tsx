@@ -1,6 +1,7 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SchedulePage } from '@/features/schedule/front/pages/SchedulePage'
+import { LearnerProvider } from '@/features/layout/front/context/LearnerContext'
 import type { StudentProfile } from '@/features/lib/types'
 
 const mockUseSearchParams = jest.fn(() => new URLSearchParams('date=2026-06-01&view=day'))
@@ -66,9 +67,17 @@ beforeEach(() => {
   }))
 })
 
+function renderSchedule() {
+  return render(
+    <LearnerProvider>
+      <SchedulePage />
+    </LearnerProvider>,
+  )
+}
+
 describe('SchedulePage attendance capture (day view)', () => {
   test('shows collapsible Mark attendance block on day view', async () => {
-    render(<SchedulePage />)
+    renderSchedule()
     await waitFor(() => {
       expect(screen.getByTestId('schedule-attendance-capture')).toBeInTheDocument()
     })
@@ -79,7 +88,7 @@ describe('SchedulePage attendance capture (day view)', () => {
 
   test('selecting a status calls attendanceApi.createRecord for the day date and focused learner', async () => {
     sessionStorage.setItem('sheath.selectedChildId', 'child_001')
-    render(<SchedulePage />)
+    renderSchedule()
     await waitFor(() => {
       expect(screen.getByTestId('schedule-attendance-capture')).toBeInTheDocument()
     })
@@ -97,7 +106,7 @@ describe('SchedulePage attendance capture (day view)', () => {
 
   test('does not show attendance capture on week view', async () => {
     mockUseSearchParams.mockReturnValue(new URLSearchParams('date=2026-06-01&view=week'))
-    render(<SchedulePage />)
+    renderSchedule()
     await waitFor(() => {
       expect(screen.getByTestId('calendar-nav')).toBeInTheDocument()
     })
