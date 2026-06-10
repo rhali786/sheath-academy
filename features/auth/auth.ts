@@ -1,5 +1,6 @@
 import NextAuth from 'next-auth'
 import type { Adapter } from '@auth/core/adapters'
+import { authConfig } from '@/features/auth/auth.config'
 import Resend from 'next-auth/providers/resend'
 import Google from 'next-auth/providers/google'
 import Facebook from 'next-auth/providers/facebook'
@@ -41,12 +42,8 @@ function lazyDrizzleAdapter(): Adapter {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: lazyDrizzleAdapter(),
-  session: { strategy: 'jwt' },
-  pages: { signIn: '/login' },
-  // Render (and most cloud hosts) terminate SSL at the load balancer;
-  // trustHost lets NextAuth read X-Forwarded-Host correctly.
-  trustHost: true,
   callbacks: {
     async signIn({ user, account }) {
       logger.debug({ email: user.email, provider: account?.provider }, 'signIn callback')

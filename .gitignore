@@ -17,3 +17,4 @@ features/dashboard/frontend/node_modules
 features/dashboard/frontend/dist
 auth-debug.log
 logs/
+backups/

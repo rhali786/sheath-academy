@@ -134,28 +134,34 @@ export function RecordsPrintReport({
             <p className="mt-2 text-3xl font-bold text-slate-900">{report.attendance.totalRecorded}</p>
             <p className="text-sm text-slate-600">{formatAttendanceSummaryLine(report.attendance)}</p>
           </div>
-          {(variant === 'full' || variant === 'islamic') && (
+          {variant === 'full' && (
             <>
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Subjects</h3>
-                <p className="mt-2 text-3xl font-bold text-slate-900">
-                  {variant === 'islamic' ? islamicSubjects.length : report.subjects.length}
-                </p>
+                <p className="mt-2 text-3xl font-bold text-slate-900">{report.subjects.length}</p>
                 <p className="text-sm text-slate-600">
-                  {(variant === 'islamic' ? islamicSubjects : report.subjects)
-                    .map((subject) => subject.name)
-                    .join(', ') || 'None recorded'}
+                  {report.subjects.map((subject) => subject.name).join(', ') || 'None recorded'}
                 </p>
               </div>
-              {variant === 'full' && (
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Portfolio evidence</h3>
-                  <p className="mt-2 text-3xl font-bold text-slate-900">{report.portfolio.count}</p>
-                  <p className="text-sm text-slate-600">Newest evidence appears first.</p>
-                </div>
-              )}
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Portfolio evidence</h3>
+                <p className="mt-2 text-3xl font-bold text-slate-900">{report.portfolio.count}</p>
+                <p className="text-sm text-slate-600">Newest evidence appears first.</p>
+              </div>
             </>
           )}
+        </section>
+      )}
+
+      {variant === 'islamic' && (
+        <section className="print-stats">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">Islamic subjects</h3>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{islamicSubjects.length}</p>
+            <p className="text-sm text-slate-600">
+              {islamicSubjects.map((subject) => subject.name).join(', ') || 'None recorded'}
+            </p>
+          </div>
         </section>
       )}
 
