@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "planPath": "docs/bug_enhancement/ia-nav-restructure-plan.json",
+  "branch": "refactor/ia-nav-restructure",
+  "updatedAt": "2026-06-09T20:00:00Z",
+  "phases": [
+    { "id": "phase-1", "status": "complete", "notes": "NAV_MODULES, getModuleItems, isNavModuleActive; leaf hrefs unchanged in phase 1." },
+    { "id": "phase-2", "status": "complete", "notes": "/people + /compliance routes; nav href repoint; PeoplePage + CompliancePage integration tests." },
+    { "id": "phase-3", "status": "complete", "notes": "Sidebar module-grouped with useModuleLastDestination; hover/focus sub-nav; collapsed rail icons." },
+    { "id": "phase-4", "status": "complete", "notes": "ScheduleAttendanceCapture on day-view; reuses attendanceApi + AttendanceStatusButtons." },
+    { "id": "phase-5", "status": "complete", "notes": "LearnerProvider in AppShell; header LearnerSwitcher; Dashboard/Attendance/Settings/Schedule wired to useLearner(); key sheath.selectedChildId preserved; db:generate no migration." }
+  ]
+}
