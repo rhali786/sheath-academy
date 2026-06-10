@@ -29,6 +29,7 @@ export async function PUT(id: string, request: Request): Promise<NextResponse<Ap
       resourceLink: body.resourceLink?.trim(),
       lessonType: body.lessonType,
       estimatedDuration: body.estimatedDuration,
+      plannedStartDate: body.plannedStartDate ?? null,
       dueDate: body.dueDate,
       status: body.status,
       sortOrder: body.order,

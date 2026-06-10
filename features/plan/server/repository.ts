@@ -1,4 +1,4 @@
-import { and, eq, gte, lte } from 'drizzle-orm'
+import { and, eq, gte, lte, sql } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
 import { lessonTasks } from '@/db/schema'
 
@@ -13,6 +13,7 @@ export interface CreateLessonTaskInput {
   resourceLink?: string
   lessonType?: string
   estimatedDuration?: string
+  plannedStartDate?: string
   dueDate?: string
   status?: string
   sortOrder?: number
@@ -25,6 +26,7 @@ export interface UpdateLessonTaskInput {
   resourceLink?: string
   lessonType?: string
   estimatedDuration?: string
+  plannedStartDate?: string | null
   dueDate?: string
   status?: string
   sortOrder?: number
@@ -48,7 +50,11 @@ export async function listLessonTaskRows(
   if (filters.subjectId) conditions.push(eq(lessonTasks.subjectId, filters.subjectId))
   if (filters.status) conditions.push(eq(lessonTasks.status, filters.status))
   if (filters.startDate) conditions.push(gte(lessonTasks.dueDate, filters.startDate))
-  if (filters.endDate) conditions.push(lte(lessonTasks.dueDate, filters.endDate))
+  if (filters.endDate) {
+    conditions.push(
+      lte(sql`coalesce(${lessonTasks.plannedStartDate}, ${lessonTasks.dueDate})`, filters.endDate),
+    )
+  }
   return db.select().from(lessonTasks).where(and(...conditions))
 }
 
@@ -84,6 +90,7 @@ export async function createLessonTaskRow(
       resourceLink: input.resourceLink ?? null,
       lessonType: input.lessonType ?? null,
       estimatedDuration: input.estimatedDuration ?? null,
+      plannedStartDate: input.plannedStartDate ?? null,
       dueDate: input.dueDate ?? null,
       status: input.status ?? 'not_started',
       sortOrder: input.sortOrder ?? 0,
@@ -151,6 +158,7 @@ export async function updateLessonTaskRow(
   if (input.resourceLink !== undefined) patch.resourceLink = input.resourceLink
   if (input.lessonType !== undefined) patch.lessonType = input.lessonType
   if (input.estimatedDuration !== undefined) patch.estimatedDuration = input.estimatedDuration
+  if (input.plannedStartDate !== undefined) patch.plannedStartDate = input.plannedStartDate
   if (input.dueDate !== undefined) patch.dueDate = input.dueDate
   if (input.status !== undefined) patch.status = input.status
   if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder

@@ -30,6 +30,7 @@ export interface LessonFormData {
   title: string
   description?: string
   resourceLink?: string
+  plannedStartDate?: string
   dueDate: string
   status: LessonTaskStatus
   order: number
@@ -59,6 +60,7 @@ export function LessonTaskForm({
   const [title, setTitle] = useState(editingLesson?.title ?? '')
   const [description, setDescription] = useState(editingLesson?.description ?? '')
   const [resourceLink, setResourceLink] = useState(editingLesson?.resourceLink ?? '')
+  const [plannedStartDate, setPlannedStartDate] = useState(editingLesson?.plannedStartDate ?? '')
   const [dueDate, setDueDate] = useState(editingLesson?.dueDate ?? todayLocal())
   const [status, setStatus] = useState<LessonTaskStatus>(editingLesson?.status ?? 'not_started')
   const [estimatedDuration, setEstimatedDuration] = useState<LessonDuration | ''>(editingLesson?.estimatedDuration ?? '')
@@ -101,6 +103,7 @@ export function LessonTaskForm({
         title: trimmedTitle,
         description: description.trim() || undefined,
         resourceLink: resourceLink.trim() || undefined,
+        plannedStartDate: plannedStartDate.trim() || undefined,
         dueDate,
         status,
         order: editingLesson?.order ?? 0,
@@ -168,6 +171,19 @@ export function LessonTaskForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
+          <label htmlFor="plannedStartDate" className="block text-sm font-medium text-slate-700 mb-1">
+            Start date <span className="text-slate-400 font-normal">(optional)</span>
+          </label>
+          <input
+            id="plannedStartDate"
+            type="date"
+            value={plannedStartDate}
+            onChange={e => setPlannedStartDate(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+          />
+        </div>
+
+        <div>
           <label htmlFor="dueDate" className="block text-sm font-medium text-slate-700 mb-1">
             Planned date
           </label>
@@ -179,7 +195,9 @@ export function LessonTaskForm({
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
           />
         </div>
+      </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="status" className="block text-sm font-medium text-slate-700 mb-1">
             Status

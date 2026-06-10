@@ -285,3 +285,57 @@ describe('LessonTaskForm — FB-011 label renames', () => {
     expect(screen.getByText(/choose a learner first/i)).toBeInTheDocument()
   })
 })
+
+describe('LessonTaskForm — completion window (plannedStartDate)', () => {
+  it('shows an optional start-date input', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    expect(screen.getByLabelText(/start date/i)).toBeInTheDocument()
+  })
+
+  it('submits plannedStartDate when start date is set', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={onSubmit} />
+    )
+    fireEvent.change(screen.getByLabelText(/learner/i), { target: { value: 'child_001' } })
+    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Window lesson' } })
+    fireEvent.change(screen.getByLabelText(/start date/i), { target: { value: '2026-05-10' } })
+    fireEvent.change(screen.getByLabelText(/planned date/i), { target: { value: '2026-05-15' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          plannedStartDate: '2026-05-10',
+          dueDate: '2026-05-15',
+        })
+      )
+    })
+  })
+
+  it('omits plannedStartDate when only due date is set (legacy back-compat)', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={onSubmit} />
+    )
+    fireEvent.change(screen.getByLabelText(/learner/i), { target: { value: 'child_001' } })
+    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Single-day lesson' } })
+    fireEvent.change(screen.getByLabelText(/planned date/i), { target: { value: '2026-05-15' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          dueDate: '2026-05-15',
+        })
+      )
+      expect(onSubmit.mock.calls[0][0].plannedStartDate).toBeUndefined()
+    })
+  })
+})

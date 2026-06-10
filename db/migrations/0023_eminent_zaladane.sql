@@ -1,0 +1,1 @@
+ALTER TABLE "lesson_tasks" ADD COLUMN "planned_start_date" date;

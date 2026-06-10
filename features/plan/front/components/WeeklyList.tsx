@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePlanner } from '../context/PlannerContext'
 import type { LessonTaskStatus } from '@/features/plan/types'
+import { formatCompletionWindow, lessonSpansDate } from '@/features/plan/utils/lessonCompletionWindow'
 
 const STATUS_BADGE: Record<LessonTaskStatus, string> = {
   not_started: 'bg-slate-100 text-slate-600',
@@ -86,7 +87,7 @@ export function WeeklyList() {
     setExpandedDays(newExpanded)
   }
 
-  const lessonsForDay = (dateStr: string) => lessons.filter(l => l.dueDate === dateStr)
+  const lessonsForDay = (dateStr: string) => lessons.filter(l => lessonSpansDate(l, dateStr))
 
   function resolveChildName(childId: string): string {
     return children.find(c => c.id === childId)?.name ?? childId
@@ -151,6 +152,9 @@ export function WeeklyList() {
                         <div>Subject: <span className="font-medium text-slate-900">{resolveSubjectName(lesson.subjectId)}</span></div>
                       </div>
                       {lesson.description && <div className="text-sm text-slate-700 mt-3 p-3 bg-forest-50 rounded border border-forest-100">{lesson.description}</div>}
+                      {formatCompletionWindow(lesson) && (
+                        <div className="text-xs text-forest-600 mt-2">{formatCompletionWindow(lesson)}</div>
+                      )}
                     </div>
                   ))
                 ) : (

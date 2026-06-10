@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
+import { formatCompletionWindow } from '@/features/plan/utils/lessonCompletionWindow'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 
@@ -62,6 +63,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     month: 'short',
     day: 'numeric',
   })
+  const windowLabel = formatCompletionWindow(lesson)
 
   const today = todayLocal()
   const isOverdue = lesson.status === 'not_started' && lesson.dueDate < today
@@ -254,7 +256,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-slate-900">{lesson.title}</div>
           <div className="text-xs text-slate-500 mt-0.5">
-            {childName} · {subjectName} · {dateFormatted}
+            {childName} · {subjectName} · {windowLabel ?? dateFormatted}
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">

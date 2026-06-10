@@ -92,4 +92,48 @@ describe('lesson tasks repository', () => {
     const rows = await listLessonTaskRows(householdId)
     expect(rows.some(r => r.id === taskId)).toBe(false)
   })
+
+  itDb('createLessonTaskRow round-trips plannedStartDate', async () => {
+    const row = await createLessonTaskRow(householdId, {
+      learnerId,
+      title: 'Window lesson',
+      plannedStartDate: '2026-06-05',
+      dueDate: '2026-06-10',
+    })
+    expect(row.plannedStartDate).toBe('2026-06-05')
+    expect(row.dueDate).toBe('2026-06-10')
+
+    const updated = await updateLessonTaskRow(row.id, householdId, { plannedStartDate: '2026-06-06' })
+    expect(updated?.plannedStartDate).toBe('2026-06-06')
+
+    await deleteLessonTaskRow(row.id, householdId)
+  })
+
+  itDb('listLessonTaskRows matches completion-window overlap, not dueDate alone', async () => {
+    const windowRow = await createLessonTaskRow(householdId, {
+      learnerId,
+      title: 'Spanning lesson',
+      plannedStartDate: '2026-06-05',
+      dueDate: '2026-06-15',
+    })
+    const legacyRow = await createLessonTaskRow(householdId, {
+      learnerId,
+      title: 'Legacy lesson',
+      dueDate: '2026-06-20',
+    })
+
+    const midWeek = await listLessonTaskRows(householdId, { startDate: '2026-06-08', endDate: '2026-06-12' })
+    expect(midWeek.some(r => r.id === windowRow.id)).toBe(true)
+    expect(midWeek.some(r => r.id === legacyRow.id)).toBe(false)
+
+    const legacyOnly = await listLessonTaskRows(householdId, { startDate: '2026-06-18', endDate: '2026-06-22' })
+    expect(legacyOnly.some(r => r.id === windowRow.id)).toBe(false)
+    expect(legacyOnly.some(r => r.id === legacyRow.id)).toBe(true)
+
+    const beforeWindow = await listLessonTaskRows(householdId, { startDate: '2026-06-01', endDate: '2026-06-04' })
+    expect(beforeWindow.some(r => r.id === windowRow.id)).toBe(false)
+
+    await deleteLessonTaskRow(windowRow.id, householdId)
+    await deleteLessonTaskRow(legacyRow.id, householdId)
+  })
 })

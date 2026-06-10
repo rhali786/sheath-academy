@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { usePlanner } from '../context/PlannerContext'
 import { plannerApi } from '../services/api'
 import type { LessonTask, LessonTaskStatus, LessonDuration } from '../../types'
+import { formatCompletionWindow, lessonSpansDate } from '../../utils/lessonCompletionWindow'
 
 const STATUS_BADGE: Record<LessonTaskStatus, string | null> = {
   not_started: null,
@@ -69,6 +70,7 @@ function DraggableLesson({ lesson, onEdit }: DraggableLessonProps) {
     id: lesson.id,
     data: { lesson },
   })
+  const windowLabel = formatCompletionWindow(lesson)
 
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, opacity: 0 as const }
@@ -97,6 +99,9 @@ function DraggableLesson({ lesson, onEdit }: DraggableLessonProps) {
         </div>
       </div>
       {lesson.description && <div className="text-xs text-forest-700 mt-1 pointer-events-none">{lesson.description}</div>}
+      {windowLabel && (
+        <div className="text-xs text-forest-600 mt-1 pointer-events-none">{windowLabel}</div>
+      )}
       {lesson.estimatedDuration && (
         <div className="text-xs text-slate-400 mt-1 pointer-events-none">{DURATION_LABEL[lesson.estimatedDuration]}</div>
       )}
@@ -165,7 +170,9 @@ export function WeekGrid() {
   }
 
   function getLessonForCell(dateStr: string, childId: string, subjectId: string) {
-    return lessons.find(l => l.dueDate === dateStr && l.childId === childId && l.subjectId === subjectId)
+    return lessons.find(
+      l => l.childId === childId && l.subjectId === subjectId && lessonSpansDate(l, dateStr),
+    )
   }
 
   function handleEdit(lessonId: string) {

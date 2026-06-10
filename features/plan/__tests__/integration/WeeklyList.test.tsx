@@ -158,3 +158,32 @@ describe('WeeklyList (mobile)', () => {
     expect(screen.getByLabelText(/tap to edit or reschedule/i)).toBeInTheDocument()
   })
 })
+
+describe('WeeklyList — completion window', () => {
+  const windowLesson: LessonTask = {
+    ...mockLessons[0],
+    plannedStartDate: '2026-05-11',
+    dueDate: '2026-05-13',
+  }
+
+  it('shows window lesson on days inside the completion window', () => {
+    renderList([windowLesson])
+
+    const mondayButton = screen.getAllByRole('button').find(btn => btn.textContent?.includes('Monday'))
+    fireEvent.click(mondayButton!)
+    expect(screen.getByText('Math lesson 1')).toBeInTheDocument()
+
+    fireEvent.click(mondayButton!)
+    const wednesdayButton = screen.getAllByRole('button').find(btn => btn.textContent?.includes('Wednesday'))
+    fireEvent.click(wednesdayButton!)
+    expect(screen.getByText('Math lesson 1')).toBeInTheDocument()
+  })
+
+  it('shows a range indicator on window lessons', () => {
+    renderList([windowLesson])
+
+    const mondayButton = screen.getAllByRole('button').find(btn => btn.textContent?.includes('Monday'))
+    fireEvent.click(mondayButton!)
+    expect(screen.getByText('May 11 – May 13')).toBeInTheDocument()
+  })
+})

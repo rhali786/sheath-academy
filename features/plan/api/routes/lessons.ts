@@ -89,6 +89,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<L
       resourceLink: body.resourceLink?.trim() || undefined,
       lessonType: body.lessonType || undefined,
       estimatedDuration: body.estimatedDuration || undefined,
+      plannedStartDate: body.plannedStartDate || undefined,
       dueDate,
       status: body.status ?? 'not_started',
       sortOrder: body.order || 0,

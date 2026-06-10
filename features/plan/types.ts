@@ -10,6 +10,8 @@ export interface LessonTask {
   title: string
   description?: string
   resourceLink?: string
+  /** Completion window start; when omitted, dueDate alone defines the lesson day. */
+  plannedStartDate?: string
   dueDate: string
   status: LessonTaskStatus
   order: number

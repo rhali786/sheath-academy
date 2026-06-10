@@ -240,6 +240,7 @@ export const lessonTasks = pgTable(
     resourceLink: text('resource_link'),
     lessonType: text('lesson_type'),
     estimatedDuration: text('estimated_duration'),
+    plannedStartDate: date('planned_start_date'),
     dueDate: date('due_date'),
     status: text('status').notNull().default('not_started'),
     sortOrder: integer('sort_order').notNull().default(0),

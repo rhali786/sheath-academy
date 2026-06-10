@@ -328,3 +328,32 @@ describe('WeekGrid — FB-006 duration in cells and daily totals', () => {
     expect(screen.queryByText(/\d+m|\d+h/)).not.toBeInTheDocument()
   })
 })
+
+describe('WeekGrid — completion window', () => {
+  const windowLesson: LessonTask = {
+    ...mockLessons[0],
+    plannedStartDate: '2026-05-11',
+    dueDate: '2026-05-13',
+  }
+
+  it('shows a range indicator for lessons with a completion window', () => {
+    renderGrid([windowLesson])
+    expect(screen.getAllByText('May 11 – May 13').length).toBeGreaterThan(0)
+  })
+
+  it('renders window lesson on intermediate days, not only due date', () => {
+    renderGrid([windowLesson])
+    expect(screen.getAllByText('Math lesson 1').length).toBeGreaterThan(1)
+  })
+
+  it('completion status still resolves at due_date for overdue', () => {
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date('2026-05-14T12:00:00'))
+    try {
+      renderGrid([{ ...windowLesson, status: 'not_started' }])
+      expect(screen.queryByText(/overdue/i)).not.toBeInTheDocument()
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+})

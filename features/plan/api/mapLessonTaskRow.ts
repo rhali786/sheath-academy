@@ -12,6 +12,7 @@ export function mapLessonTaskRow(r: LessonTaskRow): LessonTask {
     resourceLink: r.resourceLink ?? undefined,
     lessonType: r.lessonType ?? undefined,
     estimatedDuration: (r.estimatedDuration as LessonTask['estimatedDuration']) ?? undefined,
+    plannedStartDate: r.plannedStartDate ?? undefined,
     dueDate: r.dueDate ?? '',
     status: (r.status as LessonTask['status']) ?? 'not_started',
     order: r.sortOrder,
