@@ -176,6 +176,13 @@
       "when": 1781050365562,
       "tag": "0024_overconfident_eddie_brock",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1781215633388,
+      "tag": "0025_rich_inhumans",
+      "breakpoints": true
     }
   ]
 }
