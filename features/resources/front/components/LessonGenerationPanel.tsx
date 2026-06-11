@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { Resource, LessonGenerationStrategy, GeneratedLesson } from '@/features/resources/types'
 import { resourcesApi } from '../services/api'
+import { useHousehold } from '@/features/household/front/context'
 
 const STRATEGIES: { value: LessonGenerationStrategy; label: string }[] = [
   { value: 'byChapter', label: 'By chapter' },
@@ -19,12 +20,28 @@ interface LessonGenerationPanelProps {
 }
 
 export function LessonGenerationPanel({ resource, startDate, onGenerate }: LessonGenerationPanelProps) {
+  const { studentProfiles, allSubjects } = useHousehold()
   const [strategy, setStrategy] = useState<LessonGenerationStrategy>('byChapter')
   const [chapters, setChapters] = useState(String(resource.totalChapters ?? ''))
   const [schoolDays, setSchoolDays] = useState('36')
   const [generating, setGenerating] = useState(false)
   const [generated, setGenerated] = useState<GeneratedLesson[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [selectedLearnerIds, setSelectedLearnerIds] = useState<string[]>([])
+  const [selectedCourseId, setSelectedCourseId] = useState('')
+
+  function toggleLearner(id: string) {
+    setSelectedLearnerIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+    setSelectedCourseId('')
+  }
+
+  const filteredCourses = allSubjects.filter(
+    s => s.isActive && s.learnerIds.some(id => selectedLearnerIds.includes(id))
+  )
+
+  const canSave = selectedLearnerIds.length > 0 && !!selectedCourseId && generated.length > 0
 
   async function handleGenerate() {
     setGenerating(true)
@@ -112,6 +129,54 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
             </div>
           ))}
         </div>
+      )}
+
+      <div className="flex gap-3 flex-wrap">
+        <div>
+          <p className="block text-xs text-slate-600 mb-1">Learner(s)</p>
+          <div className="flex flex-wrap gap-2">
+            {studentProfiles.map(child => (
+              <label key={child.id} className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedLearnerIds.includes(child.id)}
+                  onChange={() => toggleLearner(child.id)}
+                  className="rounded"
+                />
+                <span className="text-sm text-slate-700">{child.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="generation-course-select" className="block text-xs text-slate-600 mb-1">
+            Course
+          </label>
+          <select
+            id="generation-course-select"
+            value={selectedCourseId}
+            onChange={e => setSelectedCourseId(e.target.value)}
+            className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+            data-testid="generation-course-select"
+          >
+            <option value="">Select a course…</option>
+            {filteredCourses.map(course => (
+              <option key={course.id} value={course.id}>{course.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {generated.length > 0 && (
+        <button
+          type="button"
+          disabled={!canSave}
+          className="px-3 py-1.5 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800 disabled:opacity-50"
+          data-testid="save-to-plan-button"
+        >
+          Save to plan
+        </button>
       )}
     </div>
   )
