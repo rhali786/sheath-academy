@@ -103,6 +103,42 @@ export function generateLessons(input: GenerateLessonsInput): GeneratedLesson[] 
   return lessons
 }
 
+/**
+ * Maps a generated lesson stub to the payload shape expected by
+ * `plannerApi.createLesson` (see features/plan/types.ts LessonTask).
+ */
+export function mapGeneratedLessonToTaskInput(
+  lesson: GeneratedLesson,
+  context: {
+    childId: string
+    subjectId: string
+    householdId: string
+    resourceLink?: string
+  },
+): {
+  childId: string
+  subjectId: string
+  householdId: string
+  title: string
+  description?: string
+  dueDate: string
+  status: 'not_started'
+  order: number
+  resourceLink?: string
+} {
+  return {
+    childId: context.childId,
+    subjectId: context.subjectId,
+    householdId: context.householdId,
+    title: lesson.title,
+    description: lesson.description,
+    dueDate: lesson.dueDate,
+    status: 'not_started',
+    order: lesson.order,
+    resourceLink: context.resourceLink,
+  }
+}
+
 function strategyLabel(strategy: GenerateLessonsInput['strategy']): string {
   switch (strategy) {
     case 'byChapter': return 'Chapter'

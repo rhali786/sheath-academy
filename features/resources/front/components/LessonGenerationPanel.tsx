@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { Resource, LessonGenerationStrategy, GeneratedLesson } from '@/features/resources/types'
 import { resourcesApi } from '../services/api'
+import { plannerApi } from '@/features/plan/front/services/api'
 import { useHousehold } from '@/features/household/front/context'
 
 const STRATEGIES: { value: LessonGenerationStrategy; label: string }[] = [
@@ -29,6 +30,10 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
   const [error, setError] = useState<string | null>(null)
   const [selectedLearnerIds, setSelectedLearnerIds] = useState<string[]>([])
   const [selectedCourseId, setSelectedCourseId] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
 
   function toggleLearner(id: string) {
     setSelectedLearnerIds(prev =>
@@ -41,11 +46,14 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
     s => s.isActive && s.learnerIds.some(id => selectedLearnerIds.includes(id))
   )
 
-  const canSave = selectedLearnerIds.length > 0 && !!selectedCourseId && generated.length > 0
+  const canSave = selectedLearnerIds.length > 0 && !!selectedCourseId && generated.length > 0 && !saved
 
   async function handleGenerate() {
     setGenerating(true)
     setError(null)
+    setSaveMessage(null)
+    setSaveError(null)
+    setSaved(false)
     try {
       const res = await resourcesApi.generateLessons({
         resource,
@@ -60,6 +68,37 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
       setError('Failed to generate lessons.')
     } finally {
       setGenerating(false)
+    }
+  }
+
+  async function handleSave() {
+    if (!canSave) return
+    const subjectId = selectedCourseId
+    const householdId = studentProfiles.find(c => selectedLearnerIds.includes(c.id))?.householdId ?? ''
+    setSaving(true)
+    setSaveMessage(null)
+    setSaveError(null)
+    try {
+      for (const childId of selectedLearnerIds) {
+        for (const lesson of generated) {
+          await plannerApi.createLesson({
+            childId,
+            subjectId,
+            householdId,
+            title: lesson.title,
+            description: lesson.description,
+            dueDate: lesson.dueDate,
+            status: 'not_started',
+            order: lesson.order,
+          })
+        }
+      }
+      setSaveMessage(`${generated.length} lesson${generated.length === 1 ? '' : 's'} added to the planner`)
+      setSaved(true)
+    } catch {
+      setSaveError('Failed to save lessons to the planner.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -171,13 +210,17 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
       {generated.length > 0 && (
         <button
           type="button"
-          disabled={!canSave}
+          onClick={handleSave}
+          disabled={!canSave || saving}
           className="px-3 py-1.5 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800 disabled:opacity-50"
           data-testid="save-to-plan-button"
         >
-          Save to plan
+          {saving ? 'Saving…' : 'Save to plan'}
         </button>
       )}
+
+      {saveMessage && <p className="text-xs text-green-700">{saveMessage}</p>}
+      {saveError && <p className="text-xs text-red-600">{saveError}</p>}
     </div>
   )
 }

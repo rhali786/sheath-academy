@@ -20,11 +20,20 @@ jest.mock('@/features/resources/front/services/api', () => ({
   },
 }))
 
+jest.mock('@/features/plan/front/services/api', () => ({
+  plannerApi: {
+    createLesson: jest.fn(),
+  },
+}))
+
 const { useHousehold } = jest.requireMock('@/features/household/front/context') as {
   useHousehold: jest.MockedFunction<() => HouseholdContextType>
 }
 const { resourcesApi } = jest.requireMock('@/features/resources/front/services/api') as {
   resourcesApi: { generateLessons: jest.Mock }
+}
+const { plannerApi } = jest.requireMock('@/features/plan/front/services/api') as {
+  plannerApi: { createLesson: jest.Mock }
 }
 
 const resource: Resource = {
@@ -106,6 +115,18 @@ describe('LessonGenerationPanel — learner/course selectors', () => {
     jest.clearAllMocks()
     useHousehold.mockReturnValue(loadedHousehold)
     resourcesApi.generateLessons.mockResolvedValue({ status: 'success', data: generated, message: '', timestamp: '' })
+    plannerApi.createLesson.mockResolvedValue({
+      id: 'lesson_001',
+      childId: 'child_001',
+      subjectId: 'subject_001',
+      householdId: 'household_001',
+      title: 'Chapter 1',
+      dueDate: '2026-01-05',
+      status: 'not_started',
+      order: 1,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    })
   })
 
   it('renders a learner multi-select with checkboxes for each child', () => {
@@ -153,5 +174,44 @@ describe('LessonGenerationPanel — learner/course selectors', () => {
 
     await userEvent.selectOptions(screen.getByTestId('generation-course-select'), 'subject_001')
     expect(saveButton).not.toBeDisabled()
+  })
+
+  it('saves generated lessons to the planner when "Save to plan" is clicked', async () => {
+    render(<LessonGenerationPanel resource={resource} />)
+
+    await userEvent.click(screen.getByTestId('generate-lessons-button'))
+    expect(await screen.findByText(/2 lessons generated/i)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Aisha' }))
+    await userEvent.selectOptions(screen.getByTestId('generation-course-select'), 'subject_001')
+
+    const saveButton = screen.getByRole('button', { name: /save to plan/i })
+    expect(saveButton).not.toBeDisabled()
+
+    await userEvent.click(saveButton)
+
+    expect(plannerApi.createLesson).toHaveBeenCalledTimes(2)
+    expect(plannerApi.createLesson).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      childId: 'child_001',
+      subjectId: 'subject_001',
+      householdId: 'household_001',
+      title: 'Chapter 1',
+      dueDate: '2026-01-05',
+      status: 'not_started',
+      order: 1,
+    }))
+    expect(plannerApi.createLesson).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      childId: 'child_001',
+      subjectId: 'subject_001',
+      householdId: 'household_001',
+      title: 'Chapter 2',
+      dueDate: '2026-01-06',
+      status: 'not_started',
+      order: 2,
+    }))
+
+    expect(await screen.findByText(/2 lessons added to the planner/i)).toBeInTheDocument()
+
+    expect(saveButton).toBeDisabled()
   })
 })
