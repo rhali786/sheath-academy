@@ -151,6 +151,44 @@ describe('generateLessons', () => {
     })
     lessons.forEach(l => expect(l.title).toContain('Saxon Math 7/6'))
   })
+
+  it('cadence "weekly" produces lessons 7 calendar days apart, stepping from startDate weekday', () => {
+    // 2026-09-01 is a Tuesday
+    const lessons = generateLessons({
+      resource: BASE_RESOURCE,
+      strategy: 'byChapter',
+      chapters: 4,
+      schoolDays: 36,
+      startDate: '2026-09-01',
+      cadence: 'weekly',
+    })
+    expect(lessons).toHaveLength(4)
+    expect(lessons.map(l => l.dueDate)).toEqual([
+      '2026-09-01',
+      '2026-09-08',
+      '2026-09-15',
+      '2026-09-22',
+    ])
+  })
+
+  it('cadence "everyNDays" with cadenceDays produces lessons N calendar days apart from the previous due date', () => {
+    const lessons = generateLessons({
+      resource: BASE_RESOURCE,
+      strategy: 'byChapter',
+      chapters: 4,
+      schoolDays: 36,
+      startDate: '2026-09-01',
+      cadence: 'everyNDays',
+      cadenceDays: 3,
+    })
+    expect(lessons).toHaveLength(4)
+    expect(lessons.map(l => l.dueDate)).toEqual([
+      '2026-09-01',
+      '2026-09-04',
+      '2026-09-07',
+      '2026-09-10',
+    ])
+  })
 })
 
 describe('mapGeneratedLessonToTaskInput', () => {

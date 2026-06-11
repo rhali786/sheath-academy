@@ -86,6 +86,16 @@ export async function handleCalculatePace(request: Request): Promise<NextRespons
 
 export async function handleGenerateLessons(request: Request): Promise<NextResponse> {
   const body = await request.json() as GenerateLessonsInput
+
+  if (body.cadence === 'everyNDays' && !(typeof body.cadenceDays === 'number' && body.cadenceDays >= 1)) {
+    return NextResponse.json({
+      status: 'error',
+      data: null,
+      message: 'cadenceDays must be a number >= 1 when cadence is "everyNDays"',
+      timestamp: new Date().toISOString(),
+    }, { status: 400 })
+  }
+
   const lessons = generateLessons(body)
   return NextResponse.json({
     status: 'success',

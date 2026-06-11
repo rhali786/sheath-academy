@@ -52,7 +52,7 @@ export function calculatePace(input: PaceInput): PaceResult {
  * Each lesson gets a `dueDate` by advancing through school days (Mon–Fri).
  */
 export function generateLessons(input: GenerateLessonsInput): GeneratedLesson[] {
-  const { resource, strategy, chapters, schoolDays, startDate } = input
+  const { resource, strategy, chapters, schoolDays, startDate, cadence, cadenceDays } = input
 
   let count = 0
   switch (strategy) {
@@ -71,26 +71,12 @@ export function generateLessons(input: GenerateLessonsInput): GeneratedLesson[] 
 
   if (count === 0) return []
 
-  // Advance through weekdays starting from startDate
-  const start = startDate ? new Date(startDate) : new Date()
+  const start = startDate ? parseLocalDate(startDate) : new Date()
   const lessons: GeneratedLesson[] = []
-
-  // Pre-compute school day dates (skip weekends)
-  const schoolDayDates: string[] = []
-  const cursor = new Date(start)
-  while (schoolDayDates.length < schoolDays) {
-    const dow = cursor.getDay() // 0=Sun, 6=Sat
-    if (dow !== 0 && dow !== 6) {
-      schoolDayDates.push(
-        `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`
-      )
-    }
-    cursor.setDate(cursor.getDate() + 1)
-  }
+  const dueDates = computeDueDates(count, schoolDays, start, cadence, cadenceDays)
 
   for (let i = 0; i < count; i++) {
-    const dayIndex = i < schoolDayDates.length ? i : schoolDayDates.length - 1
-    const dueDate = schoolDayDates[dayIndex]
+    const dueDate = dueDates[i]
 
     lessons.push({
       title: `${resource.title} — ${strategyLabel(strategy)} ${i + 1}`,
@@ -101,6 +87,68 @@ export function generateLessons(input: GenerateLessonsInput): GeneratedLesson[] 
   }
 
   return lessons
+}
+
+/**
+ * Computes `count` due dates starting from `start`, according to `cadence`:
+ * - 'weekly': steps 7 calendar days apart from `start`
+ * - 'everyNDays': steps `cadenceDays` calendar days apart from `start`
+ * - 'schoolDay' (default/undefined): steps through weekdays (Mon–Fri) only,
+ *   distributed across `schoolDays`, repeating the last day if `count > schoolDays`
+ */
+function computeDueDates(
+  count: number,
+  schoolDays: number,
+  start: Date,
+  cadence: GenerateLessonsInput['cadence'],
+  cadenceDays: GenerateLessonsInput['cadenceDays'],
+): string[] {
+  if (cadence === 'weekly' || cadence === 'everyNDays') {
+    const stepDays = cadence === 'weekly' ? 7 : Math.max(1, cadenceDays ?? 1)
+    const dates: string[] = []
+    const cursor = new Date(start)
+    for (let i = 0; i < count; i++) {
+      dates.push(formatDate(cursor))
+      cursor.setDate(cursor.getDate() + stepDays)
+    }
+    return dates
+  }
+
+  // Default: 'schoolDay' — advance through weekdays (Mon–Fri) only
+  const schoolDayDates: string[] = []
+  const cursor = new Date(start)
+  while (schoolDayDates.length < schoolDays) {
+    const dow = cursor.getDay() // 0=Sun, 6=Sat
+    if (dow !== 0 && dow !== 6) {
+      schoolDayDates.push(formatDate(cursor))
+    }
+    cursor.setDate(cursor.getDate() + 1)
+  }
+
+  const dates: string[] = []
+  for (let i = 0; i < count; i++) {
+    const dayIndex = i < schoolDayDates.length ? i : schoolDayDates.length - 1
+    dates.push(schoolDayDates[dayIndex])
+  }
+  return dates
+}
+
+function formatDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * Parses an ISO date string (YYYY-MM-DD) as a local-time Date, avoiding the
+ * UTC-midnight-shifts-to-previous-local-day issue with `new Date('YYYY-MM-DD')`
+ * in negative-UTC-offset timezones.
+ */
+function parseLocalDate(isoDate: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoDate)
+  if (match) {
+    const [, year, month, day] = match
+    return new Date(Number(year), Number(month) - 1, Number(day))
+  }
+  return new Date(isoDate)
 }
 
 /**
