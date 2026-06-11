@@ -13,6 +13,13 @@ import type { QuranSession } from '@/features/lib/types'
 import type { StudentProfile } from '@/features/lib/types'
 
 const SESSION_TYPES = ['New memorisation', 'Revision', 'Recitation', 'Full revision', 'Memorisation', 'Listening', 'Other']
+const QURAN_SESSION_TYPE_LABELS: Record<string, string> = {
+  'New memorisation': 'New memorization (Hifz)',
+  'Memorisation': 'Memorization review (already memorized)',
+}
+function sessionTypeLabel(type: string): string {
+  return QURAN_SESSION_TYPE_LABELS[type] ?? type
+}
 type DateSort = 'desc' | 'asc'
 
 interface EditState {
@@ -210,7 +217,7 @@ export default function QuranPage() {
                   onChange={e => setAddForm(f => ({ ...f, type: e.target.value }))}
                   className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-900"
                 >
-                  {SESSION_TYPES.map(t => <option key={t}>{t}</option>)}
+                  {SESSION_TYPES.map(t => <option key={t} value={t}>{sessionTypeLabel(t)}</option>)}
                 </select>
               </div>
               <div className="flex-1 min-w-36">
@@ -289,7 +296,7 @@ export default function QuranPage() {
             className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
           >
             <option value="">All types</option>
-            {SESSION_TYPES.map(t => <option key={t}>{t}</option>)}
+            {SESSION_TYPES.map(t => <option key={t} value={t}>{sessionTypeLabel(t)}</option>)}
           </select>
           <select
             value={dateSort}
@@ -324,7 +331,7 @@ export default function QuranPage() {
                         onChange={e => setEditForm(f => f ? { ...f, type: e.target.value } : f)}
                         className="w-full text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-forest-500"
                       >
-                        {SESSION_TYPES.map(t => <option key={t}>{t}</option>)}
+                        {SESSION_TYPES.map(t => <option key={t} value={t}>{sessionTypeLabel(t)}</option>)}
                       </select>
                     </div>
                     <div className="flex-1 min-w-32">
@@ -417,7 +424,7 @@ export default function QuranPage() {
                 <div className="flex items-center justify-between gap-4 p-4">
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-900 text-sm">{s.surah}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{s.type} · Ayah {s.fromAyah}–{s.toAyah}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{sessionTypeLabel(s.type)} · Ayah {s.fromAyah}–{s.toAyah}</p>
                     {s.notes && <p className="text-xs text-slate-400 mt-1">{s.notes}</p>}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
