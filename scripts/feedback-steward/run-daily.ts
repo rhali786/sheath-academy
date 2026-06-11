@@ -51,7 +51,14 @@ export interface RunDailyResult {
   plan: DailyPlanArtifact
   jsonArtifactPath: string
   markdownArtifactPath: string
+  feedbackSnapshotPath: string
   execution?: ExecutePlanOutput
+}
+
+export interface FeedbackSnapshotArtifact {
+  version: 1
+  generatedAt: string
+  feedback: FeedbackRow[]
 }
 
 export interface ExecuteSavedDailyPlanInput {
@@ -616,12 +623,25 @@ export async function runDaily(options: RunDailyOptions): Promise<RunDailyResult
     'bug_enhancement',
     `${artifactBaseName}.md`,
   )
+  const feedbackSnapshotPath = path.join(
+    process.cwd(),
+    'docs',
+    'bug_enhancement',
+    `${dateStamp}-${timeStamp}-steward-feedback-snapshot.json`,
+  )
 
   ensureParentDir(jsonArtifactPath)
   ensureParentDir(markdownArtifactPath)
 
+  const feedbackSnapshot: FeedbackSnapshotArtifact = {
+    version: 1,
+    generatedAt,
+    feedback: eligibility.rows,
+  }
+
   writeFileSync(jsonArtifactPath, `${JSON.stringify(plan, null, 2)}\n`, 'utf8')
   writeFileSync(markdownArtifactPath, renderDailyPlanMarkdown(plan, eligibility), 'utf8')
+  writeFileSync(feedbackSnapshotPath, `${JSON.stringify(feedbackSnapshot, null, 2)}\n`, 'utf8')
 
   if (!options.dryRun) {
     const execution = await executeSavedDailyPlan({
@@ -636,6 +656,7 @@ export async function runDaily(options: RunDailyOptions): Promise<RunDailyResult
       plan,
       jsonArtifactPath,
       markdownArtifactPath,
+      feedbackSnapshotPath,
       execution,
     }
   }
@@ -646,6 +667,7 @@ export async function runDaily(options: RunDailyOptions): Promise<RunDailyResult
     plan,
     jsonArtifactPath,
     markdownArtifactPath,
+    feedbackSnapshotPath,
   }
 }
 
@@ -671,6 +693,7 @@ async function main(): Promise<void> {
       `📝 Plan: ${feedbackCount} feedback item${feedbackCount === 1 ? '' : 's'} → ${workstreamCount} workstream${workstreamCount === 1 ? '' : 's'}`,
       `📄 JSON:     ${result.jsonArtifactPath}`,
       `📄 Markdown: ${result.markdownArtifactPath}`,
+      `📄 Feedback snapshot: ${result.feedbackSnapshotPath}`,
       ...(result.execution
         ? [
             `🔗 PR #${result.execution.prNumber}: ${result.execution.prTitle}`,

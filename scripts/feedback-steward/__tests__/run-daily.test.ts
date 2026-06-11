@@ -277,12 +277,46 @@ describe('runDaily', () => {
     expect(result.plan.feedbackIds).toEqual(['fb_1', 'fb_2'])
     expect(result.jsonArtifactPath.replace(/\\/g, '/')).toContain('/docs/bug_enhancement/')
     expect(result.markdownArtifactPath.replace(/\\/g, '/')).toContain('/docs/bug_enhancement/')
+    expect(result.feedbackSnapshotPath.replace(/\\/g, '/')).toContain('/docs/bug_enhancement/')
+    expect(result.feedbackSnapshotPath.replace(/\\/g, '/')).toMatch(/-feedback-snapshot\.json$/)
     expect(mockListEligibleFeedbackForDailyRun).toHaveBeenCalledWith(
       { featureAreas: ['auth'], feedbackTypes: ['performance'] },
       undefined,
     )
-    expect(mockWriteFileSync).toHaveBeenCalledTimes(2)
+    expect(mockWriteFileSync).toHaveBeenCalledTimes(3)
     expect(mockMkdirSync).toHaveBeenCalled()
+  })
+
+  it('writes a feedback snapshot artifact with full feedback rows (id and message included)', async () => {
+    const rows = [makeRow({ id: 'fb_1' }), makeRow({ id: 'fb_2', adminApprovedAt: '2026-05-25T15:50:00.000Z' })]
+    mockListEligibleFeedbackForDailyRun.mockResolvedValue({
+      feedbackIds: ['fb_1', 'fb_2'],
+      autoEligibleIds: ['fb_1'],
+      approvedIds: ['fb_2'],
+      rows,
+    })
+    mockSpawnSync.mockReturnValue({
+      status: 0,
+      stdout: JSON.stringify(makePlanArtifact()),
+      stderr: '',
+      output: ['', JSON.stringify(makePlanArtifact()), ''],
+      pid: 123,
+      signal: null,
+    } as never)
+
+    const result = await runDaily({ dryRun: true, now: new Date('2026-05-25T15:58:00.000Z') })
+
+    const snapshotCall = (mockWriteFileSync as jest.Mock).mock.calls.find(
+      (args) => args[0] === result.feedbackSnapshotPath,
+    )
+    expect(snapshotCall).toBeDefined()
+
+    const snapshot = JSON.parse(snapshotCall![1] as string)
+    expect(snapshot.version).toBe(1)
+    expect(snapshot.generatedAt).toBe('2026-05-25T15:58:00.000Z')
+    expect(snapshot.feedback).toEqual(rows)
+    expect(snapshot.feedback[0].id).toBe('fb_1')
+    expect(snapshot.feedback[0].message).toBe('Clarify the dashboard button copy')
   })
 
   it('invalid plan artifact exits non-zero with no file writes', async () => {

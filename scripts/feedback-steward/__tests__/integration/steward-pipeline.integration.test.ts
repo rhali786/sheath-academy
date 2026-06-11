@@ -105,10 +105,11 @@ describe('steward pipeline integration', () => {
       now: new Date(),
     })
 
-    artifactPaths = [result.jsonArtifactPath, result.markdownArtifactPath]
+    artifactPaths = [result.jsonArtifactPath, result.markdownArtifactPath, result.feedbackSnapshotPath]
 
     expect(existsSync(result.jsonArtifactPath)).toBe(true)
     expect(existsSync(result.markdownArtifactPath)).toBe(true)
+    expect(existsSync(result.feedbackSnapshotPath)).toBe(true)
     expect(result.plan.feedbackIds).toContain(id1)
     expect(result.plan.workstreams.length).toBeGreaterThan(0)
 
