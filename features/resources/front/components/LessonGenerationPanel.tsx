@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { Resource, LessonGenerationStrategy, GeneratedLesson } from '@/features/resources/types'
+import type { Resource, LessonGenerationStrategy, LessonCadence, GeneratedLesson } from '@/features/resources/types'
 import { resourcesApi } from '../services/api'
 import { plannerApi } from '@/features/plan/front/services/api'
 import { useHousehold } from '@/features/household/front/context'
@@ -12,6 +12,12 @@ const STRATEGIES: { value: LessonGenerationStrategy; label: string }[] = [
   { value: 'byPage',    label: 'By page' },
   { value: 'bySurah',   label: 'By surah' },
   { value: 'byModule',  label: 'By module' },
+]
+
+const PACING_OPTIONS: { value: LessonCadence; label: string }[] = [
+  { value: 'schoolDay',  label: 'Every school day' },
+  { value: 'weekly',     label: 'Once a week' },
+  { value: 'everyNDays', label: 'Every N days' },
 ]
 
 interface LessonGenerationPanelProps {
@@ -25,6 +31,8 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
   const [strategy, setStrategy] = useState<LessonGenerationStrategy>('byChapter')
   const [chapters, setChapters] = useState(String(resource.totalChapters ?? ''))
   const [schoolDays, setSchoolDays] = useState('36')
+  const [cadence, setCadence] = useState<LessonCadence>('schoolDay')
+  const [cadenceDays, setCadenceDays] = useState('1')
   const [generating, setGenerating] = useState(false)
   const [generated, setGenerated] = useState<GeneratedLesson[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -61,6 +69,8 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
         chapters: chapters ? parseInt(chapters, 10) : undefined,
         schoolDays: parseInt(schoolDays, 10) || 36,
         startDate,
+        cadence,
+        ...(cadence === 'everyNDays' ? { cadenceDays: parseInt(cadenceDays, 10) || 1 } : {}),
       })
       setGenerated(res.data)
       onGenerate?.(res.data)
@@ -144,6 +154,38 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
             data-testid="generation-school-days-input"
           />
         </div>
+        <div>
+          <label htmlFor="generation-pacing-select" className="block text-xs text-slate-600 mb-1">
+            Pacing
+          </label>
+          <select
+            id="generation-pacing-select"
+            value={cadence}
+            onChange={e => setCadence(e.target.value as LessonCadence)}
+            className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+            data-testid="generation-pacing-select"
+          >
+            {PACING_OPTIONS.map(p => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+        </div>
+        {cadence === 'everyNDays' && (
+          <div>
+            <label htmlFor="generation-cadence-days-input" className="block text-xs text-slate-600 mb-1">
+              N
+            </label>
+            <input
+              id="generation-cadence-days-input"
+              type="number"
+              min="1"
+              value={cadenceDays}
+              onChange={e => setCadenceDays(e.target.value)}
+              className="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+              data-testid="generation-cadence-days-input"
+            />
+          </div>
+        )}
       </div>
 
       <button

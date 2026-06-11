@@ -215,3 +215,60 @@ describe('LessonGenerationPanel — learner/course selectors', () => {
     expect(saveButton).toBeDisabled()
   })
 })
+
+describe('LessonGenerationPanel — pacing control', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    useHousehold.mockReturnValue(loadedHousehold)
+    resourcesApi.generateLessons.mockResolvedValue({ status: 'success', data: generated, message: '', timestamp: '' })
+  })
+
+  it('renders a Pacing select with the school-day option selected by default, and no N input', () => {
+    render(<LessonGenerationPanel resource={resource} />)
+
+    const pacingSelect = screen.getByTestId('generation-pacing-select') as HTMLSelectElement
+    expect(pacingSelect).toBeInTheDocument()
+    expect(pacingSelect.value).toBe('schoolDay')
+    expect(screen.getByRole('option', { name: 'Every school day' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Once a week' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Every N days' })).toBeInTheDocument()
+
+    expect(screen.queryByTestId('generation-cadence-days-input')).not.toBeInTheDocument()
+  })
+
+  it('shows an N input only when "Every N days" is selected, and passes cadence/cadenceDays to generateLessons', async () => {
+    render(<LessonGenerationPanel resource={resource} />)
+
+    const pacingSelect = screen.getByTestId('generation-pacing-select')
+
+    await userEvent.selectOptions(pacingSelect, 'weekly')
+    expect(screen.queryByTestId('generation-cadence-days-input')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByTestId('generate-lessons-button'))
+    expect(resourcesApi.generateLessons).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cadence: 'weekly' })
+    )
+
+    await userEvent.selectOptions(pacingSelect, 'everyNDays')
+    const nInput = screen.getByTestId('generation-cadence-days-input') as HTMLInputElement
+    expect(nInput).toBeInTheDocument()
+    expect(nInput).toHaveAttribute('min', '1')
+
+    await userEvent.clear(nInput)
+    await userEvent.type(nInput, '3')
+
+    await userEvent.click(screen.getByTestId('generate-lessons-button'))
+    expect(resourcesApi.generateLessons).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cadence: 'everyNDays', cadenceDays: 3 })
+    )
+  })
+
+  it('passes cadence "schoolDay" by default when generating lessons', async () => {
+    render(<LessonGenerationPanel resource={resource} />)
+
+    await userEvent.click(screen.getByTestId('generate-lessons-button'))
+    expect(resourcesApi.generateLessons).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cadence: 'schoolDay' })
+    )
+  })
+})
