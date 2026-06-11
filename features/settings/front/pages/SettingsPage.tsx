@@ -342,7 +342,10 @@ export function SettingsPage() {
                 <SubjectForm
                   householdId={householdId}
                   defaultChildId={selectedChildId ?? undefined}
-                  onSuccess={() => setSubjectRefreshKey((k) => k + 1)}
+                  onSuccess={() => {
+                    setSubjectRefreshKey((k) => k + 1)
+                    refetch()
+                  }}
                 />
               </div>
 
@@ -350,7 +353,10 @@ export function SettingsPage() {
               <SubjectsAllTable
                 childrenList={subjectChildren.map((c) => ({ id: c.id, name: c.name }))}
                 refreshKey={subjectRefreshKey}
-                onMutate={() => setSubjectRefreshKey((k) => k + 1)}
+                onMutate={() => {
+                  setSubjectRefreshKey((k) => k + 1)
+                  refetch()
+                }}
               />
             </>
           )}
