@@ -128,16 +128,21 @@
       "id": "6-e2e-playwright",
       "title": "Phase 1 — end-to-end Learning Time session flow (Playwright)",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
+      "status": "failed",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T11:00:00.000Z",
       "completedAt": null,
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "e2e/learning-time.spec.ts"
+        ],
+        "testsRun": [
+          "npm run build (success)",
+          "npm run test:e2e -- learning-time (FAILED — both tests time out in loginDev, e2e/helpers/auth.ts:21, before reaching the spec's own steps)"
+        ],
+        "notes": "e2e/learning-time.spec.ts was written following attendance.spec.ts conventions (loginDev, page.getByTestId(...) against the data-testids recorded by phase 4/5: now-card, now-card-idle/-config/-running/-paused/-ended/-finalized, start-session-button, channel-timer/channel-stopwatch, target-minutes-input, start-button, pause-button, resume-button, finish-button, outcome-partial, notes-textarea, save-outcome-button, start-another-button, elapsed-time, learning-time-link). Added a local ensureIdle() helper + parseElapsed() to handle persisted demo-DB state across runs (one-active-session-per-learner) and ordering for the mid-session-reload assertion (running AND paused reload cases). NOT VERIFIED — npm run test:e2e fails for this spec AND for the pre-existing e2e/attendance.spec.ts with the identical error (TimeoutError at helpers/auth.ts:21, the dev-bypass 'Sign in' button stays disabled/loading and never redirects in headless Chromium). Confirmed this is NOT caused by this phase's changes: (1) reverting to attendance.spec.ts alone reproduces it, (2) curl against POST /api/auth/callback/bypass with a CSRF token returns HTTP 302 + a valid authjs.session-token cookie in ~1s, so the server-side bypass works — the hang is client-side in next-auth/react's signIn() inside headless Chromium in this sandbox. This is a pre-existing e2e-harness/environment issue, out of this phase's file scope (e2e/helpers/auth.ts, features/auth/front/pages/Login.tsx). FAILING per explicit instruction rather than marking complete unverified. Next steps for whoever resumes this phase: (a) fix/diagnose e2e/helpers/auth.ts + DevBypassSection's signIn() hang in headless Chromium (separate from this plan's file scope), or (b) re-run `npm run test:e2e -- learning-time` in an environment where the existing e2e suite is known to pass, then review e2e/learning-time.spec.ts (already written, uncommitted) for correctness against the live app before committing."
       },
-      "failureReason": null
+      "failureReason": "npm run test:e2e -- learning-time times out in loginDev (e2e/helpers/auth.ts:21) for both new tests, identically to pre-existing e2e/attendance.spec.ts — a sandbox-wide e2e auth bypass hang, not a defect in the new spec. Spec file e2e/learning-time.spec.ts is written but unverified and uncommitted."
     }
   ]
 }
