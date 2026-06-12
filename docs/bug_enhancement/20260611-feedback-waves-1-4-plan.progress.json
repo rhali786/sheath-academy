@@ -1,7 +1,7 @@
 {
   "plan": "docs/bug_enhancement/20260611-feedback-waves-1-4-plan.json",
   "createdAt": "2026-06-11T12:30:00.000Z",
-  "updatedAt": "2026-06-12T03:03:35.093Z",
+  "updatedAt": "2026-06-12T04:30:00.000Z",
   "branch": "feat/feedback-waves-1-4",
   "phases": [
     {
@@ -257,14 +257,21 @@
       "id": "4a-attendance-fix",
       "title": "Wave 4a — attendance-missing alert clears after logging attendance",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "claude-opus-4-8",
+      "startedAt": "2026-06-12T04:00:00.000Z",
+      "completedAt": "2026-06-12T04:30:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/alerts/server/service.ts",
+          "features/alerts/__tests__/api/alerts.test.ts"
+        ],
+        "testsRun": [
+          "npx jest features/alerts --testPathIgnorePatterns=\"/node_modules/\"",
+          "npx jest features/dashboard/__tests__/api --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "ROOT CAUSE = date/timezone mismatch (option (a) in the plan), NOT a refetch gap. getAlerts() in features/alerts/server/service.ts computed 'today' via a naive todayLocal() using the SERVER PROCESS timezone (new Date().getFullYear()/getMonth()/getDate()). AttendancePage (features/attendance/front/pages/AttendancePage.tsx:24-26,89-107) submits attendanceDate in the HOUSEHOLD/browser-local timezone. On prod (Render server runs UTC) these diverge across a day boundary: a US family logging attendance in the evening sends e.g. 2026-06-11 but the server's todayLocal() returns 2026-06-12, so listAttendanceEvents({date: serverToday}) never matched the just-saved record and the attendance_missing alert never cleared (feedback 9937be68). FIX (service.ts only): todayLocal() now reads timezone from tryGetRequestAuthCtx()?.timezone and returns getHouseholdLocalDate(timezone) (features/lib/server/date.ts, Intl en-CA in the household tz); falls back to the old server-local computation when no request auth ctx / timezone (e.g. outside API dispatch). DashboardProvider already refetches alerts on mount (effect keyed on householdProfile?.id), so navigating /attendance -> /dashboard remounts and refetches correctly — the refetch path was NOT the bug, so DashboardProvider.tsx and features/attendance/server/repository.ts (both listed in plan fileScope) were intentionally left UNCHANGED per the plan's 'fix only the layer the failing test isolates' instruction. TEST: added a runner-tz-INDEPENDENT reproduction describe block to features/alerts/__tests__/api/alerts.test.ts that exercises the REAL service via jest.requireActual (the file otherwise mocks the service), mocks the 3 repos + overrides tryGetRequestAuthCtx timezone to Pacific/Kiritimati (UTC+14), and pins the clock to 2026-06-11T12:00Z (= 2026-06-12 in the household tz but 2026-06-11 in any plausible CI/server tz, guaranteeing divergence without mutating process.env.TZ). Confirmed the 2 new tests FAIL on the unfixed service (queried 2026-06-11 instead of 2026-06-12) then PASS after the fix. Full features/alerts suite 22/22 pass (incl. the pre-existing alertRules.test.ts unit tests which don't mock requestAuth -> tryGetRequestAuthCtx returns undefined -> server-local fallback preserves their behavior). dashboard api tests (7/7, they mock getAlerts) and npm run build (29 pages) pass. No schema/migration changes. Committed as 78465c3."
       },
       "failureReason": null
     },
