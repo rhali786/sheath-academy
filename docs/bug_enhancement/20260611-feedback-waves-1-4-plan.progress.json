@@ -279,14 +279,21 @@
       "id": "4b-setup-route",
       "title": "Wave 4b — standalone /household/setup route",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T05:00:00.000Z",
+      "completedAt": "2026-06-12T05:20:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "app/(shell)/household/setup/page.tsx",
+          "features/household/__tests__/integration/HouseholdSetupPage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/household/__tests__/integration/HouseholdSetupPage.test.tsx --testPathIgnorePatterns=\"/node_modules/\"",
+          "npx jest features/household features/dashboard --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "OPTION IMPLEMENTED: standalone route (option 1, not the callback-based-reveal fallback). HouseholdSetup works fine standalone -- it consumes useHousehold() (provided by AppShell/HouseholdProvider via the (shell) layout) and fetches its own status data directly via fetch() to /api/children/children, /api/school-years/active, /api/subjects; it has no dependency on Dashboard's loaded data. Created app/(shell)/household/setup/page.tsx as a thin route (`export default function HouseholdSetupRoutePage() { return <HouseholdSetup /> }`), no extra logic, per CLAUDE.md app/ stays routing-only. Did NOT touch features/dashboard/front/pages/Dashboard.tsx -- existing needsSetup inline-render (`if (needsSetup) return <HouseholdSetup />`) on Dashboard.tsx:139-141 is unchanged, so first-run regression protection from existing Dashboard tests is preserved. New test file features/household/__tests__/integration/HouseholdSetupPage.test.tsx (2 tests, both pass): renders the route page directly, mocking useHousehold/householdApi/childrenApi/next-navigation the same way as the existing HouseholdSetup.test.tsx -- covers 'Welcome to Sheath' (no household) and 'Complete your setup' (household exists, setup cards) states. RUN 1 (npx jest features/household features/dashboard): 33 passed / 3 failed test suites (216 passed / 22 failed tests) -- the 3 failing suites (DashboardComponents.test.tsx, Dashboard.test.tsx, LinkedFiltering.test.tsx, all failing with 'useHousehold must be used within HouseholdProvider' inside RecordsProof) are PRE-EXISTING on this branch tip, confirmed identical (22 failed / 15 passed across those 3 files) via git stash before this phase's changes -- unrelated to this phase. npm run build passes (30/30 static pages, including new route '○ /household/setup  168 B  110 kB', statically rendered). NAVIGABLE TARGET for phase 4b-setup-link: '/household/setup' (a Link href or router.push to this path renders the full HouseholdSetup experience standalone, inside AppShell/Header)."
       },
       "failureReason": null
     },
