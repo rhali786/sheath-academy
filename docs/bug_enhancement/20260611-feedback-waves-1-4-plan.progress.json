@@ -191,14 +191,22 @@
       "id": "3-api-routes",
       "title": "Wave 3 — API plumbing for subject resourceIds",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T01:00:00.000Z",
+      "completedAt": "2026-06-12T01:15:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/subjects/api/routes/subject.ts",
+          "features/subjects/front/services/api.ts",
+          "features/subjects/__tests__/api/subjects.test.ts",
+          "features/subjects/__tests__/api/subject.test.ts"
+        ],
+        "testsRun": [
+          "npx jest features/subjects --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "rowToSubject in subjects.ts/subject.ts/rollover.ts already included resourceIds from phase 3-repo-hydration, so only the PUT handler and front-end api.ts needed updating. PUT /api/subjects/:id (features/subjects/api/routes/subject.ts) now passes resourceIds from the request body through to updateSubjectRow when present (undefined when omitted, leaving existing resourceIds untouched per updateSubjectRow's syncResourceRows-only-if-defined behavior). features/subjects/front/services/api.ts updateSubject() body type gained resourceIds?: string[] (the generic put() already forwards the full body). Added new features/subjects/__tests__/api/subject.test.ts (3 tests: GET includes resourceIds, PUT passes resourceIds through and returns them, PUT omits resourceIds -> updateSubjectRow called with resourceIds: undefined). Added 1 new test to subjects.test.ts confirming GET /api/subjects includes resourceIds per row. All 4 new tests pass. Full features/subjects suite: 39/40 non-skipped pass; the 1 failure (SubjectsAllTable.test.tsx 'dialog not found') is PRE-EXISTING on the unmodified branch tip (verified via git stash run) and unrelated to this phase. npm run build passes (29/29 static pages). Next phases (3-edit-dialog-ui, 3-table-column) can rely on PATCH /api/subjects/:id accepting/returning resourceIds and subjectsApi.updateSubject() typing resourceIds."
       },
       "failureReason": null
     },

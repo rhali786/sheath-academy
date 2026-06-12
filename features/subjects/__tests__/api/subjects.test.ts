@@ -54,6 +54,26 @@ describe('GET /api/subjects', () => {
     await GET(new Request('http://localhost/api/subjects'))
     expect(mockList).toHaveBeenCalledWith('hh_test', undefined, false, undefined)
   })
+
+  it('includes resourceIds in each returned subject', async () => {
+    mockList.mockResolvedValue([
+      {
+        id: 'subject_1',
+        learnerIds: ['learner_1'],
+        learnerId: 'learner_1',
+        resourceIds: ['resource_1', 'resource_2'],
+        name: 'Algebra',
+        category: 'Math',
+        schoolYearId: 'sy_active',
+        isActive: true,
+        sortOrder: 0,
+        createdAt: new Date(),
+      },
+    ])
+    const res = await GET(new Request('http://localhost/api/subjects'))
+    const body = await res.json()
+    expect(body.data[0].resourceIds).toEqual(['resource_1', 'resource_2'])
+  })
 })
 
 describe('POST /api/subjects', () => {

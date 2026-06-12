@@ -50,6 +50,7 @@ export async function PUT(id: string, request: Request): Promise<NextResponse> {
       category: body.category as SubjectCourseCategory | undefined,
       sortOrder: body.order !== undefined ? Number(body.order) : undefined,
       learnerIds,
+      resourceIds: body.resourceIds !== undefined ? (body.resourceIds as string[]) : undefined,
     })
     if (!updated) return NextResponse.json({ status: 'error', data: null, message: 'Subject not found', timestamp: new Date().toISOString() }, { status: 404 })
     return NextResponse.json({ status: 'success', data: rowToSubject(updated), message: 'Subject updated', timestamp: new Date().toISOString() })
