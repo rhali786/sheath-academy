@@ -1,21 +1,32 @@
 {
   "plan": "docs/bug_enhancement/20260612-wave5-phase1-learning-time-plan.json",
   "createdAt": "2026-06-12T06:00:00.000Z",
-  "updatedAt": "2026-06-12T06:00:00.000Z",
+  "updatedAt": "2026-06-12T06:30:00.000Z",
   "branch": "feature/learning-time-phase1",
   "phases": [
     {
       "id": "1-schema-migration",
       "title": "Phase 1 — learning_time_sessions table + migration",
       "gated": true,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "claude-opus-4-8",
+      "startedAt": "2026-06-12T06:10:00.000Z",
+      "completedAt": "2026-06-12T06:30:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "db/schema.ts",
+          "db/__tests__/schema.test.ts",
+          "db/migrations/0025_fair_virginia_dare.sql",
+          "db/migrations/meta/0025_snapshot.json",
+          "db/migrations/meta/_journal.json"
+        ],
+        "testsRun": [
+          "npx jest db/__tests__/schema.test.ts (4 passed)",
+          "npm run db:generate (no new migration — schema matches 0025)",
+          "npm run db:migrate (applied cleanly against dev DB, migration 0025 now in __drizzle_migrations)",
+          "npm run build (success)"
+        ],
+        "notes": "Added learning_time_sessions table to db/schema.ts (migration 0025_fair_virginia_dare, idx 25 in _journal.json — contiguous after 0024_overconfident_eddie_brock). Columns per plan: id, householdId, learnerId, subjectId?, lessonTaskId?, timeChannelType ('scheduled'|'stopwatch'|'timer'), targetMinutes?, scheduledStart?, scheduledEnd?, status ('draft'|'running'|'paused'|'ended'|'finalized'), startedAt?, pausedAt?, endedAt?, endedBy? ('time'|'manual'), outcome? ('complete'|'partial'|'abandoned'), notes?, createdAt, updatedAt. Index learning_time_sessions_household_learner_idx on (householdId, learnerId). FKs to households/learners/subjects/lessonTasks use ON DELETE no action (mirrors quranSessions/attendanceEvents precedent — finalized session records are preserved, not cascade-deleted). No 'mode' column (deferred to Phase 2, confirmed absent by schema.test.ts). Migration 0025 applied against the dev DB (DATABASE_URL = Virginia dev), confirmed not prod. Verified against current DB before phase 2."
       },
       "failureReason": null
     },
