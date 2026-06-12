@@ -34,14 +34,23 @@
       "id": "2-repo-service",
       "title": "Phase 1 — session repository + lifecycle service",
       "gated": false,
-      "status": "in_progress",
+      "status": "complete",
       "model": "claude-sonnet-4-6",
       "startedAt": "2026-06-12T07:00:00.000Z",
-      "completedAt": null,
+      "completedAt": "2026-06-12T07:30:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/learning-time/types.ts",
+          "features/learning-time/server/repository.ts",
+          "features/learning-time/server/service.ts",
+          "features/learning-time/__tests__/server/repository.test.ts",
+          "features/learning-time/__tests__/server/service.test.ts"
+        ],
+        "testsRun": [
+          "npx jest features/learning-time/__tests__/server --testPathIgnorePatterns=\"/node_modules/\" (16 passed, 6 skipped — repository.test.ts skips without DATABASE_URL in the jest process, per testing-patterns boilerplate)",
+          "npm run build (success)"
+        ],
+        "notes": "Repository (features/learning-time/server/repository.ts) exports: getSessionRow(id, householdId), getActiveSessionRow(householdId, learnerId) [non-finalized session, at most one per learner], createSessionRow(householdId, CreateSessionRowInput) [status='draft'; throws Error('Learner already has an active learning time session') if an active session already exists], updateSessionRow(id, householdId, SessionRowPatch), listFinalizedSessionRows(householdId, SessionListFilters{learnerId?,from?,to?}) [status='finalized', from/to filter on endedAt]. Also exports type LearningTimeSessionRow = typeof learningTimeSessions.$inferSelect. Service (features/learning-time/server/service.ts) exports: createSession(householdId, CreateSessionInput), getActiveSession(householdId, learnerId), listSessions(householdId, SessionListFilters), transitionSession(id, householdId, SessionTransitionInput{action:'start'|'pause'|'resume'|'end'|'finalize', outcome?, notes?}) — all return the domain LearningTimeSession (features/learning-time/types.ts), which mirrors the DB row but with ISO date strings plus a server-computed `elapsedSeconds: number`. Error classes: SessionNotFoundError, InvalidTransitionError (both exported from service.ts). Transition rules: start requires status='draft'; pause/resume require status='running'/'paused' respectively AND timeChannelType !== 'scheduled'; end allowed from 'running' or 'paused', sets endedAt=now and computes endedBy ('time' if a timer's elapsed >= targetMinutes*60 or a scheduled session's scheduledEnd has passed, else 'manual'); finalize requires status='ended', sets outcome/notes and status='finalized'. KNOWN SIMPLIFICATION (documented for Phase 2+): elapsedSeconds is wall-clock from startedAt to (endedAt ?? pausedAt-if-paused ?? now) — a single pause/resume cycle is supported but resuming does not subtract paused duration from elapsedSeconds (no accumulator column in schema)."
       },
       "failureReason": null
     },
