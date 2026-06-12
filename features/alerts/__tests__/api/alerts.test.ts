@@ -9,6 +9,10 @@ jest.mock('@/features/alerts/server/service', () => ({
   getAlerts: jest.fn(),
 }))
 
+jest.mock('@/features/children/server/repository', () => ({ listAllLearners: jest.fn() }))
+jest.mock('@/features/plan/server/repository', () => ({ listLessonTaskRows: jest.fn() }))
+jest.mock('@/features/attendance/server/repository', () => ({ listAttendanceEvents: jest.fn() }))
+
 import { GET } from '@/features/alerts/api/routes/alerts'
 import { getAlerts } from '@/features/alerts/server/service'
 
@@ -65,6 +69,102 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.clearAllMocks()
+})
+
+/**
+ * Reproduction for feedback 9937be68: the "Attendance not logged today" alert
+ * never clears after logging attendance when the server PROCESS timezone differs
+ * from the HOUSEHOLD timezone (e.g. the prod server runs in UTC, the family is in
+ * a different zone).
+ *
+ * AttendancePage (features/attendance/front/pages/AttendancePage.tsx:24-26, 89-107)
+ * submits attendanceDate as the *household-local* date. getAlerts must compute
+ * "today" in the *household* timezone too — not the server process tz — or the
+ * attendance_missing query filters on a different calendar day and the just-saved
+ * record is never matched, so the alert never clears.
+ *
+ * This block exercises the REAL getAlerts service (not the file-wide mock above)
+ * with the repositories mocked at the boundary. It overrides the household tz to
+ * Pacific/Kiritimati (UTC+14) and pins the clock to 12:00Z — an instant that is
+ * 2026-06-12 in the household tz but 2026-06-11 in every runner tz from UTC-11
+ * to UTC+13. That guarantees divergence from the server-process date regardless
+ * of where CI runs (no reliance on mutating process.env.TZ mid-run).
+ */
+describe('getAlerts — attendance_missing clears across a household-vs-server day boundary', () => {
+  const actualService = jest.requireActual('@/features/alerts/server/service') as typeof import('@/features/alerts/server/service')
+
+  // 2026-06-11T12:00:00Z is 2026-06-12 02:00 in Pacific/Kiritimati (UTC+14),
+  // but still 2026-06-11 in any plausible CI/server tz.
+  const INSTANT = new Date('2026-06-11T12:00:00.000Z')
+  const HOUSEHOLD_TZ = 'Pacific/Kiritimati'
+  const HOUSEHOLD_TODAY = '2026-06-12' // what AttendancePage submits in the household tz
+  const SERVER_TODAY = '2026-06-11' // what a naive server-process-local todayLocal() returns
+
+  const learner = {
+    id: 'adam_01',
+    householdId: HOUSEHOLD_ID,
+    name: 'Adam',
+    displayColor: null,
+    gradeLevel: 'Grade 5',
+    isActive: true,
+    archivedAt: null,
+    sortOrder: 0,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+
+  let listAllLearners: jest.Mock
+  let listLessonTaskRows: jest.Mock
+  let listAttendanceEvents: jest.Mock
+  let tryGetRequestAuthCtx: jest.Mock
+
+  beforeEach(() => {
+    jest.useFakeTimers()
+    jest.setSystemTime(INSTANT)
+
+    listAllLearners = require('@/features/children/server/repository').listAllLearners
+    listLessonTaskRows = require('@/features/plan/server/repository').listLessonTaskRows
+    listAttendanceEvents = require('@/features/attendance/server/repository').listAttendanceEvents
+    tryGetRequestAuthCtx = require('@/features/auth/server/requestAuth').tryGetRequestAuthCtx
+
+    tryGetRequestAuthCtx.mockReturnValue({ householdId: HOUSEHOLD_ID, userId: 'user_01', timezone: HOUSEHOLD_TZ })
+    listAllLearners.mockResolvedValue([learner])
+    listLessonTaskRows.mockResolvedValue([])
+    listAttendanceEvents.mockResolvedValue([])
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+    jest.clearAllMocks()
+  })
+
+  test('queries attendance for the household-local date, not the server-process date', async () => {
+    await actualService.getAlerts(HOUSEHOLD_ID)
+    expect(listAttendanceEvents).toHaveBeenCalledWith(HOUSEHOLD_ID, { date: HOUSEHOLD_TODAY })
+    expect(listAttendanceEvents).not.toHaveBeenCalledWith(HOUSEHOLD_ID, { date: SERVER_TODAY })
+  })
+
+  test('no attendance_missing alert remains after attendance is logged for the household-local today', async () => {
+    // Attendance saved exactly the way AttendancePage saves it: for the household "today".
+    listAttendanceEvents.mockResolvedValue([
+      {
+        id: 'att_1',
+        householdId: HOUSEHOLD_ID,
+        learnerId: learner.id,
+        attendanceDate: HOUSEHOLD_TODAY,
+        status: 'present',
+        minutes: null,
+        notes: null,
+        occurredAt: INSTANT,
+        voidedAt: null,
+        createdAt: INSTANT,
+        updatedAt: INSTANT,
+      },
+    ])
+
+    const alerts = await actualService.getAlerts(HOUSEHOLD_ID)
+    expect(alerts.filter(a => a.type === 'attendance_missing')).toHaveLength(0)
+  })
 })
 
 describe('GET /api/alerts', () => {

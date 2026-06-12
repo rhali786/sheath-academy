@@ -2,8 +2,26 @@ import type { Alert } from '@/features/alerts/types'
 import { listAttendanceEvents } from '@/features/attendance/server/repository'
 import { listAllLearners } from '@/features/children/server/repository'
 import { listLessonTaskRows } from '@/features/plan/server/repository'
+import { tryGetRequestAuthCtx } from '@/features/auth/server/requestAuth'
+import { getHouseholdLocalDate } from '@/features/lib/server/date'
 
+/**
+ * "Today" for alert purposes, computed in the HOUSEHOLD timezone — not the
+ * server process timezone. AttendancePage submits attendanceDate in the
+ * household's local timezone, so the attendance_missing query must match on the
+ * same calendar day or a just-logged record is never matched and the alert never
+ * clears (feedback 9937be68). Falls back to server-local only when no request
+ * auth context / timezone is available.
+ */
 function todayLocal(): string {
+  const timezone = tryGetRequestAuthCtx()?.timezone
+  if (timezone) {
+    try {
+      return getHouseholdLocalDate(timezone)
+    } catch {
+      // Invalid timezone string — fall through to server-local below.
+    }
+  }
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
