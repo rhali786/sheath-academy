@@ -34,9 +34,9 @@
       "id": "2-repo-service",
       "title": "Phase 1 — session repository + lifecycle service",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
+      "status": "in_progress",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T07:00:00.000Z",
       "completedAt": null,
       "outputs": {
         "filesChanged": [],
