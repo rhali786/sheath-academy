@@ -1,0 +1,98 @@
+{
+  "plan": "docs/bug_enhancement/20260612-wave5-phase1-learning-time-plan.json",
+  "createdAt": "2026-06-12T06:00:00.000Z",
+  "updatedAt": "2026-06-12T06:00:00.000Z",
+  "branch": "feature/learning-time-phase1",
+  "phases": [
+    {
+      "id": "1-schema-migration",
+      "title": "Phase 1 — learning_time_sessions table + migration",
+      "gated": true,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "2-repo-service",
+      "title": "Phase 1 — session repository + lifecycle service",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "3-api-routes",
+      "title": "Phase 1 — learning-time API routes + router wiring",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "4-ui-now-card",
+      "title": "Phase 1 — LearningTimePage + NowCard cockpit UI",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "5-dashboard-entry",
+      "title": "Phase 1 — Dashboard Learning Time entry point",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "6-e2e-playwright",
+      "title": "Phase 1 — end-to-end Learning Time session flow (Playwright)",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    }
+  ]
+}
