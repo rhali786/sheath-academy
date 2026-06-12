@@ -9,6 +9,7 @@ import {
   listSubjectRows,
   updateSubjectRow,
   archiveSubjectRow,
+  getSubjectRow,
 } from '../../server/repository'
 import { createTestHousehold } from '@/features/lib/__tests__/fixtures/testDb'
 
@@ -172,6 +173,63 @@ describe('subjects repository — multi-learner via subject_learners join table'
       }
       const { learners: learnersTable } = await import('@/db/schema')
       await getDb().delete(learnersTable).where(eq(learnersTable.id, l2.id))
+    }
+  })
+})
+
+describe('subjects repository — resourceIds via subject_resources join table', () => {
+  itDb('createSubjectRow returns resourceIds: [] and updateSubjectRow with resourceIds persists link rows', async () => {
+    const { createResourceRow } = await import('@/features/resources/server/repository')
+    const { getDb } = await import('@/features/lib/server/db')
+    const { subjects: subjectsTable, subjectLearners, subjectResources, resources: resourcesTable } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    const r1 = await createResourceRow(householdId, { title: 'Resource One', resourceType: 'textbook' })
+    const r2 = await createResourceRow(householdId, { title: 'Resource Two', resourceType: 'workbook' })
+
+    let subjectId = ''
+    try {
+      const created = await createSubjectRow(householdId, {
+        name: 'Resourceful Course',
+        category: 'Science',
+        learnerId,
+      })
+      subjectId = created.id
+      expect(created.resourceIds).toEqual([])
+
+      const updated = await updateSubjectRow(subjectId, householdId, {
+        resourceIds: [r1.id, r2.id],
+      })
+      expect(updated?.resourceIds).toHaveLength(2)
+      expect(updated?.resourceIds).toContain(r1.id)
+      expect(updated?.resourceIds).toContain(r2.id)
+
+      // getSubjectRow round-trips resourceIds
+      const fetched = await getSubjectRow(subjectId, householdId)
+      expect(fetched?.resourceIds).toHaveLength(2)
+      expect(fetched?.resourceIds).toContain(r1.id)
+      expect(fetched?.resourceIds).toContain(r2.id)
+
+      // listSubjectRows round-trips resourceIds
+      const listed = await listSubjectRows(householdId)
+      const found = listed.find((r) => r.id === subjectId)
+      expect(found?.resourceIds).toHaveLength(2)
+      expect(found?.resourceIds).toContain(r1.id)
+      expect(found?.resourceIds).toContain(r2.id)
+
+      // updateSubjectRow with resourceIds replaces the link set exactly
+      const replaced = await updateSubjectRow(subjectId, householdId, {
+        resourceIds: [r1.id],
+      })
+      expect(replaced?.resourceIds).toEqual([r1.id])
+    } finally {
+      if (subjectId) {
+        await getDb().delete(subjectResources).where(eq(subjectResources.subjectId, subjectId))
+        await getDb().delete(subjectLearners).where(eq(subjectLearners.subjectId, subjectId))
+        await getDb().delete(subjectsTable).where(eq(subjectsTable.id, subjectId))
+      }
+      await getDb().delete(resourcesTable).where(eq(resourcesTable.id, r1.id))
+      await getDb().delete(resourcesTable).where(eq(resourcesTable.id, r2.id))
     }
   })
 })
