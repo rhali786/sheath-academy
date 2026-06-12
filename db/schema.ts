@@ -259,6 +259,40 @@ export const lessonTasks = pgTable(
   ],
 )
 
+// ─── Learning Time Sessions ───────────────────────────────────────────────────
+// Live session-execution state owned by features/learning-time. Phase 1 is
+// time-only (no task channel, no 'mode' column — added in Phase 2). FK behavior
+// mirrors the standalone session-record precedent (quranSessions/attendanceEvents):
+// plain references without onDelete on household/learner/subject/lessonTask so a
+// finalized session record is preserved rather than silently cascade-deleted.
+
+export const learningTimeSessions = pgTable(
+  'learning_time_sessions',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    learnerId: text('learner_id').notNull().references(() => learners.id),
+    subjectId: text('subject_id').references(() => subjects.id),
+    lessonTaskId: text('lesson_task_id').references(() => lessonTasks.id),
+    timeChannelType: text('time_channel_type').notNull(), // 'scheduled' | 'stopwatch' | 'timer'
+    targetMinutes: integer('target_minutes'), // for 'timer'; null for stopwatch/scheduled
+    scheduledStart: timestamp('scheduled_start'), // for 'scheduled'
+    scheduledEnd: timestamp('scheduled_end'), // for 'scheduled'
+    status: text('status').notNull(), // 'draft' | 'running' | 'paused' | 'ended' | 'finalized'
+    startedAt: timestamp('started_at'),
+    pausedAt: timestamp('paused_at'),
+    endedAt: timestamp('ended_at'),
+    endedBy: text('ended_by'), // 'time' | 'manual'
+    outcome: text('outcome'), // 'complete' | 'partial' | 'abandoned'
+    notes: text('notes'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('learning_time_sessions_household_learner_idx').on(t.householdId, t.learnerId),
+  ],
+)
+
 // ─── Attendance Events ────────────────────────────────────────────────────────
 
 export const attendanceEvents = pgTable(

@@ -23,6 +23,7 @@ import { dashboardDateToStr } from '../components/DashboardDatePicker'
 import { getAssistantInsight } from '../lib/assistantRules'
 import { TodayTaskSummaryCards } from '../components/TodayTaskSummaryCards'
 import { TodaySchedulePanel } from '../components/TodaySchedulePanel'
+import { LearningTimeEntry } from '../components/LearningTimeEntry'
 import type { LessonTask } from '@/features/plan/types'
 import type { DaySchedule } from '@/features/schedule/types'
 
@@ -61,6 +62,11 @@ export default function Dashboard() {
   const dayLessons = useMemo(
     () => allLessons.filter(l => l.dueDate === selectedDate).sort((a, b) => a.order - b.order),
     [allLessons, selectedDate],
+  )
+
+  const selectedChild = useMemo(
+    () => studentProfiles.find(c => c.id === selectedChildId) ?? null,
+    [studentProfiles, selectedChildId],
   )
 
   const assistantInsight = useMemo(
@@ -161,6 +167,7 @@ export default function Dashboard() {
           </div>
           <aside className="space-y-6" data-testid="dashboard-alerts-rail">
             <PersonalAssistantPanel insight={assistantInsight} />
+            <LearningTimeEntry learnerId={selectedChildId} learnerName={selectedChild?.name} />
             <PersonalTodoList />
             <NeedsAttention alerts={alerts} />
           </aside>

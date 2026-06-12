@@ -1,0 +1,183 @@
+{
+  "title": "Wave 5 Phase 1 — Learning Time core session object + single-learner cockpit (time-only MVP)",
+  "source": "docs/bug_enhancement/20260611-wave5-learning-time-screen-plan.md",
+  "branch": "feature/learning-time-phase1",
+  "phases": [
+    {
+      "id": "1-schema-migration",
+      "title": "Phase 1 — learning_time_sessions table + migration",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": [
+        "Confirm DATABASE_URL points at a non-prod/throwaway database before running db:generate or db:migrate (per CLAUDE.md migration rules) — if this cannot be confirmed, fail this phase rather than running migrations against an unknown target"
+      ],
+      "fileScope": [
+        "db/schema.ts",
+        "db/migrations",
+        "db/__tests__/schema.test.ts"
+      ],
+      "testsFirst": [
+        "UPDATE/NEW db/__tests__/schema.test.ts: imports learningTimeSessions from db/schema.ts and asserts it defines householdId, learnerId, subjectId, lessonTaskId, timeChannelType, targetMinutes, scheduledStart, scheduledEnd, status, startedAt, pausedAt, endedAt, endedBy, outcome, notes columns (fails until the table is added)"
+      ],
+      "implementationSteps": [
+        "Add a learningTimeSessions pgTable to db/schema.ts per the plan's schema block (docs/bug_enhancement/20260611-wave5-learning-time-screen-plan.md, 'Data model / contract changes'): id, householdId (-> households.id), learnerId (-> learners.id), subjectId? (-> subjects.id), lessonTaskId? (-> lessonTasks.id), timeChannelType ('scheduled'|'stopwatch'|'timer'), targetMinutes?, scheduledStart?, scheduledEnd?, status ('draft'|'running'|'paused'|'ended'|'finalized'), startedAt?, pausedAt?, endedAt?, endedBy? ('time'|'manual'), outcome? ('complete'|'partial'|'abandoned'), notes?, createdAt, updatedAt, plus index learning_time_sessions_household_learner_idx on (householdId, learnerId)",
+        "Do NOT add a 'mode' column in this phase — Phase 1 is time-only; 'mode' is added in Phase 2 (see plan doc, 'mode field is deliberately omitted')",
+        "Run npm run db:generate to produce the migration",
+        "Run npm run db:migrate to apply it"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- db/__tests__/schema.test.ts",
+        "RUN: npm run db:generate (produces exactly one new migration matching the schema change)",
+        "RUN: npm run db:migrate (applies cleanly, no gap in migration sequence)",
+        "RUN: npm run build"
+      ],
+      "invariants": [
+        "drizzle-migrations"
+      ],
+      "writeBack": "Added learning_time_sessions table (columns per plan doc, FK cascade behavior should match subject_resources/subjectLearners precedent — record what onDelete behavior was chosen for each FK and why). Record the migration file number/range so the next phase can confirm nothing was skipped."
+    },
+    {
+      "id": "2-repo-service",
+      "title": "Phase 1 — session repository + lifecycle service",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [
+        "phase 1-schema-migration complete — learning_time_sessions table exists and is migrated"
+      ],
+      "fileScope": [
+        "features/learning-time/types.ts",
+        "features/learning-time/server/repository.ts",
+        "features/learning-time/server/service.ts",
+        "features/learning-time/__tests__/server/repository.test.ts",
+        "features/learning-time/__tests__/server/service.test.ts"
+      ],
+      "testsFirst": [
+        "NEW features/learning-time/__tests__/server/repository.test.ts: create/read/update a session row; creating a second draft/running session for a learner that already has one active is rejected (one-active-session-per-learner)",
+        "NEW features/learning-time/__tests__/server/service.test.ts: transition validation — start requires draft; pause/resume require running/paused respectively and only for stopwatch/timer (not scheduled); end computes endedBy and elapsed time server-side from startedAt/pausedAt/endedAt (never trust client-computed elapsed time)"
+      ],
+      "implementationSteps": [
+        "Add types to features/learning-time/types.ts: LearningTimeSession, TimeChannelType, SessionStatus, EndedBy, Outcome, CreateSessionInput, SessionTransitionInput",
+        "features/learning-time/server/repository.ts — Drizzle CRUD for learning_time_sessions, following the repository-mock-boundary testing convention (CLAUDE.md: mock at the repository boundary, never mock getDb()); enforce one-active-session-per-learner (non-finalized session) at create time",
+        "features/learning-time/server/service.ts — owns transition validation (start/pause/resume/end/finalize) and server-side elapsed-time/endedBy computation; rejects illegal transitions (e.g. pause when status !== 'running', pause/resume for 'scheduled' channel type)"
+      ],
+      "doneWhen": [
+        "RUN: npx jest features/learning-time/__tests__/server --testPathIgnorePatterns=\"/node_modules/\"",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Record the exported repository/service function names and signatures (e.g. createSession, getActiveSession, transitionSession) — phase 3-api-routes calls these directly."
+    },
+    {
+      "id": "3-api-routes",
+      "title": "Phase 1 — learning-time API routes + router wiring",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase 2-repo-service complete — repository/service functions exist for create/transition/getActive/list"
+      ],
+      "fileScope": [
+        "features/learning-time/api/routes/learning-time.ts",
+        "features/learning-time/api/router.ts",
+        "app/api/[...slug]/route.ts",
+        "features/learning-time/front/services/api.ts",
+        "features/learning-time/__tests__/api/learning-time.test.ts"
+      ],
+      "testsFirst": [
+        "NEW features/learning-time/__tests__/api/learning-time.test.ts: route handler tests for POST create, PATCH transition (start/pause/resume/end/finalize via an action field), GET active, GET list — mocking the repository boundary"
+      ],
+      "implementationSteps": [
+        "features/learning-time/api/routes/learning-time.ts: POST /api/learning-time/sessions (create, status: 'draft'); PATCH /api/learning-time/sessions/:id (transitions via action field, delegates validation to the service); GET /api/learning-time/sessions/active?learnerId= (current non-finalized session, if any); GET /api/learning-time/sessions?learnerId=&from=&to= (finalized sessions in range)",
+        "features/learning-time/api/router.ts: handleLearningTimeRoute, mirroring features/dashboard/api/router.ts's slug-dispatch pattern",
+        "app/api/[...slug]/route.ts: add `if (slug[0] === 'learning-time')` case delegating to handleLearningTimeRoute, alongside the other feature routers",
+        "features/learning-time/front/services/api.ts: learningTimeApi.createSession, .transition, .getActive, .list"
+      ],
+      "doneWhen": [
+        "RUN: npx jest features/learning-time/__tests__/api --testPathIgnorePatterns=\"/node_modules/\"",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Confirm the exact request/response shapes for create/transition/getActive/list (field names) — phase 4-ui-now-card's NowCard consumes learningTimeApi directly and must match these shapes exactly."
+    },
+    {
+      "id": "4-ui-now-card",
+      "title": "Phase 1 — LearningTimePage + NowCard cockpit UI",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [
+        "phase 3-api-routes complete — learningTimeApi.createSession/.transition/.getActive/.list are available and their response shapes are recorded"
+      ],
+      "fileScope": [
+        "app/(shell)/learning-time/page.tsx",
+        "features/learning-time/front/pages/LearningTimePage.tsx",
+        "features/learning-time/front/components/NowCard.tsx",
+        "features/learning-time/__tests__/integration/LearningTimePage.test.tsx"
+      ],
+      "testsFirst": [
+        "NEW features/learning-time/__tests__/integration/LearningTimePage.test.tsx: covers loading/empty (no learners)/idle/draft-config/running/paused/ended/finalized states and the action buttons in each; mid-session refresh restores state from GET .../active (server-computed elapsed time, not reset to zero)"
+      ],
+      "implementationSteps": [
+        "app/(shell)/learning-time/page.tsx — thin route rendering LearningTimePage (per CLAUDE.md, app/ stays routing-only; needs Header + household context so lives under (shell))",
+        "features/learning-time/front/pages/LearningTimePage.tsx — learner selector (reuse the learner-picker pattern from features/attendance/front/pages/AttendancePage.tsx); empty state for a household with no learners (reuse an existing 'no learners' empty-state pattern from features/attendance); renders NowCard for the selected learner",
+        "features/learning-time/front/components/NowCard.tsx — Idle state ('Idle — awaiting assignment', 'Next: <lessonTask title> (<time>)' from today's lessonTasks via plannerApi if one exists today, else 'Nothing assigned now', 'Start session' button); Draft/config state (optional lessonTask link or 'Ad-hoc', optional subject if ad-hoc, time-channel type radio: Stopwatch/Timer/Scheduled window, conditional targetMinutes input or start/end time inputs); Running/Paused state (large elapsed/remaining time display with aria-live=\"polite\" throttled updates, Pause/Resume for stopwatch/timer only, Finish button, unchanged NEXT preview); Ended state (outcome radio Complete/Partial/Abandoned, optional notes textarea, Save -> finalize); Finalized state (read-only summary, 'Start another session' returns to idle); mobile single-column, Now card full-width; all action buttons have visible text labels"
+      ],
+      "doneWhen": [
+        "RUN: npx jest features/learning-time/__tests__/integration/LearningTimePage.test.tsx --testPathIgnorePatterns=\"/node_modules/\"",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Record the route path (/learning-time), the data-testids used for each NowCard state and action button, and how 'active session' is detected on mount — phase 5-dashboard-entry's 'Resume session' variant and phase 6-e2e-playwright's flow both depend on these."
+    },
+    {
+      "id": "5-dashboard-entry",
+      "title": "Phase 1 — Dashboard Learning Time entry point",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase 4-ui-now-card complete — /learning-time route renders NowCard; data-testids and active-session detection recorded"
+      ],
+      "fileScope": [
+        "features/dashboard/front/components/LearningTimeEntry.tsx",
+        "features/dashboard/front/pages/Dashboard.tsx",
+        "features/dashboard/__tests__/integration/components/LearningTimeEntry.test.tsx"
+      ],
+      "testsFirst": [
+        "NEW features/dashboard/__tests__/integration/components/LearningTimeEntry.test.tsx: entry module renders a 'Start Learning Time' link to /learning-time, and renders a 'Resume session — <learner>, <elapsed>' variant when learningTimeApi.getActive() returns an active session"
+      ],
+      "implementationSteps": [
+        "features/dashboard/front/components/LearningTimeEntry.tsx — small card/module: 'Start Learning Time' linking to /learning-time by default; if an active session exists for the selected learner (via learningTimeApi.getActive), show 'Resume session — <learner>, <elapsed>' instead, still linking to /learning-time",
+        "features/dashboard/front/pages/Dashboard.tsx — render LearningTimeEntry alongside existing dashboard modules (do not change existing needsSetup/first-run behavior)"
+      ],
+      "doneWhen": [
+        "RUN: npx jest features/dashboard/__tests__/integration/components/LearningTimeEntry.test.tsx --testPathIgnorePatterns=\"/node_modules/\"",
+        "RUN: npx jest features/dashboard --testPathIgnorePatterns=\"/node_modules/\"",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Confirm the entry point is reachable from /dashboard without extra clicks on first load, and record the final link target/label text — phase 6-e2e-playwright's flow starts here."
+    },
+    {
+      "id": "6-e2e-playwright",
+      "title": "Phase 1 — end-to-end Learning Time session flow (Playwright)",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase 5-dashboard-entry complete — 'Start Learning Time' / 'Resume session' entry is reachable from /dashboard"
+      ],
+      "fileScope": [
+        "e2e/learning-time.spec.ts"
+      ],
+      "testsFirst": [
+        "NEW e2e/learning-time.spec.ts: /dashboard -> 'Start Learning Time' -> configure a Timer session -> Start -> Pause -> Resume -> Finish -> finalize (outcome + note) -> 'Start another session' returns to idle; reload mid-session (running/paused) to confirm elapsed time is restored from the server, not reset to zero"
+      ],
+      "implementationSteps": [
+        "Add e2e/learning-time.spec.ts following the structure/auth-setup conventions of an existing spec (e.g. e2e/attendance.spec.ts or e2e/planner.spec.ts) — reuse existing login/seed-data helpers from e2e/helpers rather than inventing new ones"
+      ],
+      "doneWhen": [
+        "RUN: npm run build",
+        "RUN: npm run test:e2e -- learning-time (requires a built app and DATABASE_URL pointed at a non-prod database with seeded demo data)"
+      ],
+      "invariants": [],
+      "writeBack": "Record any flakiness/timing notes for the live timer assertions (e.g. polling intervals, aria-live timing) for future Phase 2+ e2e additions. Completes Wave 5 Phase 1 (Learning Time MVP)."
+    }
+  ]
+}
