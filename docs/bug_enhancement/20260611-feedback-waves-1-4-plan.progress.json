@@ -301,14 +301,20 @@
       "id": "4b-setup-link",
       "title": "Wave 4b — link 'Set up your household' to the setup target",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "claude-haiku-4-5-20251001",
+      "startedAt": "2026-06-12T05:30:00.000Z",
+      "completedAt": "2026-06-12T05:35:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/setup/front/components/NextSetupStrip.tsx",
+          "features/setup/__tests__/integration/NextSetupStrip.test.tsx"
+        ],
+        "testsRun": [
+          "npm test -- features/setup --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "Added href: '/household/setup' to the household step in STEP_MESSAGES (features/setup/front/components/NextSetupStrip.tsx:7-11). The existing {meta.href ? <Link href={meta.href}>Go ->/Link> : null} pattern (lines 82-88) now renders 'Go ->' for the household step, linking to /household/setup (the target from phase 4b-setup-route). Added test 'renders a link to /household/setup when nextStep is household' to NextSetupStrip.test.tsx. All 14 features/setup tests pass. npm run build passes (30 static pages). Covers feedback 9bb8370e, completing Wave 4 and the entire plan."
       },
       "failureReason": null
     }

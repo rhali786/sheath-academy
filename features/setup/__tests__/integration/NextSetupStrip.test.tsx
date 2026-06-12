@@ -45,6 +45,28 @@ describe('NextSetupStrip', () => {
     expect(screen.getByText(/Add a subject/i)).toBeInTheDocument()
   })
 
+  it('renders a link to /household/setup when nextStep is household', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 'success',
+        data: {
+          nextStep: 'household',
+          completed: [],
+        },
+        message: '',
+        timestamp: '',
+      }),
+    })
+    render(<NextSetupStrip />)
+    await waitFor(() => {
+      expect(screen.getByTestId('next-setup-strip')).toBeInTheDocument()
+    })
+    expect(screen.getByText(/Set up your household/i)).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: /go/i })
+    expect(link).toHaveAttribute('href', '/household/setup')
+  })
+
   it('renders a link to /lessons when nextStep is firstLesson', async () => {
     ;(global.fetch as jest.Mock).mockResolvedValue({
       ok: true,

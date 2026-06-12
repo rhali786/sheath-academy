@@ -8,6 +8,7 @@ const STEP_MESSAGES: Record<SetupStep, { title: string; detail: string; href?: s
   household: {
     title: 'Set up your household',
     detail: 'Create your workspace and family name to get started.',
+    href: '/household/setup',
   },
   firstChild: {
     title: 'Add your first child',
