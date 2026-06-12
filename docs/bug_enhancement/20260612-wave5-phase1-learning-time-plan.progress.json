@@ -105,14 +105,22 @@
       "id": "5-dashboard-entry",
       "title": "Phase 1 — Dashboard Learning Time entry point",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T10:00:00.000Z",
+      "completedAt": "2026-06-12T10:30:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/dashboard/front/components/LearningTimeEntry.tsx",
+          "features/dashboard/front/pages/Dashboard.tsx",
+          "features/dashboard/__tests__/integration/components/LearningTimeEntry.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/dashboard/__tests__/integration/components/LearningTimeEntry.test.tsx --testPathIgnorePatterns=\"/node_modules/\" (3 passed)",
+          "npx jest features/dashboard --testPathIgnorePatterns=\"/node_modules/\" (115 passed, 22 pre-existing failures in 3 suites unrelated to this change — confirmed identical failure count on a stash of this phase's diff, all 'useLearner must be used within LearnerProvider' in Dashboard.test.tsx/LinkedFiltering.test.tsx/etc, pre-existing on this branch)",
+          "npm run build (success)"
+        ],
+        "notes": "features/dashboard/front/components/LearningTimeEntry.tsx — small card (data-testid=learning-time-entry) rendering a single Link (data-testid=learning-time-link, href=/learning-time). Default label 'Start Learning Time'. On mount, if learnerId is non-null, calls learningTimeApi.getActive(learnerId); if it returns a non-null session, label becomes 'Resume session — <learnerName>, <elapsedSeconds formatted as H:MM:SS or MM:SS>' (same formatElapsed as NowCard, duplicated locally — no shared util existed). Wired into features/dashboard/front/pages/Dashboard.tsx inside the existing alerts rail (data-testid=dashboard-alerts-rail), between PersonalAssistantPanel and PersonalTodoList, so it is visible on /dashboard without extra clicks on first load. Dashboard passes learnerId={selectedChildId} and learnerName={selectedChild?.name} where selectedChild = studentProfiles.find(c => c.id === selectedChildId). Phase 6 (e2e) flow starts by clicking 'Start Learning Time' (or 'Resume session...') from /dashboard."
       },
       "failureReason": null
     },
