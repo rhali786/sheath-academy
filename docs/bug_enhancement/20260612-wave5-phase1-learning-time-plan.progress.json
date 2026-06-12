@@ -1,7 +1,7 @@
 {
   "plan": "docs/bug_enhancement/20260612-wave5-phase1-learning-time-plan.json",
   "createdAt": "2026-06-12T06:00:00.000Z",
-  "updatedAt": "2026-06-12T06:30:00.000Z",
+  "updatedAt": "2026-06-12T08:30:00.000Z",
   "branch": "feature/learning-time-phase1",
   "phases": [
     {
@@ -58,14 +58,23 @@
       "id": "3-api-routes",
       "title": "Phase 1 — learning-time API routes + router wiring",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T08:00:00.000Z",
+      "completedAt": "2026-06-12T08:30:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/learning-time/__tests__/api/learning-time.test.ts",
+          "features/learning-time/api/routes/learning-time.ts",
+          "features/learning-time/api/router.ts",
+          "app/api/[...slug]/route.ts",
+          "features/learning-time/front/services/api.ts"
+        ],
+        "testsRun": [
+          "npx jest features/learning-time/__tests__/api --testPathIgnorePatterns=\"/node_modules/\" (13 passed)",
+          "npm run build (success)"
+        ],
+        "notes": "features/learning-time/api/routes/learning-time.ts exports POST (create, body: {learnerId, timeChannelType, subjectId?, lessonTaskId?, targetMinutes?, scheduledStart?, scheduledEnd?} -> 201 {status,data:LearningTimeSession,message,timestamp}; 400 if learnerId/timeChannelType missing or invalid, or if service/repo rejects due to an existing active session for the learner), GET (list, query ?learnerId=&from=&to= -> 200 {data: LearningTimeSession[]} of finalized sessions), GET_ACTIVE (query ?learnerId= required, 400 if missing -> 200 {data: LearningTimeSession | null}), PATCH (body: {action: 'start'|'pause'|'resume'|'end'|'finalize', outcome?, notes?} -> 200 {data: LearningTimeSession}; 400 for invalid/unknown action or InvalidTransitionError, 404 via SessionNotFoundError if the session id doesn't exist for the household). All routes call features/learning-time/server/service.ts (createSession/getActiveSession/listSessions/transitionSession) — never the repository directly. POST uses guardOwnership + assertSessionOwnership('learner', learnerId); GET/GET_ACTIVE/PATCH rely on householdId scoping in the service/repository (no extra ownership check, matching attendance/quran precedent). Router: features/learning-time/api/router.ts handleLearningTimeRoute — POST/GET '/sessions', GET '/sessions/active', PATCH '/sessions/:id' (slug[1] as id). Wired into app/api/[...slug]/route.ts via `if (slug[0] === 'learning-time')`. Front client features/learning-time/front/services/api.ts exports learningTimeApi.{createSession(input: CreateSessionInput), transition(id, input: SessionTransitionInput), getActive(learnerId): Promise<ApiResponse<LearningTimeSession|null>>, list(filters: SessionListFilters)} — all response shapes are LearningTimeSession (features/learning-time/types.ts) exactly as returned by the service layer (includes server-computed elapsedSeconds; getActive's data is null when no active session exists). Phase 4 (NowCard) should consume learningTimeApi directly with these exact shapes."
       },
       "failureReason": null
     },
