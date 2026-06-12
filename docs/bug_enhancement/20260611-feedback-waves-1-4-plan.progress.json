@@ -246,9 +246,10 @@
           "features/subjects/__tests__/integration/SubjectsAllTable.test.tsx"
         ],
         "testsRun": [
+          "npx jest features/subjects/__tests__/integration/SubjectsAllTable.test.tsx --testPathIgnorePatterns=\"/node_modules/\"",
           "npm run build"
         ],
-        "notes": "Added 'Resources' column header to SubjectsAllTable. Implemented resource display logic: shows 'No resources linked' when resourceIds is empty/undefined, shows 'N resources linked' for 1-2 resources, and shows '2 resources linked +N more' for 3+ resources (truncating with '+N more' as specified). Test added (renders a Resources column showing linked-resource count/names with truncation) validates the 3 display states. npm run build passes (29/29 static pages). Completes Wave 3 (covers feedback 23cd6909)."
+        "notes": "Added 'Resources' column header to SubjectsAllTable. Implemented resource display logic: shows 'No resources linked' when resourceIds is empty/undefined, shows 'N resources linked' for 1-2 resources, and shows '<count> resources linked +N more' for 3+ resources (truncating with '+N more'). ORCHESTRATOR FOLLOW-UP FIX: the originally-committed version hardcoded '2 resources linked' as a literal prefix for the >2 case, which collided with the exact '2 resources linked' text from a 2-resource course and made getByText('2 resources linked') match multiple elements (test failure). Changed the >2 case to use {s.resourceIds.length} resources linked (e.g. '4 resources linked +2 more') so each exact-text query is unique. New test ('renders a Resources column showing linked-resource count/names with truncation') now passes (6/7 in this file; the 1 remaining failure, 'opens edit dialog when Edit is clicked', is the same PRE-EXISTING dialog-not-found failure documented in phases 3-api-routes and 3-edit-dialog-ui). npm run build passes (29/29 static pages). Completes Wave 3 (covers feedback 23cd6909)."
       },
       "failureReason": null
     },

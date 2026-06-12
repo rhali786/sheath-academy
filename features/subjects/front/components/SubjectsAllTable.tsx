@@ -127,7 +127,7 @@ export function SubjectsAllTable({ childrenList, refreshKey = 0, onMutate }: Sub
                       <span>{s.resourceIds.length} resources linked</span>
                     ) : (
                       <span>
-                        2 resources linked <span>+{s.resourceIds.length - 2} more</span>
+                        {s.resourceIds.length} resources linked <span>+{s.resourceIds.length - 2} more</span>
                       </span>
                     )}
                   </td>
