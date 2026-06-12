@@ -1,7 +1,7 @@
 {
   "plan": "docs/bug_enhancement/20260611-feedback-waves-1-4-plan.json",
   "createdAt": "2026-06-11T12:30:00.000Z",
-  "updatedAt": "2026-06-12T00:52:47.643Z",
+  "updatedAt": "2026-06-12T03:03:35.093Z",
   "branch": "feat/feedback-waves-1-4",
   "phases": [
     {
@@ -214,14 +214,21 @@
       "id": "3-edit-dialog-ui",
       "title": "Wave 3 — Linked resources picker in SubjectEditDialog",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T01:30:00.000Z",
+      "completedAt": "2026-06-12T02:00:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/subjects/front/components/SubjectEditDialog.tsx",
+          "features/subjects/__tests__/integration/SubjectEditDialog.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/subjects/__tests__/integration/SubjectEditDialog.test.tsx --testPathIgnorePatterns=\"/node_modules/\"",
+          "npx jest features/subjects --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "Completed work from an interrupted prior worker: the 3 new tests (renders Linked resources multi-select from resourcesApi.listResources(), pre-selects resourceIds, toggles+saves with updated resourceIds) were already written; only SubjectEditDialog.tsx needed the implementation. Added resources/selectedResourceIds state, an effect that calls resourcesApi.listResources() (no workspaceId arg, matching the test mock) on open and populates `resources`, syncs selectedResourceIds from subject.resourceIds on open/subject change, a toggleResource() handler, and a checkbox-based 'Linked resources' section (data-testid=\"edit-subject-resources\", min-h-[44px] labels per resource, only rendered when resources.length > 0) between Category and the error message. handleSubmit now sends resourceIds: selectedResourceIds to subjectsApi.updateSubject. All 5 SubjectEditDialog.test.tsx tests pass. Full features/subjects suite: 42 passed / 1 failed / 17 skipped (60 total) -- the 1 failure (SubjectsAllTable.test.tsx 'opens edit dialog when Edit is clicked' / dialog-not-found) is PRE-EXISTING, confirmed via git stash on this exact branch tip (same failure with or without this phase's changes) and matches the failure documented in phase 3-api-routes notes. npm run build passes (29/29 static pages). Note: there's a harmless React act() warning in the console for the pre-existing synchronous 'pre-selects all enrolled learners as checkboxes' test, caused by the new useEffect's async setResources resolving after that test's assertions -- does not affect pass/fail, left as-is (out of scope). Next phase (3-table-column) can add a 'Resources' column to SubjectsAllTable; SubjectCourse.resourceIds is already populated end-to-end."
       },
       "failureReason": null
     },
