@@ -82,14 +82,22 @@
       "id": "4-ui-now-card",
       "title": "Phase 1 — LearningTimePage + NowCard cockpit UI",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T09:00:00.000Z",
+      "completedAt": "2026-06-12T09:45:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/learning-time/__tests__/integration/LearningTimePage.test.tsx",
+          "features/learning-time/front/components/NowCard.tsx",
+          "features/learning-time/front/pages/LearningTimePage.tsx",
+          "app/(shell)/learning-time/page.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/learning-time/__tests__/integration/LearningTimePage.test.tsx --testPathIgnorePatterns=\"/node_modules/\" (17 passed)",
+          "npm run build (success)"
+        ],
+        "notes": "Route: /learning-time (app/(shell)/learning-time/page.tsx, thin wrapper rendering LearningTimePage). LearningTimePage.tsx: learner selector (data-testid=learner-select) defaults to the first active learner and follows ?childId=, mirroring AttendancePage; empty state data-testid=learning-time-empty ('No active children. Add one to get started.') when no active learners. Renders <NowCard learnerId={selectedChildId}/>. NowCard.tsx data-testids per state: now-card (outer wrapper), now-card-loading, now-card-idle, now-card-config, now-card-running, now-card-paused, now-card-ended, now-card-finalized. Action buttons: start-session-button (idle->config), start-button + cancel-config-button (config), pause-button/resume-button + finish-button (running/paused), save-outcome-button (ended), start-another-button (finalized). Config form fields: lesson-select ('adhoc' or today's next lessonTask id), subject-select (ad-hoc only), channel-stopwatch/channel-timer/channel-scheduled radios, target-minutes-input (timer), scheduled-start-input/scheduled-end-input (scheduled, type=time combined with today's date into ISO before createSession). 'Active session' detection on mount: NowCard calls learningTimeApi.getActive(learnerId) in a useEffect; while pending shows now-card-loading; result session.status drives the rendered state directly (draft->config, running/paused->elapsed view, ended->outcome form, null->idle). Elapsed time display (data-testid=elapsed-time, aria-live='polite') = session.elapsedSeconds (server value at fetch/transition time) + seconds-since-fetch while status==='running', via a 1s setInterval — never reset to zero on refresh. Draft/config 'Start' button: if session.status==='draft' (recovered from getActive) calls transition(id,{action:'start'}) directly; otherwise calls createSession(input) then transition(newId,{action:'start'}) — single click covers create+start since the API has no update-draft endpoint. 'Next' preview sourced from plannerApi.getLessons(undefined,[learnerId]) filtered to status='not_started' && dueDate===today. Phase 5 (dashboard entry) should use learningTimeApi.getActive(learnerId) the same way to build the 'Resume session' variant."
       },
       "failureReason": null
     },
