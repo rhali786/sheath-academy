@@ -56,7 +56,7 @@ export function Header({ onMenuOpen }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          <NotificationBellDropdown alerts={alerts} />
+          <NotificationBellDropdown alerts={alerts} onOpen={loadAlerts} />
 
           {session ? (
             <div className="flex items-center gap-2">

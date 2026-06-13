@@ -11,6 +11,7 @@ import { listConversations } from '@/features/messaging/front/services/api'
 
 interface NotificationBellDropdownProps {
   alerts: Alert[]
+  onOpen?: () => void
 }
 
 const SEVERITY_RANK: Record<Alert['severity'], number> = {
@@ -28,7 +29,7 @@ function getConversationLabel(conv: ConversationSummary, currentUserId?: string)
   return conv.title || 'Unnamed'
 }
 
-export function NotificationBellDropdown({ alerts }: NotificationBellDropdownProps) {
+export function NotificationBellDropdown({ alerts, onOpen }: NotificationBellDropdownProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const { data: session } = useSession()
@@ -94,7 +95,13 @@ export function NotificationBellDropdown({ alerts }: NotificationBellDropdownPro
     <div className="relative" ref={ref}>
       <button
         type="button"
-        onClick={() => setOpen(v => !v)}
+        onClick={() => {
+          setOpen(v => {
+            const next = !v
+            if (next) onOpen?.()
+            return next
+          })
+        }}
         className="relative p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors"
         aria-label="Notifications"
         aria-expanded={open}
