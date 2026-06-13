@@ -1,6 +1,6 @@
 {
-  "id": "ab8b3afc-75c3-45a7-aaa8-bdac807a1665",
-  "prevId": "d3b0c0a3-4f93-4023-b7a0-b16c5f4e7a3a",
+  "id": "8567295d-b2c5-4b09-a561-b0eec89defdf",
+  "prevId": "ab8b3afc-75c3-45a7-aaa8-bdac807a1665",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3205,6 +3205,82 @@
           "columns": [
             "subject_id",
             "learner_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.subject_resources": {
+      "name": "subject_resources",
+      "schema": "",
+      "columns": {
+        "subject_id": {
+          "name": "subject_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "subject_resources_resource_idx": {
+          "name": "subject_resources_resource_idx",
+          "columns": [
+            {
+              "expression": "resource_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "subject_resources_subject_id_subjects_id_fk": {
+          "name": "subject_resources_subject_id_subjects_id_fk",
+          "tableFrom": "subject_resources",
+          "tableTo": "subjects",
+          "columnsFrom": [
+            "subject_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "subject_resources_resource_id_resources_id_fk": {
+          "name": "subject_resources_resource_id_resources_id_fk",
+          "tableFrom": "subject_resources",
+          "tableTo": "resources",
+          "columnsFrom": [
+            "resource_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "subject_resources_subject_id_resource_id_pk": {
+          "name": "subject_resources_subject_id_resource_id_pk",
+          "columns": [
+            "subject_id",
+            "resource_id"
           ]
         }
       },
