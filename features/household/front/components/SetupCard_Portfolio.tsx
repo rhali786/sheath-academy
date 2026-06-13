@@ -8,10 +8,9 @@ export function SetupCard_Portfolio() {
     <SetupCard
       testId="setup-card-portfolio"
       title="Start your portfolio"
-      description="Collect work samples and achievements for each child. Portfolio is coming soon."
+      description="Capture evidence of learning for each child."
       actionLabel="Start portfolio"
-      disabled
-      disabledTooltip="Coming soon"
+      actionHref="/portfolio"
     />
   )
 }
