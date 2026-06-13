@@ -32,6 +32,7 @@ export function ResourcesPage() {
   async function handleCreate(data: Parameters<typeof resourcesApi.createResource>[0]) {
     const res = await resourcesApi.createResource(data)
     setResources(prev => [...prev, res.data])
+    setSelected(res.data)
     setShowForm(false)
   }
 
@@ -102,7 +103,7 @@ export function ResourcesPage() {
                   className="text-xs text-slate-500 hover:text-slate-700"
                   data-testid={`resource-expand-${resource.id}`}
                 >
-                  {selected?.id === resource.id ? 'Collapse' : 'Details'}
+                  {selected?.id === resource.id ? 'Hide' : 'Plan lessons'}
                 </button>
               </div>
             </div>
