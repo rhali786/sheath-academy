@@ -9,6 +9,34 @@ import userEvent from '@testing-library/user-event'
 import { ResourceForm } from '@/features/resources/front/components/ResourceForm'
 import { PacingCard } from '@/features/resources/front/components/PacingCard'
 import { VerificationBadge } from '@/features/resources/front/components/VerificationBadge'
+import { ResourcesPage } from '@/features/resources/front/pages/ResourcesPage'
+import type { Resource } from '@/features/resources/types'
+import type { HouseholdContextType } from '@/features/household/front/context/HouseholdContext'
+
+jest.mock('@/features/household/front/context', () => ({
+  useHousehold: jest.fn(),
+}))
+
+jest.mock('@/features/resources/front/services/api', () => ({
+  resourcesApi: {
+    listResources: jest.fn(),
+    createResource: jest.fn(),
+    generateLessons: jest.fn(),
+  },
+}))
+
+jest.mock('@/features/plan/front/services/api', () => ({
+  plannerApi: {
+    createLesson: jest.fn(),
+  },
+}))
+
+const { useHousehold } = jest.requireMock('@/features/household/front/context') as {
+  useHousehold: jest.MockedFunction<() => HouseholdContextType>
+}
+const { resourcesApi: mockResourcesApi } = jest.requireMock('@/features/resources/front/services/api') as {
+  resourcesApi: { listResources: jest.Mock; createResource: jest.Mock; generateLessons: jest.Mock }
+}
 
 // ── ResourceForm ──────────────────────────────────────────────────────────────
 
@@ -98,5 +126,87 @@ describe('VerificationBadge', () => {
     render(<VerificationBadge status="needs-review" />)
     expect(screen.getByTestId('verification-badge-needs-review')).toBeInTheDocument()
     expect(screen.getByText('Needs review')).toBeInTheDocument()
+  })
+})
+
+// ── ResourcesPage ─────────────────────────────────────────────────────────────
+
+describe('ResourcesPage', () => {
+  const loadedHousehold: HouseholdContextType = {
+    householdProfile: {
+      id: 'household_001',
+      workspaceId: 'household_001',
+      familyName: 'Test Family',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    },
+    studentProfiles: [],
+    allSubjects: [],
+    familyName: 'Test Family',
+    needsSetup: false,
+    loading: false,
+    error: null,
+    refetch: jest.fn(),
+  }
+
+  const existingResource: Resource = {
+    id: 'resource_001',
+    workspaceId: 'household_001',
+    title: 'Saxon Math 7/6',
+    resourceType: 'textbook',
+    totalChapters: 12,
+    verificationStatus: 'verified',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    useHousehold.mockReturnValue(loadedHousehold)
+  })
+
+  it('resource card toggle reads "Plan lessons" when collapsed and "Hide" when expanded', async () => {
+    mockResourcesApi.listResources.mockResolvedValue({
+      status: 'success', data: [existingResource], message: '', timestamp: '',
+    })
+
+    render(<ResourcesPage />)
+
+    const toggle = await screen.findByTestId(`resource-expand-${existingResource.id}`)
+    expect(toggle).toHaveTextContent('Plan lessons')
+    expect(screen.queryByTestId('lesson-generation-panel')).not.toBeInTheDocument()
+
+    await userEvent.click(toggle)
+
+    expect(toggle).toHaveTextContent('Hide')
+    expect(screen.getByTestId('lesson-generation-panel')).toBeInTheDocument()
+  })
+
+  it('newly added resource is shown expanded with the Generate lessons panel visible', async () => {
+    mockResourcesApi.listResources.mockResolvedValue({
+      status: 'success', data: [], message: '', timestamp: '',
+    })
+    const newResource: Resource = {
+      id: 'resource_002',
+      workspaceId: 'household_001',
+      title: 'New Reader',
+      resourceType: 'reader',
+      verificationStatus: 'user-submitted',
+      createdAt: '2026-01-02T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
+    }
+    mockResourcesApi.createResource.mockResolvedValue({
+      status: 'success', data: newResource, message: '', timestamp: '',
+    })
+
+    render(<ResourcesPage />)
+
+    await waitFor(() => expect(mockResourcesApi.listResources).toHaveBeenCalled())
+
+    await userEvent.click(screen.getByTestId('add-resource-button'))
+    await userEvent.type(screen.getByTestId('resource-title-input'), 'New Reader')
+    fireEvent.submit(screen.getByTestId('resource-form'))
+
+    expect(await screen.findByTestId('lesson-generation-panel')).toBeInTheDocument()
+    expect(screen.getByTestId(`resource-expand-${newResource.id}`)).toHaveTextContent('Hide')
   })
 })
