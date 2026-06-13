@@ -7,9 +7,15 @@ jest.mock('next-auth/react', () => ({
   signOut: jest.fn(),
 }))
 
+jest.mock('next/navigation', () => ({
+  usePathname: jest.fn(() => '/'),
+}))
+
 jest.mock('@/features/dashboard/front/components/NotificationBellDropdown', () => ({
-  NotificationBellDropdown: ({ alerts }: { alerts: unknown[] }) => (
-    <div data-testid="dashboard-notification-bell" data-alert-count={alerts.length} />
+  NotificationBellDropdown: ({ alerts, onOpen }: { alerts: unknown[]; onOpen?: () => void }) => (
+    <div data-testid="dashboard-notification-bell" data-alert-count={alerts.length}>
+      <button type="button" aria-label="Notifications" onClick={() => onOpen?.()} />
+    </div>
   ),
 }))
 
@@ -22,9 +28,15 @@ jest.mock('@/features/household/front/components/HouseholdSwitcher', () => ({
 }))
 
 import { useSession, signOut } from 'next-auth/react'
+import { usePathname } from 'next/navigation'
 
 const mockUseSession = useSession as jest.Mock
 const mockSignOut = signOut as jest.Mock
+const mockUsePathname = usePathname as jest.Mock
+
+function alertsFetchCalls() {
+  return (global.fetch as jest.Mock).mock.calls.filter(c => c[0] === '/api/alerts')
+}
 
 function mockFetchEmpty() {
   ;(global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
@@ -155,5 +167,41 @@ describe('Header — app header height sync', () => {
         document.documentElement.style.getPropertyValue('--app-header-height')
       ).toBe('56px')
     })
+  })
+})
+
+describe('Header — alert refresh', () => {
+  beforeEach(() => {
+    mockFetchEmpty()
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
+    mockUsePathname.mockReturnValue('/')
+  })
+
+  test('refetches /api/alerts when the route changes', () => {
+    const { rerender } = render(<Header />)
+    expect(alertsFetchCalls()).toHaveLength(1)
+
+    mockUsePathname.mockReturnValue('/attendance')
+    rerender(<Header />)
+
+    expect(alertsFetchCalls()).toHaveLength(2)
+  })
+
+  test('does not refetch on re-render with the same pathname', () => {
+    const { rerender } = render(<Header />)
+    expect(alertsFetchCalls()).toHaveLength(1)
+
+    rerender(<Header />)
+
+    expect(alertsFetchCalls()).toHaveLength(1)
+  })
+
+  test('refetches /api/alerts when the bell dropdown is opened', () => {
+    render(<Header />)
+    expect(alertsFetchCalls()).toHaveLength(1)
+
+    fireEvent.click(screen.getByRole('button', { name: /notifications/i }))
+
+    expect(alertsFetchCalls()).toHaveLength(2)
   })
 })
