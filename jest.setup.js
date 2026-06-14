@@ -26,4 +26,10 @@ if (typeof window !== 'undefined') {
     unobserve: jest.fn(),
     disconnect: jest.fn(),
   }))
+
+  // Clear sessionStorage/localStorage between tests to prevent test isolation leakage
+  afterEach(() => {
+    sessionStorage.clear()
+    localStorage.clear()
+  })
 }
