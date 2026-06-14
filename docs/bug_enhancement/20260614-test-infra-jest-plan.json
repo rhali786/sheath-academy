@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/bug_enhancement/20260614-test-infra-jest-plan.md",
+  "branch": "fix/test-infrastructure-jest-integration",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Test isolation foundation — clear sessionStorage/localStorage between tests",
+      "gated": false,
+      "modelTier": "cheap",
+      "preconditions": [
+        "On branch fix/test-infrastructure-jest-integration from dev",
+        "jest.config.js setupFilesAfterEnv points at jest.setup.js"
+      ],
+      "fileScope": [
+        "jest.setup.js"
+      ],
+      "testsFirst": [
+        "RUN: npm test -- --testPathIgnorePatterns=\"/node_modules/\" features/quran/__tests__/integration/QuranPage.test.tsx features/attendance/__tests__/integration/AttendancePage.test.tsx — confirm sessionStorage-leakage failures (e.g. 'falls back to All Children filter when ?childId is invalid', Edit/Delete session visibility tests) are present before the fix"
+      ],
+      "implementationSteps": [
+        "Add afterEach(() => { sessionStorage.clear(); localStorage.clear() }) to jest.setup.js so LearnerContext's sessionStorage-persisted selectedChildId (key 'sheath.selectedChildId') does not leak across tests within the same file"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- --testPathIgnorePatterns=\"/node_modules/\" features/quran/__tests__/integration/QuranPage.test.tsx features/attendance/__tests__/integration/AttendancePage.test.tsx (record pass/fail counts per test in outputs.notes for phase-3)",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "List which QuranPage and AttendancePage integration tests now pass vs still fail after the sessionStorage/localStorage isolation fix — this is phase-3's starting scope. Confirm no other suite regressed."
+    },
+    {
+      "id": "phase-2",
+      "title": "Provider-wrapper fixes (LearnerProvider / HouseholdProvider)",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase-1 complete",
+        "LearnerProvider is exported from features/layout/front/context/LearnerContext.tsx",
+        "HouseholdProvider is exported from @/features/household/front/context"
+      ],
+      "fileScope": [
+        "features/dashboard/__tests__/integration/Dashboard.test.tsx",
+        "features/dashboard/__tests__/integration/components/LinkedFiltering.test.tsx",
+        "features/dashboard/__tests__/integration/components/DashboardComponents.test.tsx",
+        "features/plan/__tests__/integration/LessonsPage.test.tsx",
+        "features/quran/__tests__/integration/QuranPage.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE Dashboard.test.tsx renderDashboard(): wrap output with <LearnerProvider> alongside existing <HouseholdProvider><DashboardProvider> — 14 tests currently fail with 'useLearner must be used within LearnerProvider' thrown from DashboardProvider",
+        "UPDATE LessonsPage.test.tsx render helper: wrap with <LearnerProvider> — 9 tests currently fail with the same error because LessonsPage calls useLearner()",
+        "UPDATE LinkedFiltering.test.tsx (5 tests) and DashboardComponents.test.tsx (3 tests in the RecordsProof Component block): wrap each <RecordsProof .../> render with <HouseholdProvider>, adding a small local render helper if none exists — RecordsProof calls useHousehold()",
+        "UPDATE QuranPage.test.tsx 'updates child filter when URL childId changes while component stays mounted' test to use the file's existing renderQuranPage() helper instead of bare render(<QuranPage />)"
+      ],
+      "implementationSteps": [
+        "Dashboard.test.tsx: wrap renderDashboard()'s returned tree with <LearnerProvider> as the outermost provider, keeping <HouseholdProvider> and <DashboardProvider> nested inside it",
+        "LessonsPage.test.tsx: wrap its render helper's returned tree with <LearnerProvider>",
+        "LinkedFiltering.test.tsx and DashboardComponents.test.tsx: add/use a render helper that wraps <RecordsProof .../> in <HouseholdProvider>; mock @/features/household/front/context's underlying data (householdApi/childrenApi) so studentProfiles match each test's existing expectations, per the testing-patterns skill",
+        "QuranPage.test.tsx: replace the bare render(<QuranPage />) call in the 'updates child filter when URL childId changes...' test with the file's renderQuranPage() helper"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- --testPathIgnorePatterns=\"/node_modules/\" features/dashboard/__tests__/integration features/plan/__tests__/integration/LessonsPage.test.tsx features/quran/__tests__/integration/QuranPage.test.tsx",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Confirm the 14+5+3+9 provider-related tests now pass. Note any newly-surfaced failures (e.g. a wrapped RecordsProof test now reaching a different assertion) for phase-3, and list the final pass/fail state of QuranPage.test.tsx."
+    },
+    {
+      "id": "phase-3",
+      "title": "Remaining QuranPage/AttendancePage triage",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase-1 and phase-2 complete",
+        "phase-1 outputs.notes lists which QuranPage/AttendancePage tests still fail after the isolation fix",
+        "phase-2 outputs.notes lists any newly-surfaced QuranPage failures from the provider-wrapper fix"
+      ],
+      "fileScope": [
+        "features/quran/__tests__/integration/QuranPage.test.tsx",
+        "features/quran/front/pages/QuranPage.tsx",
+        "features/attendance/__tests__/integration/AttendancePage.test.tsx",
+        "features/attendance/front/pages/AttendancePage.tsx"
+      ],
+      "testsFirst": [
+        "RUN: npm test -- --testPathIgnorePatterns=\"/node_modules/\" features/quran/__tests__/integration/QuranPage.test.tsx features/attendance/__tests__/integration/AttendancePage.test.tsx — using phase-1/phase-2 outputs.notes, identify the exact set of still-failing tests (expected candidates: AttendancePage 'shows summary counts' and 'clicking Present button calls createRecord with status present')"
+      ],
+      "implementationSteps": [
+        "For each still-failing test: read the current component and the test's expectation. If the test asserts stale copy/behavior, update the test. If the component genuinely regressed relative to the test's reasonable expectation, fix the component. Record which for each in outputs.notes — product-code changes must be flagged for extra review."
+      ],
+      "doneWhen": [
+        "RUN: npm test -- --testPathIgnorePatterns=\"/node_modules/\" features/quran/__tests__/integration/QuranPage.test.tsx features/attendance/__tests__/integration/AttendancePage.test.tsx (0 failed)",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "List every fix made (test-only vs product-code), and confirm both suites are fully green."
+    },
+    {
+      "id": "phase-4",
+      "title": "SubjectsAllTable / SubjectEditDialog naming alignment",
+      "gated": false,
+      "modelTier": "cheap",
+      "preconditions": [
+        "phase-1 through phase-3 complete"
+      ],
+      "fileScope": [
+        "features/subjects/front/components/SubjectEditDialog.tsx",
+        "features/subjects/__tests__/integration/SubjectsAllTable.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE SubjectsAllTable.test.tsx 'opens edit dialog when Edit is clicked' — change getByRole('dialog', { name: /edit subject/i }) to /edit course/i to match SubjectEditDialog's existing 'Edit course' heading (SubjectsAllTable's own column header reads 'Course / Subject', so 'Edit course' is the established term in this feature)"
+      ],
+      "implementationSteps": [
+        "Update the test assertion as described. Keep SubjectEditDialog's heading as 'Edit course' unless you find stronger evidence elsewhere in the Subjects feature that it should say 'Edit subject' — if so, change the dialog heading instead and record why in outputs.notes."
+      ],
+      "doneWhen": [
+        "RUN: npm test -- --testPathIgnorePatterns=\"/node_modules/\" features/subjects/__tests__/integration/SubjectsAllTable.test.tsx",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Confirm SubjectsAllTable.test.tsx passes and state which side (test or dialog heading) was changed and why."
+    },
+    {
+      "id": "phase-5",
+      "title": "Re-enable integration tests in npm test",
+      "gated": true,
+      "modelTier": "standard",
+      "preconditions": [
+        "phases 1-4 complete",
+        "All 7 previously-failing suites pass under npm test -- --testPathIgnorePatterns=\"/node_modules/\"",
+        "This flips ~86 files from never-run to must-pass in CI on every future PR — needs a human glance before merging"
+      ],
+      "fileScope": [
+        "jest.config.js"
+      ],
+      "testsFirst": [
+        "RUN: npm test (current config, integration tests still excluded) — confirm the existing 127 suites / 935 tests baseline still passes before changing the config"
+      ],
+      "implementationSteps": [
+        "Remove '/__tests__/integration/' from testPathIgnorePatterns in jest.config.js, leaving only '/node_modules/'"
+      ],
+      "doneWhen": [
+        "RUN: npm test (full run, no override flags — must show 0 failed across all ~231 suites)",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Record the final suite/test counts for npm test with integration tests included."
+    }
+  ]
+}
