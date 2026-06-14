@@ -74,6 +74,7 @@ const report: RecordsReport = {
   completedLessons: [],
   progressBySubject: [],
   portfolio: { count: 0, items: [] },
+  timeBySubject: [],
   checklist: [],
   generatedAt: '2026-05-16T00:00:00Z',
 }

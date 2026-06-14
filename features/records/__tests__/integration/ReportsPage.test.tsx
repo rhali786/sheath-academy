@@ -125,6 +125,9 @@ const report: RecordsReport = {
       },
     ],
   },
+  timeBySubject: [
+    { subjectId: 'sub_a', subjectName: 'Mathematics', totalMinutes: 135 },
+  ],
   checklist: [
     {
       id: 'missing_attendance_records',
