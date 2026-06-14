@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { learningTimeApi } from '@/features/learning-time/front/services/api'
+import { formatElapsed } from '@/features/learning-time/front/lib/formatElapsed'
 import { plannerApi } from '@/features/plan/front/services/api'
 import { subjectsApi } from '@/features/subjects/front/services/api'
 import {
@@ -34,16 +35,6 @@ const OUTCOME_LABELS: Record<Outcome, string> = {
 function todayLocal(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function formatElapsed(totalSeconds: number): string {
-  const s = Math.max(0, Math.floor(totalSeconds))
-  const hrs = Math.floor(s / 3600)
-  const mins = Math.floor((s % 3600) / 60)
-  const secs = s % 60
-  const mm = String(mins).padStart(2, '0')
-  const ss = String(secs).padStart(2, '0')
-  return hrs > 0 ? `${hrs}:${mm}:${ss}` : `${mm}:${ss}`
 }
 
 function nextLabel(lesson: LessonTask | null | undefined): string {
