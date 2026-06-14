@@ -119,12 +119,41 @@
       "writeBack": "Confirm SubjectsAllTable.test.tsx passes and state which side (test or dialog heading) was changed and why."
     },
     {
+      "id": "phase-4b",
+      "title": "LessonsPage ?childId= seed + Lesson-added confirmation fix",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase-1 through phase-4 complete",
+        "phase-2 outputs.notes: 3 LessonsPage.test.tsx tests still fail after the LearnerProvider wrapper — 'sets child filter from ?childId query param after children load', 'updates child filter when URL childId changes while component stays mounted', and 'collapses form and shows Lesson added confirmation after successful submit'",
+        "QuranPage.tsx (features/quran/front/pages/QuranPage.tsx lines ~114-122) has the reference '?childId= seeds useLearner().setSelectedChildId' pattern this phase should follow"
+      ],
+      "fileScope": [
+        "features/plan/front/pages/LessonsPage.tsx",
+        "features/plan/__tests__/integration/LessonsPage.test.tsx",
+        "features/plan/front/components/LessonTaskForm.tsx"
+      ],
+      "testsFirst": [
+        "RUN: npm test -- --testPathIgnorePatterns=\"/node_modules/\" -- features/plan/__tests__/integration/LessonsPage.test.tsx — confirm the 3 failures named in preconditions are present before the fix"
+      ],
+      "implementationSteps": [
+        "LessonsPage.tsx: add a '?childId= seeds shared learner' effect mirroring QuranPage.tsx's pattern — when children load and searchParams.get('childId') matches a child id, call setSelectedChildId(matched.id) from useLearner()",
+        "For 'collapses form and shows Lesson added confirmation after successful submit': read LessonTaskForm.tsx to find why getAllByRole('combobox') no longer finds the 'Select child' option after openAddLessonForm() now that the page is wrapped in LearnerProvider. If it's selector/copy drift, update the test; if LessonTaskForm genuinely fails to render the child select in this state, fix the component. Record which in outputs.notes."
+      ],
+      "doneWhen": [
+        "RUN: npm test -- --testPathIgnorePatterns=\"/node_modules/\" -- features/plan/__tests__/integration/LessonsPage.test.tsx (0 failed)",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Confirm all 10 LessonsPage.test.tsx tests pass. State whether the third fix was test-only or a component change."
+    },
+    {
       "id": "phase-5",
       "title": "Re-enable integration tests in npm test",
       "gated": true,
       "modelTier": "standard",
       "preconditions": [
-        "phases 1-4 complete",
+        "phases 1-4 and 4b complete",
         "All 7 previously-failing suites pass under npm test -- --testPathIgnorePatterns=\"/node_modules/\"",
         "This flips ~86 files from never-run to must-pass in CI on every future PR — needs a human glance before merging"
       ],

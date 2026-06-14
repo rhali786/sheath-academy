@@ -1,0 +1,125 @@
+{
+  "plan": "C:\\PROJECTS\\sheath-academy\\docs\\bug_enhancement\\20260614-test-infra-jest-plan.json",
+  "createdAt": "2026-06-14T23:17:51.992Z",
+  "updatedAt": "2026-06-15T02:30:00.000Z",
+  "branch": "fix/test-infrastructure-jest-integration",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Test isolation foundation — clear sessionStorage/localStorage between tests",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-haiku-4-5-20251001",
+      "startedAt": "2026-06-14T23:17:51.994Z",
+      "completedAt": "2026-06-15T00:05:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "jest.setup.js"
+        ],
+        "testsRun": [
+          "features/quran/__tests__/integration/QuranPage.test.tsx",
+          "features/attendance/__tests__/integration/AttendancePage.test.tsx"
+        ],
+        "notes": "QuranPage: 16 passed, 2 failed, 1 skipped. Failing: 'shows the friendly review label for an existing session with type Memorisation' (multiple elements found), 'updates child filter when URL childId changes while component stays mounted'. AttendancePage: 20 passed, 5 failed. Failing: 'shows summary counts' (unable to find element), 'clicking Present button calls createRecord with status present', 'Void icon button shows inline confirm UI and archives the record on confirm', 'Void icon button does not archive when inline cancel is clicked', 'summary heading shows selected learner name', 'summary heading still names the learner when attendance is empty'. Added afterEach(() => { sessionStorage.clear(); localStorage.clear() }) to jest.setup.js. Build passes successfully. No other suite regressed."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-2",
+      "title": "Provider-wrapper fixes (LearnerProvider / HouseholdProvider)",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-14T23:24:50.004Z",
+      "completedAt": "2026-06-15T01:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/dashboard/__tests__/integration/Dashboard.test.tsx",
+          "features/plan/__tests__/integration/LessonsPage.test.tsx",
+          "features/quran/__tests__/integration/QuranPage.test.tsx",
+          "features/dashboard/__tests__/integration/components/LinkedFiltering.test.tsx",
+          "features/dashboard/__tests__/integration/components/DashboardComponents.test.tsx"
+        ],
+        "testsRun": [
+          "features/dashboard/__tests__/integration/Dashboard.test.tsx",
+          "features/plan/__tests__/integration/LessonsPage.test.tsx",
+          "features/quran/__tests__/integration/QuranPage.test.tsx",
+          "features/dashboard/__tests__/integration/components/LinkedFiltering.test.tsx",
+          "features/dashboard/__tests__/integration/components/DashboardComponents.test.tsx"
+        ],
+        "notes": "Dashboard.test.tsx: added <LearnerProvider> as outermost wrapper in renderDashboard() — all 14 tests now pass. LinkedFiltering.test.tsx: added jest.mock for useHousehold, reportsApi, quranApi — all 5 RecordsProof tests now pass. DashboardComponents.test.tsx: added same 3 mocks — all 3 RecordsProof tests now pass. LessonsPage.test.tsx: added LearnerProvider import and renderLessonsPage() helper, replaced all render(<LessonsPage />) calls — 7 of 10 tests now pass. 3 still failing for phase-3: (1) 'sets child filter from ?childId query param' and (2) 'updates child filter when URL childId changes while mounted' — LessonsPage does not read searchParams.get('childId') anywhere, so these need a component fix or test update; (3) 'collapses form and shows Lesson added confirmation' — newly-surfaced failure: getAllByRole('combobox').find(...text==='Select child') returns undefined, the child select inside LessonTaskForm is not found after openAddLessonForm(). QuranPage.test.tsx: replaced bare render(<QuranPage />) with renderQuranPage() in 'updates child filter...' test and updated the rerender call — test now passes. Remaining QuranPage failure: 'shows the friendly review label for an existing session with type Memorisation' (multiple elements found) — pre-existing, phase-3 issue. Build passes."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-3",
+      "title": "Remaining QuranPage/AttendancePage triage",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-14T23:41:47.341Z",
+      "completedAt": "2026-06-15T02:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/quran/__tests__/integration/QuranPage.test.tsx",
+          "features/attendance/__tests__/integration/AttendancePage.test.tsx"
+        ],
+        "testsRun": [
+          "features/quran/__tests__/integration/QuranPage.test.tsx",
+          "features/attendance/__tests__/integration/AttendancePage.test.tsx"
+        ],
+        "notes": "All fixes are test-only (no product-code changes). QuranPage: 'shows the friendly review label for an existing session with type Memorisation' — fixed by using getByText with selector:'p' to avoid matching both the session card <p> and the filter dropdown <option> (both rendered the same friendly label). AttendancePage: 'shows summary counts', 'summary heading shows selected learner name', 'summary heading still names the learner when attendance is empty', 'clicking Present button calls createRecord with status present' — root cause: selectedChildId starts null after sessionStorage is cleared between tests (phase-1 fix), so fetchSummary returns early and markAttendance returns early; fixed by explicitly selecting child_001 via fireEvent.change on the learner select after openMarkForm(). AttendancePage Void icon button tests: InlineConfirm renders aria-label='Void' and default cancelLabel='Cancel'; tests expected '/confirm void/i' and '/cancel void/i' — fixed tests to match actual component labels (/^void$/i and /^cancel$/i), consistent with AttendanceList.test.tsx which already uses these exact labels. Both suites: 0 failed, 43 passed, 1 skipped. Build passes."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-4",
+      "title": "SubjectsAllTable / SubjectEditDialog naming alignment",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-haiku-4-5-20251001",
+      "startedAt": "2026-06-14T23:53:06.143Z",
+      "completedAt": "2026-06-15T02:30:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/subjects/__tests__/integration/SubjectsAllTable.test.tsx"
+        ],
+        "testsRun": [
+          "features/subjects/__tests__/integration/SubjectsAllTable.test.tsx"
+        ],
+        "notes": "Updated 'opens edit dialog when Edit is clicked' test assertion from /edit subject/i to /edit course/i to match SubjectEditDialog's actual 'Edit course' heading. All 7 SubjectsAllTable tests pass. Test-only change; no component code modified. Dialog heading remains 'Edit course' as it aligns with the established 'Course / Subject' terminology in the Subjects feature. Build passes successfully."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-4b",
+      "title": "LessonsPage ?childId= seed + Lesson-added confirmation fix",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-5",
+      "title": "Re-enable integration tests in npm test",
+      "gated": true,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    }
+  ]
+}
