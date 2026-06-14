@@ -5,6 +5,7 @@ import { LearnerProvider } from '@/features/layout/front/context/LearnerContext'
 import type { LearningTimeSession } from '@/features/learning-time/types'
 import type { LessonTask } from '@/features/plan/types'
 import type { ApiResponse, StudentProfile } from '@/features/lib/types'
+import type { SubjectCourse } from '@/features/subjects/types'
 
 let mockSearchParams = new URLSearchParams()
 jest.mock('next/navigation', () => ({
@@ -48,6 +49,7 @@ const mockCreateSession = learningTimeApi.createSession as jest.Mock
 const mockTransition = learningTimeApi.transition as jest.Mock
 const mockGetLessons = plannerApi.getLessons as jest.Mock
 const mockGetSubjects = subjectsApi.getSubjects as jest.Mock
+const mockList = learningTimeApi.list as jest.Mock
 
 const mockChildren: StudentProfile[] = [
   { id: 'child_001', householdId: 'hh_001', name: 'Adam', gradeLabel: '5th', isActive: true, username: 'adam', password: 'pw', createdAt: '2026-01-01T00:00:00Z' },
@@ -128,6 +130,7 @@ beforeEach(() => {
   mockGetSubjects.mockResolvedValue(ok([]))
   mockCreateSession.mockResolvedValue(ok(makeSession({ status: 'draft', startedAt: null })))
   mockTransition.mockResolvedValue(ok(makeSession()))
+  mockList.mockResolvedValue(ok([]))
 })
 
 afterEach(() => {
@@ -379,6 +382,115 @@ describe('LearningTimePage', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('now-card-idle')).toBeInTheDocument()
+    })
+  })
+})
+
+describe('LearningTimePage — session history', () => {
+  it('shows a loading state for session history before the list resolves', async () => {
+    let resolveList: (value: ApiResponse<LearningTimeSession[]>) => void = () => {}
+    mockList.mockReturnValue(new Promise(resolve => { resolveList = resolve }))
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('session-history-loading')).toBeInTheDocument()
+    })
+
+    resolveList(ok([]))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('session-history-empty')).toBeInTheDocument()
+    })
+  })
+
+  it('renders "No completed sessions yet" when the history list is empty', async () => {
+    mockList.mockResolvedValue(ok([]))
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('session-history-empty')).toBeInTheDocument()
+    })
+    expect(screen.getByText(/no completed sessions yet/i)).toBeInTheDocument()
+  })
+
+  it('renders finalized sessions with date, subject name, duration, and outcome', async () => {
+    mockUseHousehold.mockImplementation(() => ({
+      householdProfile: { id: 'hh_001' },
+      studentProfiles: mockChildren,
+      allSubjects: [{ id: 'subj_001', name: 'Algebra' } as SubjectCourse],
+      loading: false,
+      needsSetup: false,
+      familyName: '',
+      error: null,
+      refetch: jest.fn(),
+    }))
+    mockList.mockResolvedValue(ok([
+      makeSession({
+        id: 'lts_010',
+        subjectId: 'subj_001',
+        status: 'finalized',
+        elapsedSeconds: 1800,
+        endedAt: '2026-06-10T11:00:00.000Z',
+        outcome: 'complete',
+      }),
+      makeSession({
+        id: 'lts_011',
+        subjectId: null,
+        status: 'finalized',
+        elapsedSeconds: 600,
+        endedAt: '2026-06-11T11:00:00.000Z',
+        outcome: 'partial',
+      }),
+    ]))
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('session-history-list')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Algebra')).toBeInTheDocument()
+    expect(screen.getByText('No subject')).toBeInTheDocument()
+    expect(screen.getByText('30:00')).toBeInTheDocument()
+    expect(screen.getByText('10:00')).toBeInTheDocument()
+    expect(screen.getByText(/complete/i)).toBeInTheDocument()
+    expect(screen.getByText(/partial/i)).toBeInTheDocument()
+  })
+
+  it('switching the learner re-fetches session history for the new learner', async () => {
+    const secondChild: StudentProfile = {
+      id: 'child_002',
+      householdId: 'hh_001',
+      name: 'Sara',
+      gradeLabel: '3rd',
+      isActive: true,
+      username: 'sara',
+      password: 'pw',
+      createdAt: '2026-01-01T00:00:00Z',
+    }
+    mockUseHousehold.mockImplementation(() => ({
+      householdProfile: { id: 'hh_001' },
+      studentProfiles: [...mockChildren, secondChild],
+      allSubjects: [],
+      loading: false,
+      needsSetup: false,
+      familyName: '',
+      error: null,
+      refetch: jest.fn(),
+    }))
+    mockList.mockResolvedValue(ok([]))
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(mockList).toHaveBeenCalledWith({ learnerId: 'child_001' })
+    })
+
+    fireEvent.change(screen.getByTestId('learner-select'), { target: { value: 'child_002' } })
+
+    await waitFor(() => {
+      expect(mockList).toHaveBeenCalledWith({ learnerId: 'child_002' })
     })
   })
 })
