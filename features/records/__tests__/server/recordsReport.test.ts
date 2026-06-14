@@ -2,6 +2,7 @@ import { getRecordsReport } from '@/features/records/server/service'
 import { listAttendanceEvents } from '@/features/attendance/server/repository'
 import { getLearner } from '@/features/children/server/repository'
 import { listEvidenceRows } from '@/features/portfolio/server/repository'
+import { listFinalizedSessionRows } from '@/features/learning-time/server/repository'
 import { listLessonTaskRows } from '@/features/plan/server/repository'
 import { getActiveSchoolYear } from '@/features/school-year/server/service'
 import { listSubjectRows } from '@/features/subjects/server/repository'
@@ -16,6 +17,10 @@ jest.mock('@/features/children/server/repository', () => ({
 
 jest.mock('@/features/portfolio/server/repository', () => ({
   listEvidenceRows: jest.fn(),
+}))
+
+jest.mock('@/features/learning-time/server/repository', () => ({
+  listFinalizedSessionRows: jest.fn(),
 }))
 
 jest.mock('@/features/plan/server/repository', () => ({
@@ -33,6 +38,7 @@ jest.mock('@/features/subjects/server/repository', () => ({
 const mockGetLearner = getLearner as jest.Mock
 const mockListAttendanceEvents = listAttendanceEvents as jest.Mock
 const mockListEvidenceRows = listEvidenceRows as jest.Mock
+const mockListFinalizedSessionRows = listFinalizedSessionRows as jest.Mock
 const mockListLessonTaskRows = listLessonTaskRows as jest.Mock
 const mockGetActiveSchoolYear = getActiveSchoolYear as jest.Mock
 const mockListSubjectRows = listSubjectRows as jest.Mock
@@ -122,6 +128,7 @@ beforeEach(() => {
     createdAt: now,
     updatedAt: now,
   }])
+  mockListFinalizedSessionRows.mockResolvedValue([])
 })
 
 afterEach(() => {
@@ -147,5 +154,128 @@ describe('getRecordsReport', () => {
     expect(report.completedLessons).toHaveLength(1)
     expect(report.attendance.byStatus.present).toBe(1)
     expect(report.portfolio.count).toBe(1)
+  })
+})
+
+function sessionRow(overrides: Partial<{
+  id: string
+  subjectId: string | null
+  startedAt: Date
+  endedAt: Date
+}>) {
+  return {
+    id: overrides.id ?? 'lts_01',
+    householdId: HOUSEHOLD_ID,
+    learnerId: LEARNER_ID,
+    subjectId: overrides.subjectId ?? null,
+    lessonTaskId: null,
+    timeChannelType: 'stopwatch',
+    targetMinutes: null,
+    scheduledStart: null,
+    scheduledEnd: null,
+    status: 'finalized',
+    startedAt: overrides.startedAt ?? now,
+    pausedAt: null,
+    endedAt: overrides.endedAt ?? now,
+    endedBy: 'manual',
+    outcome: 'complete',
+    notes: null,
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
+describe('getRecordsReport — timeBySubject', () => {
+  it('aggregates finalized session minutes by subject into timeBySubject', async () => {
+    mockListFinalizedSessionRows.mockResolvedValue([
+      sessionRow({
+        id: 'lts_01',
+        subjectId: SUBJECT_ID,
+        startedAt: new Date('2026-01-05T10:00:00.000Z'),
+        endedAt: new Date('2026-01-05T10:30:00.000Z'),
+      }),
+      sessionRow({
+        id: 'lts_02',
+        subjectId: SUBJECT_ID,
+        startedAt: new Date('2026-01-06T10:00:00.000Z'),
+        endedAt: new Date('2026-01-06T10:45:00.000Z'),
+      }),
+    ])
+
+    const report = await getRecordsReport(HOUSEHOLD_ID, {
+      childId: LEARNER_ID,
+      startDate: '2026-01-01',
+      endDate: '2026-01-10',
+    })
+
+    expect(report.timeBySubject).toEqual([
+      { subjectId: SUBJECT_ID, subjectName: 'Math', totalMinutes: 75 },
+    ])
+  })
+
+  it('groups sessions with no subjectId under an "Unassigned" entry, sorted last', async () => {
+    mockListFinalizedSessionRows.mockResolvedValue([
+      sessionRow({
+        id: 'lts_01',
+        subjectId: SUBJECT_ID,
+        startedAt: new Date('2026-01-05T10:00:00.000Z'),
+        endedAt: new Date('2026-01-05T10:30:00.000Z'),
+      }),
+      sessionRow({
+        id: 'lts_02',
+        subjectId: null,
+        startedAt: new Date('2026-01-06T10:00:00.000Z'),
+        endedAt: new Date('2026-01-06T10:20:00.000Z'),
+      }),
+    ])
+
+    const report = await getRecordsReport(HOUSEHOLD_ID, {
+      childId: LEARNER_ID,
+      startDate: '2026-01-01',
+      endDate: '2026-01-10',
+    })
+
+    expect(report.timeBySubject).toEqual([
+      { subjectId: SUBJECT_ID, subjectName: 'Math', totalMinutes: 30 },
+      { subjectId: null, subjectName: 'Unassigned', totalMinutes: 20 },
+    ])
+  })
+
+  it('includes a session finalized during the last day of the range (end-of-day boundary)', async () => {
+    mockListFinalizedSessionRows.mockResolvedValue([
+      sessionRow({
+        id: 'lts_01',
+        subjectId: SUBJECT_ID,
+        startedAt: new Date('2026-01-31T17:30:00.000Z'),
+        endedAt: new Date('2026-01-31T18:00:00.000Z'),
+      }),
+    ])
+
+    const report = await getRecordsReport(HOUSEHOLD_ID, {
+      childId: LEARNER_ID,
+      startDate: '2026-01-01',
+      endDate: '2026-01-31',
+    })
+
+    expect(mockListFinalizedSessionRows).toHaveBeenCalledWith(HOUSEHOLD_ID, {
+      learnerId: LEARNER_ID,
+      from: '2026-01-01T00:00:00.000Z',
+      to: '2026-01-31T23:59:59.999Z',
+    })
+    expect(report.timeBySubject).toEqual([
+      { subjectId: SUBJECT_ID, subjectName: 'Math', totalMinutes: 30 },
+    ])
+  })
+
+  it('returns an empty timeBySubject array when there are no finalized sessions in range', async () => {
+    mockListFinalizedSessionRows.mockResolvedValue([])
+
+    const report = await getRecordsReport(HOUSEHOLD_ID, {
+      childId: LEARNER_ID,
+      startDate: '2026-01-01',
+      endDate: '2026-01-10',
+    })
+
+    expect(report.timeBySubject).toEqual([])
   })
 })
