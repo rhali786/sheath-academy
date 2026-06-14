@@ -255,7 +255,9 @@ describe('QuranPage', () => {
     mockGetSessions.mockResolvedValue(okSessions([makeSession({ surah: 'Al-Fatiha', type: 'Memorisation' })]))
     renderQuranPage()
     await waitFor(() => {
-      expect(screen.getByText(/memorization review \(already memorized\)/i)).toBeInTheDocument()
+      // The label appears in both the session row <p> and the filter dropdown <option>.
+      // Use selector:'p' to target only the session card text, avoiding the "multiple elements" error.
+      expect(screen.getByText(/memorization review \(already memorized\)/i, { selector: 'p' })).toBeInTheDocument()
     })
   })
 

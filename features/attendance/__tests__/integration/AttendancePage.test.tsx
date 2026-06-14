@@ -151,6 +151,10 @@ describe('AttendancePage', () => {
     byStatus.absent = 1
     mockGetSummary.mockResolvedValue(ok({ childId: 'child_001', totalRecorded: 4, byStatus }))
     renderAttendance()
+    // Open form and select child_001 to trigger fetchSummary — selectedChildId starts null
+    // (sessionStorage cleared between tests), so fetchSummary won't run until a child is chosen.
+    await openMarkForm()
+    fireEvent.change(screen.getByLabelText(/^learner$/i), { target: { value: 'child_001' } })
     await waitFor(() => {
       expect(screen.getByText('3')).toBeInTheDocument()
       expect(screen.getByTestId('attendance-summary-present')).toBeInTheDocument()
@@ -161,6 +165,9 @@ describe('AttendancePage', () => {
   it('clicking Present button calls createRecord with status present', async () => {
     renderAttendance()
     await openMarkForm()
+    // Explicitly select child_001: selectedChildId starts null (sessionStorage cleared),
+    // so markAttendance guards on !selectedChildId and returns early without explicit selection.
+    fireEvent.change(screen.getByLabelText(/^learner$/i), { target: { value: 'child_001' } })
     await waitFor(() => {
       expect(screen.getAllByText('Adam').length).toBeGreaterThan(0)
     })
@@ -277,9 +284,9 @@ describe('AttendancePage', () => {
     renderAttendance()
     await waitFor(() => screen.getByRole('button', { name: /void record/i }))
     fireEvent.click(screen.getByRole('button', { name: /void record/i }))
-    // Inline confirm UI should appear (no window.confirm)
-    await waitFor(() => expect(screen.getByRole('button', { name: /confirm void/i })).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: /confirm void/i }))
+    // InlineConfirm renders confirmLabel="Void" (aria-label="Void") — not "confirm void"
+    await waitFor(() => expect(screen.getByRole('button', { name: /^void$/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /^void$/i }))
     await waitFor(() => {
       expect(mockArchiveRecord).toHaveBeenCalledWith('rec_001')
     })
@@ -290,8 +297,9 @@ describe('AttendancePage', () => {
     renderAttendance()
     await waitFor(() => screen.getByRole('button', { name: /void record/i }))
     fireEvent.click(screen.getByRole('button', { name: /void record/i }))
-    await waitFor(() => expect(screen.getByRole('button', { name: /cancel void/i })).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: /cancel void/i }))
+    // InlineConfirm renders cancelLabel="Cancel" (default, aria-label="Cancel") — not "cancel void"
+    await waitFor(() => expect(screen.getByRole('button', { name: /^cancel$/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
     expect(mockArchiveRecord).not.toHaveBeenCalled()
     // Void button should be back
     expect(screen.getByRole('button', { name: /void record/i })).toBeInTheDocument()
@@ -344,6 +352,10 @@ describe('AttendancePage', () => {
 
   it('summary heading shows selected learner name', async () => {
     renderAttendance()
+    // selectedChildId starts null (sessionStorage cleared); must explicitly select a child
+    // to see the learner name in the heading.
+    await openMarkForm()
+    fireEvent.change(screen.getByLabelText(/^learner$/i), { target: { value: 'child_001' } })
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /summary — adam/i })).toBeInTheDocument()
     })
@@ -366,6 +378,9 @@ describe('AttendancePage', () => {
   it('summary heading still names the learner when attendance is empty', async () => {
     mockGetRecords.mockResolvedValue(ok([]))
     renderAttendance()
+    // selectedChildId starts null; explicitly select a child to populate the heading.
+    await openMarkForm()
+    fireEvent.change(screen.getByLabelText(/^learner$/i), { target: { value: 'child_001' } })
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /summary — adam/i })).toBeInTheDocument()
     })
