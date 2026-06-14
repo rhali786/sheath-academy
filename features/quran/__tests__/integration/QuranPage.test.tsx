@@ -281,7 +281,7 @@ describe('QuranPage', () => {
       makeSession({ id: 'session_002', childId: 'child_002', surah: 'Al-Baqarah' }),
     ]))
 
-    const { rerender } = render(<QuranPage />)
+    const { rerender } = renderQuranPage()
 
     // Initially all children — filter is empty
     await waitFor(() => {
@@ -293,7 +293,7 @@ describe('QuranPage', () => {
 
     // Simulate URL change while mounted (e.g. back/forward, link within same page)
     act(() => { mockSearchParams = new URLSearchParams('childId=child_002') })
-    rerender(<QuranPage />)
+    rerender(<LearnerProvider><QuranPage /></LearnerProvider>)
 
     await waitFor(() => {
       const sel = screen.getAllByRole('combobox').find(s =>

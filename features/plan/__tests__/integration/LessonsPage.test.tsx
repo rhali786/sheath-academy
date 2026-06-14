@@ -1,6 +1,7 @@
 import React from 'react'
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
 import { LessonsPage } from '@/features/plan/front/pages/LessonsPage'
+import { LearnerProvider } from '@/features/layout/front/context/LearnerContext'
 
 const mockReplace = jest.fn()
 let mockSearchParams = new URLSearchParams()
@@ -80,6 +81,14 @@ afterEach(() => {
   jest.clearAllMocks()
 })
 
+function renderLessonsPage() {
+  return render(
+    <LearnerProvider>
+      <LessonsPage />
+    </LearnerProvider>
+  )
+}
+
 async function openAddLessonForm() {
   fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
   await waitFor(() => {
@@ -89,12 +98,12 @@ async function openAddLessonForm() {
 
 describe('LessonsPage', () => {
   it('renders the Add lesson form heading when the form is expanded', async () => {
-    render(<LessonsPage />)
+    renderLessonsPage()
     await openAddLessonForm()
   })
 
   it('renders Today section when children have loaded', async () => {
-    render(<LessonsPage />)
+    renderLessonsPage()
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /^today$/i })).toBeInTheDocument()
     })
@@ -110,7 +119,7 @@ describe('LessonsPage', () => {
 
     mockGetLessons.mockResolvedValue([todayLesson, otherDayLesson, otherChildLesson])
 
-    const { container } = render(<LessonsPage />)
+    const { container } = renderLessonsPage()
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /^today$/i })).toBeInTheDocument()
@@ -128,7 +137,7 @@ describe('LessonsPage', () => {
   })
 
   it('Today section does not trigger an independent getLessons call', async () => {
-    render(<LessonsPage />)
+    renderLessonsPage()
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /^today$/i })).toBeInTheDocument()
     })
@@ -138,7 +147,7 @@ describe('LessonsPage', () => {
   })
 
   it('renders All lessons section heading', async () => {
-    render(<LessonsPage />)
+    renderLessonsPage()
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /all lessons/i })).toBeInTheDocument()
     })
@@ -148,7 +157,7 @@ describe('LessonsPage', () => {
     const editLesson = makeLesson({ id: 'edit_001', title: 'Lesson To Edit' })
     mockGetLessons.mockResolvedValue([editLesson])
 
-    render(<LessonsPage />)
+    renderLessonsPage()
     await openAddLessonForm()
     expect(screen.queryByRole('heading', { name: /edit lesson/i })).not.toBeInTheDocument()
   })
@@ -170,7 +179,7 @@ describe('LessonsPage', () => {
     mockGetLessons.mockResolvedValue([laythLesson, khadijahLesson])
     mockSearchParams = new URLSearchParams('childId=child_002')
 
-    render(<LessonsPage />)
+    renderLessonsPage()
 
     await waitFor(() => {
       // Find the "All lessons" child filter by the "All children" option
@@ -184,7 +193,7 @@ describe('LessonsPage', () => {
   it('falls back to All Children filter when ?childId is invalid', async () => {
     mockSearchParams = new URLSearchParams('childId=nonexistent_child')
 
-    render(<LessonsPage />)
+    renderLessonsPage()
 
     await waitFor(() => {
       const allChildrenSelect = screen.getAllByRole('combobox').find(s =>
@@ -208,7 +217,7 @@ describe('LessonsPage', () => {
     }))
     mockSearchParams = new URLSearchParams()
 
-    const { rerender } = render(<LessonsPage />)
+    const { rerender } = renderLessonsPage()
 
     // Wait for children to load — filter starts empty (All children)
     await waitFor(() => {
@@ -220,7 +229,7 @@ describe('LessonsPage', () => {
 
     // Simulate URL change while component stays mounted
     act(() => { mockSearchParams = new URLSearchParams('childId=child_002') })
-    rerender(<LessonsPage />)
+    rerender(<LearnerProvider><LessonsPage /></LearnerProvider>)
 
     await waitFor(() => {
       const sel = screen.getAllByRole('combobox').find(s =>
@@ -233,7 +242,7 @@ describe('LessonsPage', () => {
   it('collapses form and shows Lesson added confirmation after successful submit', async () => {
     const mockCreate = plannerApi.createLesson as jest.Mock
     mockCreate.mockResolvedValue(ok(makeLesson()))
-    render(<LessonsPage />)
+    renderLessonsPage()
     await openAddLessonForm()
 
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'New Lesson' } })

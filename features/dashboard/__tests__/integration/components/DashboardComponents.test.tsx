@@ -12,6 +12,27 @@ jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: { getLessons: jest.fn().mockResolvedValue([]) },
 }))
 
+jest.mock('@/features/household/front/context', () => ({
+  useHousehold: jest.fn(() => ({
+    studentProfiles: [],
+    loading: false,
+    householdProfile: null,
+    allSubjects: [],
+    familyName: '',
+    needsSetup: false,
+    error: null,
+    refetch: jest.fn(),
+  })),
+}))
+
+jest.mock('@/features/records/front/services/api', () => ({
+  reportsApi: { getRecordsReport: jest.fn() },
+}))
+
+jest.mock('@/features/quran/front/services/api', () => ({
+  quranApi: { getSessions: jest.fn() },
+}))
+
 describe('Dashboard Components - Unit Tests', () => {
   describe('DoToday Component', () => {
     test('renders heading', () => {

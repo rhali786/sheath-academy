@@ -14,6 +14,7 @@
 import { render, screen, waitFor, act } from '@testing-library/react'
 import { DashboardProvider } from '@/features/dashboard/front/context'
 import { HouseholdProvider } from '@/features/household/front/context'
+import { LearnerProvider } from '@/features/layout/front/context/LearnerContext'
 import Dashboard from '@/features/dashboard/front/pages/Dashboard'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { plannerApi } from '@/features/plan/front/services/api'
@@ -130,11 +131,13 @@ function todayStr(): string {
 
 function renderDashboard() {
   return render(
-    <HouseholdProvider>
-      <DashboardProvider>
-        <Dashboard />
-      </DashboardProvider>
-    </HouseholdProvider>
+    <LearnerProvider>
+      <HouseholdProvider>
+        <DashboardProvider>
+          <Dashboard />
+        </DashboardProvider>
+      </HouseholdProvider>
+    </LearnerProvider>
   )
 }
 
