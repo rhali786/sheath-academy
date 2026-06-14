@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { useHousehold } from '@/features/household/front/context'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { NowCard } from '@/features/learning-time/front/components/NowCard'
+import { SessionHistoryList } from '@/features/learning-time/front/components/SessionHistoryList'
 
 export function LearningTimePage() {
   const { studentProfiles: children } = useHousehold()
@@ -50,7 +51,12 @@ export function LearningTimePage() {
             </select>
           </div>
 
-          {selectedChildId && <NowCard learnerId={selectedChildId} />}
+          {selectedChildId && (
+            <>
+              <NowCard learnerId={selectedChildId} />
+              <SessionHistoryList learnerId={selectedChildId} />
+            </>
+          )}
         </>
       )}
     </div>
