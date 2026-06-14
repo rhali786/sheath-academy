@@ -210,6 +210,33 @@ See the **`testing-patterns`** skill (`/testing-patterns`) for boilerplate for e
 
 ---
 
+## Testing gotchas (read before debugging failing tests)
+
+- **`npm test` excludes `features/**/__tests__/integration/`** (86 files, via `jest.config.js`
+  `testPathIgnorePatterns`). A green `npm test` does NOT mean integration tests pass. To run
+  everything: `npx jest --testPathIgnorePatterns="/node_modules/"`.
+- **"useX must be used within XProvider" in an integration test almost always means the
+  test's render helper is missing a provider wrapper** (e.g. `LearnerProvider`,
+  `HouseholdProvider`) — not a bug in the component. Check the test's `render(...)` call
+  before touching the component.
+- **`LearnerContext` persists `selectedChildId` to `sessionStorage` and is not cleared
+  between tests.** A test earlier in the same file that sets a child filter (via UI or
+  `?childId=`) can leak into a later test in the same file, causing unrelated-looking
+  failures (missing rows/buttons, wrong filter value). If a test fails in a way that
+  suggests "the wrong child is selected" with no obvious cause, suspect sessionStorage
+  leakage from an earlier test in the file.
+- **`npm run test:e2e` is not run in CI** (only `npm run smoke` is) and has drifted from the
+  product significantly (81/135 failing as of 2026-06-14). Don't assume e2e failures mean
+  you broke something — they may be pre-existing drift. Don't assume e2e passes reflect
+  current behavior either.
+- **The pre-commit `commit-msg` hook bumps `package.json`'s version and re-stages it, but
+  leaves a one-commit-delayed stray diff** (each commit's bump lands fully in the *next*
+  commit, and seeds a new +1 diff). This is expected — don't chain extra "fix the version"
+  commits to clean it up (it just perpetuates). If you need a clean working tree, discard it
+  with `git reset HEAD -- package.json && git checkout -- package.json`.
+
+---
+
 ## Troubleshooting
 
 | Symptom | Likely cause | What to do |
