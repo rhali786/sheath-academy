@@ -1,7 +1,7 @@
 {
   "plan": "C:\\PROJECTS\\sheath-academy\\docs\\bug_enhancement\\20260614-test-infra-jest-plan.json",
   "createdAt": "2026-06-14T23:17:51.992Z",
-  "updatedAt": "2026-06-15T02:30:00.000Z",
+  "updatedAt": "2026-06-15T03:40:00.000Z",
   "branch": "fix/test-infrastructure-jest-integration",
   "phases": [
     {
@@ -95,14 +95,19 @@
       "id": "phase-4b",
       "title": "LessonsPage ?childId= seed + Lesson-added confirmation fix",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-14T23:58:45.589Z",
+      "completedAt": "2026-06-15T03:30:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/plan/front/pages/LessonsPage.tsx",
+          "features/plan/__tests__/integration/LessonsPage.test.tsx"
+        ],
+        "testsRun": [
+          "features/plan/__tests__/integration/LessonsPage.test.tsx"
+        ],
+        "notes": "Two component fixes + one test-only fix. (1) LessonsPage.tsx: added setSelectedChildId to useLearner() destructure; added ?childId= seed effect mirroring QuranPage.tsx pattern — when children load and searchParams.get('childId') matches a child id, calls setSelectedChildId(matched.id), which propagates to filterChildId via the existing selectedChildId sync effect. Fixes 'sets child filter from ?childId' and 'updates child filter when URL childId changes' tests. (2) LessonsPage.test.tsx 'collapses form and shows Lesson added confirmation': LessonTaskForm uses checkboxes (not a <select>) for child selection — replaced combobox search for 'Select child' with fireEvent.click on checkbox with aria-label='Adam'; also corrected subject select placeholder text from 'Select subject' to 'Select course/subject'. All 10 LessonsPage tests pass. Build passes."
       },
       "failureReason": null
     },
@@ -110,14 +115,18 @@
       "id": "phase-5",
       "title": "Re-enable integration tests in npm test",
       "gated": true,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-15T03:35:00.000Z",
+      "completedAt": "2026-06-15T03:40:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "jest.config.js"
+        ],
+        "testsRun": [
+          "npm test (full run)"
+        ],
+        "notes": "Removed '/__tests__/integration/' from jest.config.js testPathIgnorePatterns, leaving only '/node_modules/'. Gate precondition verified first: all 22 previously-failing/at-risk suites (dashboard integration incl. LinkedFiltering/DashboardComponents, LessonsPage, QuranPage, AttendancePage, SubjectsAllTable) pass — 171 passed, 1 skipped, 0 failed. Full npm test: Test Suites: 19 skipped, 212 passed, 212 of 231 total; Tests: 151 skipped, 1738 passed, 1889 total, 0 failed. The 19 skipped suites are pre-existing DB-repository tests gated on DATABASE_URL (unrelated to integration-test re-enabling). npm run build passes."
       },
       "failureReason": null
     }
