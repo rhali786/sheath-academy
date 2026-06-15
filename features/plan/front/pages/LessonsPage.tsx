@@ -24,7 +24,7 @@ type DateSort = 'asc' | 'desc'
 
 export function LessonsPage() {
   const { householdProfile, studentProfiles: children, allSubjects: subjects } = useHousehold()
-  const { selectedChildId } = useLearner()
+  const { selectedChildId, setSelectedChildId } = useLearner()
   const searchParams = useSearchParams()
   const [lessons, setLessons] = useState<LessonTask[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -41,6 +41,16 @@ export function LessonsPage() {
   useEffect(() => {
     setFilterChildId(selectedChildId ?? '')
   }, [selectedChildId])
+
+  // Seed shared learner from ?childId= when present
+  useEffect(() => {
+    if (children.length === 0) return
+    const urlChildId = searchParams.get('childId')
+    const matched = urlChildId ? children.find(c => c.id === urlChildId) : null
+    if (matched) {
+      setSelectedChildId(matched.id)
+    }
+  }, [searchParams, children, setSelectedChildId])
 
   useEffect(() => {
     if (searchParams.get('add') === '1') {

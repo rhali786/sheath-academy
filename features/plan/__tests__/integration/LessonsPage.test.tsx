@@ -246,12 +246,11 @@ describe('LessonsPage', () => {
     await openAddLessonForm()
 
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'New Lesson' } })
-    fireEvent.change(screen.getAllByRole('combobox').find(s =>
-      Array.from((s as HTMLSelectElement).options).some(o => o.text === 'Select child')
-    )!, { target: { value: 'child_001' } })
+    // LessonTaskForm uses checkboxes for child selection (not a select)
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Adam' }))
 
     const subjectSel = screen.getAllByRole('combobox').find(s =>
-      Array.from((s as HTMLSelectElement).options).some(o => o.text === 'Select subject')
+      Array.from((s as HTMLSelectElement).options).some(o => o.text === 'Select course/subject')
     )
     if (subjectSel) fireEvent.change(subjectSel, { target: { value: 'subj_001' } })
 
