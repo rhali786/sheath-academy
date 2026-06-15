@@ -22,5 +22,13 @@ Per-phase detail will live in `docs/bug_enhancement/20260614-test-infra-jest-pla
 once `plan:execute` starts (same pattern as `ia-nav-followup-plan.progress.json`).
 
 ## Part B — E2E triage
-- [ ] `docs/bug_enhancement/20260614-e2e-triage.md` written (22 spec files categorized)
-- [ ] Stale `e2e/auth.spec.ts` `/` redirect test removed/updated
+- [x] `docs/bug_enhancement/20260614-e2e-triage.md` written (all 24 spec files categorized;
+      raw working notes in `20260614-e2e-triage-notes.md`)
+- [x] Stale `e2e/auth.spec.ts` `/` redirect test removed/updated
+- [x] Stale `e2e/auth-isolation.spec.ts` `/` redirect test removed/updated (same root cause)
+- Branch: `docs/e2e-triage-b1` (off `dev`, separate from Part A's
+  `fix/test-infrastructure-jest-integration`)
+- Result: 63 of 138 tests fail across 24 spec files (down from 81/135 after the two fixes
+  above). Headline root cause: `/` is now a public landing page, dashboard moved to
+  `/dashboard` — accounts for ~28 failures. Second-largest: `selectOption({label: regex})`
+  Playwright API misuse (~14 failures). B2+ (separate future plan) will fix these.
