@@ -13,6 +13,7 @@ jest.mock('@/features/resources/server/repository', () => ({
 import {
   calculatePace,
   generateLessons,
+  mapGeneratedLessonToTaskInput,
   createResource,
   getResource,
   updateVerificationStatus,
@@ -149,6 +150,92 @@ describe('generateLessons', () => {
       startDate: '2026-09-01',
     })
     lessons.forEach(l => expect(l.title).toContain('Saxon Math 7/6'))
+  })
+
+  it('cadence "weekly" produces lessons 7 calendar days apart, stepping from startDate weekday', () => {
+    // 2026-09-01 is a Tuesday
+    const lessons = generateLessons({
+      resource: BASE_RESOURCE,
+      strategy: 'byChapter',
+      chapters: 4,
+      schoolDays: 36,
+      startDate: '2026-09-01',
+      cadence: 'weekly',
+    })
+    expect(lessons).toHaveLength(4)
+    expect(lessons.map(l => l.dueDate)).toEqual([
+      '2026-09-01',
+      '2026-09-08',
+      '2026-09-15',
+      '2026-09-22',
+    ])
+  })
+
+  it('cadence "everyNDays" with cadenceDays produces lessons N calendar days apart from the previous due date', () => {
+    const lessons = generateLessons({
+      resource: BASE_RESOURCE,
+      strategy: 'byChapter',
+      chapters: 4,
+      schoolDays: 36,
+      startDate: '2026-09-01',
+      cadence: 'everyNDays',
+      cadenceDays: 3,
+    })
+    expect(lessons).toHaveLength(4)
+    expect(lessons.map(l => l.dueDate)).toEqual([
+      '2026-09-01',
+      '2026-09-04',
+      '2026-09-07',
+      '2026-09-10',
+    ])
+  })
+})
+
+describe('mapGeneratedLessonToTaskInput', () => {
+  it('maps a GeneratedLesson to a plannerApi.createLesson payload', () => {
+    const lesson = {
+      title: 'Saxon Math 7/6 — Chapter 1',
+      dueDate: '2026-09-01',
+      order: 1,
+      description: 'Saxon Math 7/6 Chapter 1',
+    }
+
+    const payload = mapGeneratedLessonToTaskInput(lesson, {
+      childId: 'child_001',
+      subjectId: 'subject_001',
+      householdId: 'household_001',
+      resourceLink: 'https://example.com/saxon-math-7-6',
+    })
+
+    expect(payload).toEqual({
+      childId: 'child_001',
+      subjectId: 'subject_001',
+      householdId: 'household_001',
+      title: 'Saxon Math 7/6 — Chapter 1',
+      description: 'Saxon Math 7/6 Chapter 1',
+      dueDate: '2026-09-01',
+      status: 'not_started',
+      order: 1,
+      resourceLink: 'https://example.com/saxon-math-7-6',
+    })
+  })
+
+  it('omits resourceLink when not provided', () => {
+    const lesson = {
+      title: 'Saxon Math 7/6 — Chapter 2',
+      dueDate: '2026-09-02',
+      order: 2,
+    }
+
+    const payload = mapGeneratedLessonToTaskInput(lesson, {
+      childId: 'child_001',
+      subjectId: 'subject_001',
+      householdId: 'household_001',
+    })
+
+    expect(payload.resourceLink).toBeUndefined()
+    expect(payload.title).toBe('Saxon Math 7/6 — Chapter 2')
+    expect(payload.status).toBe('not_started')
   })
 })
 

@@ -160,4 +160,60 @@ describe('SubjectsAllTable — Wave 8 FB-003', () => {
     expect(screen.getByText('Islamic Studies')).toBeInTheDocument()
     expect(screen.queryByText('IslamicStudies')).not.toBeInTheDocument()
   })
+
+  it('renders a Resources column showing linked-resource count/names with truncation', async () => {
+    const courseWith2Resources: SubjectCourse = {
+      id: 's_2res',
+      childId: 'c1',
+      learnerIds: ['c1'],
+      name: 'Math with Practice',
+      category: 'Math',
+      isActive: true,
+      order: 0,
+      createdAt: '2026-01-01',
+      resourceIds: ['r1', 'r2'],
+    }
+    const courseWithManyResources: SubjectCourse = {
+      id: 's_many',
+      childId: 'c1',
+      learnerIds: ['c1'],
+      name: 'Comprehensive Science',
+      category: 'Science',
+      isActive: true,
+      order: 0,
+      createdAt: '2026-01-01',
+      resourceIds: ['r3', 'r4', 'r5', 'r6'],
+    }
+    const courseWithNoResources: SubjectCourse = {
+      id: 's_none',
+      childId: 'c2',
+      learnerIds: ['c2'],
+      name: 'Reading',
+      category: 'Reading',
+      isActive: true,
+      order: 0,
+      createdAt: '2026-01-01',
+      resourceIds: [],
+    }
+    subjectsApi.getSubjects.mockResolvedValue({
+      data: [courseWith2Resources, courseWithManyResources, courseWithNoResources],
+      status: 'success',
+      message: '',
+      timestamp: '',
+    })
+    render(<SubjectsAllTable childrenList={childrenList} refreshKey={0} />)
+    await waitFor(() => expect(screen.getByTestId('subjects-all-table')).toBeInTheDocument())
+
+    // Verify Resources column header exists
+    expect(screen.getByText('Resources')).toBeInTheDocument()
+
+    // Course with 2 resources: show count
+    expect(screen.getByText('2 resources linked')).toBeInTheDocument()
+
+    // Course with many resources: show first 2 + "+2 more"
+    expect(screen.getByText('+2 more')).toBeInTheDocument()
+
+    // Course with no resources: show empty state
+    expect(screen.getByText('No resources linked')).toBeInTheDocument()
+  })
 })

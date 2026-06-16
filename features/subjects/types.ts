@@ -43,6 +43,8 @@ export interface SubjectCourse {
   level?: string
   /** Optional school year association. */
   schoolYearId?: string
+  /** IDs of resources linked to this course. Optional for back-compat with existing fixtures/mocks. */
+  resourceIds?: string[]
   isActive: boolean
   order: number
   createdAt: string

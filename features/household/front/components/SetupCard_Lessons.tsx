@@ -8,10 +8,9 @@ export function SetupCard_Lessons() {
     <SetupCard
       testId="setup-card-lessons"
       title="Create your first lesson plan"
-      description="Organise daily lessons for each child. Lesson planning is coming soon."
+      description="Organise daily lessons for each child."
       actionLabel="Set up lessons"
-      disabled
-      disabledTooltip="Coming soon"
+      actionHref="/plan"
     />
   )
 }

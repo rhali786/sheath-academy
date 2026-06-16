@@ -2,8 +2,10 @@
 
 import { useEffect, useState, FormEvent } from 'react'
 import type { SubjectCourse, SubjectCourseCategory } from '@/features/subjects/types'
+import type { Resource } from '@/features/resources/types'
 import { SUBJECT_COURSE_CATEGORIES, formatCategory } from '@/features/subjects/front/lib/categories'
 import { subjectsApi } from '@/features/subjects/front/services/api'
+import { resourcesApi } from '@/features/resources/front/services/api'
 
 export interface SubjectChildOption {
   id: string
@@ -28,6 +30,8 @@ export function SubjectEditDialog({
   const [name, setName] = useState('')
   const [selectedLearnerIds, setSelectedLearnerIds] = useState<string[]>([])
   const [category, setCategory] = useState<SubjectCourseCategory>('Math')
+  const [resources, setResources] = useState<Resource[]>([])
+  const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -36,13 +40,36 @@ export function SubjectEditDialog({
     setName(subject.name)
     setSelectedLearnerIds(subject.learnerIds?.length ? [...subject.learnerIds] : subject.childId ? [subject.childId] : [])
     setCategory(subject.category)
+    setSelectedResourceIds(subject.resourceIds ? [...subject.resourceIds] : [])
     setError(null)
   }, [open, subject])
+
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    resourcesApi
+      .listResources()
+      .then((res) => {
+        if (!cancelled) setResources(res.data || [])
+      })
+      .catch(() => {
+        if (!cancelled) setResources([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open])
 
   if (!open || !subject) return null
 
   function toggleLearner(id: string) {
     setSelectedLearnerIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
+
+  function toggleResource(id: string) {
+    setSelectedResourceIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     )
   }
@@ -61,6 +88,7 @@ export function SubjectEditDialog({
         name: name.trim(),
         learnerIds: selectedLearnerIds,
         category,
+        resourceIds: selectedResourceIds,
       })
       onSaved()
       onClose()
@@ -136,6 +164,24 @@ export function SubjectEditDialog({
               ))}
             </select>
           </div>
+          {resources.length > 0 && (
+            <div>
+              <p className="block text-xs font-medium text-slate-600 mb-1.5">Linked resources</p>
+              <div className="flex flex-col gap-2" data-testid="edit-subject-resources">
+                {resources.map((r) => (
+                  <label key={r.id} className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+                    <input
+                      type="checkbox"
+                      checked={selectedResourceIds.includes(r.id)}
+                      onChange={() => toggleResource(r.id)}
+                      className="rounded"
+                    />
+                    <span className="text-sm text-slate-700">{r.title}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           {error && <p className="text-xs text-red-600">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <button

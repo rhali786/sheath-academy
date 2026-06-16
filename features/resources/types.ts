@@ -58,6 +58,8 @@ export interface PaceResult {
   isOnTrack?: boolean
 }
 
+export type LessonCadence = 'schoolDay' | 'weekly' | 'everyNDays'
+
 export interface GenerateLessonsInput {
   resource: Resource
   strategy: LessonGenerationStrategy
@@ -67,6 +69,10 @@ export interface GenerateLessonsInput {
   schoolDays: number
   /** ISO date of the first school day (for calculating dueDates) */
   startDate?: string
+  /** Pacing cadence for due dates. Defaults to 'schoolDay' (Mon–Fri stepping). */
+  cadence?: LessonCadence
+  /** Required when cadence === 'everyNDays' — number of calendar days between lessons */
+  cadenceDays?: number
 }
 
 export interface GeneratedLesson {

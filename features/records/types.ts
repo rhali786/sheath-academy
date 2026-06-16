@@ -18,6 +18,12 @@ export interface RecordsChecklistItem {
   blocking: false
 }
 
+export interface TimeBySubject {
+  subjectId: string | null
+  subjectName: string
+  totalMinutes: number
+}
+
 export interface RecordsReport {
   child: StudentProfile
   dateRange: ReportDateRange
@@ -29,6 +35,7 @@ export interface RecordsReport {
     count: number
     items: EvidenceItem[]
   }
+  timeBySubject: TimeBySubject[]
   checklist: RecordsChecklistItem[]
   generatedAt: string
 }

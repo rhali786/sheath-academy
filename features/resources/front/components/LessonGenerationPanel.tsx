@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import type { Resource, LessonGenerationStrategy, GeneratedLesson } from '@/features/resources/types'
+import type { Resource, LessonGenerationStrategy, LessonCadence, GeneratedLesson } from '@/features/resources/types'
 import { resourcesApi } from '../services/api'
+import { plannerApi } from '@/features/plan/front/services/api'
+import { useHousehold } from '@/features/household/front/context'
 
 const STRATEGIES: { value: LessonGenerationStrategy; label: string }[] = [
   { value: 'byChapter', label: 'By chapter' },
@@ -12,6 +14,12 @@ const STRATEGIES: { value: LessonGenerationStrategy; label: string }[] = [
   { value: 'byModule',  label: 'By module' },
 ]
 
+const PACING_OPTIONS: { value: LessonCadence; label: string }[] = [
+  { value: 'schoolDay',  label: 'Every school day' },
+  { value: 'weekly',     label: 'Once a week' },
+  { value: 'everyNDays', label: 'Every N days' },
+]
+
 interface LessonGenerationPanelProps {
   resource: Resource
   startDate?: string
@@ -19,16 +27,41 @@ interface LessonGenerationPanelProps {
 }
 
 export function LessonGenerationPanel({ resource, startDate, onGenerate }: LessonGenerationPanelProps) {
+  const { studentProfiles, allSubjects } = useHousehold()
   const [strategy, setStrategy] = useState<LessonGenerationStrategy>('byChapter')
   const [chapters, setChapters] = useState(String(resource.totalChapters ?? ''))
   const [schoolDays, setSchoolDays] = useState('36')
+  const [cadence, setCadence] = useState<LessonCadence>('schoolDay')
+  const [cadenceDays, setCadenceDays] = useState('1')
   const [generating, setGenerating] = useState(false)
   const [generated, setGenerated] = useState<GeneratedLesson[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [selectedLearnerIds, setSelectedLearnerIds] = useState<string[]>([])
+  const [selectedCourseId, setSelectedCourseId] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  function toggleLearner(id: string) {
+    setSelectedLearnerIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+    setSelectedCourseId('')
+  }
+
+  const filteredCourses = allSubjects.filter(
+    s => s.isActive && s.learnerIds.some(id => selectedLearnerIds.includes(id))
+  )
+
+  const canSave = selectedLearnerIds.length > 0 && !!selectedCourseId && generated.length > 0 && !saved
 
   async function handleGenerate() {
     setGenerating(true)
     setError(null)
+    setSaveMessage(null)
+    setSaveError(null)
+    setSaved(false)
     try {
       const res = await resourcesApi.generateLessons({
         resource,
@@ -36,6 +69,8 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
         chapters: chapters ? parseInt(chapters, 10) : undefined,
         schoolDays: parseInt(schoolDays, 10) || 36,
         startDate,
+        cadence,
+        ...(cadence === 'everyNDays' ? { cadenceDays: parseInt(cadenceDays, 10) || 1 } : {}),
       })
       setGenerated(res.data)
       onGenerate?.(res.data)
@@ -43,6 +78,37 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
       setError('Failed to generate lessons.')
     } finally {
       setGenerating(false)
+    }
+  }
+
+  async function handleSave() {
+    if (!canSave) return
+    const subjectId = selectedCourseId
+    const householdId = studentProfiles.find(c => selectedLearnerIds.includes(c.id))?.householdId ?? ''
+    setSaving(true)
+    setSaveMessage(null)
+    setSaveError(null)
+    try {
+      for (const childId of selectedLearnerIds) {
+        for (const lesson of generated) {
+          await plannerApi.createLesson({
+            childId,
+            subjectId,
+            householdId,
+            title: lesson.title,
+            description: lesson.description,
+            dueDate: lesson.dueDate,
+            status: 'not_started',
+            order: lesson.order,
+          })
+        }
+      }
+      setSaveMessage(`${generated.length} lesson${generated.length === 1 ? '' : 's'} added to the planner`)
+      setSaved(true)
+    } catch {
+      setSaveError('Failed to save lessons to the planner.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -88,6 +154,38 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
             data-testid="generation-school-days-input"
           />
         </div>
+        <div>
+          <label htmlFor="generation-pacing-select" className="block text-xs text-slate-600 mb-1">
+            Pacing
+          </label>
+          <select
+            id="generation-pacing-select"
+            value={cadence}
+            onChange={e => setCadence(e.target.value as LessonCadence)}
+            className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+            data-testid="generation-pacing-select"
+          >
+            {PACING_OPTIONS.map(p => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+        </div>
+        {cadence === 'everyNDays' && (
+          <div>
+            <label htmlFor="generation-cadence-days-input" className="block text-xs text-slate-600 mb-1">
+              N
+            </label>
+            <input
+              id="generation-cadence-days-input"
+              type="number"
+              min="1"
+              value={cadenceDays}
+              onChange={e => setCadenceDays(e.target.value)}
+              className="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+              data-testid="generation-cadence-days-input"
+            />
+          </div>
+        )}
       </div>
 
       <button
@@ -113,6 +211,58 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
           ))}
         </div>
       )}
+
+      <div className="flex gap-3 flex-wrap">
+        <div>
+          <p className="block text-xs text-slate-600 mb-1">Learner(s)</p>
+          <div className="flex flex-wrap gap-2">
+            {studentProfiles.map(child => (
+              <label key={child.id} className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedLearnerIds.includes(child.id)}
+                  onChange={() => toggleLearner(child.id)}
+                  className="rounded"
+                />
+                <span className="text-sm text-slate-700">{child.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="generation-course-select" className="block text-xs text-slate-600 mb-1">
+            Course
+          </label>
+          <select
+            id="generation-course-select"
+            value={selectedCourseId}
+            onChange={e => setSelectedCourseId(e.target.value)}
+            className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+            data-testid="generation-course-select"
+          >
+            <option value="">Select a course…</option>
+            {filteredCourses.map(course => (
+              <option key={course.id} value={course.id}>{course.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {generated.length > 0 && (
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={!canSave || saving}
+          className="px-3 py-1.5 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800 disabled:opacity-50"
+          data-testid="save-to-plan-button"
+        >
+          {saving ? 'Saving…' : 'Save to plan'}
+        </button>
+      )}
+
+      {saveMessage && <p className="text-xs text-green-700">{saveMessage}</p>}
+      {saveError && <p className="text-xs text-red-600">{saveError}</p>}
     </div>
   )
 }

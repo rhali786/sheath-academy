@@ -1,0 +1,148 @@
+{
+  "plan": "docs/bug_enhancement/20260612-wave5-phase1-learning-time-plan.json",
+  "createdAt": "2026-06-12T06:00:00.000Z",
+  "updatedAt": "2026-06-12T08:30:00.000Z",
+  "branch": "feature/learning-time-phase1",
+  "phases": [
+    {
+      "id": "1-schema-migration",
+      "title": "Phase 1 — learning_time_sessions table + migration",
+      "gated": true,
+      "status": "complete",
+      "model": "claude-opus-4-8",
+      "startedAt": "2026-06-12T06:10:00.000Z",
+      "completedAt": "2026-06-12T06:30:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "db/schema.ts",
+          "db/__tests__/schema.test.ts",
+          "db/migrations/0025_fair_virginia_dare.sql",
+          "db/migrations/meta/0025_snapshot.json",
+          "db/migrations/meta/_journal.json"
+        ],
+        "testsRun": [
+          "npx jest db/__tests__/schema.test.ts (4 passed)",
+          "npm run db:generate (no new migration — schema matches 0025)",
+          "npm run db:migrate (applied cleanly against dev DB, migration 0025 now in __drizzle_migrations)",
+          "npm run build (success)"
+        ],
+        "notes": "Added learning_time_sessions table to db/schema.ts (migration 0025_fair_virginia_dare, idx 25 in _journal.json — contiguous after 0024_overconfident_eddie_brock). Columns per plan: id, householdId, learnerId, subjectId?, lessonTaskId?, timeChannelType ('scheduled'|'stopwatch'|'timer'), targetMinutes?, scheduledStart?, scheduledEnd?, status ('draft'|'running'|'paused'|'ended'|'finalized'), startedAt?, pausedAt?, endedAt?, endedBy? ('time'|'manual'), outcome? ('complete'|'partial'|'abandoned'), notes?, createdAt, updatedAt. Index learning_time_sessions_household_learner_idx on (householdId, learnerId). FKs to households/learners/subjects/lessonTasks use ON DELETE no action (mirrors quranSessions/attendanceEvents precedent — finalized session records are preserved, not cascade-deleted). No 'mode' column (deferred to Phase 2, confirmed absent by schema.test.ts). Migration 0025 applied against the dev DB (DATABASE_URL = Virginia dev), confirmed not prod. Verified against current DB before phase 2."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "2-repo-service",
+      "title": "Phase 1 — session repository + lifecycle service",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T07:00:00.000Z",
+      "completedAt": "2026-06-12T07:30:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/learning-time/types.ts",
+          "features/learning-time/server/repository.ts",
+          "features/learning-time/server/service.ts",
+          "features/learning-time/__tests__/server/repository.test.ts",
+          "features/learning-time/__tests__/server/service.test.ts"
+        ],
+        "testsRun": [
+          "npx jest features/learning-time/__tests__/server --testPathIgnorePatterns=\"/node_modules/\" (16 passed, 6 skipped — repository.test.ts skips without DATABASE_URL in the jest process, per testing-patterns boilerplate)",
+          "npm run build (success)"
+        ],
+        "notes": "Repository (features/learning-time/server/repository.ts) exports: getSessionRow(id, householdId), getActiveSessionRow(householdId, learnerId) [non-finalized session, at most one per learner], createSessionRow(householdId, CreateSessionRowInput) [status='draft'; throws Error('Learner already has an active learning time session') if an active session already exists], updateSessionRow(id, householdId, SessionRowPatch), listFinalizedSessionRows(householdId, SessionListFilters{learnerId?,from?,to?}) [status='finalized', from/to filter on endedAt]. Also exports type LearningTimeSessionRow = typeof learningTimeSessions.$inferSelect. Service (features/learning-time/server/service.ts) exports: createSession(householdId, CreateSessionInput), getActiveSession(householdId, learnerId), listSessions(householdId, SessionListFilters), transitionSession(id, householdId, SessionTransitionInput{action:'start'|'pause'|'resume'|'end'|'finalize', outcome?, notes?}) — all return the domain LearningTimeSession (features/learning-time/types.ts), which mirrors the DB row but with ISO date strings plus a server-computed `elapsedSeconds: number`. Error classes: SessionNotFoundError, InvalidTransitionError (both exported from service.ts). Transition rules: start requires status='draft'; pause/resume require status='running'/'paused' respectively AND timeChannelType !== 'scheduled'; end allowed from 'running' or 'paused', sets endedAt=now and computes endedBy ('time' if a timer's elapsed >= targetMinutes*60 or a scheduled session's scheduledEnd has passed, else 'manual'); finalize requires status='ended', sets outcome/notes and status='finalized'. KNOWN SIMPLIFICATION (documented for Phase 2+): elapsedSeconds is wall-clock from startedAt to (endedAt ?? pausedAt-if-paused ?? now) — a single pause/resume cycle is supported but resuming does not subtract paused duration from elapsedSeconds (no accumulator column in schema)."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "3-api-routes",
+      "title": "Phase 1 — learning-time API routes + router wiring",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T08:00:00.000Z",
+      "completedAt": "2026-06-12T08:30:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/learning-time/__tests__/api/learning-time.test.ts",
+          "features/learning-time/api/routes/learning-time.ts",
+          "features/learning-time/api/router.ts",
+          "app/api/[...slug]/route.ts",
+          "features/learning-time/front/services/api.ts"
+        ],
+        "testsRun": [
+          "npx jest features/learning-time/__tests__/api --testPathIgnorePatterns=\"/node_modules/\" (13 passed)",
+          "npm run build (success)"
+        ],
+        "notes": "features/learning-time/api/routes/learning-time.ts exports POST (create, body: {learnerId, timeChannelType, subjectId?, lessonTaskId?, targetMinutes?, scheduledStart?, scheduledEnd?} -> 201 {status,data:LearningTimeSession,message,timestamp}; 400 if learnerId/timeChannelType missing or invalid, or if service/repo rejects due to an existing active session for the learner), GET (list, query ?learnerId=&from=&to= -> 200 {data: LearningTimeSession[]} of finalized sessions), GET_ACTIVE (query ?learnerId= required, 400 if missing -> 200 {data: LearningTimeSession | null}), PATCH (body: {action: 'start'|'pause'|'resume'|'end'|'finalize', outcome?, notes?} -> 200 {data: LearningTimeSession}; 400 for invalid/unknown action or InvalidTransitionError, 404 via SessionNotFoundError if the session id doesn't exist for the household). All routes call features/learning-time/server/service.ts (createSession/getActiveSession/listSessions/transitionSession) — never the repository directly. POST uses guardOwnership + assertSessionOwnership('learner', learnerId); GET/GET_ACTIVE/PATCH rely on householdId scoping in the service/repository (no extra ownership check, matching attendance/quran precedent). Router: features/learning-time/api/router.ts handleLearningTimeRoute — POST/GET '/sessions', GET '/sessions/active', PATCH '/sessions/:id' (slug[1] as id). Wired into app/api/[...slug]/route.ts via `if (slug[0] === 'learning-time')`. Front client features/learning-time/front/services/api.ts exports learningTimeApi.{createSession(input: CreateSessionInput), transition(id, input: SessionTransitionInput), getActive(learnerId): Promise<ApiResponse<LearningTimeSession|null>>, list(filters: SessionListFilters)} — all response shapes are LearningTimeSession (features/learning-time/types.ts) exactly as returned by the service layer (includes server-computed elapsedSeconds; getActive's data is null when no active session exists). Phase 4 (NowCard) should consume learningTimeApi directly with these exact shapes."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "4-ui-now-card",
+      "title": "Phase 1 — LearningTimePage + NowCard cockpit UI",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T09:00:00.000Z",
+      "completedAt": "2026-06-12T09:45:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/learning-time/__tests__/integration/LearningTimePage.test.tsx",
+          "features/learning-time/front/components/NowCard.tsx",
+          "features/learning-time/front/pages/LearningTimePage.tsx",
+          "app/(shell)/learning-time/page.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/learning-time/__tests__/integration/LearningTimePage.test.tsx --testPathIgnorePatterns=\"/node_modules/\" (17 passed)",
+          "npm run build (success)"
+        ],
+        "notes": "Route: /learning-time (app/(shell)/learning-time/page.tsx, thin wrapper rendering LearningTimePage). LearningTimePage.tsx: learner selector (data-testid=learner-select) defaults to the first active learner and follows ?childId=, mirroring AttendancePage; empty state data-testid=learning-time-empty ('No active children. Add one to get started.') when no active learners. Renders <NowCard learnerId={selectedChildId}/>. NowCard.tsx data-testids per state: now-card (outer wrapper), now-card-loading, now-card-idle, now-card-config, now-card-running, now-card-paused, now-card-ended, now-card-finalized. Action buttons: start-session-button (idle->config), start-button + cancel-config-button (config), pause-button/resume-button + finish-button (running/paused), save-outcome-button (ended), start-another-button (finalized). Config form fields: lesson-select ('adhoc' or today's next lessonTask id), subject-select (ad-hoc only), channel-stopwatch/channel-timer/channel-scheduled radios, target-minutes-input (timer), scheduled-start-input/scheduled-end-input (scheduled, type=time combined with today's date into ISO before createSession). 'Active session' detection on mount: NowCard calls learningTimeApi.getActive(learnerId) in a useEffect; while pending shows now-card-loading; result session.status drives the rendered state directly (draft->config, running/paused->elapsed view, ended->outcome form, null->idle). Elapsed time display (data-testid=elapsed-time, aria-live='polite') = session.elapsedSeconds (server value at fetch/transition time) + seconds-since-fetch while status==='running', via a 1s setInterval — never reset to zero on refresh. Draft/config 'Start' button: if session.status==='draft' (recovered from getActive) calls transition(id,{action:'start'}) directly; otherwise calls createSession(input) then transition(newId,{action:'start'}) — single click covers create+start since the API has no update-draft endpoint. 'Next' preview sourced from plannerApi.getLessons(undefined,[learnerId]) filtered to status='not_started' && dueDate===today. Phase 5 (dashboard entry) should use learningTimeApi.getActive(learnerId) the same way to build the 'Resume session' variant."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "5-dashboard-entry",
+      "title": "Phase 1 — Dashboard Learning Time entry point",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T10:00:00.000Z",
+      "completedAt": "2026-06-12T10:30:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/dashboard/front/components/LearningTimeEntry.tsx",
+          "features/dashboard/front/pages/Dashboard.tsx",
+          "features/dashboard/__tests__/integration/components/LearningTimeEntry.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/dashboard/__tests__/integration/components/LearningTimeEntry.test.tsx --testPathIgnorePatterns=\"/node_modules/\" (3 passed)",
+          "npx jest features/dashboard --testPathIgnorePatterns=\"/node_modules/\" (115 passed, 22 pre-existing failures in 3 suites unrelated to this change — confirmed identical failure count on a stash of this phase's diff, all 'useLearner must be used within LearnerProvider' in Dashboard.test.tsx/LinkedFiltering.test.tsx/etc, pre-existing on this branch)",
+          "npm run build (success)"
+        ],
+        "notes": "features/dashboard/front/components/LearningTimeEntry.tsx — small card (data-testid=learning-time-entry) rendering a single Link (data-testid=learning-time-link, href=/learning-time). Default label 'Start Learning Time'. On mount, if learnerId is non-null, calls learningTimeApi.getActive(learnerId); if it returns a non-null session, label becomes 'Resume session — <learnerName>, <elapsedSeconds formatted as H:MM:SS or MM:SS>' (same formatElapsed as NowCard, duplicated locally — no shared util existed). Wired into features/dashboard/front/pages/Dashboard.tsx inside the existing alerts rail (data-testid=dashboard-alerts-rail), between PersonalAssistantPanel and PersonalTodoList, so it is visible on /dashboard without extra clicks on first load. Dashboard passes learnerId={selectedChildId} and learnerName={selectedChild?.name} where selectedChild = studentProfiles.find(c => c.id === selectedChildId). Phase 6 (e2e) flow starts by clicking 'Start Learning Time' (or 'Resume session...') from /dashboard."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "6-e2e-playwright",
+      "title": "Phase 1 — end-to-end Learning Time session flow (Playwright)",
+      "gated": false,
+      "status": "failed",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T11:00:00.000Z",
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [
+          "e2e/learning-time.spec.ts"
+        ],
+        "testsRun": [
+          "npm run build (success)",
+          "npm run test:e2e -- learning-time (FAILED — both tests time out in loginDev, e2e/helpers/auth.ts:21, before reaching the spec's own steps)"
+        ],
+        "notes": "e2e/learning-time.spec.ts was written following attendance.spec.ts conventions (loginDev, page.getByTestId(...) against the data-testids recorded by phase 4/5: now-card, now-card-idle/-config/-running/-paused/-ended/-finalized, start-session-button, channel-timer/channel-stopwatch, target-minutes-input, start-button, pause-button, resume-button, finish-button, outcome-partial, notes-textarea, save-outcome-button, start-another-button, elapsed-time, learning-time-link). Added a local ensureIdle() helper + parseElapsed() to handle persisted demo-DB state across runs (one-active-session-per-learner) and ordering for the mid-session-reload assertion (running AND paused reload cases). NOT VERIFIED — npm run test:e2e fails for this spec AND for the pre-existing e2e/attendance.spec.ts with the identical error (TimeoutError at helpers/auth.ts:21, the dev-bypass 'Sign in' button stays disabled/loading and never redirects in headless Chromium). Confirmed this is NOT caused by this phase's changes: (1) reverting to attendance.spec.ts alone reproduces it, (2) curl against POST /api/auth/callback/bypass with a CSRF token returns HTTP 302 + a valid authjs.session-token cookie in ~1s, so the server-side bypass works — the hang is client-side in next-auth/react's signIn() inside headless Chromium in this sandbox. This is a pre-existing e2e-harness/environment issue, out of this phase's file scope (e2e/helpers/auth.ts, features/auth/front/pages/Login.tsx). FAILING per explicit instruction rather than marking complete unverified. Next steps for whoever resumes this phase: (a) fix/diagnose e2e/helpers/auth.ts + DevBypassSection's signIn() hang in headless Chromium (separate from this plan's file scope), or (b) re-run `npm run test:e2e -- learning-time` in an environment where the existing e2e suite is known to pass, then review e2e/learning-time.spec.ts (already written, uncommitted) for correctness against the live app before committing."
+      },
+      "failureReason": "npm run test:e2e -- learning-time times out in loginDev (e2e/helpers/auth.ts:21) for both new tests, identically to pre-existing e2e/attendance.spec.ts — a sandbox-wide e2e auth bypass hang, not a defect in the new spec. Spec file e2e/learning-time.spec.ts is written but unverified and uncommitted."
+    }
+  ]
+}

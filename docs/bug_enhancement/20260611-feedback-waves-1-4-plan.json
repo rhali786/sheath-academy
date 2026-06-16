@@ -1,0 +1,387 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/bug_enhancement/20260611-feedback-waves-1-4-plan.md",
+  "branch": "feat/feedback-waves-1-4",
+  "phases": [
+    {
+      "id": "1a-refetch",
+      "title": "Wave 1a — refetch household context after subject mutations",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "On branch feat/feedback-waves-1-4 from dev",
+        "HouseholdContext exposes refetch() (features/household/front/context/HouseholdContext.tsx)"
+      ],
+      "fileScope": [
+        "features/settings/front/pages/SettingsPage.tsx",
+        "features/settings/__tests__/integration/SettingsPage.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE SettingsPage.test.tsx: creating/editing/archiving a subject calls refetch() from useHousehold(), so allSubjects updates without a reload (in addition to the existing subjectRefreshKey bump)"
+      ],
+      "implementationSteps": [
+        "In SettingsPage.tsx, SubjectForm onSuccess (~line 345) and SubjectsAllTable onMutate (~line 353): call refetch() from useHousehold() (already imported/used at line 134) alongside the existing setSubjectRefreshKey((k) => k + 1)"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/settings/__tests__/integration/SettingsPage.test.tsx",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "refetch() is now called from SubjectForm onSuccess and SubjectsAllTable onMutate; allSubjects from useHousehold() reflects newly created/edited/archived courses without a page reload (covers feedback 50774221 / fcee6fd0)."
+    },
+    {
+      "id": "1b-selectors",
+      "title": "Wave 1b — learner/course selectors in LessonGenerationPanel",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase 1a-refetch complete — allSubjects from useHousehold() reflects newly created courses"
+      ],
+      "fileScope": [
+        "features/resources/front/components/LessonGenerationPanel.tsx",
+        "features/resources/__tests__/integration/LessonGenerationPanel.test.tsx"
+      ],
+      "testsFirst": [
+        "NEW/UPDATE LessonGenerationPanel.test.tsx: renders a learner multi-select and a course/subject <select> sourced from useHousehold().allSubjects, filtered to the selected learner(s); a 'Save to plan' button is rendered (with visible text, not icon-only) but disabled until a learner and course are chosen and generated.length > 0; no Save button when generated.length === 0"
+      ],
+      "implementationSteps": [
+        "Add a learner multi-select reusing the checkbox pattern from features/subjects/front/components/SubjectForm.tsx",
+        "Add a course/subject <select> sourced from useHousehold().allSubjects, filtered to the selected learner(s)",
+        "Add a disabled 'Save to plan' button below the generated-lessons preview (no onClick wiring yet)",
+        "Add <label> elements for the new selects; stack learner select, course select, and buttons vertically on mobile using the existing flex-wrap pattern"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/resources/__tests__/integration/LessonGenerationPanel.test.tsx",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "LessonGenerationPanel now renders a learner multi-select, a course <select> filtered by selected learner(s), and a disabled 'Save to plan' button. onClick wiring is deferred to phase 1b-save."
+    },
+    {
+      "id": "1b-save",
+      "title": "Wave 1b — wire Save to plan to plannerApi.createLesson",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase 1b-selectors complete — learner multi-select, course select, and 'Save to plan' button exist in LessonGenerationPanel"
+      ],
+      "fileScope": [
+        "features/resources/front/components/LessonGenerationPanel.tsx",
+        "features/resources/__tests__/api/resources.test.ts",
+        "features/resources/__tests__/integration/LessonGenerationPanel.test.tsx"
+      ],
+      "testsFirst": [
+        "NEW resources.test.ts test: 'generateLessons output can be saved as lesson tasks' — exercises the mapping from a GeneratedLesson (features/resources/types.ts:61-77) to a plannerApi.createLesson payload (childId, subjectId, householdId, title, dueDate, status: 'not_started', order, resourceLink, description), mocking plannerApi",
+        "UPDATE LessonGenerationPanel.test.tsx: generate -> select learner + course -> click 'Save to plan' -> asserts plannerApi.createLesson is called once per generated lesson with the correct dueDate/title/resourceLink/childId/subjectId; a confirmation message is shown; 'Save to plan' is disabled again until the next 'Generate lessons' run"
+      ],
+      "implementationSteps": [
+        "Wire 'Save to plan' onClick to loop plannerApi.createLesson() once per GeneratedLesson, mapping fields per the LessonTask shape in features/plan/types.ts:5-25",
+        "Show a loading/spinner state while the sequential save calls are in flight",
+        "On success, show a confirmation message (e.g. 'N lessons added to the planner') and disable 'Save to plan' until the next 'Generate lessons' run"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/resources",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Save to plan persists generated lessons via a plannerApi.createLesson loop (covers feedback e534c6cc). Manual QA still needed: generate lessons on /resources, save, then confirm they appear on /lessons and the Weekly Planner with correct due dates."
+    },
+    {
+      "id": "2a-labels",
+      "title": "Wave 2a — Quran session-type label clarity",
+      "gated": false,
+      "modelTier": "cheap",
+      "preconditions": [],
+      "fileScope": [
+        "features/quran/front/pages/QuranPage.tsx",
+        "features/quran/__tests__/integration/QuranPage.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE QuranPage.test.tsx: the session-type dropdown(s) render friendly labels ('New memorization (Hifz)' for 'New memorisation', 'Memorization review (already memorized)' for 'Memorisation') while submitting the original stored type value; an existing session with type 'Memorisation' displays the friendly review label"
+      ],
+      "implementationSteps": [
+        "Add a QURAN_SESSION_TYPE_LABELS: Record<string, string> map in QuranPage.tsx mapping 'New memorisation' -> 'New memorization (Hifz)' and 'Memorisation' -> 'Memorization review (already memorized)'; other SESSION_TYPES pass through unchanged via QURAN_SESSION_TYPE_LABELS[type] ?? type",
+        "Replace the raw SESSION_TYPES strings used as <option> labels (lines ~213, ~292, ~327) with the label-map lookup, keeping value={type} as the stored value"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/quran/__tests__/integration/QuranPage.test.tsx",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Quran session-type dropdowns now show friendly labels via QURAN_SESSION_TYPE_LABELS in QuranPage.tsx; stored type values and historical data are unchanged (covers feedback 80f04cd0)."
+    },
+    {
+      "id": "2b-cadence-service",
+      "title": "Wave 2b — generateLessons cadence support (service layer)",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [],
+      "fileScope": [
+        "features/resources/types.ts",
+        "features/resources/server/service.ts",
+        "features/resources/api/routes/resources.ts",
+        "features/resources/__tests__/api/resources.test.ts"
+      ],
+      "testsFirst": [
+        "NEW resources.test.ts tests for generateLessons: cadence: 'weekly' produces lessons 7 calendar days apart (stepping from startDate's weekday); cadence: 'everyNDays', cadenceDays: 3 produces lessons 3 calendar days apart from the previous lesson's due date; existing cadence: 'schoolDay'/undefined tests (lines 105-153) must keep passing unchanged"
+      ],
+      "implementationSteps": [
+        "Add optional fields to GenerateLessonsInput (features/resources/types.ts:61-70): cadence?: 'schoolDay' | 'weekly' | 'everyNDays' (default 'schoolDay'), cadenceDays?: number (required when cadence === 'everyNDays')",
+        "In generateLessons() (features/resources/server/service.ts:54-104): when cadence === 'weekly', step due dates by 7 calendar days from startDate; when 'everyNDays', step by cadenceDays calendar days; when 'schoolDay'/undefined, keep the existing Mon-Fri school-day stepping unchanged",
+        "In the generate-lessons route handler (features/resources/api/routes/resources.ts): pass through cadence/cadenceDays from the request body; validate cadenceDays >= 1 when cadence === 'everyNDays'"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/resources",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "generateLessons() supports cadence 'schoolDay' (default, unchanged) | 'weekly' (7 days) | 'everyNDays' (cadenceDays); GenerateLessonsInput and the resources API route accept/validate these new optional fields. UI wiring is phase 2b-pacing-ui."
+    },
+    {
+      "id": "2b-pacing-ui",
+      "title": "Wave 2b — Pacing control in LessonGenerationPanel",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase 2b-cadence-service complete — GenerateLessonsInput has cadence/cadenceDays and generateLessons()/the resources route handle them"
+      ],
+      "fileScope": [
+        "features/resources/front/components/LessonGenerationPanel.tsx",
+        "features/resources/__tests__/integration/LessonGenerationPanel.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE LessonGenerationPanel.test.tsx: a 'Pacing' <select> (Every school day / Once a week / Every N days) is rendered next to the existing 'School days' input; an 'N' number input (min 1) is shown only when 'Every N days' is selected; the chosen cadence/cadenceDays values are passed to resourcesApi.generateLessons"
+      ],
+      "implementationSteps": [
+        "Add a 'Pacing' <select> with options Every school day (default) / Once a week / Every N days, near the existing 'School days' input (~lines 80-90)",
+        "Show an 'N' number input (min 1) only when 'Every N days' is selected, and include cadence/cadenceDays in the resourcesApi.generateLessons call",
+        "Reuse existing <label> patterns; no icon-only controls"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/resources/__tests__/integration/LessonGenerationPanel.test.tsx",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "LessonGenerationPanel has a Pacing select (schoolDay/weekly/everyNDays) with a conditional N input, wired through to resourcesApi.generateLessons (covers feedback 3c4cc9a2). Manual QA: verify preview dates are 7 days apart for 'Once a week' and N days apart for 'Every N days'."
+    },
+    {
+      "id": "3-schema-migration",
+      "title": "Wave 3 — subject_resources join table schema + migration",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [
+        "Confirm DATABASE_URL points at a non-prod/throwaway database before running db:generate or db:migrate (per CLAUDE.md migration rules) — if this cannot be confirmed, fail this phase rather than running migrations against an unknown target"
+      ],
+      "fileScope": [
+        "db/schema.ts",
+        "db/migrations",
+        "db/__tests__/schema.test.ts"
+      ],
+      "testsFirst": [
+        "NEW db/__tests__/schema.test.ts: imports subjectResources from db/schema.ts and asserts it defines subjectId and resourceId columns (fails until the table is added)"
+      ],
+      "implementationSteps": [
+        "Add a subjectResources pgTable to db/schema.ts modeled on the existing subjectLearners table (lines 201-208): subjectId references subjects.id (cascade), resourceId references resources.id (cascade), composite primary key (subjectId, resourceId), index on resourceId named subject_resources_resource_idx",
+        "Run npm run db:generate to produce the migration",
+        "Run npm run db:migrate to apply it"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- db/__tests__/schema.test.ts",
+        "RUN: npm run db:generate (produces exactly one new migration matching the schema change)",
+        "RUN: npm run db:migrate (applies cleanly, no gap in migration sequence)",
+        "RUN: npm run build"
+      ],
+      "invariants": ["drizzle-migrations"],
+      "writeBack": "Added subject_resources join table (subjectId, resourceId, composite PK, index on resourceId). Record the migration file number/range here so the next phase can confirm nothing was skipped."
+    },
+    {
+      "id": "3-repo-hydration",
+      "title": "Wave 3 — repository hydration for subject resourceIds",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase 3-schema-migration complete — subject_resources table exists and the migration has been applied to the target database"
+      ],
+      "fileScope": [
+        "features/subjects/server/repository.ts",
+        "features/subjects/types.ts",
+        "features/subjects/__tests__/api/repository.test.ts"
+      ],
+      "testsFirst": [
+        "NEW repository.test.ts tests: updateSubjectRow called with resourceIds persists the link rows, and getSubjectRow/listSubjectRows return the same resourceIds"
+      ],
+      "implementationSteps": [
+        "Add readResourceIds/writeResourceRows/syncResourceRows helpers mirroring readLearnerIds/writeLearnerRows/syncLearnerRows (features/subjects/server/repository.ts:32-67), targeting the new subject_resources table",
+        "Extend the hydrate/hydrateMany pattern (lines 69-96) so listSubjectRows/getSubjectRow/createSubjectRow/updateSubjectRow attach resourceIds the same way learnerIds is attached",
+        "updateSubjectRow calls syncResourceRows when input.resourceIds !== undefined (mirrors syncLearnerRows)",
+        "Extend UpdateSubjectInput (features/subjects/server/repository.ts:22-30) with resourceIds?: string[]",
+        "Extend SubjectCourse (features/subjects/types.ts:30-49) with resourceIds: string[]"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/subjects",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Subjects repository now hydrates/syncs resourceIds via readResourceIds/writeResourceRows/syncResourceRows against subject_resources, mirroring the learner pattern. SubjectCourse and UpdateSubjectInput both have resourceIds. API plumbing is phase 3-api-routes."
+    },
+    {
+      "id": "3-api-routes",
+      "title": "Wave 3 — API plumbing for subject resourceIds",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase 3-repo-hydration complete — subjects repository reads/writes resourceIds"
+      ],
+      "fileScope": [
+        "features/subjects/api/routes/subjects.ts",
+        "features/subjects/front/services/api.ts",
+        "features/subjects/__tests__/api/subjects.test.ts"
+      ],
+      "testsFirst": [
+        "UPDATE subjects.test.ts: PATCH /api/subjects/:id with resourceIds in the body updates the subject_resources link rows, and GET returns resourceIds in the response"
+      ],
+      "implementationSteps": [
+        "rowToSubject (features/subjects/api/routes/subjects.ts) includes resourceIds in the response shape",
+        "The PATCH/update handler accepts resourceIds from the request body and passes it through to updateSubjectRow",
+        "features/subjects/front/services/api.ts: the update-subject function passes resourceIds through to the API call"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/subjects",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "PATCH /api/subjects/:id accepts and persists resourceIds; GET responses include resourceIds; front-end api.ts passes resourceIds through. UI wiring is phases 3-edit-dialog-ui and 3-table-column."
+    },
+    {
+      "id": "3-edit-dialog-ui",
+      "title": "Wave 3 — Linked resources picker in SubjectEditDialog",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase 3-api-routes complete — PATCH /api/subjects/:id accepts/returns resourceIds"
+      ],
+      "fileScope": [
+        "features/subjects/front/components/SubjectEditDialog.tsx",
+        "features/subjects/__tests__/integration/SubjectEditDialog.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE SubjectEditDialog.test.tsx: a 'Linked resources' multi-select renders the household's resources (from resourcesApi.getResources()); toggling resources and saving calls the update API with the updated resourceIds"
+      ],
+      "implementationSteps": [
+        "Add a 'Linked resources' multi-select using checkboxes (reusing the learner-checkbox visual pattern from SubjectForm.tsx), populated from resourcesApi.getResources() (household-scoped)",
+        "Use checkboxes with visible labels (not a native <select multiple>) for touch-target size >= 44px on mobile",
+        "On save, include the updated resourceIds in the update-subject API call"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/subjects/__tests__/integration/SubjectEditDialog.test.tsx",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "SubjectEditDialog has a checkbox-based 'Linked resources' multi-select wired to resourceIds via the update-subject API. The 'Resources' column in SubjectsAllTable is phase 3-table-column."
+    },
+    {
+      "id": "3-table-column",
+      "title": "Wave 3 — Resources column in SubjectsAllTable",
+      "gated": false,
+      "modelTier": "cheap",
+      "preconditions": [
+        "phase 3-edit-dialog-ui complete — resourceIds are editable and persisted per subject"
+      ],
+      "fileScope": [
+        "features/subjects/front/components/SubjectsAllTable.tsx",
+        "features/subjects/__tests__/integration/SubjectsAllTable.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE SubjectsAllTable.test.tsx: renders a 'Resources' column showing the linked-resource count/names per course (e.g. '2 resources linked'), truncating with '+N more' for more than 2, and 'No resources linked' when resourceIds.length === 0"
+      ],
+      "implementationSteps": [
+        "Add a 'Resources' column to SubjectsAllTable showing linked resource count or names (truncate with '+N more' for >2); show 'No resources linked' when empty"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/subjects/__tests__/integration/SubjectsAllTable.test.tsx",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "SubjectsAllTable shows a 'Resources' column with linked-resource count/names and an empty state (covers feedback 23cd6909, completing Wave 3)."
+    },
+    {
+      "id": "4a-attendance-fix",
+      "title": "Wave 4a — attendance-missing alert clears after logging attendance",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [],
+      "fileScope": [
+        "features/alerts/server/service.ts",
+        "features/alerts/__tests__/api/alerts.test.ts",
+        "features/attendance/server/repository.ts",
+        "features/dashboard/front/context/DashboardProvider.tsx"
+      ],
+      "testsFirst": [
+        "NEW alerts.test.ts test (the reproduction): create an attendance record for 'today' the same way AttendancePage would (features/attendance/front/pages/AttendancePage.tsx:89-107), then call getAlerts/listAlerts and assert no attendance_missing alert remains for that learner"
+      ],
+      "implementationSteps": [
+        "Run the reproduction test first to determine the root cause: (a) a date/timezone mismatch between the client-submitted attendanceDate and the server's todayLocal() (features/alerts/server/service.ts:6-9, used at :58-97), or (b) a refetch/remount gap in DashboardProvider when navigating back to /dashboard",
+        "Fix only at the layer the failing test isolates: if (a), fix date computation/formatting (no schema change); if (b), ensure DashboardProvider refetches alerts on mount/route revisit",
+        "If the root cause is larger than a one-line fix (e.g. a genuine cross-page cache-invalidation gap), do not expand scope — record the finding in writeBack and fail this phase with that reason instead of leaving it half-done"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/alerts",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Record the root cause found (date/timezone mismatch vs. refetch gap) and the fix applied (covers feedback 9937be68). This determines the eventual commit message for this change."
+    },
+    {
+      "id": "4b-setup-route",
+      "title": "Wave 4b — standalone /household/setup route",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [],
+      "fileScope": [
+        "app/(shell)/household/setup/page.tsx",
+        "features/household/front/components/HouseholdSetup.tsx",
+        "features/dashboard/front/pages/Dashboard.tsx",
+        "features/household/__tests__"
+      ],
+      "testsFirst": [
+        "NEW test for app/(shell)/household/setup/page.tsx (or its underlying page component): renders HouseholdSetup"
+      ],
+      "implementationSteps": [
+        "Create app/(shell)/household/setup/page.tsx as a thin route rendering <HouseholdSetup /> (per CLAUDE.md, app/ stays routing-only)",
+        "Confirm HouseholdSetup works standalone outside Dashboard's data-loading context. If it depends on dashboard-loaded data not available standalone, fall back to a callback-based reveal in Dashboard.tsx instead of a standalone route, and record which option was used in writeBack",
+        "Do not change existing needsSetup behavior in Dashboard.tsx — keep existing inline-render for first-run regression-protected by existing Dashboard tests"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/household features/dashboard",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Record which option was implemented (new /household/setup route vs. callback-based reveal) and the resulting navigable target/path — phase 4b-setup-link links to whatever target this phase produced."
+    },
+    {
+      "id": "4b-setup-link",
+      "title": "Wave 4b — link 'Set up your household' to the setup target",
+      "gated": false,
+      "modelTier": "cheap",
+      "preconditions": [
+        "phase 4b-setup-route complete — a navigable household-setup target exists (route or equivalent), recorded in its writeBack notes"
+      ],
+      "fileScope": [
+        "features/setup/front/components/NextSetupStrip.tsx",
+        "features/setup/__tests__/integration/NextSetupStrip.test.tsx"
+      ],
+      "testsFirst": [
+        "UPDATE NextSetupStrip.test.tsx: the household step renders a 'Go ->' link to the target produced by phase 4b-setup-route"
+      ],
+      "implementationSteps": [
+        "Add href to the household entry in STEP_MESSAGES (features/setup/front/components/NextSetupStrip.tsx:7-11) pointing at the target recorded by phase 4b-setup-route, so the existing {meta.href ? <Link href={meta.href}>Go ->/Link> : null} pattern (lines 82-88) renders for this step"
+      ],
+      "doneWhen": [
+        "RUN: npm test -- features/setup",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Household step in NextSetupStrip now has an href and renders 'Go ->' (covers feedback 9bb8370e, completing Wave 4)."
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import { getLearner, type LearnerRow } from '@/features/children/server/reposito
 import type { StudentProfile } from '@/features/lib/types'
 import { listEvidenceRows, type EvidenceRow } from '@/features/portfolio/server/repository'
 import type { EvidenceItem, EvidenceType } from '@/features/portfolio/types'
+import { listFinalizedSessionRows } from '@/features/learning-time/server/repository'
 import { listLessonTaskRows, type LessonTaskRow } from '@/features/plan/server/repository'
 import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
 import { getCompletedLessonHistory } from '@/features/plan/utils/completedLessonHistory'
@@ -12,7 +13,7 @@ import { computeProgressBySubject } from '@/features/plan/utils/progressBySubjec
 import { getActiveSchoolYear } from '@/features/school-year/server/service'
 import { listSubjectRows, type SubjectRow } from '@/features/subjects/server/repository'
 import type { SubjectCourse, SubjectCourseCategory } from '@/features/subjects/types'
-import type { RecordsChecklistItem, RecordsReport, RecordsReportOptions, ReportDateRange } from '../types'
+import type { RecordsChecklistItem, RecordsReport, RecordsReportOptions, ReportDateRange, TimeBySubject } from '../types'
 
 async function defaultDateRange(
   householdId: string,
@@ -120,6 +121,29 @@ function mapEvidence(row: EvidenceRow): EvidenceItem {
   }
 }
 
+function buildTimeBySubject(
+  rows: { subjectId: string | null; startedAt: Date | null; endedAt: Date | null }[],
+  subjectNames: Record<string, string>,
+): TimeBySubject[] {
+  const totals = new Map<string | null, number>()
+  for (const row of rows) {
+    if (!row.startedAt || !row.endedAt) continue
+    const minutes = (row.endedAt.getTime() - row.startedAt.getTime()) / 60000
+    totals.set(row.subjectId, (totals.get(row.subjectId) ?? 0) + minutes)
+  }
+  return Array.from(totals.entries())
+    .map(([subjectId, minutes]) => ({
+      subjectId,
+      subjectName: subjectId ? subjectNames[subjectId] ?? 'Unassigned' : 'Unassigned',
+      totalMinutes: Math.round(minutes),
+    }))
+    .sort((a, b) => {
+      if (a.subjectId === null) return 1
+      if (b.subjectId === null) return -1
+      return a.subjectName.localeCompare(b.subjectName)
+    })
+}
+
 function summarizeAttendance(childId: string, records: AttendanceRecord[]) {
   return summarizeAttendanceByStatus(
     childId,
@@ -219,9 +243,15 @@ export async function getRecordsReport(
       endDate: dateRange.end,
     })
   ).map(mapEvidence)
+  const sessionRows = await listFinalizedSessionRows(householdId, {
+    learnerId: options.childId,
+    from: `${dateRange.start}T00:00:00.000Z`,
+    to: `${dateRange.end}T23:59:59.999Z`,
+  })
 
   const childNames = { [child.id]: child.name }
   const subjectNames = Object.fromEntries(subjects.map(subject => [subject.id, subject.name]))
+  const timeBySubject = buildTimeBySubject(sessionRows, subjectNames)
   const progressBySubject = computeProgressBySubject(
     lessons,
     dateRange,
@@ -246,6 +276,7 @@ export async function getRecordsReport(
       count: evidence.length,
       items: evidence,
     },
+    timeBySubject,
     checklist: buildChecklist({
       expectedAttendanceDays: countWeekdays(dateRange.start, dateRange.end),
       recordedAttendanceDays: new Set(attendanceRecords.map(record => record.date)).size,

@@ -340,28 +340,28 @@ describe('SetupCard component', () => {
 // ── SetupCard_Lessons and _Portfolio standalone ───────────────────────────────
 
 describe('SetupCard_Lessons standalone', () => {
-  it('renders with a disabled action button', () => {
+  it('renders an enabled link to /plan', () => {
     render(<SetupCard_Lessons />)
-    const btn = screen.getByRole('button')
-    expect(btn).toBeDisabled()
+    const link = screen.getByRole('link', { name: /set up lessons/i })
+    expect(link).toHaveAttribute('href', '/plan')
   })
 
-  it('shows "Coming soon" tooltip text', () => {
+  it('description no longer says "coming soon"', () => {
     render(<SetupCard_Lessons />)
-    expect(screen.getByTitle('Coming soon')).toBeInTheDocument()
+    expect(screen.queryByText(/coming soon/i)).not.toBeInTheDocument()
   })
 })
 
 describe('SetupCard_Portfolio standalone', () => {
-  it('renders with a disabled action button', () => {
+  it('renders an enabled link to /portfolio', () => {
     render(<SetupCard_Portfolio />)
-    const btn = screen.getByRole('button')
-    expect(btn).toBeDisabled()
+    const link = screen.getByRole('link', { name: /start portfolio/i })
+    expect(link).toHaveAttribute('href', '/portfolio')
   })
 
-  it('shows "Coming soon" tooltip text', () => {
+  it('description no longer says "coming soon"', () => {
     render(<SetupCard_Portfolio />)
-    expect(screen.getByTitle('Coming soon')).toBeInTheDocument()
+    expect(screen.queryByText(/coming soon/i)).not.toBeInTheDocument()
   })
 })
 

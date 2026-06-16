@@ -27,7 +27,11 @@
       "Bash(gh run *)",
       "Bash(gh pr *)",
       "Bash(echo \"EXITCODE=$?\")",
-      "Read(//c/Users/rashe/AppData/Local/Temp/claude/**)"
+      "Read(//c/Users/rashe/AppData/Local/Temp/claude/**)",
+      "Bash(tasklist)",
+      "Bash(npx tsx *)",
+      "Bash(awk '{print $1}')",
+      "Bash(powershell *)"
     ]
   }
 }

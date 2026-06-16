@@ -93,6 +93,7 @@ export function SubjectsAllTable({ childrenList, refreshKey = 0, onMutate }: Sub
               <th className="px-4 py-3">Learner(s)</th>
               <th className="px-4 py-3">Course / Subject</th>
               <th className="px-4 py-3">Category</th>
+              <th className="px-4 py-3">Resources</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
@@ -118,6 +119,17 @@ export function SubjectsAllTable({ childrenList, refreshKey = 0, onMutate }: Sub
                     {s.category === 'OtherCustom' && s.customCategory
                       ? s.customCategory
                       : formatCategory(s.category)}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {!s.resourceIds || s.resourceIds.length === 0 ? (
+                      <span className="text-slate-500">No resources linked</span>
+                    ) : s.resourceIds.length <= 2 ? (
+                      <span>{s.resourceIds.length} resources linked</span>
+                    ) : (
+                      <span>
+                        {s.resourceIds.length} resources linked <span>+{s.resourceIds.length - 2} more</span>
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <button

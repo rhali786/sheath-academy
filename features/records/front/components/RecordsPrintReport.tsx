@@ -1,5 +1,6 @@
 import type { QuranSession } from '@/features/lib/types'
 import { formatAttendanceSummaryLine } from '@/features/attendance/front/lib/summaryDisplay'
+import { formatMinutes } from '@/features/records/front/lib/formatDuration'
 import type { RecordsReport } from '@/features/records/types'
 
 export type RecordsPrintVariant =
@@ -197,6 +198,24 @@ export function RecordsPrintReport({
               </div>
             ))}
           </div>
+        </section>
+      )}
+
+      {showProgress && (
+        <section>
+          <h3 className="text-base font-bold text-slate-900">Time spent by subject</h3>
+          {report.timeBySubject.length === 0 ? (
+            <p className="mt-2 text-sm text-slate-600">No learning time recorded for this date range.</p>
+          ) : (
+            <div className="mt-3 divide-y divide-slate-100">
+              {report.timeBySubject.map((entry) => (
+                <div key={entry.subjectId ?? 'unassigned'} className="py-2 flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-slate-800">{entry.subjectName}</span>
+                  <span className="text-sm text-slate-600">{formatMinutes(entry.totalMinutes)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
 

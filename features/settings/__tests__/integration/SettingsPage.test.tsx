@@ -334,6 +334,108 @@ describe('SettingsPage', () => {
     const checkboxes = screen.getAllByRole('checkbox')
     expect(checkboxes).toHaveLength(2)
   })
+
+  it('subjects tab calls refetch() from useHousehold() when the SubjectForm reports success', async () => {
+    mockSearchParams = new URLSearchParams('tab=subjects')
+    childrenApi.getChildren.mockResolvedValue({
+      data: [
+        {
+          id: 'c1',
+          householdId: 'household_001',
+          name: 'Only',
+          gradeLabel: '1',
+          username: 'a',
+          password: 'p',
+          isActive: true,
+          createdAt: '2026-01-01',
+        },
+      ],
+      status: 'success',
+      message: 'ok',
+      timestamp: '',
+    })
+    renderSettings()
+    await waitFor(() => {
+      expect(screen.getByTestId('subject-form')).toBeInTheDocument()
+    })
+
+    expect(loadedHousehold.refetch).not.toHaveBeenCalled()
+
+    const { subjectsApi } = jest.requireMock('@/features/subjects/front/services/api') as {
+      subjectsApi: { createSubject: jest.Mock }
+    }
+    subjectsApi.createSubject.mockResolvedValue({ status: 'success', data: null, message: 'ok', timestamp: '' })
+
+    // Simulate the SubjectForm reporting a successful create via its onSuccess prop.
+    const learnerCheckbox = screen.getByRole('checkbox', { name: 'Only' }) as HTMLInputElement
+    if (!learnerCheckbox.checked) {
+      await userEvent.click(learnerCheckbox)
+    }
+    await userEvent.type(screen.getByLabelText(/Course \/ Subject name/i), 'Algebra')
+    await userEvent.click(screen.getByRole('button', { name: /add course/i }))
+
+    await waitFor(() => {
+      expect(loadedHousehold.refetch).toHaveBeenCalled()
+    })
+  })
+
+  it('subjects tab calls refetch() from useHousehold() when SubjectsAllTable reports a mutation', async () => {
+    mockSearchParams = new URLSearchParams('tab=subjects')
+    childrenApi.getChildren.mockResolvedValue({
+      data: [
+        {
+          id: 'c1',
+          householdId: 'household_001',
+          name: 'Only',
+          gradeLabel: '1',
+          username: 'a',
+          password: 'p',
+          isActive: true,
+          createdAt: '2026-01-01',
+        },
+      ],
+      status: 'success',
+      message: 'ok',
+      timestamp: '',
+    })
+    const { subjectsApi } = jest.requireMock('@/features/subjects/front/services/api') as {
+      subjectsApi: { getSubjects: jest.Mock; archiveSubject: jest.Mock }
+    }
+    subjectsApi.getSubjects.mockResolvedValue({
+      data: [
+        {
+          id: 'sub1',
+          householdId: 'household_001',
+          childIds: ['c1'],
+          name: 'Geometry',
+          color: '#000000',
+          isActive: true,
+          createdAt: '2026-01-01',
+        },
+      ],
+      status: 'success',
+      message: 'ok',
+      timestamp: '',
+    })
+    subjectsApi.archiveSubject.mockResolvedValue({ status: 'success', data: null, message: 'ok', timestamp: '' })
+
+    renderSettings()
+    await waitFor(() => {
+      expect(screen.getByTestId('subject-form')).toBeInTheDocument()
+    })
+    await waitFor(() => {
+      expect(screen.getByText('Geometry')).toBeInTheDocument()
+    })
+
+    expect(loadedHousehold.refetch).not.toHaveBeenCalled()
+
+    const archiveButton = screen.getByRole('button', { name: /archive/i })
+    await userEvent.click(archiveButton)
+
+    await waitFor(() => {
+      expect(loadedHousehold.refetch).toHaveBeenCalled()
+    })
+  })
 })
 
 describe('Display name — Your profile section', () => {

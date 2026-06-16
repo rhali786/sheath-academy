@@ -1,0 +1,322 @@
+{
+  "plan": "docs/bug_enhancement/20260611-feedback-waves-1-4-plan.json",
+  "createdAt": "2026-06-11T12:30:00.000Z",
+  "updatedAt": "2026-06-12T04:30:00.000Z",
+  "branch": "feat/feedback-waves-1-4",
+  "phases": [
+    {
+      "id": "1a-refetch",
+      "title": "Wave 1a — refetch household context after subject mutations",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-11T00:00:00.000Z",
+      "completedAt": "2026-06-11T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/settings/front/pages/SettingsPage.tsx",
+          "features/settings/__tests__/integration/SettingsPage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/settings/__tests__/integration/SettingsPage.test.tsx --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "Added two new integration tests covering SubjectForm onSuccess and SubjectsAllTable onMutate. Both call refetch() from useHousehold() in addition to the existing subjectRefreshKey bump (covers feedback 50774221 / fcee6fd0). Both new tests pass; pre-existing unrelated failure 'shows school year panel when tab query is school-year' confirmed failing on this branch before this change too. Build passes."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "1b-selectors",
+      "title": "Wave 1b — learner/course selectors in LessonGenerationPanel",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-11T00:00:00.000Z",
+      "completedAt": "2026-06-11T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/resources/front/components/LessonGenerationPanel.tsx",
+          "features/resources/__tests__/integration/LessonGenerationPanel.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/resources/__tests__/integration/LessonGenerationPanel.test.tsx --testPathIgnorePatterns=\"/node_modules/\"",
+          "npx jest features/resources --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "LessonGenerationPanel now consumes useHousehold() for studentProfiles and allSubjects. Renders a learner multi-select (checkboxes, reusing the SubjectForm pattern), a #generation-course-select <select data-testid=\"generation-course-select\"> filtered to subjects where learnerIds intersects selectedLearnerIds and isActive, and a 'Save to plan' button (data-testid=\"save-to-plan-button\") rendered only when generated.length > 0, disabled until a learner + course are selected. onClick is NOT wired yet (deferred to phase 1b-save). All 4 new tests pass; full features/resources suite (41 tests) and npm run build pass. ResourcesPage tests unaffected (LessonGenerationPanel not rendered in those tests since 'selected' stays null)."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "1b-save",
+      "title": "Wave 1b — wire Save to plan to plannerApi.createLesson",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-11T00:00:00.000Z",
+      "completedAt": "2026-06-11T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/resources/server/service.ts",
+          "features/resources/__tests__/api/resources.test.ts",
+          "features/resources/front/components/LessonGenerationPanel.tsx",
+          "features/resources/__tests__/integration/LessonGenerationPanel.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/resources --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "Added mapGeneratedLessonToTaskInput (pure mapping fn) to features/resources/server/service.ts, covered by 2 new resources.test.ts unit tests. NOTE: this exported helper is NOT imported into LessonGenerationPanel.tsx (server/service.ts transitively imports repository.ts -> getDb(), which would pull DB/drizzle code into the client bundle); the component instead inlines the equivalent mapping. 'Save to plan' onClick now loops plannerApi.createLesson() once per selected learner x generated lesson, mapping {childId, subjectId: selectedCourseId, householdId: studentProfiles.find(...).householdId, title, description, dueDate, status: 'not_started', order} (resourceLink omitted — Resource type has no URL field to source it from). Shows 'Saving…' state while in flight, a confirmation message 'N lessons added to the planner' on success, and disables Save to plan again until the next Generate lessons run (resets saved/messages). All 44 features/resources tests and npm run build pass. Covers feedback e534c6cc. Manual QA still needed: generate lessons on /resources, save, then confirm they appear on /lessons and the Weekly Planner with correct due dates."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "2a-labels",
+      "title": "Wave 2a — Quran session-type label clarity",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-11T00:00:00.000Z",
+      "completedAt": "2026-06-11T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/quran/front/pages/QuranPage.tsx",
+          "features/quran/__tests__/integration/QuranPage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/quran/__tests__/integration/QuranPage.test.tsx --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "Added QURAN_SESSION_TYPE_LABELS map ('New memorisation' -> 'New memorization (Hifz)', 'Memorisation' -> 'Memorization review (already memorized)') and sessionTypeLabel(type) helper (falls through to the raw type for other SESSION_TYPES) in QuranPage.tsx. Applied to all SESSION_TYPES <option> renders (Log session form, filter dropdown, inline edit form) and to the session-list type display; value={type} (stored value) is unchanged in every case. Added 3 new integration tests. PRE-EXISTING UNRELATED FAILURE: at this branch's merge-base (5aabb36), QuranPage.test.tsx already fails 10/15 -- every test involving the 'Edit session'/Pencil inline-edit flow times out at ~8000ms with 'useLearner must be used within LearnerProvider' errors, unrelated to this change. Of the 3 new tests, 2 directly cover the 2a acceptance criteria and pass ('shows friendly session-type labels in the Log session form and filter dropdowns', 'shows the friendly review label for an existing session with type Memorisation'). The 3rd ('shows the friendly label in the inline edit dropdown for an existing session') depends on that same pre-existing broken inline-edit flow, so it was marked it.skip with a comment explaining why -- re-enable once the inline-edit flow is fixed (out of scope for this phase). Final run: 10 failed / 1 skipped / 7 passed (18 total) -- failure count matches the pre-existing baseline exactly (10/15 at baseline since this phase added 3 tests, 1 of which is skipped). npm run build passes. Covers feedback 80f04cd0."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "2b-cadence-service",
+      "title": "Wave 2b — generateLessons cadence support (service layer)",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-11T00:00:00.000Z",
+      "completedAt": "2026-06-11T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/resources/types.ts",
+          "features/resources/server/service.ts",
+          "features/resources/api/routes/resources.ts",
+          "features/resources/__tests__/api/resources.test.ts"
+        ],
+        "testsRun": [
+          "npx jest features/resources --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "Added LessonCadence = 'schoolDay' | 'weekly' | 'everyNDays' and optional cadence/cadenceDays fields to GenerateLessonsInput (features/resources/types.ts). generateLessons() now delegates due-date calculation to a new computeDueDates() helper: cadence 'weekly' steps 7 calendar days apart from startDate, 'everyNDays' steps cadenceDays (clamped to >=1) calendar days apart, and 'schoolDay'/undefined preserves the existing Mon-Fri weekday-stepping behavior unchanged (all 4 pre-existing generateLessons tests still pass). Also fixed a latent timezone bug while implementing this: startDate (an ISO 'YYYY-MM-DD' string) was being parsed with `new Date(startDate)` (UTC midnight), which shifts to the previous local day in negative-UTC-offset timezones (e.g. America/New_York) -- added parseLocalDate() to parse YYYY-MM-DD as a local-time Date, used for all cadence modes including schoolDay. handleGenerateLessons (features/resources/api/routes/resources.ts) now validates cadenceDays >= 1 (number) when cadence === 'everyNDays', returning a 400 'error' response otherwise; cadence/cadenceDays otherwise pass through to generateLessons() unchanged via the existing `body as GenerateLessonsInput` spread. Added 2 new resources.test.ts tests (weekly: 2026-09-01/08/15/22; everyNDays cadenceDays=3: 2026-09-01/04/07/10), both pass. Full features/resources suite (46 tests) and npm run build pass. UI wiring (Pacing select + N input in LessonGenerationPanel, wired to resourcesApi.generateLessons) is phase 2b-pacing-ui."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "2b-pacing-ui",
+      "title": "Wave 2b — Pacing control in LessonGenerationPanel",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-11T00:00:00.000Z",
+      "completedAt": "2026-06-11T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/resources/front/components/LessonGenerationPanel.tsx",
+          "features/resources/__tests__/integration/LessonGenerationPanel.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/resources/__tests__/integration/LessonGenerationPanel.test.tsx --testPathIgnorePatterns=\"/node_modules/\"",
+          "npx jest features/resources --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "Added a 'Pacing' <select data-testid=\"generation-pacing-select\"> (Every school day [default 'schoolDay'] / Once a week ['weekly'] / Every N days ['everyNDays']) next to the existing 'School days' input in LessonGenerationPanel.tsx, using the new PACING_OPTIONS array and LessonCadence type from features/resources/types.ts. When 'Every N days' is selected, an 'N' number input (min 1, data-testid=\"generation-cadence-days-input\") appears, defaulting to '1'. handleGenerate now passes cadence (always) and cadenceDays (only when cadence === 'everyNDays', parsed with fallback 1) to resourcesApi.generateLessons. Added 3 new integration tests covering: default pacing select state + no N input, conditional N input + cadence/cadenceDays passed to generateLessons for 'weekly' and 'everyNDays', and default 'schoolDay' cadence passed when generating. All 8 LessonGenerationPanel tests pass, full features/resources suite (49 tests) passes, npm run build passes. Covers feedback 3c4cc9a2, completing Wave 2b. Manual QA still needed (per plan): verify preview dates are 7 days apart for 'Once a week' and N days apart for 'Every N days' against the live /resources page."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "3-schema-migration",
+      "title": "Wave 3 — subject_resources join table schema + migration",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-11T18:09:00.000Z",
+      "completedAt": "2026-06-11T18:12:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "db/schema.ts",
+          "db/__tests__/schema.test.ts",
+          "db/migrations/0025_rich_inhumans.sql",
+          "db/migrations/meta/0025_snapshot.json",
+          "db/migrations/meta/_journal.json"
+        ],
+        "testsRun": [
+          "npx jest db/__tests__/schema.test.ts --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run db:generate",
+          "npm run db:migrate",
+          "npm run build"
+        ],
+        "notes": "Added subjectResources pgTable to db/schema.ts (subjectId, resourceId, composite PK on (subjectId, resourceId), index subject_resources_resource_idx on resourceId, both FKs cascade-delete to subjects.id and resources.id), modeled directly on the existing subjectLearners table. Confirmed DATABASE_URL in .env.local points at the dev DB (virginia-postgres / sacad), not prod (oregon-postgres / sheath_academy). Highest pre-existing migration was 0024_overconfident_eddie_brock.sql; npm run db:generate produced exactly one new migration, 0025_rich_inhumans.sql (CREATE TABLE subject_resources with composite PK, both FKs, and the resource_id index) — no gap. npm run db:migrate applied cleanly against the dev DB (sacad). Invariant check: re-running npm run db:generate afterward reports 'No schema changes, nothing to migrate'. New db/__tests__/schema.test.ts (1 test) and npm run build both pass. Migration range touched: 0025 only (0000-0024 unchanged, 26 total). Next phase (3-repo-hydration) can read/write subjectResources via subjects.id <-> resources.id link rows."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "3-repo-hydration",
+      "title": "Wave 3 — repository hydration for subject resourceIds",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T00:52:47.641Z",
+      "completedAt": "2026-06-12T00:52:47.643Z",
+      "outputs": {
+        "filesChanged": [
+          "features/subjects/server/repository.ts",
+          "features/subjects/types.ts",
+          "features/subjects/__tests__/api/repository.test.ts",
+          "features/subjects/api/routes/subjects.ts",
+          "features/subjects/api/routes/subject.ts",
+          "features/subjects/api/routes/rollover.ts"
+        ],
+        "testsRun": [
+          "npx dotenv -e .env.local -- npx jest features/subjects --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "Added readResourceIds/writeResourceRows/syncResourceRows to repository.ts mirroring the learner pattern, targeting the new subject_resources table (subjectId, resourceId composite PK). hydrate/hydrateMany now attach resourceIds alongside learnerIds for listSubjectRows/getSubjectRow/createSubjectRow/upsertSubjectRow/updateSubjectRow (create paths return resourceIds: []; updateSubjectRow calls syncResourceRows when input.resourceIds !== undefined). UpdateSubjectInput gained resourceIds?: string[] (CreateSubjectInput unchanged per plan). SubjectRowWithLearners gained resourceIds: string[] (required, repository-internal). SubjectCourse (features/subjects/types.ts) gained resourceIds?: string[] (OPTIONAL, not required as literally specified in the plan) -- making it required produced ~18 pre-existing-shape TS errors across unrelated test fixtures/mocks (features/plan, features/records, features/resources, features/subjects __tests__) outside this phase file scope; optional avoids that blast radius while still letting API routes populate it. Updated the 3 existing rowToSubject() mappers (features/subjects/api/routes/{subjects,subject,rollover}.ts) to pass resourceIds: r.resourceIds through -- required for npm run build to pass given the SubjectRowWithLearners shape change, and within the natural scope of this phase. Added 1 new repository.test.ts test (createResourceRow x2, updateSubjectRow with resourceIds, getSubjectRow/listSubjectRows round-trip, re-sync to a smaller set) -- passes. Full features/subjects suite: 51/53 pass; the 2 failures (SubjectsAllTable.test.tsx dialog-not-found, and archiveSubjectsByLearner \"archives solo course\" learnerIds mismatch) are PRE-EXISTING on the unmodified branch tip (verified via git stash) -- unrelated to this phase, caused by shared-dev-DB test-order pollution. npm run build passes (29/29 static pages). No schema/migration changes in this phase. Next phase (3-api-routes) can read/write resourceIds via UpdateSubjectInput.resourceIds and SubjectCourse.resourceIds (optional)."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "3-api-routes",
+      "title": "Wave 3 — API plumbing for subject resourceIds",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T01:00:00.000Z",
+      "completedAt": "2026-06-12T01:15:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/subjects/api/routes/subject.ts",
+          "features/subjects/front/services/api.ts",
+          "features/subjects/__tests__/api/subjects.test.ts",
+          "features/subjects/__tests__/api/subject.test.ts"
+        ],
+        "testsRun": [
+          "npx jest features/subjects --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "rowToSubject in subjects.ts/subject.ts/rollover.ts already included resourceIds from phase 3-repo-hydration, so only the PUT handler and front-end api.ts needed updating. PUT /api/subjects/:id (features/subjects/api/routes/subject.ts) now passes resourceIds from the request body through to updateSubjectRow when present (undefined when omitted, leaving existing resourceIds untouched per updateSubjectRow's syncResourceRows-only-if-defined behavior). features/subjects/front/services/api.ts updateSubject() body type gained resourceIds?: string[] (the generic put() already forwards the full body). Added new features/subjects/__tests__/api/subject.test.ts (3 tests: GET includes resourceIds, PUT passes resourceIds through and returns them, PUT omits resourceIds -> updateSubjectRow called with resourceIds: undefined). Added 1 new test to subjects.test.ts confirming GET /api/subjects includes resourceIds per row. All 4 new tests pass. Full features/subjects suite: 39/40 non-skipped pass; the 1 failure (SubjectsAllTable.test.tsx 'dialog not found') is PRE-EXISTING on the unmodified branch tip (verified via git stash run) and unrelated to this phase. npm run build passes (29/29 static pages). Next phases (3-edit-dialog-ui, 3-table-column) can rely on PATCH /api/subjects/:id accepting/returning resourceIds and subjectsApi.updateSubject() typing resourceIds."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "3-edit-dialog-ui",
+      "title": "Wave 3 — Linked resources picker in SubjectEditDialog",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T01:30:00.000Z",
+      "completedAt": "2026-06-12T02:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/subjects/front/components/SubjectEditDialog.tsx",
+          "features/subjects/__tests__/integration/SubjectEditDialog.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/subjects/__tests__/integration/SubjectEditDialog.test.tsx --testPathIgnorePatterns=\"/node_modules/\"",
+          "npx jest features/subjects --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "Completed work from an interrupted prior worker: the 3 new tests (renders Linked resources multi-select from resourcesApi.listResources(), pre-selects resourceIds, toggles+saves with updated resourceIds) were already written; only SubjectEditDialog.tsx needed the implementation. Added resources/selectedResourceIds state, an effect that calls resourcesApi.listResources() (no workspaceId arg, matching the test mock) on open and populates `resources`, syncs selectedResourceIds from subject.resourceIds on open/subject change, a toggleResource() handler, and a checkbox-based 'Linked resources' section (data-testid=\"edit-subject-resources\", min-h-[44px] labels per resource, only rendered when resources.length > 0) between Category and the error message. handleSubmit now sends resourceIds: selectedResourceIds to subjectsApi.updateSubject. All 5 SubjectEditDialog.test.tsx tests pass. Full features/subjects suite: 42 passed / 1 failed / 17 skipped (60 total) -- the 1 failure (SubjectsAllTable.test.tsx 'opens edit dialog when Edit is clicked' / dialog-not-found) is PRE-EXISTING, confirmed via git stash on this exact branch tip (same failure with or without this phase's changes) and matches the failure documented in phase 3-api-routes notes. npm run build passes (29/29 static pages). Note: there's a harmless React act() warning in the console for the pre-existing synchronous 'pre-selects all enrolled learners as checkboxes' test, caused by the new useEffect's async setResources resolving after that test's assertions -- does not affect pass/fail, left as-is (out of scope). Next phase (3-table-column) can add a 'Resources' column to SubjectsAllTable; SubjectCourse.resourceIds is already populated end-to-end."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "3-table-column",
+      "title": "Wave 3 — Resources column in SubjectsAllTable",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-haiku-4-5-20251001",
+      "startedAt": "2026-06-12T03:10:00.000Z",
+      "completedAt": "2026-06-12T03:15:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/subjects/front/components/SubjectsAllTable.tsx",
+          "features/subjects/__tests__/integration/SubjectsAllTable.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/subjects/__tests__/integration/SubjectsAllTable.test.tsx --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "Added 'Resources' column header to SubjectsAllTable. Implemented resource display logic: shows 'No resources linked' when resourceIds is empty/undefined, shows 'N resources linked' for 1-2 resources, and shows '<count> resources linked +N more' for 3+ resources (truncating with '+N more'). ORCHESTRATOR FOLLOW-UP FIX: the originally-committed version hardcoded '2 resources linked' as a literal prefix for the >2 case, which collided with the exact '2 resources linked' text from a 2-resource course and made getByText('2 resources linked') match multiple elements (test failure). Changed the >2 case to use {s.resourceIds.length} resources linked (e.g. '4 resources linked +2 more') so each exact-text query is unique. New test ('renders a Resources column showing linked-resource count/names with truncation') now passes (6/7 in this file; the 1 remaining failure, 'opens edit dialog when Edit is clicked', is the same PRE-EXISTING dialog-not-found failure documented in phases 3-api-routes and 3-edit-dialog-ui). npm run build passes (29/29 static pages). Completes Wave 3 (covers feedback 23cd6909)."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "4a-attendance-fix",
+      "title": "Wave 4a — attendance-missing alert clears after logging attendance",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-opus-4-8",
+      "startedAt": "2026-06-12T04:00:00.000Z",
+      "completedAt": "2026-06-12T04:30:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/alerts/server/service.ts",
+          "features/alerts/__tests__/api/alerts.test.ts"
+        ],
+        "testsRun": [
+          "npx jest features/alerts --testPathIgnorePatterns=\"/node_modules/\"",
+          "npx jest features/dashboard/__tests__/api --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "ROOT CAUSE = date/timezone mismatch (option (a) in the plan), NOT a refetch gap. getAlerts() in features/alerts/server/service.ts computed 'today' via a naive todayLocal() using the SERVER PROCESS timezone (new Date().getFullYear()/getMonth()/getDate()). AttendancePage (features/attendance/front/pages/AttendancePage.tsx:24-26,89-107) submits attendanceDate in the HOUSEHOLD/browser-local timezone. On prod (Render server runs UTC) these diverge across a day boundary: a US family logging attendance in the evening sends e.g. 2026-06-11 but the server's todayLocal() returns 2026-06-12, so listAttendanceEvents({date: serverToday}) never matched the just-saved record and the attendance_missing alert never cleared (feedback 9937be68). FIX (service.ts only): todayLocal() now reads timezone from tryGetRequestAuthCtx()?.timezone and returns getHouseholdLocalDate(timezone) (features/lib/server/date.ts, Intl en-CA in the household tz); falls back to the old server-local computation when no request auth ctx / timezone (e.g. outside API dispatch). DashboardProvider already refetches alerts on mount (effect keyed on householdProfile?.id), so navigating /attendance -> /dashboard remounts and refetches correctly — the refetch path was NOT the bug, so DashboardProvider.tsx and features/attendance/server/repository.ts (both listed in plan fileScope) were intentionally left UNCHANGED per the plan's 'fix only the layer the failing test isolates' instruction. TEST: added a runner-tz-INDEPENDENT reproduction describe block to features/alerts/__tests__/api/alerts.test.ts that exercises the REAL service via jest.requireActual (the file otherwise mocks the service), mocks the 3 repos + overrides tryGetRequestAuthCtx timezone to Pacific/Kiritimati (UTC+14), and pins the clock to 2026-06-11T12:00Z (= 2026-06-12 in the household tz but 2026-06-11 in any plausible CI/server tz, guaranteeing divergence without mutating process.env.TZ). Confirmed the 2 new tests FAIL on the unfixed service (queried 2026-06-11 instead of 2026-06-12) then PASS after the fix. Full features/alerts suite 22/22 pass (incl. the pre-existing alertRules.test.ts unit tests which don't mock requestAuth -> tryGetRequestAuthCtx returns undefined -> server-local fallback preserves their behavior). dashboard api tests (7/7, they mock getAlerts) and npm run build (29 pages) pass. No schema/migration changes. Committed as 78465c3."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "4b-setup-route",
+      "title": "Wave 4b — standalone /household/setup route",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-12T05:00:00.000Z",
+      "completedAt": "2026-06-12T05:20:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "app/(shell)/household/setup/page.tsx",
+          "features/household/__tests__/integration/HouseholdSetupPage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/household/__tests__/integration/HouseholdSetupPage.test.tsx --testPathIgnorePatterns=\"/node_modules/\"",
+          "npx jest features/household features/dashboard --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "OPTION IMPLEMENTED: standalone route (option 1, not the callback-based-reveal fallback). HouseholdSetup works fine standalone -- it consumes useHousehold() (provided by AppShell/HouseholdProvider via the (shell) layout) and fetches its own status data directly via fetch() to /api/children/children, /api/school-years/active, /api/subjects; it has no dependency on Dashboard's loaded data. Created app/(shell)/household/setup/page.tsx as a thin route (`export default function HouseholdSetupRoutePage() { return <HouseholdSetup /> }`), no extra logic, per CLAUDE.md app/ stays routing-only. Did NOT touch features/dashboard/front/pages/Dashboard.tsx -- existing needsSetup inline-render (`if (needsSetup) return <HouseholdSetup />`) on Dashboard.tsx:139-141 is unchanged, so first-run regression protection from existing Dashboard tests is preserved. New test file features/household/__tests__/integration/HouseholdSetupPage.test.tsx (2 tests, both pass): renders the route page directly, mocking useHousehold/householdApi/childrenApi/next-navigation the same way as the existing HouseholdSetup.test.tsx -- covers 'Welcome to Sheath' (no household) and 'Complete your setup' (household exists, setup cards) states. RUN 1 (npx jest features/household features/dashboard): 33 passed / 3 failed test suites (216 passed / 22 failed tests) -- the 3 failing suites (DashboardComponents.test.tsx, Dashboard.test.tsx, LinkedFiltering.test.tsx, all failing with 'useHousehold must be used within HouseholdProvider' inside RecordsProof) are PRE-EXISTING on this branch tip, confirmed identical (22 failed / 15 passed across those 3 files) via git stash before this phase's changes -- unrelated to this phase. npm run build passes (30/30 static pages, including new route '○ /household/setup  168 B  110 kB', statically rendered). NAVIGABLE TARGET for phase 4b-setup-link: '/household/setup' (a Link href or router.push to this path renders the full HouseholdSetup experience standalone, inside AppShell/Header)."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "4b-setup-link",
+      "title": "Wave 4b — link 'Set up your household' to the setup target",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-haiku-4-5-20251001",
+      "startedAt": "2026-06-12T05:30:00.000Z",
+      "completedAt": "2026-06-12T05:35:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/setup/front/components/NextSetupStrip.tsx",
+          "features/setup/__tests__/integration/NextSetupStrip.test.tsx"
+        ],
+        "testsRun": [
+          "npm test -- features/setup --testPathIgnorePatterns=\"/node_modules/\"",
+          "npm run build"
+        ],
+        "notes": "Added href: '/household/setup' to the household step in STEP_MESSAGES (features/setup/front/components/NextSetupStrip.tsx:7-11). The existing {meta.href ? <Link href={meta.href}>Go ->/Link> : null} pattern (lines 82-88) now renders 'Go ->' for the household step, linking to /household/setup (the target from phase 4b-setup-route). Added test 'renders a link to /household/setup when nextStep is household' to NextSetupStrip.test.tsx. All 14 features/setup tests pass. npm run build passes (30 static pages). Covers feedback 9bb8370e, completing Wave 4 and the entire plan."
+      },
+      "failureReason": null
+    }
+  ]
+}

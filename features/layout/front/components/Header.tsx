@@ -1,7 +1,8 @@
 'use client'
 
-import { useRef, useMemo, useState, useEffect } from 'react'
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useSyncAppHeaderHeight } from '@/features/layout/front/hooks/useSyncAppHeaderHeight'
 import { HouseholdSwitcher } from '@/features/household/front/components/HouseholdSwitcher'
@@ -20,15 +21,20 @@ export function Header({ onMenuOpen }: HeaderProps) {
   const greeting = useMemo(() => pickGreeting(), [])
   const displayName = session?.user?.name ?? null
   const [alerts, setAlerts] = useState<Alert[]>([])
+  const pathname = usePathname()
 
   useSyncAppHeaderHeight(headerRef)
 
-  useEffect(() => {
+  const loadAlerts = useCallback(() => {
     fetch('/api/alerts')
       .then(r => r.ok ? r.json() : { data: [] })
       .then(res => setAlerts(Array.isArray(res.data) ? res.data : []))
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    loadAlerts()
+  }, [pathname, loadAlerts])
 
   return (
     <header
@@ -50,7 +56,7 @@ export function Header({ onMenuOpen }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          <NotificationBellDropdown alerts={alerts} />
+          <NotificationBellDropdown alerts={alerts} onOpen={loadAlerts} />
 
           {session ? (
             <div className="flex items-center gap-2">

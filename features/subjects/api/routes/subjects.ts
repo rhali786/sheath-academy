@@ -12,6 +12,7 @@ function rowToSubject(r: SubjectRowWithLearners): SubjectCourse {
     id: r.id,
     childId: r.learnerIds[0] ?? r.learnerId ?? '',
     learnerIds: r.learnerIds,
+    resourceIds: r.resourceIds,
     name: r.name,
     category: (r.category as SubjectCourseCategory) ?? 'core',
     schoolYearId: r.schoolYearId ?? undefined,

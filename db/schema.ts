@@ -207,6 +207,20 @@ export const subjectLearners = pgTable(
   (t) => [primaryKey({ columns: [t.subjectId, t.learnerId] })],
 )
 
+// ─── Subject Resources (join table: one row per resource linked to a course) ──
+
+export const subjectResources = pgTable(
+  'subject_resources',
+  {
+    subjectId: text('subject_id').notNull().references(() => subjects.id, { onDelete: 'cascade' }),
+    resourceId: text('resource_id').notNull().references(() => resources.id, { onDelete: 'cascade' }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.subjectId, t.resourceId] }),
+    index('subject_resources_resource_idx').on(t.resourceId),
+  ],
+)
+
 // ─── Personal Todos ───────────────────────────────────────────────────────────
 
 export const personalTodos = pgTable(
@@ -256,6 +270,40 @@ export const lessonTasks = pgTable(
     index('lesson_tasks_household_status_idx').on(t.householdId, t.status),
     // Admin aggregate: scan by date across all households, group by household_id
     index('lesson_tasks_due_household_idx').on(t.dueDate, t.householdId),
+  ],
+)
+
+// ─── Learning Time Sessions ───────────────────────────────────────────────────
+// Live session-execution state owned by features/learning-time. Phase 1 is
+// time-only (no task channel, no 'mode' column — added in Phase 2). FK behavior
+// mirrors the standalone session-record precedent (quranSessions/attendanceEvents):
+// plain references without onDelete on household/learner/subject/lessonTask so a
+// finalized session record is preserved rather than silently cascade-deleted.
+
+export const learningTimeSessions = pgTable(
+  'learning_time_sessions',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    learnerId: text('learner_id').notNull().references(() => learners.id),
+    subjectId: text('subject_id').references(() => subjects.id),
+    lessonTaskId: text('lesson_task_id').references(() => lessonTasks.id),
+    timeChannelType: text('time_channel_type').notNull(), // 'scheduled' | 'stopwatch' | 'timer'
+    targetMinutes: integer('target_minutes'), // for 'timer'; null for stopwatch/scheduled
+    scheduledStart: timestamp('scheduled_start'), // for 'scheduled'
+    scheduledEnd: timestamp('scheduled_end'), // for 'scheduled'
+    status: text('status').notNull(), // 'draft' | 'running' | 'paused' | 'ended' | 'finalized'
+    startedAt: timestamp('started_at'),
+    pausedAt: timestamp('paused_at'),
+    endedAt: timestamp('ended_at'),
+    endedBy: text('ended_by'), // 'time' | 'manual'
+    outcome: text('outcome'), // 'complete' | 'partial' | 'abandoned'
+    notes: text('notes'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('learning_time_sessions_household_learner_idx').on(t.householdId, t.learnerId),
   ],
 )
 

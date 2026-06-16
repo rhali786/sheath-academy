@@ -1,9 +1,9 @@
 import { and, eq, inArray, isNull, or } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
-import { subjects, subjectLearners } from '@/db/schema'
+import { subjects, subjectLearners, subjectResources } from '@/db/schema'
 
 export type SubjectRow = typeof subjects.$inferSelect
-export type SubjectRowWithLearners = SubjectRow & { learnerIds: string[] }
+export type SubjectRowWithLearners = SubjectRow & { learnerIds: string[]; resourceIds: string[] }
 
 export interface CreateSubjectInput {
   name: string
@@ -27,6 +27,8 @@ export interface UpdateSubjectInput {
   sortOrder?: number
   /** Replace enrolled learners when provided. Primary learner = learnerIds[0]. */
   learnerIds?: string[]
+  /** Replace linked resources when provided. */
+  resourceIds?: string[]
 }
 
 /** Attach subject_learners rows for a subject, deduplicating. */
@@ -66,12 +68,50 @@ async function readLearnerIds(subjectId: string): Promise<string[]> {
   return rows.map((r) => r.learnerId)
 }
 
-/** Hydrate a SubjectRow with its learnerIds from the join table.
+/** Attach subject_resources rows for a subject, deduplicating. */
+async function writeResourceRows(subjectId: string, resourceIdList: string[]): Promise<void> {
+  if (resourceIdList.length === 0) return
+  const db = getDb()
+  await db
+    .insert(subjectResources)
+    .values(resourceIdList.map((rid) => ({ subjectId, resourceId: rid })))
+    .onConflictDoNothing()
+}
+
+/** Replace subject_resources links to match resourceIdList exactly. */
+async function syncResourceRows(subjectId: string, resourceIdList: string[]): Promise<void> {
+  const db = getDb()
+  const existing = await db
+    .select({ resourceId: subjectResources.resourceId })
+    .from(subjectResources)
+    .where(eq(subjectResources.subjectId, subjectId))
+  const next = [...new Set(resourceIdList)]
+  const toRemove = existing.map((r) => r.resourceId).filter((id) => !next.includes(id))
+  if (toRemove.length > 0) {
+    await db
+      .delete(subjectResources)
+      .where(and(eq(subjectResources.subjectId, subjectId), inArray(subjectResources.resourceId, toRemove)))
+  }
+  await writeResourceRows(subjectId, next.filter((id) => !existing.some((r) => r.resourceId === id)))
+}
+
+/** Read all resource IDs linked to a subject, in insertion order. */
+async function readResourceIds(subjectId: string): Promise<string[]> {
+  const db = getDb()
+  const rows = await db
+    .select({ resourceId: subjectResources.resourceId })
+    .from(subjectResources)
+    .where(eq(subjectResources.subjectId, subjectId))
+  return rows.map((r) => r.resourceId)
+}
+
+/** Hydrate a SubjectRow with its learnerIds and resourceIds from the join tables.
  *  Falls back to [subjects.learnerId] for rows that predate the migration. */
 async function hydrate(row: SubjectRow): Promise<SubjectRowWithLearners> {
   const ids = await readLearnerIds(row.id)
   const learnerIds = ids.length > 0 ? ids : row.learnerId ? [row.learnerId] : []
-  return { ...row, learnerIds }
+  const resourceIds = await readResourceIds(row.id)
+  return { ...row, learnerIds, resourceIds }
 }
 
 async function hydrateMany(rows: SubjectRow[]): Promise<SubjectRowWithLearners[]> {
@@ -88,10 +128,21 @@ async function hydrateMany(rows: SubjectRow[]): Promise<SubjectRowWithLearners[]
     list.push(jr.learnerId)
     bySubject.set(jr.subjectId, list)
   }
+  const resourceJoinRows = await db
+    .select()
+    .from(subjectResources)
+    .where(inArray(subjectResources.subjectId, ids))
+  const resourcesBySubject = new Map<string, string[]>()
+  for (const jr of resourceJoinRows) {
+    const list = resourcesBySubject.get(jr.subjectId) ?? []
+    list.push(jr.resourceId)
+    resourcesBySubject.set(jr.subjectId, list)
+  }
   return rows.map((row) => {
     const ids = bySubject.get(row.id) ?? []
     const learnerIds = ids.length > 0 ? ids : row.learnerId ? [row.learnerId] : []
-    return { ...row, learnerIds }
+    const resourceIds = resourcesBySubject.get(row.id) ?? []
+    return { ...row, learnerIds, resourceIds }
   })
 }
 
@@ -158,7 +209,7 @@ export async function upsertSubjectRow(
   const row = inserted[0]
   const allLearnerIds = input.learnerIds ?? (primaryLearnerId ? [primaryLearnerId] : [])
   await writeLearnerRows(row.id, allLearnerIds)
-  return { ...row, learnerIds: allLearnerIds }
+  return { ...row, learnerIds: allLearnerIds, resourceIds: [] }
 }
 
 export async function createSubjectRow(
@@ -188,7 +239,7 @@ export async function createSubjectRow(
   const row = inserted[0]
   const allLearnerIds = input.learnerIds ?? (primaryLearnerId ? [primaryLearnerId] : [])
   await writeLearnerRows(row.id, allLearnerIds)
-  return { ...row, learnerIds: allLearnerIds }
+  return { ...row, learnerIds: allLearnerIds, resourceIds: [] }
 }
 
 export async function updateSubjectRow(
@@ -216,6 +267,10 @@ export async function updateSubjectRow(
 
   if (input.learnerIds !== undefined) {
     await syncLearnerRows(id, input.learnerIds)
+  }
+
+  if (input.resourceIds !== undefined) {
+    await syncResourceRows(id, input.resourceIds)
   }
 
   return hydrate(result[0])
