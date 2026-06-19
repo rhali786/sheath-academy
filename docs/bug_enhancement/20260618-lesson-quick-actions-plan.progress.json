@@ -1,21 +1,29 @@
 {
   "plan": "docs/bug_enhancement/20260618-lesson-quick-actions-plan.md",
   "createdAt": "2026-06-18T00:00:00.000Z",
-  "updatedAt": "2026-06-18T00:00:00.000Z",
+  "updatedAt": "2026-06-18T10:30:00.000Z",
   "branch": "feat/lesson-quick-actions",
   "phases": [
     {
       "id": "phase-1",
       "title": "Date terminology — relabel dueDate / plannedStartDate everywhere",
       "gated": false,
-      "status": "in_progress",
+      "status": "complete",
       "model": "standard",
       "startedAt": "2026-06-18T10:00:00.000Z",
-      "completedAt": null,
+      "completedAt": "2026-06-18T10:30:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": null
+        "filesChanged": [
+          "features/plan/front/components/LessonTaskForm.tsx",
+          "features/plan/__tests__/integration/LessonTaskForm.test.tsx",
+          "features/plan/__tests__/integration/LessonCard.test.tsx"
+        ],
+        "testsRun": [
+          "features/plan/__tests__/integration/LessonTaskForm.test.tsx — 30 passed",
+          "features/plan/__tests__/integration/LessonCard.test.tsx — 22 passed",
+          "npm test (unit suite) — 127 suites, 935 tests passed"
+        ],
+        "notes": "Phase 1 complete. LessonTaskForm now labels plannedStartDate as 'Available from (optional)' and dueDate as 'Due date'. Helper text added: 'Lesson can be completed any day from Available from through Due date.' LessonCard inline edit already had 'Due date' label — no change needed there. All old test references to 'Start date' / 'Planned date' labels updated to match new labels. Committed on feat/lesson-quick-actions as cb52e61. Phase 2 can proceed: add editPlannedStartDate state + 'Available from' input to LessonCard inline edit."
       },
       "failureReason": null,
       "workOrder": {
