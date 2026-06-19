@@ -1,7 +1,12 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { buildDailySchedule } from '@/features/schedule/server/service'
 import { ScheduleTimeline } from '@/features/schedule/front/components/ScheduleTimeline'
 import type { LessonTask } from '@/features/plan/types'
+
+const mockPush = jest.fn()
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
+}))
 
 function makeLesson(id: string, title: string, status: LessonTask['status'] = 'not_started'): LessonTask {
   return {
@@ -19,6 +24,10 @@ function makeLesson(id: string, title: string, status: LessonTask['status'] = 'n
   }
 }
 
+beforeEach(() => {
+  mockPush.mockReset()
+})
+
 describe('ScheduleTimeline', () => {
   test('shows empty state when no entries', () => {
     const schedule = buildDailySchedule([], { startTime: '08:30', transitionMinutes: 10 })
@@ -35,5 +44,24 @@ describe('ScheduleTimeline', () => {
     expect(screen.getByTestId('schedule-timeline')).toBeInTheDocument()
     expect(screen.getByText('Mathematics')).toBeInTheDocument()
     expect(screen.getByTestId('timeline-status-completed')).toBeInTheDocument()
+  })
+
+  test('lesson row renders edit icon button', () => {
+    const schedule = buildDailySchedule(
+      [makeLesson('l1', 'Mathematics', 'not_started')],
+      { startTime: '08:30', transitionMinutes: 10 },
+    )
+    render(<ScheduleTimeline schedule={schedule} currentTime="09:00" showAdjustDay={false} />)
+    expect(screen.getByRole('button', { name: /edit lesson/i })).toBeInTheDocument()
+  })
+
+  test('clicking edit icon navigates to /lessons?editId=<id>', () => {
+    const schedule = buildDailySchedule(
+      [makeLesson('l1', 'Mathematics', 'not_started')],
+      { startTime: '08:30', transitionMinutes: 10 },
+    )
+    render(<ScheduleTimeline schedule={schedule} currentTime="09:00" showAdjustDay={false} />)
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(mockPush).toHaveBeenCalledWith('/lessons?editId=l1')
   })
 })

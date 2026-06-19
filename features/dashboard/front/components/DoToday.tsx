@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useContext_Dashboard } from '../context/DashboardProvider'
 import { TodayLessonCard } from '@/features/plan/front/components/TodayLessonCard'
 
@@ -13,6 +14,7 @@ function todayLocal(): string {
 
 export function DoToday() {
   const { selectedChildId, children } = useContext_Dashboard()
+  const router = useRouter()
   const today = todayLocal()
 
   const activeChildren = selectedChildId
@@ -22,7 +24,11 @@ export function DoToday() {
   return (
     <section>
       <h2 className="text-xl font-bold text-slate-900 mb-5">Do Today</h2>
-      <TodayLessonCard children={activeChildren} today={today} />
+      <TodayLessonCard
+        children={activeChildren}
+        today={today}
+        onEditLesson={id => router.push('/lessons?editId=' + id)}
+      />
     </section>
   )
 }

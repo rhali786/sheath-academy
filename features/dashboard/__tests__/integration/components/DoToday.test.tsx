@@ -1,12 +1,18 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { DoToday } from '@/features/dashboard/front/components/DoToday'
 import { DashboardContext } from '@/features/dashboard/front/context/DashboardProvider'
 import type { DashboardContextType } from '@/features/dashboard/front/context/DashboardProvider'
 import type { StudentProfile } from '@/features/lib/types'
+import type { LessonTask } from '@/features/plan/types'
 
 jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: { getLessons: jest.fn().mockResolvedValue([]) },
+}))
+
+const mockPush = jest.fn()
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
 }))
 
 const mockChild: StudentProfile = {
@@ -85,5 +91,40 @@ describe('DashboardProvider auto-selects first child', () => {
     await waitFor(() => {
       expect(screen.getByText(/today —/i)).toBeInTheDocument()
     })
+  })
+})
+
+describe('DoToday edit lesson deep-link', () => {
+  beforeEach(() => {
+    mockPush.mockReset()
+  })
+
+  it('edit icon click navigates to /lessons?editId=<id>', async () => {
+    const d = new Date()
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const lesson: LessonTask = {
+      id: 'lesson_abc',
+      childId: 'child_001',
+      subjectId: 'subj_001',
+      householdId: 'hh_001',
+      title: 'Test Lesson',
+      dueDate: today,
+      status: 'not_started',
+      order: 0,
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    }
+
+    const { plannerApi } = jest.requireMock('@/features/plan/front/services/api')
+    plannerApi.getLessons.mockResolvedValue([lesson])
+
+    renderDoToday(makeCtx({ children: [mockChild], selectedChildId: 'child_001' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Lesson')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(mockPush).toHaveBeenCalledWith('/lessons?editId=lesson_abc')
   })
 })

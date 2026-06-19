@@ -42,25 +42,34 @@ interface LessonCardProps {
   /** Legacy: called when Edit button is clicked (top-form pattern) — kept for backward compatibility */
   onEdit?: (lesson: LessonTask) => void
   onDelete?: (id: string) => void
+  /** When provided and lesson is not_started, shows a Check icon button to mark the lesson done. */
+  onComplete?: (id: string, status: 'completed') => Promise<void>
   /** Open inline edit on mount (e.g. deep-linked from /plan). */
   defaultEditing?: boolean
 }
 
-export function LessonCard({ lesson, childName, subjectName, children, subjects, onUpdate, onEdit, onDelete, defaultEditing = false }: LessonCardProps) {
+export function LessonCard({ lesson, childName, subjectName, children, subjects, onUpdate, onEdit, onDelete, onComplete, defaultEditing = false }: LessonCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [localStatus, setLocalStatus] = useState<LessonTaskStatus>(lesson.status)
 
   // Edit form state
   const [editTitle, setEditTitle] = useState(lesson.title)
   const [editChildId, setEditChildId] = useState(lesson.childId)
   const [editSubjectId, setEditSubjectId] = useState(lesson.subjectId)
+  const [editPlannedStartDate, setEditPlannedStartDate] = useState(lesson.plannedStartDate ?? '')
   const [editDueDate, setEditDueDate] = useState(lesson.dueDate)
   const [editStatus, setEditStatus] = useState<LessonTaskStatus>(lesson.status)
   const [editDescription, setEditDescription] = useState(lesson.description ?? '')
   const [editResourceLink, setEditResourceLink] = useState(lesson.resourceLink ?? '')
   const [applyToGroup, setApplyToGroup] = useState(false)
   const [titleError, setTitleError] = useState('')
+
+  // Sync local status when lesson.status updates from parent (e.g., after refetch)
+  useEffect(() => {
+    setLocalStatus(lesson.status)
+  }, [lesson.status])
 
   const dateFormatted = new Date(`${lesson.dueDate}T00:00:00`).toLocaleDateString('en-US', {
     weekday: 'short',
@@ -70,7 +79,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
   const windowLabel = formatCompletionWindow(lesson)
 
   const today = todayLocal()
-  const isOverdue = lesson.status === 'not_started' && lesson.dueDate < today
+  const isOverdue = localStatus === 'not_started' && lesson.dueDate < today
 
   const descriptionExcerpt = lesson.description
     ? lesson.description.length > 80
@@ -78,11 +87,23 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
       : lesson.description
     : undefined
 
+  async function handleMarkDone() {
+    if (!onComplete) return
+    const prev = localStatus
+    setLocalStatus('completed')
+    try {
+      await onComplete(lesson.id, 'completed')
+    } catch {
+      setLocalStatus(prev)
+    }
+  }
+
   function startEdit() {
     setConfirmDelete(false)
     setEditTitle(lesson.title)
     setEditChildId(lesson.childId)
     setEditSubjectId(lesson.subjectId)
+    setEditPlannedStartDate(lesson.plannedStartDate ?? '')
     setEditDueDate(lesson.dueDate)
     setEditStatus(lesson.status)
     setEditDescription(lesson.description ?? '')
@@ -123,6 +144,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
         title: trimmed,
         childId: editChildId,
         subjectId: editSubjectId,
+        plannedStartDate: editPlannedStartDate || undefined,
         dueDate: editDueDate,
         status: editStatus,
         description: editDescription.trim() || undefined,
@@ -192,14 +214,27 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Due date</label>
+              <label htmlFor={`edit-planned-start-${lesson.id}`} className="block text-xs font-medium text-slate-500 mb-1">Available from <span className="font-normal text-slate-400">(optional)</span></label>
               <input
+                id={`edit-planned-start-${lesson.id}`}
+                type="date"
+                value={editPlannedStartDate}
+                onChange={e => setEditPlannedStartDate(e.target.value)}
+                className="w-full text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-forest-500"
+              />
+            </div>
+            <div>
+              <label htmlFor={`edit-due-date-${lesson.id}`} className="block text-xs font-medium text-slate-500 mb-1">Due date</label>
+              <input
+                id={`edit-due-date-${lesson.id}`}
                 type="date"
                 value={editDueDate}
                 onChange={e => setEditDueDate(e.target.value)}
                 className="w-full text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-forest-500"
               />
             </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Status</label>
               <select
@@ -296,9 +331,18 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
               Overdue
             </span>
           )}
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE_CLASS[lesson.status]}`}>
-            {STATUS_LABELS[lesson.status]}
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE_CLASS[localStatus]}`}>
+            {STATUS_LABELS[localStatus]}
           </span>
+          {onComplete && localStatus === 'not_started' && (
+            <button
+              onClick={handleMarkDone}
+              aria-label="Mark lesson done"
+              className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+            >
+              <Check className="w-3.5 h-3.5" />
+            </button>
+          )}
           {(onUpdate || onEdit) && (
             <button
               onClick={startEdit}

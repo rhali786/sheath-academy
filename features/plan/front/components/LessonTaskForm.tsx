@@ -232,7 +232,7 @@ export function LessonTaskForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="plannedStartDate" className="block text-sm font-medium text-slate-700 mb-1">
-            Start date <span className="text-slate-400 font-normal">(optional)</span>
+            Available from <span className="text-slate-400 font-normal">(optional)</span>
           </label>
           <input
             id="plannedStartDate"
@@ -245,7 +245,7 @@ export function LessonTaskForm({
 
         <div>
           <label htmlFor="dueDate" className="block text-sm font-medium text-slate-700 mb-1">
-            Planned date
+            Due date
           </label>
           <input
             id="dueDate"
@@ -256,6 +256,9 @@ export function LessonTaskForm({
           />
         </div>
       </div>
+      <p className="text-xs text-slate-500 -mt-2">
+        Lesson can be completed any day from &lsquo;Available from&rsquo; through &lsquo;Due date&rsquo;.
+      </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>

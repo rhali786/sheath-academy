@@ -186,6 +186,21 @@ describe('LessonTaskList', () => {
     expect(onDelete).toHaveBeenCalledWith('lesson_001')
   })
 
+  it('forwards onComplete prop to each LessonCard (mark-done icon appears)', () => {
+    const onComplete = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskList
+        lessons={[baseLesson]}
+        children={mockChildren}
+        subjects={mockSubjects}
+        onComplete={onComplete}
+      />
+    )
+    expect(screen.getByRole('button', { name: /mark lesson done/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /mark lesson done/i }))
+    expect(onComplete).toHaveBeenCalledWith('lesson_001', 'completed')
+  })
+
   it('Cancel in InlineConfirm hides the confirmation panel', () => {
     const onDelete = jest.fn()
     render(

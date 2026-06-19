@@ -231,6 +231,180 @@ describe('LessonCard — FB-011 overdue badge', () => {
   })
 })
 
+describe('LessonCard — phase-1 date terminology in inline edit', () => {
+  it('inline edit shows "Due date" label (not "Planned date")', () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson()}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(screen.getByText(/^due date$/i)).toBeInTheDocument()
+    expect(screen.queryByText(/planned date/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('LessonCard — phase-2 Available-from field in inline edit', () => {
+  it('inline edit renders an "Available from" date input', () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ plannedStartDate: '2026-05-01' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(screen.getByLabelText(/available from/i)).toBeInTheDocument()
+  })
+
+  it('inline edit pre-fills Available from with lesson.plannedStartDate', () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ plannedStartDate: '2026-05-01' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    const input = screen.getByLabelText(/available from/i) as HTMLInputElement
+    expect(input.value).toBe('2026-05-01')
+  })
+
+  it('saving with edited Available from calls onUpdate with plannedStartDate set', async () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ plannedStartDate: '2026-05-01', title: 'Algebra' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    fireEvent.change(screen.getByLabelText(/available from/i), { target: { value: '2026-05-10' } })
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => {
+      expect(onUpdate).toHaveBeenCalledWith(
+        'lesson_001',
+        expect.objectContaining({ plannedStartDate: '2026-05-10' }),
+      )
+    })
+  })
+
+  it('saving without Available from passes plannedStartDate as undefined when field is empty', async () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ plannedStartDate: undefined, title: 'Algebra' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    // Available from field should be empty
+    const input = screen.getByLabelText(/available from/i) as HTMLInputElement
+    expect(input.value).toBe('')
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => {
+      const patch = onUpdate.mock.calls[0][1]
+      expect(patch.plannedStartDate).toBeUndefined()
+    })
+  })
+
+  it('inline edit also renders "Due date" input', () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson()}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(screen.getByLabelText(/^due date$/i)).toBeInTheDocument()
+  })
+})
+
+describe('LessonCard — phase-3 mark-done icon', () => {
+  it('renders Check icon button for not_started lesson when onComplete is provided', () => {
+    const onComplete = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ status: 'not_started' })}
+        childName="Adam"
+        subjectName="Math"
+        onComplete={onComplete}
+      />
+    )
+    expect(screen.getByRole('button', { name: /mark lesson done/i })).toBeInTheDocument()
+  })
+
+  it('clicking mark-done button calls onComplete with id and completed', async () => {
+    const onComplete = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ id: 'lesson_001', status: 'not_started' })}
+        childName="Adam"
+        subjectName="Math"
+        onComplete={onComplete}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /mark lesson done/i }))
+    await waitFor(() => {
+      expect(onComplete).toHaveBeenCalledWith('lesson_001', 'completed')
+    })
+  })
+
+  it('does NOT render Check icon when status is completed', () => {
+    const onComplete = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ status: 'completed' })}
+        childName="Adam"
+        subjectName="Math"
+        onComplete={onComplete}
+      />
+    )
+    expect(screen.queryByRole('button', { name: /mark lesson done/i })).not.toBeInTheDocument()
+  })
+
+  it('does NOT render Check icon when status is skipped', () => {
+    const onComplete = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ status: 'skipped' })}
+        childName="Adam"
+        subjectName="Math"
+        onComplete={onComplete}
+      />
+    )
+    expect(screen.queryByRole('button', { name: /mark lesson done/i })).not.toBeInTheDocument()
+  })
+
+  it('does NOT render Check icon when onComplete is not provided', () => {
+    render(
+      <LessonCard
+        lesson={makeLesson({ status: 'not_started' })}
+        childName="Adam"
+        subjectName="Math"
+      />
+    )
+    expect(screen.queryByRole('button', { name: /mark lesson done/i })).not.toBeInTheDocument()
+  })
+})
+
 describe('LessonCard — grouped lessons', () => {
   it('shows a group affordance when groupId is set', () => {
     render(

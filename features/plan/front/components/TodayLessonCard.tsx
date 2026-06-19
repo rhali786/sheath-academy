@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Pencil } from 'lucide-react'
 import { plannerApi } from '@/features/plan/front/services/api'
 import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
@@ -27,9 +28,10 @@ interface TodayLessonCardProps {
   today: string
   /** When provided, skips the internal fetch and uses these lessons directly. */
   externalLessons?: LessonTask[]
+  onEditLesson?: (id: string) => void
 }
 
-export function TodayLessonCard({ children, today, externalLessons }: TodayLessonCardProps) {
+export function TodayLessonCard({ children, today, externalLessons, onEditLesson }: TodayLessonCardProps) {
   const [fetchedLessons, setFetchedLessons] = useState<LessonTask[]>([])
   const [isLoading, setIsLoading] = useState(externalLessons === undefined)
   const [error, setError] = useState<string | null>(null)
@@ -166,6 +168,15 @@ export function TodayLessonCard({ children, today, externalLessons }: TodayLesso
                         Skip
                       </button>
                     </>
+                  )}
+                  {onEditLesson && (
+                    <button
+                      onClick={() => onEditLesson(lesson.id)}
+                      aria-label="Edit lesson"
+                      className="p-1 rounded text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
                   )}
                 </div>
               </li>

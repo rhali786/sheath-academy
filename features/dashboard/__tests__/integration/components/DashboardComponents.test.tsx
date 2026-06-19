@@ -12,6 +12,10 @@ jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: { getLessons: jest.fn().mockResolvedValue([]) },
 }))
 
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(() => ({ push: jest.fn() })),
+}))
+
 describe('Dashboard Components - Unit Tests', () => {
   describe('DoToday Component', () => {
     test('renders heading', () => {
