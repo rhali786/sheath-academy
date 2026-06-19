@@ -69,7 +69,7 @@ describe('LessonTaskForm — create mode', () => {
     const y = today.getFullYear()
     const m = String(today.getMonth() + 1).padStart(2, '0')
     const d = String(today.getDate()).padStart(2, '0')
-    const dateInput = screen.getByLabelText(/planned date/i) as HTMLInputElement
+    const dateInput = screen.getByLabelText(/due date/i) as HTMLInputElement
     expect(dateInput.value).toBe(`${y}-${m}-${d}`)
   })
 
@@ -268,12 +268,12 @@ describe('LessonTaskForm — FB-011 label renames', () => {
     expect(screen.getByLabelText(/course\/subject/i)).toBeInTheDocument()
   })
 
-  it('uses "Planned date" label not "Due date"', () => {
+  it('uses "Due date" label (not "Planned date") for dueDate field', () => {
     render(
       <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
     )
-    expect(screen.getByLabelText(/planned date/i)).toBeInTheDocument()
-    expect(screen.queryByLabelText(/due date/i)).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/due date/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/planned date/i)).not.toBeInTheDocument()
   })
 
   it('shows Estimated duration dropdown', () => {
@@ -314,15 +314,63 @@ describe('LessonTaskForm — FB-011 label renames', () => {
   })
 })
 
-describe('LessonTaskForm — completion window (plannedStartDate)', () => {
-  it('shows an optional start-date input', () => {
+describe('LessonTaskForm — phase-1 date terminology', () => {
+  it('renders "Available from" label (not "Start date") for plannedStartDate', () => {
     render(
       <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
     )
-    expect(screen.getByLabelText(/start date/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/available from/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/start date/i)).not.toBeInTheDocument()
   })
 
-  it('submits plannedStartDate when start date is set', async () => {
+  it('renders "Due date" label (not "Planned date") for dueDate', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    expect(screen.getByLabelText(/due date/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/planned date/i)).not.toBeInTheDocument()
+  })
+
+  it('renders helper text about completion window', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    expect(screen.getByText(/lesson can be completed any day from/i)).toBeInTheDocument()
+  })
+
+  it('submits plannedStartDate and dueDate with new labels', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={onSubmit} />
+    )
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
+    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Terminology test' } })
+    fireEvent.change(screen.getByLabelText(/available from/i), { target: { value: '2026-06-01' } })
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-06-15' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          plannedStartDate: '2026-06-01',
+          dueDate: '2026-06-15',
+        })
+      )
+    })
+  })
+})
+
+describe('LessonTaskForm — completion window (plannedStartDate)', () => {
+  it('shows an optional "Available from" input for plannedStartDate', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    expect(screen.getByLabelText(/available from/i)).toBeInTheDocument()
+  })
+
+  it('submits plannedStartDate when "Available from" date is set', async () => {
     const onSubmit = jest.fn().mockResolvedValue(undefined)
     render(
       <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={onSubmit} />
@@ -330,8 +378,8 @@ describe('LessonTaskForm — completion window (plannedStartDate)', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
     fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Window lesson' } })
-    fireEvent.change(screen.getByLabelText(/start date/i), { target: { value: '2026-05-10' } })
-    fireEvent.change(screen.getByLabelText(/planned date/i), { target: { value: '2026-05-15' } })
+    fireEvent.change(screen.getByLabelText(/available from/i), { target: { value: '2026-05-10' } })
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-15' } })
 
     fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
 
@@ -353,7 +401,7 @@ describe('LessonTaskForm — completion window (plannedStartDate)', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
     fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Single-day lesson' } })
-    fireEvent.change(screen.getByLabelText(/planned date/i), { target: { value: '2026-05-15' } })
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-15' } })
 
     fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
 
@@ -388,7 +436,7 @@ describe('LessonTaskForm — multi-learner group assignment', () => {
       target: { value: 'subj_algebra_shared' },
     })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Shared algebra' } })
-    fireEvent.change(screen.getByLabelText(/planned date/i), { target: { value: '2026-05-15' } })
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-15' } })
 
     fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
 
@@ -414,7 +462,7 @@ describe('LessonTaskForm — multi-learner group assignment', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /khadijah/i }))
     fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Shared lesson' } })
-    fireEvent.change(screen.getByLabelText(/planned date/i), { target: { value: '2026-05-15' } })
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-15' } })
 
     fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
 

@@ -1,0 +1,183 @@
+{
+  "plan": "docs/bug_enhancement/20260618-lesson-quick-actions-plan.md",
+  "createdAt": "2026-06-18T00:00:00.000Z",
+  "updatedAt": "2026-06-18T00:00:00.000Z",
+  "branch": "feat/lesson-quick-actions",
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Date terminology — relabel dueDate / plannedStartDate everywhere",
+      "gated": false,
+      "status": "in_progress",
+      "model": "standard",
+      "startedAt": "2026-06-18T10:00:00.000Z",
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": null
+      },
+      "failureReason": null,
+      "workOrder": {
+        "summary": "Relabel date fields in LessonTaskForm and LessonCard inline edit. dueDate -> 'Due date', plannedStartDate -> 'Available from (optional)'. Add helper text: 'Lesson can be completed any day from Available from through Due date.' No new behavior — labels only.",
+        "fileScope": [
+          "features/plan/front/components/LessonTaskForm.tsx",
+          "features/plan/front/components/LessonCard.tsx",
+          "features/plan/__tests__/integration/LessonTaskForm.test.tsx",
+          "features/plan/__tests__/integration/LessonCard.test.tsx"
+        ],
+        "tests": [
+          "features/plan/__tests__/integration/LessonTaskForm.test.tsx — add test: renders 'Available from' label and 'Due date' label; helper text present; submit still sends plannedStartDate and dueDate fields.",
+          "features/plan/__tests__/integration/LessonCard.test.tsx — add test: inline edit shows 'Available from' and 'Due date' label (not 'Planned date' or old 'Due date' label from LessonTaskForm)."
+        ],
+        "doneWhen": [
+          "New label tests pass.",
+          "npm test -- features/plan/__tests__/integration/LessonTaskForm.test.tsx passes.",
+          "npm test -- features/plan/__tests__/integration/LessonCard.test.tsx passes."
+        ],
+        "commitMessage": "refactor(plan): unify lesson date labels to Due date / Available from"
+      }
+    },
+    {
+      "id": "phase-2",
+      "title": "Inline edit gains Available-from field",
+      "gated": false,
+      "status": "pending",
+      "model": "standard",
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": null
+      },
+      "failureReason": null,
+      "workOrder": {
+        "preconditions": "Phase 1 complete. LessonCard inline edit now shows 'Due date' label.",
+        "summary": "Add 'Available from' (plannedStartDate) field to LessonCard inline edit form. State: editPlannedStartDate initialized from lesson.plannedStartDate. Include in saveEdit patch as plannedStartDate: editPlannedStartDate || undefined. The startEdit() function must also reset this field. The PUT API (plannerApi.updateLesson) already accepts plannedStartDate — no backend change needed.",
+        "fileScope": [
+          "features/plan/front/components/LessonCard.tsx",
+          "features/plan/__tests__/integration/LessonCard.test.tsx"
+        ],
+        "tests": [
+          "LessonCard.test.tsx — add test: inline edit renders an 'Available from' date input; changing it and saving calls onUpdate with plannedStartDate set.",
+          "LessonCard.test.tsx — add test: inline edit renders 'Due date' date input."
+        ],
+        "doneWhen": [
+          "Tests pass.",
+          "npm test -- features/plan/__tests__/integration/LessonCard.test.tsx passes."
+        ],
+        "commitMessage": "feat(plan): allow editing Available-from date in lesson inline edit"
+      }
+    },
+    {
+      "id": "phase-3",
+      "title": "Mark-done icon on Lessons page",
+      "gated": false,
+      "status": "pending",
+      "model": "standard",
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": null
+      },
+      "failureReason": null,
+      "workOrder": {
+        "preconditions": "Phase 2 complete.",
+        "summary": "Add quick mark-done to LessonCard, LessonTaskList, and LessonsPage. LessonCard: add optional onComplete?: (id: string, status: 'completed') => Promise<void>. When onComplete provided AND lesson.status === 'not_started', render a lucide Check icon button (aria-label='Mark lesson done') in the action icon row alongside Pencil/Trash. Use optimistic update mirroring TodayLessonCard: set a local status state on click, revert on failure. Completed/skipped lessons show no check icon. LessonTaskList: add optional onComplete prop, forward it to each LessonCard. LessonsPage: add handleComplete(id) which calls plannerApi.completeLesson(id, 'completed') then fetchLessons().",
+        "fileScope": [
+          "features/plan/front/components/LessonCard.tsx",
+          "features/plan/front/components/LessonTaskList.tsx",
+          "features/plan/front/pages/LessonsPage.tsx",
+          "features/plan/__tests__/integration/LessonCard.test.tsx",
+          "features/plan/__tests__/integration/LessonTaskList.test.tsx",
+          "features/plan/__tests__/integration/LessonsPage.test.tsx"
+        ],
+        "tests": [
+          "LessonCard.test.tsx — renders Check icon for not-started lesson when onComplete given; click calls onComplete(id, 'completed').",
+          "LessonCard.test.tsx — does NOT render Check icon when status is completed.",
+          "LessonCard.test.tsx — does NOT render Check icon when status is skipped.",
+          "LessonCard.test.tsx — does NOT render Check icon when onComplete is not provided.",
+          "LessonTaskList.test.tsx — forwards onComplete to each LessonCard.",
+          "LessonsPage.test.tsx — handleComplete calls plannerApi.completeLesson then refetches."
+        ],
+        "doneWhen": [
+          "All new tests pass.",
+          "npm test -- features/plan/__tests__/integration/LessonCard.test.tsx passes.",
+          "npm test -- features/plan/__tests__/integration/LessonTaskList.test.tsx passes.",
+          "npm test -- features/plan/__tests__/integration/LessonsPage.test.tsx passes."
+        ],
+        "commitMessage": "feat(plan): add quick mark-done icon to lesson cards"
+      }
+    },
+    {
+      "id": "phase-4",
+      "title": "Quick-edit deep links on Dashboard and Schedule",
+      "gated": false,
+      "status": "pending",
+      "model": "standard",
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": null
+      },
+      "failureReason": null,
+      "workOrder": {
+        "preconditions": "Phase 3 complete.",
+        "summary": "Add edit affordances to Dashboard (TodayLessonCard via DoToday) and Schedule (ScheduleTimeline). TodayLessonCard: add optional onEditLesson?: (id: string) => void prop. When provided, render a lucide Pencil icon button (aria-label='Edit lesson') on each lesson row (alongside the existing mark-done/skip buttons). DoToday (features/dashboard/front/components/DoToday.tsx): import useRouter from next/navigation, pass onEditLesson={id => router.push('/lessons?editId=' + id)} to TodayLessonCard. ScheduleTimeline (features/schedule/front/components/ScheduleTimeline.tsx): in TimelineRow, when entry.kind === 'lesson', add a Pencil icon button that calls useRouter().push('/lessons?editId=' + entry.lesson.id). Place it inside the existing right-side content area alongside StatusPill, keeping existing data-testid attributes unchanged.",
+        "fileScope": [
+          "features/plan/front/components/TodayLessonCard.tsx",
+          "features/dashboard/front/components/DoToday.tsx",
+          "features/schedule/front/components/ScheduleTimeline.tsx",
+          "features/plan/__tests__/integration/TodayLessonCard.test.tsx",
+          "features/dashboard/__tests__/integration/components/DoToday.test.tsx",
+          "features/schedule/__tests__/integration/ScheduleTimeline.test.tsx"
+        ],
+        "tests": [
+          "TodayLessonCard.test.tsx — when onEditLesson provided, edit icon renders; click calls onEditLesson with lesson id.",
+          "TodayLessonCard.test.tsx — when onEditLesson not provided, no edit icon rendered.",
+          "DoToday.test.tsx — edit icon click triggers router.push('/lessons?editId=<id>').",
+          "ScheduleTimeline.test.tsx — lesson row renders edit icon; click triggers router.push('/lessons?editId=<id>')."
+        ],
+        "doneWhen": [
+          "All new tests pass.",
+          "npm test -- features/plan/__tests__/integration/TodayLessonCard.test.tsx passes.",
+          "npm test -- features/dashboard/__tests__/integration/components/DoToday.test.tsx passes.",
+          "npm test -- features/schedule/__tests__/integration/ScheduleTimeline.test.tsx passes."
+        ],
+        "commitMessage": "feat(dashboard,schedule): add quick-edit deep links to lessons"
+      }
+    },
+    {
+      "id": "phase-5",
+      "title": "Final verify — full test suite + build",
+      "gated": false,
+      "status": "pending",
+      "model": "standard",
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": null
+      },
+      "failureReason": null,
+      "workOrder": {
+        "preconditions": "Phases 1-4 complete.",
+        "summary": "Run the full test suite and build to confirm nothing is broken. No code changes in this phase.",
+        "fileScope": [],
+        "tests": [],
+        "doneWhen": [
+          "npm test passes (unit + excluded-by-default integration pattern).",
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" passes.",
+          "npm run build passes."
+        ],
+        "commitMessage": null
+      }
+    }
+  ]
+}

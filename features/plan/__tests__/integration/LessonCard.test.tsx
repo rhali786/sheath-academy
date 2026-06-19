@@ -231,6 +231,23 @@ describe('LessonCard — FB-011 overdue badge', () => {
   })
 })
 
+describe('LessonCard — phase-1 date terminology in inline edit', () => {
+  it('inline edit shows "Due date" label (not "Planned date")', () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson()}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(screen.getByText(/^due date$/i)).toBeInTheDocument()
+    expect(screen.queryByText(/planned date/i)).not.toBeInTheDocument()
+  })
+})
+
 describe('LessonCard — grouped lessons', () => {
   it('shows a group affordance when groupId is set', () => {
     render(
