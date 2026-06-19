@@ -1,7 +1,8 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Check, ChevronRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Check, ChevronRight, Pencil } from 'lucide-react'
 import type { DaySchedule, ScheduleEntry } from '@/features/schedule/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { getEntryTimelineStatus, type TimelineDisplayStatus } from '@/features/schedule/lib/timelineStatus'
@@ -59,11 +60,13 @@ function TimelineRow({
   currentTime,
   subjectsById,
   isLast,
+  onEditLesson,
 }: {
   entry: ScheduleEntry
   currentTime: string
   subjectsById: Map<string, SubjectCourse>
   isLast: boolean
+  onEditLesson: (id: string) => void
 }) {
   const status = getEntryTimelineStatus(entry, currentTime)
   const isLesson = entry.kind === 'lesson'
@@ -98,7 +101,18 @@ function TimelineRow({
                   <p className="text-xs text-slate-500 mt-0.5 truncate">{subtitle}</p>
                 )}
               </div>
-              <StatusPill status={status} />
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <StatusPill status={status} />
+                {isLesson && (
+                  <button
+                    onClick={() => onEditLesson(entry.lesson.id)}
+                    aria-label="Edit lesson"
+                    className="p-1 rounded text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -115,6 +129,7 @@ export function ScheduleTimeline({
   onScheduleChange,
 }: ScheduleTimelineProps) {
   const [schedule, setSchedule] = useState(initialSchedule)
+  const router = useRouter()
 
   function handleScheduleChange(next: DaySchedule) {
     setSchedule(next)
@@ -155,6 +170,7 @@ export function ScheduleTimeline({
           currentTime={currentTime}
           subjectsById={subjectsById}
           isLast={index === entries.length - 1}
+          onEditLesson={id => router.push('/lessons?editId=' + id)}
         />
       ))}
 

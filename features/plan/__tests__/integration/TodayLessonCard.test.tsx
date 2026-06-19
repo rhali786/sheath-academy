@@ -220,6 +220,35 @@ describe('TodayLessonCard', () => {
     })
   })
 
+  describe('onEditLesson prop', () => {
+    it('renders edit icon when onEditLesson is provided', async () => {
+      const lessons = makeLessons([{ title: 'Pending lesson', dueDate: '2026-05-12', status: 'not_started' }])
+      const onEditLesson = jest.fn()
+      render(
+        <TodayLessonCard children={[mockChild]} today="2026-05-12" externalLessons={lessons} onEditLesson={onEditLesson} />
+      )
+      expect(screen.getByRole('button', { name: /edit lesson/i })).toBeInTheDocument()
+    })
+
+    it('does not render edit icon when onEditLesson is not provided', async () => {
+      const lessons = makeLessons([{ title: 'Pending lesson', dueDate: '2026-05-12', status: 'not_started' }])
+      render(
+        <TodayLessonCard children={[mockChild]} today="2026-05-12" externalLessons={lessons} />
+      )
+      expect(screen.queryByRole('button', { name: /edit lesson/i })).not.toBeInTheDocument()
+    })
+
+    it('clicking edit icon calls onEditLesson with lesson id', async () => {
+      const lessons = makeLessons([{ id: 'lesson_0', title: 'Pending lesson', dueDate: '2026-05-12', status: 'not_started' }])
+      const onEditLesson = jest.fn()
+      render(
+        <TodayLessonCard children={[mockChild]} today="2026-05-12" externalLessons={lessons} onEditLesson={onEditLesson} />
+      )
+      fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+      expect(onEditLesson).toHaveBeenCalledWith('lesson_0')
+    })
+  })
+
   describe('Mark done and Skip actions', () => {
     it('renders "Mark done" button for not_started lesson', async () => {
       mockGetLessons.mockResolvedValue(makeLessons([
