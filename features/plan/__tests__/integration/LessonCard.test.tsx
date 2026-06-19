@@ -337,6 +337,74 @@ describe('LessonCard — phase-2 Available-from field in inline edit', () => {
   })
 })
 
+describe('LessonCard — phase-3 mark-done icon', () => {
+  it('renders Check icon button for not_started lesson when onComplete is provided', () => {
+    const onComplete = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ status: 'not_started' })}
+        childName="Adam"
+        subjectName="Math"
+        onComplete={onComplete}
+      />
+    )
+    expect(screen.getByRole('button', { name: /mark lesson done/i })).toBeInTheDocument()
+  })
+
+  it('clicking mark-done button calls onComplete with id and completed', async () => {
+    const onComplete = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ id: 'lesson_001', status: 'not_started' })}
+        childName="Adam"
+        subjectName="Math"
+        onComplete={onComplete}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /mark lesson done/i }))
+    await waitFor(() => {
+      expect(onComplete).toHaveBeenCalledWith('lesson_001', 'completed')
+    })
+  })
+
+  it('does NOT render Check icon when status is completed', () => {
+    const onComplete = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ status: 'completed' })}
+        childName="Adam"
+        subjectName="Math"
+        onComplete={onComplete}
+      />
+    )
+    expect(screen.queryByRole('button', { name: /mark lesson done/i })).not.toBeInTheDocument()
+  })
+
+  it('does NOT render Check icon when status is skipped', () => {
+    const onComplete = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ status: 'skipped' })}
+        childName="Adam"
+        subjectName="Math"
+        onComplete={onComplete}
+      />
+    )
+    expect(screen.queryByRole('button', { name: /mark lesson done/i })).not.toBeInTheDocument()
+  })
+
+  it('does NOT render Check icon when onComplete is not provided', () => {
+    render(
+      <LessonCard
+        lesson={makeLesson({ status: 'not_started' })}
+        childName="Adam"
+        subjectName="Math"
+      />
+    )
+    expect(screen.queryByRole('button', { name: /mark lesson done/i })).not.toBeInTheDocument()
+  })
+})
+
 describe('LessonCard — grouped lessons', () => {
   it('shows a group affordance when groupId is set', () => {
     render(

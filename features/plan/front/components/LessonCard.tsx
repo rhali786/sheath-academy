@@ -42,14 +42,17 @@ interface LessonCardProps {
   /** Legacy: called when Edit button is clicked (top-form pattern) — kept for backward compatibility */
   onEdit?: (lesson: LessonTask) => void
   onDelete?: (id: string) => void
+  /** When provided and lesson is not_started, shows a Check icon button to mark the lesson done. */
+  onComplete?: (id: string, status: 'completed') => Promise<void>
   /** Open inline edit on mount (e.g. deep-linked from /plan). */
   defaultEditing?: boolean
 }
 
-export function LessonCard({ lesson, childName, subjectName, children, subjects, onUpdate, onEdit, onDelete, defaultEditing = false }: LessonCardProps) {
+export function LessonCard({ lesson, childName, subjectName, children, subjects, onUpdate, onEdit, onDelete, onComplete, defaultEditing = false }: LessonCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [localStatus, setLocalStatus] = useState<LessonTaskStatus>(lesson.status)
 
   // Edit form state
   const [editTitle, setEditTitle] = useState(lesson.title)
@@ -63,6 +66,11 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
   const [applyToGroup, setApplyToGroup] = useState(false)
   const [titleError, setTitleError] = useState('')
 
+  // Sync local status when lesson.status updates from parent (e.g., after refetch)
+  useEffect(() => {
+    setLocalStatus(lesson.status)
+  }, [lesson.status])
+
   const dateFormatted = new Date(`${lesson.dueDate}T00:00:00`).toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
@@ -71,13 +79,24 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
   const windowLabel = formatCompletionWindow(lesson)
 
   const today = todayLocal()
-  const isOverdue = lesson.status === 'not_started' && lesson.dueDate < today
+  const isOverdue = localStatus === 'not_started' && lesson.dueDate < today
 
   const descriptionExcerpt = lesson.description
     ? lesson.description.length > 80
       ? lesson.description.slice(0, 80) + '…'
       : lesson.description
     : undefined
+
+  async function handleMarkDone() {
+    if (!onComplete) return
+    const prev = localStatus
+    setLocalStatus('completed')
+    try {
+      await onComplete(lesson.id, 'completed')
+    } catch {
+      setLocalStatus(prev)
+    }
+  }
 
   function startEdit() {
     setConfirmDelete(false)
@@ -312,9 +331,18 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
               Overdue
             </span>
           )}
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE_CLASS[lesson.status]}`}>
-            {STATUS_LABELS[lesson.status]}
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE_CLASS[localStatus]}`}>
+            {STATUS_LABELS[localStatus]}
           </span>
+          {onComplete && localStatus === 'not_started' && (
+            <button
+              onClick={handleMarkDone}
+              aria-label="Mark lesson done"
+              className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+            >
+              <Check className="w-3.5 h-3.5" />
+            </button>
+          )}
           {(onUpdate || onEdit) && (
             <button
               onClick={startEdit}

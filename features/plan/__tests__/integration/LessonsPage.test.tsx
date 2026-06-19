@@ -18,6 +18,7 @@ jest.mock('@/features/plan/front/services/api', () => ({
     createLesson: jest.fn(),
     updateLesson: jest.fn(),
     deleteLesson: jest.fn(),
+    completeLesson: jest.fn(),
   },
 }))
 
@@ -25,11 +26,18 @@ jest.mock('@/features/household/front/context', () => ({
   useHousehold: jest.fn(),
 }))
 
+jest.mock('@/features/layout/front/context/LearnerContext', () => ({
+  useLearner: jest.fn(),
+}))
+
 import { plannerApi } from '@/features/plan/front/services/api'
 import { useHousehold } from '@/features/household/front/context'
+import { useLearner } from '@/features/layout/front/context/LearnerContext'
 
 const mockGetLessons = plannerApi.getLessons as jest.Mock
+const mockCompleteLesson = plannerApi.completeLesson as jest.Mock
 const mockUseHousehold = useHousehold as jest.Mock
+const mockUseLearner = useLearner as jest.Mock
 
 const mockChildren: StudentProfile[] = [
   { id: 'child_001', householdId: 'hh_001', name: 'Adam', gradeLabel: '5th', isActive: true, username: 'adam', password: 'pw', createdAt: '2026-01-01T00:00:00Z' },
@@ -72,7 +80,12 @@ beforeEach(() => {
     error: null,
     refetch: jest.fn(),
   }))
+  mockUseLearner.mockImplementation(() => ({
+    selectedChildId: null,
+    setSelectedChildId: jest.fn(),
+  }))
   mockGetLessons.mockResolvedValue([])
+  mockCompleteLesson.mockResolvedValue(undefined)
   mockSearchParams = new URLSearchParams()
 })
 
@@ -227,6 +240,32 @@ describe('LessonsPage', () => {
         Array.from((s as HTMLSelectElement).options ?? []).some(o => o.text === 'All children')
       ) as HTMLSelectElement
       expect(sel).toHaveValue('child_002')
+    })
+  })
+
+  it('handleComplete calls plannerApi.completeLesson then refetches lessons', async () => {
+    const notStartedLesson = makeLesson({ id: 'lesson_001', status: 'not_started', dueDate: '2099-12-31' })
+    mockGetLessons.mockResolvedValue([notStartedLesson])
+    mockCompleteLesson.mockResolvedValue(undefined)
+
+    render(<LessonsPage />)
+
+    // Wait for lessons to load and mark-done button to appear
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /mark lesson done/i })).toBeInTheDocument()
+    })
+
+    // Clear previous calls from initial load
+    mockGetLessons.mockClear()
+    mockGetLessons.mockResolvedValue([{ ...notStartedLesson, status: 'completed' }])
+
+    fireEvent.click(screen.getByRole('button', { name: /mark lesson done/i }))
+
+    await waitFor(() => {
+      expect(mockCompleteLesson).toHaveBeenCalledWith('lesson_001', 'completed')
+    })
+    await waitFor(() => {
+      expect(mockGetLessons).toHaveBeenCalled()
     })
   })
 

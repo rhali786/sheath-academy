@@ -112,6 +112,11 @@ export function LessonsPage() {
     await fetchLessons()
   }
 
+  async function handleComplete(id: string, status: 'completed') {
+    await plannerApi.completeLesson(id, status)
+    await fetchLessons()
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-8">
       {successMsg && (
@@ -201,6 +206,7 @@ export function LessonsPage() {
             error={error}
             onUpdate={handleUpdate}
             onDelete={handleDelete}
+            onComplete={handleComplete}
             editingLessonId={editingLessonId}
           />
         )}

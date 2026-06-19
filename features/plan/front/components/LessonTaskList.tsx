@@ -14,10 +14,11 @@ interface LessonTaskListProps {
   /** Legacy: passed through to LessonCard when onUpdate is not available */
   onEdit?: (lesson: LessonTask) => void
   onDelete?: (id: string) => void
+  onComplete?: (id: string, status: 'completed') => Promise<void>
   editingLessonId?: string | null
 }
 
-export function LessonTaskList({ lessons, children, subjects, error, onUpdate, onEdit, onDelete, editingLessonId = null }: LessonTaskListProps) {
+export function LessonTaskList({ lessons, children, subjects, error, onUpdate, onEdit, onDelete, onComplete, editingLessonId = null }: LessonTaskListProps) {
   if (error) {
     return <p className="text-sm text-red-600 py-4">Could not load lessons. Please refresh.</p>
   }
@@ -47,6 +48,7 @@ export function LessonTaskList({ lessons, children, subjects, error, onUpdate, o
           onUpdate={onUpdate}
           onEdit={onEdit}
           onDelete={onDelete}
+          onComplete={onComplete}
           defaultEditing={lesson.id === editingLessonId}
         />
       ))}
