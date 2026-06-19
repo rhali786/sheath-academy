@@ -248,6 +248,95 @@ describe('LessonCard — phase-1 date terminology in inline edit', () => {
   })
 })
 
+describe('LessonCard — phase-2 Available-from field in inline edit', () => {
+  it('inline edit renders an "Available from" date input', () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ plannedStartDate: '2026-05-01' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(screen.getByLabelText(/available from/i)).toBeInTheDocument()
+  })
+
+  it('inline edit pre-fills Available from with lesson.plannedStartDate', () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ plannedStartDate: '2026-05-01' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    const input = screen.getByLabelText(/available from/i) as HTMLInputElement
+    expect(input.value).toBe('2026-05-01')
+  })
+
+  it('saving with edited Available from calls onUpdate with plannedStartDate set', async () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ plannedStartDate: '2026-05-01', title: 'Algebra' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    fireEvent.change(screen.getByLabelText(/available from/i), { target: { value: '2026-05-10' } })
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => {
+      expect(onUpdate).toHaveBeenCalledWith(
+        'lesson_001',
+        expect.objectContaining({ plannedStartDate: '2026-05-10' }),
+      )
+    })
+  })
+
+  it('saving without Available from passes plannedStartDate as undefined when field is empty', async () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ plannedStartDate: undefined, title: 'Algebra' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    // Available from field should be empty
+    const input = screen.getByLabelText(/available from/i) as HTMLInputElement
+    expect(input.value).toBe('')
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => {
+      const patch = onUpdate.mock.calls[0][1]
+      expect(patch.plannedStartDate).toBeUndefined()
+    })
+  })
+
+  it('inline edit also renders "Due date" input', () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson()}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(screen.getByLabelText(/^due date$/i)).toBeInTheDocument()
+  })
+})
+
 describe('LessonCard — grouped lessons', () => {
   it('shows a group affordance when groupId is set', () => {
     render(

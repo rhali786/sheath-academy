@@ -55,6 +55,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
   const [editTitle, setEditTitle] = useState(lesson.title)
   const [editChildId, setEditChildId] = useState(lesson.childId)
   const [editSubjectId, setEditSubjectId] = useState(lesson.subjectId)
+  const [editPlannedStartDate, setEditPlannedStartDate] = useState(lesson.plannedStartDate ?? '')
   const [editDueDate, setEditDueDate] = useState(lesson.dueDate)
   const [editStatus, setEditStatus] = useState<LessonTaskStatus>(lesson.status)
   const [editDescription, setEditDescription] = useState(lesson.description ?? '')
@@ -83,6 +84,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     setEditTitle(lesson.title)
     setEditChildId(lesson.childId)
     setEditSubjectId(lesson.subjectId)
+    setEditPlannedStartDate(lesson.plannedStartDate ?? '')
     setEditDueDate(lesson.dueDate)
     setEditStatus(lesson.status)
     setEditDescription(lesson.description ?? '')
@@ -123,6 +125,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
         title: trimmed,
         childId: editChildId,
         subjectId: editSubjectId,
+        plannedStartDate: editPlannedStartDate || undefined,
         dueDate: editDueDate,
         status: editStatus,
         description: editDescription.trim() || undefined,
@@ -192,14 +195,27 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Due date</label>
+              <label htmlFor={`edit-planned-start-${lesson.id}`} className="block text-xs font-medium text-slate-500 mb-1">Available from <span className="font-normal text-slate-400">(optional)</span></label>
               <input
+                id={`edit-planned-start-${lesson.id}`}
+                type="date"
+                value={editPlannedStartDate}
+                onChange={e => setEditPlannedStartDate(e.target.value)}
+                className="w-full text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-forest-500"
+              />
+            </div>
+            <div>
+              <label htmlFor={`edit-due-date-${lesson.id}`} className="block text-xs font-medium text-slate-500 mb-1">Due date</label>
+              <input
+                id={`edit-due-date-${lesson.id}`}
                 type="date"
                 value={editDueDate}
                 onChange={e => setEditDueDate(e.target.value)}
                 className="w-full text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-forest-500"
               />
             </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Status</label>
               <select
