@@ -34,16 +34,21 @@ function extractMeaningfulClaudeMessage(stdout: string, stderr: string): string 
 
 export function runClaudePrompt(input: ClaudePromptInput): ClaudePromptResult {
   const startedAt = Date.now()
+
+  // Pass the prompt (last arg) via stdin to avoid OS arg-length limits on large messages.
+  const args = [...input.args]
+  const prompt = args.pop() ?? ''
+
   const spawnOptions: Parameters<typeof spawnClaude>[1] = {
     encoding: 'utf8',
-    input: '',
+    input: prompt,
   }
   if (input.timeoutMs !== undefined) {
     spawnOptions.timeout = input.timeoutMs
     spawnOptions.killSignal = 'SIGKILL'
   }
 
-  const result = spawnClaude(input.args, spawnOptions)
+  const result = spawnClaude(args, spawnOptions)
 
   const stdout = typeof result.stdout === 'string' ? result.stdout : ''
   const stderr = typeof result.stderr === 'string' ? result.stderr : ''
