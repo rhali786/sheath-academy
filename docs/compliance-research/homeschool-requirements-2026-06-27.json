@@ -1,0 +1,658 @@
+[
+  {
+    "state": "TX",
+    "stateName": "Texas",
+    "pathways": [
+      {
+        "key": "private-school-exemption",
+        "label": "Home school as private school — Leeper exemption",
+        "legalBasis": "Texas Education Code §25.086; Leeper v. Arlington ISD, 897 S.W.2d 948 (Tex. 1994); Homeschool Freedom Act of 2025, HB 2674",
+        "requirements": {
+          "instructionDaysPerYear": {
+            "value": null,
+            "source_url": "https://thsc.org/texas-homeschool-laws/",
+            "verified": true,
+            "notes": "No minimum days or hours required under Texas law"
+          },
+          "instructionHoursPerYear": {
+            "value": null,
+            "source_url": "https://thsc.org/texas-homeschool-laws/",
+            "verified": true,
+            "notes": "No minimum hours required"
+          },
+          "requiredSubjects": {
+            "value": ["reading", "spelling", "grammar", "mathematics", "good citizenship"],
+            "source_url": "https://thsc.org/texas-homeschool-laws/",
+            "verified": true,
+            "notes": "Per Leeper v. Arlington ISD; curriculum must be bona fide and in written form covering these five subjects"
+          },
+          "filings": {
+            "value": [],
+            "source_url": "https://thsc.org/texas-homeschool-laws/",
+            "verified": true,
+            "notes": "No notice of intent, no registration, no state approval required. If withdrawing from public school, parent provides written notice to the district only; no state form required."
+          },
+          "evaluationOrTesting": {
+            "value": null,
+            "source_url": "https://thsc.org/texas-homeschool-laws/",
+            "verified": true,
+            "notes": "No testing or evaluation required"
+          },
+          "recordRetention": {
+            "value": null,
+            "source_url": "https://thsc.org/texas-homeschool-laws/",
+            "verified": true,
+            "notes": "No record retention legally required"
+          }
+        }
+      }
+    ],
+    "last_verified": "2026-06-27"
+  },
+  {
+    "state": "FL",
+    "stateName": "Florida",
+    "pathways": [
+      {
+        "key": "home-education-program",
+        "label": "Home Education Program",
+        "legalBasis": "Florida Statutes §1002.41 (2025)",
+        "requirements": {
+          "instructionDaysPerYear": {
+            "value": null,
+            "source_url": "https://www.leg.state.fl.us/Statutes/index.cfm?App_mode=Display_Statute&URL=1000-1099%2F1002%2FSections%2F1002.41.html",
+            "verified": true,
+            "notes": "§1002.41 explicitly excludes home education from public school day requirements; no minimum days specified"
+          },
+          "instructionHoursPerYear": {
+            "value": null,
+            "source_url": "https://www.leg.state.fl.us/Statutes/index.cfm?App_mode=Display_Statute&URL=1000-1099%2F1002%2FSections%2F1002.41.html",
+            "verified": true,
+            "notes": "No minimum hours specified"
+          },
+          "requiredSubjects": {
+            "value": null,
+            "source_url": "https://www.leg.state.fl.us/Statutes/index.cfm?App_mode=Display_Statute&URL=1000-1099%2F1002%2FSections%2F1002.41.html",
+            "verified": true,
+            "notes": "§1002.41 specifies no mandatory subjects; parent selects curriculum"
+          },
+          "filings": {
+            "value": [
+              {
+                "type": "Notice of Intent",
+                "deadline": "Within 30 days of establishing the home education program",
+                "recipient": "District school superintendent",
+                "content": "Written notice signed by parent including full legal names, addresses, and birthdates of all children in the program",
+                "notes": "Also required within 30 days of moving to a new district, adding a child, or terminating the program"
+              }
+            ],
+            "source_url": "https://www.leg.state.fl.us/Statutes/index.cfm?App_mode=Display_Statute&URL=1000-1099%2F1002%2FSections%2F1002.41.html",
+            "verified": true
+          },
+          "evaluationOrTesting": {
+            "value": {
+              "required": true,
+              "frequency": "Annual",
+              "calendarDeadline": null,
+              "calendarDeadlineNotes": "Statute requires annual evaluation but specifies no fixed calendar deadline; tied to the program year",
+              "parentChoosesMethod": true,
+              "methods": [
+                "Florida-certified teacher review of portfolio",
+                "Nationally normed student achievement test administered by a certified teacher",
+                "Florida statewide student assessment",
+                "Evaluation by a licensed psychologist or school psychologist",
+                "Any other valid measurement tool mutually agreed upon by parent and superintendent"
+              ],
+              "filedWith": "District school superintendent's office"
+            },
+            "source_url": "https://www.leg.state.fl.us/Statutes/index.cfm?App_mode=Display_Statute&URL=1000-1099%2F1002%2FSections%2F1002.41.html",
+            "verified": true
+          },
+          "recordRetention": {
+            "value": {
+              "portfolioRequired": true,
+              "portfolioContents": "Log of educational activities made contemporaneously with instruction designating reading materials by title; samples of writings, worksheets, workbooks, or creative materials",
+              "durationYears": 2,
+              "availableForInspection": "Upon 15 days written notice from superintendent; inspection is not mandatory"
+            },
+            "source_url": "https://www.leg.state.fl.us/Statutes/index.cfm?App_mode=Display_Statute&URL=1000-1099%2F1002%2FSections%2F1002.41.html",
+            "verified": true
+          }
+        }
+      }
+    ],
+    "last_verified": "2026-06-27"
+  },
+  {
+    "state": "NY",
+    "stateName": "New York",
+    "pathways": [
+      {
+        "key": "home-instruction",
+        "label": "Home Instruction",
+        "legalBasis": "8 NYCRR §100.10 (Commissioner's Regulations); New York Education Law §3204",
+        "requirements": {
+          "instructionDaysPerYear": {
+            "value": 180,
+            "source_url": "https://www.law.cornell.edu/regulations/new-york/8-NYCRR-100.10",
+            "verified": true,
+            "notes": "Instruction must be 'the substantial equivalent of 180 days each school year'"
+          },
+          "instructionHoursPerYear": {
+            "value": {
+              "grades1to6": 900,
+              "grades7to12": 990
+            },
+            "source_url": "https://www.law.cornell.edu/regulations/new-york/8-NYCRR-100.10",
+            "verified": true,
+            "notes": "900 hours for grades 1–6; 990 hours for grades 7–12. One unit = 6,480 minutes of instruction per school year."
+          },
+          "requiredSubjects": {
+            "value": {
+              "grades1to6": ["arithmetic", "reading", "spelling", "writing", "English language arts", "geography", "U.S. history", "science", "health", "music", "visual arts", "physical education"],
+              "grades7to8": ["English (2 units)", "history and geography (2 units)", "science (2 units)", "mathematics (2 units)", "physical education", "health", "art (0.5 unit)", "music (0.5 unit)", "practical arts", "library skills"],
+              "grades9to12": ["English (4 units)", "social studies (4 units including American history, Participation in Government, Economics)", "mathematics (2 units)", "science (2 units)", "art or music (1 unit)", "health (0.5 unit)", "physical education (2 units)", "electives (3 units)"],
+              "allGrades": ["patriotism and citizenship", "alcohol and drug awareness", "highway safety and traffic regulation", "fire and arson prevention"]
+            },
+            "source_url": "https://www.law.cornell.edu/regulations/new-york/8-NYCRR-100.10",
+            "verified": true
+          },
+          "filings": {
+            "value": [
+              {
+                "type": "Notice of Intent",
+                "deadline": "July 1 annually; or within 14 days of commencing home instruction mid-year",
+                "recipient": "Local school district superintendent"
+              },
+              {
+                "type": "IHIP (Individualized Home Instruction Plan)",
+                "deadline": "Within 4 weeks of receiving district forms, or August 15 — whichever is later",
+                "content": "Syllabi, curriculum materials, textbooks, or plan of instruction per required subject; names of instructors; dates of quarterly report submissions",
+                "recipient": "Local school district"
+              },
+              {
+                "type": "Quarterly Progress Reports",
+                "deadline": "On dates specified in IHIP, spaced at even intervals throughout the year",
+                "content": "Cumulative instruction hours, materials covered per subject, grades or narrative evaluations; explanation if less than 80% of planned coursework completed",
+                "recipient": "Local school district"
+              }
+            ],
+            "source_url": "https://www.law.cornell.edu/regulations/new-york/8-NYCRR-100.10",
+            "verified": true
+          },
+          "evaluationOrTesting": {
+            "value": {
+              "required": true,
+              "frequency": "Annual",
+              "filingTiming": "Submitted with or as part of the 4th quarterly report",
+              "passingStandard": "Composite score above 33rd percentile on national norms OR demonstration of one year of academic growth",
+              "methods": [
+                "Nationally normed standardized test: Iowa Test of Basic Skills, California Achievement Test, Stanford Achievement Test, Comprehensive Test of Basic Skills, or Metropolitan Achievement Test",
+                "Written narrative evaluation by a NYS-certified teacher (grades 1–3 annually; grades 4–8 every other year as alternative)"
+              ],
+              "administrationNote": "Test may be administered at a public school, registered/nonregistered nonpublic school, or at home by a certified teacher"
+            },
+            "source_url": "https://www.law.cornell.edu/regulations/new-york/8-NYCRR-100.10",
+            "verified": true
+          },
+          "recordRetention": {
+            "value": {
+              "attendanceRecords": "Maintained by parent; available to district upon request",
+              "quarterlyReports": "Filed with district per IHIP schedule"
+            },
+            "source_url": "https://www.law.cornell.edu/regulations/new-york/8-NYCRR-100.10",
+            "verified": true,
+            "notes": "Regulation does not specify a minimum post-program retention duration"
+          }
+        }
+      },
+      {
+        "key": "nonpublic-school-substantial-equivalence",
+        "label": "Non-public school (substantial equivalence)",
+        "legalBasis": "New York Education Law §3204(2)",
+        "requirements": {
+          "instructionDaysPerYear": {
+            "value": null,
+            "source_url": "https://www.nysed.gov/curriculum-instruction/10010-home-instruction",
+            "verified": false,
+            "notes": "Must provide instruction substantially equivalent to public school; specific day/hour minimums for home-operated nonpublic school not separately codified in §3204(2)"
+          },
+          "instructionHoursPerYear": {
+            "value": null,
+            "source_url": "https://www.nysed.gov/curriculum-instruction/10010-home-instruction",
+            "verified": false,
+            "notes": "Substantial equivalence standard applies; specific hours not separately codified for this pathway"
+          },
+          "requiredSubjects": {
+            "value": null,
+            "source_url": "https://www.nysed.gov/curriculum-instruction/10010-home-instruction",
+            "verified": false,
+            "notes": "Must provide substantially equivalent instruction to public school curriculum; subject list not separately enumerated for this pathway in §3204(2)"
+          },
+          "filings": {
+            "value": null,
+            "source_url": "https://www.nysed.gov/curriculum-instruction/10010-home-instruction",
+            "verified": false,
+            "notes": "IHIP and quarterly report requirements of §100.10 do not apply; district may conduct a substantial equivalence review; specific filing obligations not confirmed"
+          },
+          "evaluationOrTesting": {
+            "value": null,
+            "source_url": "https://www.nysed.gov/curriculum-instruction/10010-home-instruction",
+            "verified": false,
+            "notes": "No standardized testing requirement codified under this pathway; district may initiate substantial equivalence review"
+          },
+          "recordRetention": {
+            "value": null,
+            "source_url": "https://www.nysed.gov/curriculum-instruction/10010-home-instruction",
+            "verified": false,
+            "notes": "Not separately specified for this pathway"
+          }
+        }
+      }
+    ],
+    "last_verified": "2026-06-27"
+  },
+  {
+    "state": "PA",
+    "stateName": "Pennsylvania",
+    "pathways": [
+      {
+        "key": "home-education-program",
+        "label": "Home Education Program",
+        "legalBasis": "24 P.S. §13-1327.1",
+        "requirements": {
+          "instructionDaysPerYear": {
+            "value": 180,
+            "source_url": "https://codes.findlaw.com/pa/title-24-ps-education/pa-st-sect-24-13-1327-1/",
+            "verified": true,
+            "notes": "180 days OR the equivalent hours alternative satisfies the requirement"
+          },
+          "instructionHoursPerYear": {
+            "value": {
+              "elementary": 900,
+              "secondary": 990
+            },
+            "source_url": "https://codes.findlaw.com/pa/title-24-ps-education/pa-st-sect-24-13-1327-1/",
+            "verified": true,
+            "notes": "Elementary (grades K–6): 180 days OR 900 hours. Secondary (grades 7–12): 180 days OR 990 hours. Either standard satisfies the law."
+          },
+          "requiredSubjects": {
+            "value": {
+              "elementary": ["English (spelling, reading, writing)", "arithmetic", "science", "geography", "history of the United States and Pennsylvania", "civics", "safety education", "health and physiology", "physical education", "music", "art"],
+              "secondary": ["English (language, literature, speech, composition)", "science", "geography", "social studies", "mathematics", "art", "music", "physical education", "health", "safety education"]
+            },
+            "source_url": "https://codes.findlaw.com/pa/title-24-ps-education/pa-st-sect-24-13-1327-1/",
+            "verified": true
+          },
+          "filings": {
+            "value": [
+              {
+                "type": "Notarized Affidavit",
+                "deadline": "Prior to commencement of program; then annually by August 1",
+                "recipient": "Superintendent of the school district of residence",
+                "content": "Supervisor name, child name/age/address/phone; assurance subjects taught in English; outline of proposed objectives by subject area; immunization records; medical records; compliance assurance; criminal history certification for all adults residing in the home (no disqualifying offenses within past 5 years)"
+              }
+            ],
+            "source_url": "https://codes.findlaw.com/pa/title-24-ps-education/pa-st-sect-24-13-1327-1/",
+            "verified": true
+          },
+          "evaluationOrTesting": {
+            "value": {
+              "required": true,
+              "annualEvaluationDeadline": "June 30 annually",
+              "evaluatorQualifications": [
+                "Licensed clinical or school psychologist",
+                "Pennsylvania-certified teacher",
+                "Non-public school teacher or administrator with at least 2 years teaching experience within the last 10 years"
+              ],
+              "evaluationBasis": "Interview of child and review of portfolio",
+              "standardizedTestingRequired": true,
+              "standardizedTestingGrades": [3, 5, 8],
+              "standardizedTestingNote": "At grades 3, 5, and 8: PSSAs or an approved nationally normed standardized test in reading/language arts and mathematics must be included in the portfolio"
+            },
+            "source_url": "https://codes.findlaw.com/pa/title-24-ps-education/pa-st-sect-24-13-1327-1/",
+            "verified": true
+          },
+          "recordRetention": {
+            "value": {
+              "portfolioRequired": true,
+              "portfolioContents": "Contemporaneous log designating reading materials by title; samples of writings, worksheets, workbooks, or creative materials used or developed by the student",
+              "duration": null,
+              "durationNotes": "Statute requires portfolio maintained during the program; no explicit post-program minimum retention duration specified"
+            },
+            "source_url": "https://codes.findlaw.com/pa/title-24-ps-education/pa-st-sect-24-13-1327-1/",
+            "verified": true
+          }
+        }
+      }
+    ],
+    "last_verified": "2026-06-27"
+  },
+  {
+    "state": "CA",
+    "stateName": "California",
+    "pathways": [
+      {
+        "key": "home-based-private-school",
+        "label": "Home-based private school (Private School Affidavit) — includes PSP/umbrella enrollment",
+        "legalBasis": "California Education Code §48222; EC §33190",
+        "requirements": {
+          "instructionDaysPerYear": {
+            "value": null,
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=48222.",
+            "verified": true,
+            "notes": "EC §48222 specifies no minimum school days for home-based private schools; private schools set their own calendars"
+          },
+          "instructionHoursPerYear": {
+            "value": null,
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=48222.",
+            "verified": true,
+            "notes": "No minimum hours specified under this pathway"
+          },
+          "requiredSubjects": {
+            "value": {
+              "grades1to6": ["English (reading, literature, language, composition, spelling, handwriting)", "mathematics", "social sciences", "science", "visual and performing arts", "health", "physical education (minimum 200 minutes per 10 schooldays)"],
+              "grades7to12": ["English", "social sciences", "world languages", "physical education", "science", "mathematics", "visual and performing arts", "applied arts", "career technical education"]
+            },
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=51210.",
+            "verified": true,
+            "notes": "EC §48222 requires instruction 'in the several branches of study required to be taught in the public schools of the state', referencing EC §51210 (grades 1–6) and EC §51220 (grades 7–12). PSPs (Private School Satellite Programs / umbrella schools) operate under this same statutory framework — the PSP files the affidavit; legal requirements for the parent are identical."
+          },
+          "filings": {
+            "value": [
+              {
+                "type": "Private School Affidavit (PSA)",
+                "deadline": "October 1–15 annually",
+                "recipient": "Superintendent of Public Instruction (filed online via CDE Private School Affidavit system)",
+                "content": "All business names and addresses, enrollment by grade, teacher count, faculty names/addresses/qualifications, confirmation of required records maintenance"
+              }
+            ],
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=33190.",
+            "verified": true,
+            "notes": "Filing the PSA is explicitly non-evaluative — EC §33190 states it shall not be construed as evaluation, recognition, approval, or endorsement by the state"
+          },
+          "evaluationOrTesting": {
+            "value": null,
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=48222.",
+            "verified": true,
+            "notes": "No state-mandated testing or evaluation required"
+          },
+          "recordRetention": {
+            "value": {
+              "attendanceRecordsRequired": true,
+              "attendanceNote": "Must record every absence of a pupil for half a day or more throughout the school year",
+              "coursesOfferedRequired": true,
+              "facultyRecordsRequired": true,
+              "facultyNote": "Names, addresses, and educational qualifications of all faculty",
+              "duration": null,
+              "durationNotes": "EC §48222 and §33190 require maintenance of records but do not specify a minimum retention duration"
+            },
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=48222.",
+            "verified": true
+          }
+        }
+      },
+      {
+        "key": "credentialed-private-tutor",
+        "label": "Instruction by credentialed private tutor",
+        "legalBasis": "California Education Code §48224",
+        "requirements": {
+          "instructionDaysPerYear": {
+            "value": 175,
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=48224.",
+            "verified": false,
+            "notes": "EC §48224 specifies 175 days per calendar year; marked unverified because the statute text was not directly fetched — verify against current statute before relying on this value"
+          },
+          "instructionHoursPerYear": {
+            "value": null,
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=48224.",
+            "verified": false,
+            "notes": "EC §48224 specifies 3 hours per day minimum (not an annual total); 175 days × 3 hrs = 525 hrs implied minimum — verify against current statute"
+          },
+          "instructionHoursPerDay": {
+            "value": 3,
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=48224.",
+            "verified": false,
+            "notes": "EC §48224 minimum; verify against current statute text"
+          },
+          "requiredSubjects": {
+            "value": "Same branches of study required to be taught in public schools (references EC §51210/§51220)",
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=48224.",
+            "verified": true,
+            "notes": "Tutor must hold a valid California state credential for the grade level being taught"
+          },
+          "tutorQualification": {
+            "value": "Valid California state credential for the grade level being taught",
+            "source_url": "https://www.cde.ca.gov/sp/ps/homeschool.asp",
+            "verified": true
+          },
+          "filings": {
+            "value": [],
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=48224.",
+            "verified": true,
+            "notes": "No affidavit or district notification required under EC §48224"
+          },
+          "evaluationOrTesting": {
+            "value": null,
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=48224.",
+            "verified": true,
+            "notes": "No state-mandated testing or evaluation"
+          },
+          "recordRetention": {
+            "value": null,
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=48224.",
+            "verified": false,
+            "notes": "EC §48224 does not specify record retention; unclear whether general private school record rules apply — verify"
+          }
+        }
+      },
+      {
+        "key": "public-school-independent-study",
+        "label": "Public school independent study program",
+        "legalBasis": "California Education Code §46300.6; EC §51745 et seq.",
+        "requirements": {
+          "instructionDaysPerYear": {
+            "value": null,
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=51745.",
+            "verified": false,
+            "notes": "Child remains enrolled in public school; attendance requirements governed by the written independent study agreement with the district"
+          },
+          "instructionHoursPerYear": {
+            "value": null,
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=51745.",
+            "verified": false,
+            "notes": "Hours governed by written IS agreement; varies by district program"
+          },
+          "requiredSubjects": {
+            "value": null,
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=51745.",
+            "verified": false,
+            "notes": "Curriculum follows public school requirements; determined by district IS agreement"
+          },
+          "filings": {
+            "value": [
+              {
+                "type": "Written Independent Study Agreement",
+                "deadline": "Prior to commencing independent study",
+                "recipient": "Enrolling public school district",
+                "content": "Learning objectives, course of study, materials, evaluation method, minutes of instruction per day",
+                "notes": "Terms vary by district; statute requires written agreement but content is district-defined"
+              }
+            ],
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=51745.",
+            "verified": false
+          },
+          "evaluationOrTesting": {
+            "value": {
+              "required": true,
+              "notes": "Student participates in all state assessments as a public school student; district evaluates work product per IS agreement terms"
+            },
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=51745.",
+            "verified": false,
+            "notes": "Specific requirements vary by district IS program"
+          },
+          "recordRetention": {
+            "value": null,
+            "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=51745.",
+            "verified": false,
+            "notes": "Records maintained by district; parent retains copies per IS agreement"
+          }
+        }
+      }
+    ],
+    "last_verified": "2026-06-27"
+  },
+  {
+    "state": "MI",
+    "stateName": "Michigan",
+    "pathways": [
+      {
+        "key": "home-education-exemption",
+        "label": "Home education exemption",
+        "legalBasis": "MCL §380.1561(3)(f)",
+        "requirements": {
+          "instructionDaysPerYear": {
+            "value": null,
+            "source_url": "https://legislature.mi.gov/Laws/MCL?objectName=MCL-380-1561",
+            "verified": true,
+            "notes": "MCL §380.1561(3)(f) does not specify a minimum number of days; requires only an 'organized educational program' in the nine subjects"
+          },
+          "instructionHoursPerYear": {
+            "value": null,
+            "source_url": "https://legislature.mi.gov/Laws/MCL?objectName=MCL-380-1561",
+            "verified": true,
+            "notes": "No minimum hours specified in this subsection"
+          },
+          "requiredSubjects": {
+            "value": ["reading", "spelling", "mathematics", "science", "history", "civics", "literature", "writing", "English grammar"],
+            "source_url": "https://legislature.mi.gov/Laws/MCL?objectName=MCL-380-1561",
+            "verified": true,
+            "notes": "Must constitute an 'organized educational program' in these nine subjects"
+          },
+          "filings": {
+            "value": [],
+            "source_url": "https://legislature.mi.gov/Laws/MCL?objectName=MCL-380-1561",
+            "verified": true,
+            "notes": "No notice, registration, or approval required under this pathway"
+          },
+          "evaluationOrTesting": {
+            "value": null,
+            "source_url": "https://legislature.mi.gov/Laws/MCL?objectName=MCL-380-1561",
+            "verified": true,
+            "notes": "No testing or evaluation required"
+          },
+          "recordRetention": {
+            "value": null,
+            "source_url": "https://legislature.mi.gov/Laws/MCL?objectName=MCL-380-1561",
+            "verified": true,
+            "notes": "No record retention required by statute under this pathway"
+          }
+        }
+      },
+      {
+        "key": "nonpublic-school",
+        "label": "Nonpublic school exemption",
+        "legalBasis": "MCL §380.1561(3)(a); People v. DeJonge, 501 N.W.2d 127 (Mich. 1993)",
+        "requirements": {
+          "instructionDaysPerYear": {
+            "value": 180,
+            "source_url": "https://legislature.mi.gov/Laws/MCL?objectName=MCL-380-1561",
+            "verified": false,
+            "notes": "180-day requirement cited in secondary sources for this pathway; verify against current MCL §380.1581 or related statute"
+          },
+          "instructionHoursPerYear": {
+            "value": null,
+            "source_url": "https://legislature.mi.gov/Laws/MCL?objectName=MCL-380-1561",
+            "verified": false,
+            "notes": "Specific hour minimum not confirmed in fetched statute text"
+          },
+          "requiredSubjects": {
+            "value": null,
+            "source_url": "https://legislature.mi.gov/Laws/MCL?objectName=MCL-380-1561",
+            "verified": false,
+            "notes": "Nonpublic school must provide instruction comparable to public schools; specific subject list for this pathway not confirmed in fetched sources"
+          },
+          "filings": {
+            "value": [
+              {
+                "type": "Annual notification to local superintendent",
+                "deadline": "Annually",
+                "recipient": "Local school superintendent"
+              }
+            ],
+            "source_url": "https://legislature.mi.gov/Laws/MCL?objectName=MCL-380-1561",
+            "verified": true
+          },
+          "teacherQualification": {
+            "value": "Instructor must hold a bachelor's degree; religious objection exemption available per People v. DeJonge, 501 N.W.2d 127 (Mich. 1993)",
+            "source_url": "https://legislature.mi.gov/Laws/MCL?objectName=MCL-380-1561",
+            "verified": true
+          },
+          "evaluationOrTesting": {
+            "value": null,
+            "source_url": "https://legislature.mi.gov/Laws/MCL?objectName=MCL-380-1561",
+            "verified": false,
+            "notes": "No testing requirement confirmed for this pathway in fetched sources"
+          },
+          "recordRetention": {
+            "value": null,
+            "source_url": "https://legislature.mi.gov/Laws/MCL?objectName=MCL-380-1561",
+            "verified": false,
+            "notes": "Record retention requirements for nonpublic school pathway not confirmed in fetched sources"
+          }
+        }
+      }
+    ],
+    "last_verified": "2026-06-27"
+  },
+  {
+    "state": "CT",
+    "stateName": "Connecticut",
+    "pathways": [
+      {
+        "key": "equivalent-instruction",
+        "label": "Equivalent instruction — home education",
+        "legalBasis": "Connecticut General Statutes §10-184",
+        "requirements": {
+          "instructionDaysPerYear": {
+            "value": null,
+            "source_url": "https://portal.ct.gov/SDE/Homeschooling/Homeschooling-in-Connecticut",
+            "verified": true,
+            "notes": "CGS §10-184 requires 'equivalent instruction' — a qualitative standard only; no minimum days codified"
+          },
+          "instructionHoursPerYear": {
+            "value": null,
+            "source_url": "https://portal.ct.gov/SDE/Homeschooling/Homeschooling-in-Connecticut",
+            "verified": true,
+            "notes": "No minimum hours specified by statute; CT SDE recommends keeping an attendance log but does not mandate a minimum"
+          },
+          "requiredSubjects": {
+            "value": ["reading", "writing", "spelling", "English grammar", "geography", "arithmetic", "United States history", "citizenship including study of town, state, and federal governments"],
+            "source_url": "https://portal.ct.gov/SDE/Homeschooling/Homeschooling-in-Connecticut",
+            "verified": true,
+            "notes": "CGS §10-184 enumerates these subjects; instruction method and materials are not mandated by statute"
+          },
+          "filings": {
+            "value": [],
+            "source_url": "https://portal.ct.gov/SDE/Homeschooling/Homeschooling-in-Connecticut",
+            "verified": true,
+            "notes": "No Notice of Intent required by statute. CT SDE voluntary guidance suggests an optional NOI to the local superintendent within 10 days of starting, but this has no statutory basis and is not legally required."
+          },
+          "evaluationOrTesting": {
+            "value": null,
+            "source_url": "https://portal.ct.gov/SDE/Homeschooling/Homeschooling-in-Connecticut",
+            "verified": true,
+            "notes": "No testing, portfolio review, or curriculum approval required by statute. CT SDE recommends annual portfolio review and standardized testing as voluntary best practices only."
+          },
+          "recordRetention": {
+            "value": null,
+            "source_url": "https://portal.ct.gov/SDE/Homeschooling/Homeschooling-in-Connecticut",
+            "verified": true,
+            "notes": "No record retention required by statute. CT SDE recommends maintaining an attendance log and portfolio as voluntary guidance only."
+          }
+        }
+      }
+    ],
+    "last_verified": "2026-06-27"
+  }
+]
