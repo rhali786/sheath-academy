@@ -15,7 +15,7 @@ export const mockRuleset: ComplianceRuleset = {
   requirementType: 'attendance_days',
   value: 180,
   unit: 'days',
-  sourceUrl: 'https://tea.texas.gov/academics/home-school',
+  sourceUrl: 'https://tea.texas.gov/academics/special-student-populations/home-school',
   lastVerifiedAt: '2026-01-15',
   isVerified: true,
 }

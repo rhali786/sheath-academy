@@ -264,7 +264,7 @@ export function CompliancePage() {
   }
 
   return (
-    <div className="page-shell space-y-6">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
       <div className="flex items-center gap-3">
         <ShieldCheck className="w-6 h-6 text-forest-700" />
         <h1 className="page-title">Compliance</h1>
