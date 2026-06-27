@@ -29,7 +29,9 @@ const mockUseLearner = useLearner as jest.Mock
 
 const mockHouseholdValue = {
   householdProfile: { id: 'hh_fix_001', familyName: 'Test Family', workspaceId: 'ws1', createdAt: '' },
-  studentProfiles: [],
+  studentProfiles: [
+    { id: 'student_seed_layth_001', name: 'Layth', householdId: 'hh_fix_001', gradeLabel: '7th', isActive: true, username: 'layth', password: '', createdAt: '' },
+  ],
   allSubjects: [],
   familyName: 'Test Family',
   needsSetup: false,
@@ -125,5 +127,18 @@ describe('BadgesPage', () => {
       const lockedEl = screen.getByTestId('badge-locked-badge_fix_002')
       expect(lockedEl).toHaveAttribute('aria-label', expect.stringContaining('not yet earned'))
     })
+  })
+
+  it('shows the selected learner name in the page header', async () => {
+    render(<BadgesPage />)
+    await waitFor(() => {
+      expect(screen.getByTestId('badges-learner-name')).toHaveTextContent('Layth')
+    })
+  })
+
+  it('calls getCollection with the selected learnerId', async () => {
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByTestId('badges-trophy-case')).toBeInTheDocument())
+    expect(mockGetCollection).toHaveBeenCalledWith('hh_fix_001', 'student_seed_layth_001')
   })
 })

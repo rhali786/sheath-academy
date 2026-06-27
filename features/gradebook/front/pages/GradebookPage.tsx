@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { GraduationCap, AlertCircle, CheckCircle2, TrendingDown, BookOpen } from 'lucide-react'
+import { GraduationCap, AlertCircle, CheckCircle2, TrendingDown, BookOpen, ChevronDown, ChevronRight } from 'lucide-react'
 import { gradebookApi } from '@/features/gradebook/front/services/api'
-import type { GradebookSummary, NeedsAttentionItem } from '@/features/gradebook/types'
+import type { GradebookSummary, NeedsAttentionItem, Score } from '@/features/gradebook/types'
 
 function gradeLetter(letter: string | null) {
   if (!letter) return null
@@ -50,9 +50,49 @@ function NeedsAttentionQueue({ items }: { items: NeedsAttentionItem[] }) {
   )
 }
 
+function ScoreHistory({ learnerId, subjectId }: { learnerId: string; subjectId: string }) {
+  const [scores, setScores] = useState<Score[] | null>(null)
+
+  useEffect(() => {
+    gradebookApi.getScores(learnerId, subjectId).then(res => setScores(res.data))
+  }, [learnerId, subjectId])
+
+  if (scores === null) {
+    return <p className="text-xs text-slate-400 py-1 pl-6 animate-pulse">Loading…</p>
+  }
+  if (scores.length === 0) {
+    return <p className="text-xs text-slate-400 py-1 pl-6">No scored attempts yet.</p>
+  }
+  return (
+    <ul className="mt-1 space-y-1 pl-6 border-l-2 border-forest-100">
+      {scores.map(score => {
+        const dateStr = new Date(`${score.occurredAt}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        return (
+          <li key={score.id} className="text-xs text-slate-600 flex items-center gap-2 py-0.5">
+            <span className="text-slate-400 w-12 flex-shrink-0">{dateStr}</span>
+            {score.state === 'graded' && score.numericValue !== null ? (
+              <span className={gradeLetter(score.numericValue >= 90 ? 'A' : score.numericValue >= 80 ? 'B' : score.numericValue >= 70 ? 'C' : 'F') ?? ''}>
+                {score.numericValue}%
+              </span>
+            ) : (
+              <span className="badge-amber capitalize">{score.state}</span>
+            )}
+            {score.comment && <span className="text-slate-400 truncate">{score.comment}</span>}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 function LearnerCard({ summary }: { summary: GradebookSummary }) {
   const hasSubjects = summary.subjects.length > 0
   const hasGpa = summary.gpa.unweighted !== null
+  const [expandedSubjectId, setExpandedSubjectId] = useState<string | null>(null)
+
+  function toggleSubject(subjectId: string) {
+    setExpandedSubjectId(prev => prev === subjectId ? null : subjectId)
+  }
 
   return (
     <div className="card p-5 space-y-4">
@@ -84,32 +124,52 @@ function LearnerCard({ summary }: { summary: GradebookSummary }) {
           No subjects graded yet — add subjects to start tracking progress.
         </div>
       ) : (
-        <div className="space-y-2">
-          {summary.subjects.map(subject => (
-            <div key={subject.subjectId} className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <BookOpen className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                <span className="text-sm text-slate-700 truncate">{subject.label}</span>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {subject.needsReview && (
-                  <TrendingDown className="w-3.5 h-3.5 text-amber-500" aria-label="Needs review" />
-                )}
-                {subject.gradeLetter ? (
-                  <span className={gradeLetter(subject.gradeLetter) ?? ''}>
-                    {subject.gradeLetter}
-                    {subject.pointsAverage !== null && (
-                      <span className="ml-1 text-xs opacity-70">
-                        ({subject.pointsAverage.toFixed(0)}%)
-                      </span>
+        <div className="space-y-1">
+          {summary.subjects.map(subject => {
+            const isExpanded = expandedSubjectId === subject.subjectId
+            return (
+              <div key={subject.subjectId}>
+                <button
+                  type="button"
+                  data-testid={`subject-row-${summary.learnerId}-${subject.subjectId}`}
+                  onClick={() => toggleSubject(subject.subjectId)}
+                  className="w-full flex items-center justify-between gap-2 py-1 rounded hover:bg-slate-50 transition-colors text-left"
+                  aria-expanded={isExpanded}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    {isExpanded
+                      ? <ChevronDown className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                      : <ChevronRight className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                    }
+                    <BookOpen className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <span className="text-sm text-slate-700 truncate">{subject.label}</span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {subject.needsReview && (
+                      <TrendingDown className="w-3.5 h-3.5 text-amber-500" aria-label="Needs review" />
                     )}
-                  </span>
-                ) : (
-                  <span className="badge-amber">No grade</span>
+                    {subject.gradeLetter ? (
+                      <span className={gradeLetter(subject.gradeLetter) ?? ''}>
+                        {subject.gradeLetter}
+                        {subject.pointsAverage !== null && (
+                          <span className="ml-1 text-xs opacity-70">
+                            ({subject.pointsAverage.toFixed(0)}%)
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="badge-amber">No grade</span>
+                    )}
+                  </div>
+                </button>
+                {isExpanded && (
+                  <div data-testid={`score-history-${summary.learnerId}-${subject.subjectId}`}>
+                    <ScoreHistory learnerId={summary.learnerId} subjectId={subject.subjectId} />
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
@@ -144,7 +204,7 @@ export function GradebookPage() {
 
   if (loading) {
     return (
-      <div className="page-shell" data-testid="gradebook-loading">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4" data-testid="gradebook-loading">
         <div className="animate-pulse space-y-4">
           {[1, 2, 3].map(i => (
             <div key={i} className="card h-32 bg-slate-100" />
@@ -156,7 +216,7 @@ export function GradebookPage() {
 
   if (error) {
     return (
-      <div className="page-shell" data-testid="gradebook-error">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4" data-testid="gradebook-error">
         <div className="card p-6 text-center space-y-2">
           <AlertCircle className="w-6 h-6 text-red-400 mx-auto" />
           <p className="text-sm text-slate-600">{error}</p>

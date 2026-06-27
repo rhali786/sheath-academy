@@ -92,7 +92,7 @@ function EmptyBadgeState({ starterDefs }: { starterDefs: BadgeDefinition[] }) {
 }
 
 export function BadgesPage() {
-  const { householdProfile } = useHousehold()
+  const { householdProfile, studentProfiles } = useHousehold()
   const { selectedChildId } = useLearner()
   const [collection, setCollection] = useState<BadgeCollectionItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -100,6 +100,7 @@ export function BadgesPage() {
 
   const householdId = householdProfile?.id ?? ''
   const learnerId = selectedChildId ?? ''
+  const learnerName = studentProfiles?.find(p => p.id === learnerId)?.name ?? null
 
   useEffect(() => {
     if (!householdId) return
@@ -114,7 +115,7 @@ export function BadgesPage() {
 
   if (loading) {
     return (
-      <div className="page-shell" data-testid="badges-loading">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4" data-testid="badges-loading">
         <div className="animate-pulse grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map(i => <div key={i} className="card h-40 bg-slate-100" />)}
         </div>
@@ -124,7 +125,7 @@ export function BadgesPage() {
 
   if (error) {
     return (
-      <div className="page-shell" data-testid="badges-error">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4" data-testid="badges-error">
         <div className="card p-6 text-center space-y-2">
           <AlertCircle className="w-6 h-6 text-red-400 mx-auto" />
           <p className="text-sm text-slate-600">{error}</p>
@@ -150,6 +151,11 @@ export function BadgesPage() {
       <div className="flex items-center gap-3">
         <Trophy className="w-6 h-6 text-forest-700" />
         <h1 className="page-title">Badges</h1>
+        {learnerName && (
+          <span data-testid="badges-learner-name" className="text-sm text-slate-500 font-normal">
+            — {learnerName}
+          </span>
+        )}
       </div>
 
       <div

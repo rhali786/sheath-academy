@@ -244,7 +244,7 @@ export function CompliancePage() {
 
   if (loading) {
     return (
-      <div className="page-shell" data-testid="compliance-loading">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4" data-testid="compliance-loading">
         <div className="animate-pulse space-y-4">
           {[1, 2, 3].map(i => <div key={i} className="card h-24 bg-slate-100" />)}
         </div>
@@ -254,7 +254,7 @@ export function CompliancePage() {
 
   if (error || !statusResult) {
     return (
-      <div className="page-shell" data-testid="compliance-error">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4" data-testid="compliance-error">
         <div className="card p-6 text-center space-y-2">
           <AlertCircle className="w-6 h-6 text-red-400 mx-auto" />
           <p className="text-sm text-slate-600">{error ?? 'Unknown error'}</p>
