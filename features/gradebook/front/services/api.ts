@@ -1,39 +1,53 @@
 import type { ApiResponse } from '@/features/lib/types'
 import type { GradebookSummary, Score, SubjectGradeResult, NeedsAttentionItem } from '@/features/gradebook/types'
-import { mockGradebookSummaries, mockScores, laythNeedsAttention } from '@/features/gradebook/__tests__/fixtures/mockGradebook'
 
-function ok<T>(data: T): ApiResponse<T> {
-  return { status: 'success', data, message: 'ok', timestamp: new Date().toISOString() }
+function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') return window.location.origin
+  return `http://127.0.0.1:${process.env.PORT ?? '3000'}`
+}
+
+async function get<T>(path: string): Promise<ApiResponse<T>> {
+  const res = await fetch(`${getApiBaseUrl()}${path}`)
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  return res.json()
 }
 
 export const gradebookApi = {
-  /** Returns grade summaries for all learners in the household. */
   getSummaries: async (_householdId: string): Promise<ApiResponse<GradebookSummary[]>> => {
-    await tick()
-    return ok(mockGradebookSummaries)
+    return get<GradebookSummary[]>('/api/gradebook/summaries')
   },
 
-  /** Returns all scores for a specific subject + learner. */
-  getScores: async (_learnerId: string, _subjectId: string): Promise<ApiResponse<Score[]>> => {
-    await tick()
-    return ok(mockScores.filter(s => s.learnerId === _learnerId && s.subjectId === _subjectId))
+  getScores: async (_learnerId: string, subjectId: string, learnerId = _learnerId): Promise<ApiResponse<Score[]>> => {
+    return get<Score[]>(`/api/gradebook/scores?learnerId=${encodeURIComponent(learnerId)}&subjectId=${encodeURIComponent(subjectId)}`)
   },
 
-  /** Returns subject grade results for a specific learner. */
   getSubjectGrades: async (learnerId: string): Promise<ApiResponse<SubjectGradeResult[]>> => {
-    await tick()
-    const summary = mockGradebookSummaries.find(s => s.learnerId === learnerId)
-    return ok(summary?.subjects ?? [])
+    const summaries = await get<GradebookSummary[]>('/api/gradebook/summaries')
+    const summary = summaries.data.find(s => s.learnerId === learnerId)
+    return {
+      status: 'success',
+      data: summary?.subjects ?? [],
+      message: 'ok',
+      timestamp: new Date().toISOString(),
+    }
   },
 
-  /** Returns the "needs attention" list for a learner. */
   getNeedsAttention: async (learnerId: string): Promise<ApiResponse<NeedsAttentionItem[]>> => {
-    await tick()
-    void learnerId
-    return ok(laythNeedsAttention)
+    const summaries = await get<GradebookSummary[]>('/api/gradebook/summaries')
+    const summary = summaries.data.find(s => s.learnerId === learnerId)
+    const items: NeedsAttentionItem[] = (summary?.needsAttentionSubjects ?? []).map(subjectId => {
+      const sub = summary?.subjects.find(s => s.subjectId === subjectId)
+      return {
+        subjectId,
+        label: sub?.label ?? subjectId,
+        reason: sub?.needsReview ? 'decaying' : sub?.pointsAverage === null ? 'no_scores' : 'missing',
+      }
+    })
+    return {
+      status: 'success',
+      data: items,
+      message: 'ok',
+      timestamp: new Date().toISOString(),
+    }
   },
-}
-
-function tick(): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, 0))
 }

@@ -5,6 +5,7 @@ import type { LessonTask } from '@/features/plan/types'
 import { getLessonTaskRow, updateLessonTaskRow, completeLessonTaskRow, deleteLessonTaskRow } from '@/features/plan/server/repository'
 import { mapLessonTaskRow } from '@/features/plan/api/mapLessonTaskRow'
 import { notFoundResponse } from '@/features/auth/server/context'
+import { validateLessonWindow } from '@/features/plan/server/validation'
 
 function rowToLesson(r: Parameters<typeof mapLessonTaskRow>[0]): LessonTask {
   return mapLessonTaskRow(r)
@@ -21,6 +22,17 @@ export async function GET(id: string): Promise<NextResponse<ApiResponse<LessonTa
 
 export async function PUT(id: string, request: Request): Promise<NextResponse<ApiResponse<LessonTask | null>>> {
   const body = await request.json()
+
+  if (body.dueDate) {
+    const windowCheck = validateLessonWindow(body.plannedStartDate ?? null, body.dueDate)
+    if (!windowCheck.valid) {
+      return NextResponse.json(
+        { status: 'error', data: null, message: windowCheck.error ?? 'Invalid date range', timestamp: new Date().toISOString() },
+        { status: 400 },
+      )
+    }
+  }
+
   try {
     const { householdId } = getRequestAuthCtx()
     const updated = await updateLessonTaskRow(id, householdId, {

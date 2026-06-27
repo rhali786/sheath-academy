@@ -22,6 +22,9 @@ import { handleAdminFeedbackRoute } from '@/features/feedback/api/adminRouter'
 import { handleMessagingRoute } from '@/features/messaging/api/router'
 import { handleTodosRoute } from '@/features/todos/api/router'
 import { handleLearningTimeRoute } from '@/features/learning-time/api/router'
+import { handleGradebookRoute } from '@/features/gradebook/api/router'
+import { handleComplianceRoute } from '@/features/compliance/api/router'
+import { handleBadgesRoute } from '@/features/badges/api/router'
 
 async function handleRoute(slug: string[], request: Request): Promise<NextResponse | Response | null> {
   if (slug[0] === 'dashboard') {
@@ -105,6 +108,18 @@ async function handleRoute(slug: string[], request: Request): Promise<NextRespon
 
   if (slug[0] === 'learning-time') {
     return await handleLearningTimeRoute(slug.slice(1), request)
+  }
+
+  if (slug[0] === 'gradebook') {
+    return await handleGradebookRoute(slug.slice(1), request)
+  }
+
+  if (slug[0] === 'compliance') {
+    return await handleComplianceRoute(slug.slice(1), request)
+  }
+
+  if (slug[0] === 'badges') {
+    return await handleBadgesRoute(slug.slice(1), request)
   }
 
   return null

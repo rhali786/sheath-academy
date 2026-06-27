@@ -5,43 +5,32 @@ import type {
   ComplianceDeadline,
   ComplianceSubmission,
 } from '@/features/compliance/types'
-import {
-  mockStatusResult,
-  mockRuleset,
-  mockDeadlines,
-  mockSubmissions,
-} from '@/features/compliance/__tests__/fixtures/mockCompliance'
 
-function ok<T>(data: T): ApiResponse<T> {
-  return { status: 'success', data, message: 'ok', timestamp: new Date().toISOString() }
+function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') return window.location.origin
+  return `http://127.0.0.1:${process.env.PORT ?? '3000'}`
 }
 
-function tick(): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, 0))
+async function get<T>(path: string): Promise<ApiResponse<T>> {
+  const res = await fetch(`${getApiBaseUrl()}${path}`)
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  return res.json()
 }
 
 export const complianceApi = {
-  /** Returns computed compliance status (Layer 1: fixture-backed; Layer 3: real). */
-  getStatus: async (_householdId: string, _schoolYearId: string): Promise<ApiResponse<StatusEngineResult>> => {
-    await tick()
-    return ok(mockStatusResult)
+  getStatus: async (_householdId: string, schoolYearId: string): Promise<ApiResponse<StatusEngineResult>> => {
+    return get<StatusEngineResult>(`/api/compliance/status?schoolYearId=${encodeURIComponent(schoolYearId)}`)
   },
 
-  /** Returns the active ruleset for the household's state + pathway. */
   getRuleset: async (_householdId: string): Promise<ApiResponse<ComplianceRuleset | null>> => {
-    await tick()
-    return ok(mockRuleset)
+    return get<ComplianceRuleset | null>('/api/compliance/ruleset')
   },
 
-  /** Returns upcoming and past compliance deadlines. */
-  getDeadlines: async (_householdId: string, _schoolYearId: string): Promise<ApiResponse<ComplianceDeadline[]>> => {
-    await tick()
-    return ok(mockDeadlines)
+  getDeadlines: async (_householdId: string, schoolYearId: string): Promise<ApiResponse<ComplianceDeadline[]>> => {
+    return get<ComplianceDeadline[]>(`/api/compliance/deadlines?schoolYearId=${encodeURIComponent(schoolYearId)}`)
   },
 
-  /** Returns submission tracker entries. */
-  getSubmissions: async (_householdId: string, _schoolYearId: string): Promise<ApiResponse<ComplianceSubmission[]>> => {
-    await tick()
-    return ok(mockSubmissions)
+  getSubmissions: async (_householdId: string, schoolYearId: string): Promise<ApiResponse<ComplianceSubmission[]>> => {
+    return get<ComplianceSubmission[]>(`/api/compliance/submissions?schoolYearId=${encodeURIComponent(schoolYearId)}`)
   },
 }

@@ -61,6 +61,18 @@ describe('GET /api/plan/lessons/:id', () => {
 })
 
 describe('PUT /api/plan/lessons/:id', () => {
+  it('returns 400 when plannedStartDate is after dueDate', async () => {
+    const req = new Request('http://localhost/api/plan/lessons/lt_1', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plannedStartDate: '2026-06-10', dueDate: '2026-06-01' }),
+    })
+    const res = await PUT('lt_1', req)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.status).toBe('error')
+  })
+
   it('passes resourceLink/lessonType/estimatedDuration through to the repository and back', async () => {
     mockUpdate.mockResolvedValue(makeRow({
       resourceLink: 'https://example.com/updated',

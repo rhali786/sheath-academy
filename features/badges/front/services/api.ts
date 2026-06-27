@@ -1,46 +1,44 @@
 import type { ApiResponse } from '@/features/lib/types'
 import type { BadgeDefinition, BadgeAward, BadgeCollectionItem, BadgeSettings } from '@/features/badges/types'
-import { mockBadgeCollection, mockBadgeDefinitions, mockBadgeAwards } from '@/features/badges/__tests__/fixtures/mockBadges'
 
-function ok<T>(data: T): ApiResponse<T> {
-  return { status: 'success', data, message: 'ok', timestamp: new Date().toISOString() }
+function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') return window.location.origin
+  return `http://127.0.0.1:${process.env.PORT ?? '3000'}`
 }
 
-function tick(): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, 0))
+async function get<T>(path: string): Promise<ApiResponse<T>> {
+  const res = await fetch(`${getApiBaseUrl()}${path}`)
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  return res.json()
 }
 
 export const badgesApi = {
-  /** Returns the badge collection (definitions + earned state) for a learner. */
-  getCollection: async (_householdId: string, _learnerId: string): Promise<ApiResponse<BadgeCollectionItem[]>> => {
-    await tick()
-    return ok(mockBadgeCollection)
+  getCollection: async (_householdId: string, learnerId: string): Promise<ApiResponse<BadgeCollectionItem[]>> => {
+    return get<BadgeCollectionItem[]>(`/api/badges/collection?learnerId=${encodeURIComponent(learnerId)}`)
   },
 
-  /** Returns all badge definitions visible to the household. */
   getDefinitions: async (_householdId: string): Promise<ApiResponse<BadgeDefinition[]>> => {
-    await tick()
-    return ok(mockBadgeDefinitions)
+    return get<BadgeDefinition[]>('/api/badges/definitions')
   },
 
-  /** Returns all awards for a learner. */
-  getAwards: async (_householdId: string, _learnerId: string): Promise<ApiResponse<BadgeAward[]>> => {
-    await tick()
-    return ok(mockBadgeAwards)
+  getAwards: async (_householdId: string, learnerId: string): Promise<ApiResponse<BadgeAward[]>> => {
+    return get<BadgeAward[]>(`/api/badges/awards?learnerId=${encodeURIComponent(learnerId)}`)
   },
 
-  /** Returns household badge settings. */
   getSettings: async (_householdId: string): Promise<ApiResponse<BadgeSettings>> => {
-    await tick()
-    return ok({ householdId: _householdId, platformBadgesEnabled: true })
+    return get<BadgeSettings>('/api/badges/settings')
   },
 
-  /** Submits evidence for a badge award (Layer 1: no-op stub). */
   submitEvidence: async (
-    _awardId: string,
-    _evidenceId: string,
+    awardId: string,
+    evidenceId: string,
   ): Promise<ApiResponse<BadgeAward>> => {
-    await tick()
-    return ok(mockBadgeAwards[0])
+    const res = await fetch(`${getApiBaseUrl()}/api/badges/awards/${encodeURIComponent(awardId)}/evidence`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ evidenceId }),
+    })
+    if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+    return res.json()
   },
 }
