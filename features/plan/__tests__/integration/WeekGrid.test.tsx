@@ -357,3 +357,71 @@ describe('WeekGrid — completion window', () => {
     }
   })
 })
+
+describe('WeekGrid — US1 drag shifts whole window + Undo', () => {
+  const windowLesson: LessonTask = {
+    ...mockLessons[0],
+    id: 'window_lesson_001',
+    plannedStartDate: '2026-05-11', // span: 2 days (May 11–13)
+    dueDate: '2026-05-13',
+  }
+
+  it('drag sends both plannedStartDate and dueDate preserving span', async () => {
+    // Drag 7-day window lesson from dueDate 2026-05-13 → 2026-05-15 (delta +2)
+    // new plannedStartDate = 2026-05-11 + 2 = 2026-05-13; new dueDate = 2026-05-15
+    renderGrid([windowLesson])
+    await mockCapturedDragEnd!({
+      active: { id: 'window_lesson_001', data: { current: {} } },
+      over: {
+        id: 'child_001:subj_001:2026-05-15',
+        data: { current: { dateStr: '2026-05-15' } },
+      },
+    })
+    expect(mockUpdateLesson).toHaveBeenCalledWith('window_lesson_001', {
+      dueDate: '2026-05-15',
+      plannedStartDate: '2026-05-13',
+    })
+  })
+
+  it('drag of lesson without plannedStartDate only sends dueDate', async () => {
+    renderGrid(mockLessons) // mockLessons[0] has no plannedStartDate
+    await mockCapturedDragEnd!({
+      active: { id: 'lesson_001', data: { current: {} } },
+      over: {
+        id: 'child_001:subj_001:2026-05-14',
+        data: { current: { dateStr: '2026-05-14' } },
+      },
+    })
+    expect(mockUpdateLesson).toHaveBeenCalledWith('lesson_001', { dueDate: '2026-05-14' })
+  })
+
+  it('regression: 7-day window drag earlier keeps valid window and Undo restores both dates', async () => {
+    const sevenDayLesson: LessonTask = {
+      ...mockLessons[0],
+      id: 'seven_day_001',
+      plannedStartDate: '2026-05-12', // span: 6 days
+      dueDate: '2026-05-18',
+    }
+    renderGrid([sevenDayLesson])
+
+    // Drag to 2026-05-16 (earlier than start 2026-05-12? No, just 2 days earlier than dueDate)
+    // delta: 2026-05-16 - 2026-05-18 = -2 days
+    // new start = 2026-05-12 - 2 = 2026-05-10; new due = 2026-05-16
+    await mockCapturedDragEnd!({
+      active: { id: 'seven_day_001', data: { current: {} } },
+      over: {
+        id: 'child_001:subj_001:2026-05-16',
+        data: { current: { dateStr: '2026-05-16' } },
+      },
+    })
+
+    expect(mockUpdateLesson).toHaveBeenCalledWith('seven_day_001', {
+      dueDate: '2026-05-16',
+      plannedStartDate: '2026-05-10',
+    })
+
+    // Window is valid: 2026-05-10 <= 2026-05-16
+    const [, payload] = mockUpdateLesson.mock.calls[0] as [string, any]
+    expect(payload.plannedStartDate <= payload.dueDate).toBe(true)
+  })
+})

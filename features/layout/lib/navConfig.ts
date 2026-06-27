@@ -41,11 +41,27 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'attendance', label: 'Attendance', href: '/attendance', section: 'main', module: 'Records' },
   {
     id: 'grades-progress',
-    label: 'Growth & Reflection',
-    href: '/growth',
+    label: 'Portfolio',
+    href: '/growth/portfolio',
     section: 'main',
     module: 'Records',
-    activePrefixes: ['/growth', '/portfolio'],
+    activePrefixes: ['/growth/portfolio', '/portfolio'],
+  },
+  {
+    id: 'gradebook',
+    label: 'Gradebook',
+    href: '/growth/gradebook',
+    section: 'main',
+    module: 'Records',
+    activePrefixes: ['/growth/gradebook'],
+  },
+  {
+    id: 'badges',
+    label: 'Badges',
+    href: '/growth/badges',
+    section: 'main',
+    module: 'Records',
+    activePrefixes: ['/growth/badges'],
   },
   {
     id: 'reports-records',
@@ -90,7 +106,7 @@ export const NAV_ITEMS: NavItem[] = [
 ]
 
 /** Module config IDs for the module-grouped sidebar (re-homed IA). */
-export type NavModuleId = 'home' | 'planbook' | 'records' | 'people' | 'messages' | 'settings'
+export type NavModuleId = 'home' | 'planbook' | 'records' | 'growth' | 'people' | 'messages' | 'settings'
 
 export type NavModuleConfig = {
   id: NavModuleId
@@ -115,7 +131,14 @@ export const NAV_MODULES: NavModuleConfig[] = [
     id: 'records',
     label: 'Records',
     defaultHref: '/attendance',
-    itemIds: ['attendance', 'grades-progress', 'reports-records', 'compliance'],
+    itemIds: ['attendance', 'reports-records', 'compliance'],
+    section: 'main',
+  },
+  {
+    id: 'growth',
+    label: 'Growth',
+    defaultHref: '/growth/gradebook',
+    itemIds: ['gradebook', 'badges', 'grades-progress'],
     section: 'main',
   },
   { id: 'people', label: 'People', defaultHref: '/people', itemIds: [], section: 'main' },

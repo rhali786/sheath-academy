@@ -18,6 +18,9 @@ import {
   Layers3,
   MessageCircle,
   Inbox,
+  Trophy,
+  GraduationCap,
+  TrendingUp,
 } from 'lucide-react'
 
 export const NAV_ICONS: Record<string, LucideIcon> = {
@@ -27,6 +30,8 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   courses: Layers3,
   attendance: ClipboardCheck,
   'grades-progress': BarChart3,
+  gradebook: GraduationCap,
+  badges: Trophy,
   'reports-records': FileText,
   people: Users,
   resources: FolderOpen,
@@ -50,6 +55,7 @@ export const MODULE_ICONS: Record<string, LucideIcon> = {
   home: Home,
   planbook: BookOpen,
   records: ClipboardCheck,
+  growth: TrendingUp,
   progress: BarChart3,
   people: Users,
   messages: MessageSquare,
