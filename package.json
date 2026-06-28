@@ -1,6 +1,6 @@
 {
   "name": "sheath-academy",
-  "version": "2.70.1",
+  "version": "2.71.0",
   "private": true,
   "engines": {
     "node": ">=22.22.2"
@@ -13,7 +13,7 @@
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:db": "dotenv -e .env.local -- jest --testPathPattern \"__tests__/integration/.*\\.db\\.test\\.(ts|tsx)$\" --forceExit",
+    "test:db": "dotenv -e .env.local -- jest --testPathPattern \"__tests__/integration/.*\\.db\\.test\\.(ts|tsx)$\" --testPathIgnorePatterns \"/node_modules/\" --forceExit",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "smoke": "node scripts/smoke.cjs",

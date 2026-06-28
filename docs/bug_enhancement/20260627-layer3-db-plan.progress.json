@@ -1,0 +1,118 @@
+{
+  "plan": "docs/bug_enhancement/20260627-layer3-db-plan.json",
+  "createdAt": "2026-06-27T00:00:00.000Z",
+  "updatedAt": "2026-06-27T12:00:00.000Z",
+  "branch": "feat/layer3-db",
+  "phases": [
+    {
+      "id": "1-test-db-plumbing",
+      "title": "Fix test:db plumbing so .db.test.ts files actually run",
+      "gated": false,
+      "status": "in_progress",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-27T12:00:00.000Z",
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "2-gradebook-schema",
+      "title": "Gradebook schema — add a single scores table to db/schema.ts, generate + apply migration",
+      "gated": true,
+      "status": "pending",
+      "model": "claude-sonnet-4-6",
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "3-gradebook-repo",
+      "title": "Gradebook repository — implement real listScores(), add createScore(), drop the Attempt type, write .db.test.ts",
+      "gated": false,
+      "status": "pending",
+      "model": "claude-sonnet-4-6",
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "4-compliance-schema",
+      "title": "Compliance schema — add 5 compliance tables to db/schema.ts, generate + apply migration",
+      "gated": true,
+      "status": "pending",
+      "model": "claude-sonnet-4-6",
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "5-compliance-repo",
+      "title": "Compliance repository — implement real getActiveRuleset(), listDeadlines(), listSubmissions(), write .db.test.ts",
+      "gated": false,
+      "status": "pending",
+      "model": "claude-sonnet-4-6",
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "6-badges-schema",
+      "title": "Badges schema — add 5 badge tables to db/schema.ts, generate + apply migration",
+      "gated": true,
+      "status": "pending",
+      "model": "claude-sonnet-4-6",
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "7-badges-repo",
+      "title": "Badges repository — implement all stub functions, add createAward()/addEvidence(), write .db.test.ts",
+      "gated": false,
+      "status": "pending",
+      "model": "claude-sonnet-4-6",
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "8-plan-lesson-steps",
+      "title": "Lesson Planner — lesson_steps schema + migration + repository CRUD + .db.test.ts",
+      "gated": true,
+      "status": "pending",
+      "model": "claude-sonnet-4-6",
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "9-reference-seed",
+      "title": "Reference data seed — compliance_rulesets + starter badge_definitions from JSON research file",
+      "gated": false,
+      "status": "pending",
+      "model": "claude-sonnet-4-6",
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "10-demo-seed-extension",
+      "title": "Demo seed extension — add gradebook, compliance, and badge rows to the demo households",
+      "gated": false,
+      "status": "pending",
+      "model": "claude-sonnet-4-6",
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    }
+  ]
+}
