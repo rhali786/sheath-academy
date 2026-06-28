@@ -1,7 +1,7 @@
 {
   "plan": "docs/bug_enhancement/20260627-layer3-db-plan.json",
   "createdAt": "2026-06-27T00:00:00.000Z",
-  "updatedAt": "2026-06-27T12:05:00.000Z",
+  "updatedAt": "2026-06-28T00:30:00.000Z",
   "branch": "feat/layer3-db",
   "phases": [
     {
@@ -73,22 +73,43 @@
       "id": "4-compliance-schema",
       "title": "Compliance schema — add 5 compliance tables to db/schema.ts, generate + apply migration",
       "gated": true,
-      "status": "pending",
+      "status": "complete",
       "model": "claude-sonnet-4-6",
-      "startedAt": null,
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "startedAt": "2026-06-28T00:00:00.000Z",
+      "completedAt": "2026-06-28T00:30:00.000Z",
+      "outputs": {
+        "filesChanged": ["db/schema.ts", "db/migrations/0028_slim_emma_frost.sql"],
+        "testsRun": [
+          "npx tsc --noEmit: pre-existing test file errors only (run-classify.test.ts, drizzleAdapter.test.ts, feedback/repository.test.ts) — no errors from schema.ts or new compliance tables",
+          "npm run db:generate: produced db/migrations/0028_slim_emma_frost.sql — 5 compliance tables + schoolYears composite UNIQUE",
+          "npm run db:generate (second run): No schema changes, nothing to migrate — drift check passed",
+          "npm run db:migrate: applied successfully — truncation NOTICE for long FK name (household_compliance_config_active_ruleset_id_compliance_rulesets_id_fk) is a cosmetic warning, not an error",
+          "npm run build: passed (exit code 0)"
+        ],
+        "notes": "Migration file: 0028_slim_emma_frost.sql. Five tables added to db/schema.ts after the scores block: complianceRulesets (no householdId — platform-wide), householdComplianceConfig (householdId PK → households.id, activeRulesetId → complianceRulesets.id), complianceOverrides, complianceDeadlines, complianceSubmissions. The three household+schoolYear tables use composite (schoolYearId, householdId) FKs → schoolYears(id, household_id), which gained a composite UNIQUE(id, household_id) via the same migration. Migration SQL was reordered (same fix as phase 2): the schoolYears UNIQUE ALTER TABLE statement was moved BEFORE the FK constraint statements that reference it (drizzle-kit generates FK-first, but Postgres requires the referenced UNIQUE to exist first). Phase 5 depends on all five compliance tables existing."
+      },
       "failureReason": null
     },
     {
       "id": "5-compliance-repo",
       "title": "Compliance repository — implement real getActiveRuleset(), listDeadlines(), listSubmissions(), write .db.test.ts",
       "gated": false,
-      "status": "pending",
+      "status": "complete",
       "model": "claude-sonnet-4-6",
-      "startedAt": null,
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "startedAt": "2026-06-28T01:00:00.000Z",
+      "completedAt": "2026-06-28T01:30:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/compliance/server/repository.ts",
+          "features/compliance/__tests__/integration/repository.db.test.ts"
+        ],
+        "testsRun": [
+          "npm run test:db -- --testPathPattern compliance.*repository.db: PASS — 5 tests green in features/compliance/__tests__/integration/repository.db.test.ts (12 total across 3 suites including tenant + gradebook)",
+          "npm test: 1033 passed, 2 pre-existing failures in run-classify.test.ts (unrelated — same as all prior phases)",
+          "npm run build: passed"
+        ],
+        "notes": "Implemented real getActiveRuleset() using innerJoin(householdComplianceConfig, ...) filtering by householdId; returns ComplianceRuleset or null. Implemented real listDeadlines() and listSubmissions() querying by (householdId, schoolYearId). Updated getComplianceStatusInput() to call real getActiveRuleset() and query complianceOverrides for the school year (replaces ruleset:null, overrides:[] stubs). Added new exported functions: createDeadline, markDeadlineComplete, createSubmission, updateSubmissionStatus, setHouseholdComplianceConfig. Drizzle numeric columns returned as strings — converted via Number(); timestamp columns returned as Date — converted via .toISOString(). The 5 test cases cover: null-config path, populated-config path, household isolation for listDeadlines, listSubmissions returns rows, and createDeadline+markDeadlineComplete round-trip."
+      },
       "failureReason": null
     },
     {
