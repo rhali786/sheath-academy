@@ -174,9 +174,9 @@ export interface GradingMark {
   comment?: string
 }
 
-/** Ingests evidence-rich marks + work samples into Attempt/Score. */
+/** Ingests evidence-rich marks + work samples into Score. */
 export interface GradingSource {
-  ingestMark(record: StudentRecordKey, mark: GradingMark): Promise<{ attemptId: string; scoreId: string }>
+  ingestMark(record: StudentRecordKey, mark: GradingMark): Promise<{ scoreId: string }>
 }
 
 /** Attendance rollup used by the combined PDF bundle + credits-from-hours. */

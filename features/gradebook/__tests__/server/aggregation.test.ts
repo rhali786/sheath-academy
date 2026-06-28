@@ -9,7 +9,6 @@ import type { Score, SubjectGradingConfig } from '@/features/gradebook/types'
 function score(numericValue: number | null, state: Score['state'] = 'graded', occurredAt = '2026-01-01'): Score {
   return {
     id: `s_${Math.random()}`,
-    attemptId: 'a1',
     subjectId: 'sub1',
     learnerId: 'l1',
     householdId: 'hh1',

@@ -5,7 +5,6 @@ export type GradeBand = 'g1_4' | 'g5_8' | 'g9_12'
 
 export interface Score {
   id: string
-  attemptId: string
   subjectId: string
   learnerId: string
   householdId: string
@@ -47,18 +46,6 @@ export interface MasteryStatus {
   score: number | null
   strategy: MasteryStrategyType
   needsReview: boolean
-}
-
-// ─── Attempt ──────────────────────────────────────────────────────────────────
-
-export interface Attempt {
-  id: string
-  learnerId: string
-  subjectId: string | null
-  householdId: string
-  lessonTaskId?: string | null
-  scores: Score[]
-  occurredAt: string
 }
 
 // ─── Gradebook API types ───────────────────────────────────────────────────────

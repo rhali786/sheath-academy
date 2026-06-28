@@ -1,9 +1,22 @@
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
-import { learners, subjects } from '@/db/schema'
+import { learners, subjects, scores } from '@/db/schema'
 import { computeSubjectGrade, computeGpa } from './aggregation'
-import type { GradebookSummary, Score, SubjectGradingConfig, NeedsAttentionItem } from '@/features/gradebook/types'
+import type { GradebookSummary, Score, SubjectGradingConfig, ScoreState, ScoreSource } from '@/features/gradebook/types'
 import type { GradeBand } from '@/features/gradebook/types'
+
+export type ScoreRow = typeof scores.$inferSelect
+
+export interface CreateScoreInput {
+  learnerId: string
+  subjectId?: string
+  lessonTaskId?: string
+  state: ScoreState
+  numericValue: number | null
+  source: ScoreSource
+  occurredAt: string
+  comment?: string
+}
 
 function normalizeGradeBand(gradeLevel: string | null): GradeBand {
   if (!gradeLevel) return 'g5_8'
@@ -18,34 +31,109 @@ function normalizeGradeBand(gradeLevel: string | null): GradeBand {
   return 'g9_12'
 }
 
+/** Map a ScoreRow (from Drizzle) to the Score domain interface. */
+function rowToScore(row: ScoreRow): Score {
+  return {
+    id: row.id,
+    subjectId: row.subjectId ?? '',
+    learnerId: row.learnerId,
+    householdId: row.householdId,
+    state: row.state as ScoreState,
+    // Drizzle returns numeric columns as strings — convert to number or null
+    numericValue: row.numericValue !== null ? parseFloat(row.numericValue) : null,
+    source: row.source as ScoreSource,
+    // Drizzle returns timestamp columns as Date objects
+    occurredAt: row.occurredAt instanceof Date ? row.occurredAt.toISOString() : String(row.occurredAt),
+    comment: row.comment ?? undefined,
+  }
+}
+
+/**
+ * Insert a single score row and return it as a ScoreRow.
+ */
+export async function createScore(householdId: string, input: CreateScoreInput): Promise<ScoreRow> {
+  const db = getDb()
+  const now = new Date()
+  const id = `score_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+
+  const [row] = await db
+    .insert(scores)
+    .values({
+      id,
+      householdId,
+      learnerId: input.learnerId,
+      subjectId: input.subjectId ?? null,
+      lessonTaskId: input.lessonTaskId ?? null,
+      state: input.state,
+      numericValue: input.numericValue !== null ? String(input.numericValue) : null,
+      source: input.source,
+      occurredAt: new Date(input.occurredAt),
+      comment: input.comment ?? null,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning()
+
+  return row
+}
+
+/**
+ * Returns scores for a specific learner + subject.
+ */
+export async function listScores(
+  householdId: string,
+  learnerId: string,
+  subjectId: string,
+): Promise<Score[]> {
+  const db = getDb()
+  const rows = await db
+    .select()
+    .from(scores)
+    .where(
+      and(
+        eq(scores.householdId, householdId),
+        eq(scores.learnerId, learnerId),
+        eq(scores.subjectId, subjectId),
+      ),
+    )
+  return rows.map(rowToScore)
+}
+
 /**
  * Returns GradebookSummary for every active learner in the household.
- * In Layer 2, scores are empty (scores table created in Layer 3); the
- * aggregation module returns null averages/GPA for learners with no scores.
+ * Fetches all scores for the household in one query, then groups by learner+subject.
  */
 export async function listGradebookSummaries(householdId: string): Promise<GradebookSummary[]> {
   const db = getDb()
 
-  const learnerRows = await db
-    .select()
-    .from(learners)
-    .where(eq(learners.householdId, householdId))
+  const [learnerRows, subjectRows, allScoreRows] = await Promise.all([
+    db.select().from(learners).where(eq(learners.householdId, householdId)),
+    db.select().from(subjects).where(eq(subjects.householdId, householdId)),
+    db.select().from(scores).where(eq(scores.householdId, householdId)),
+  ])
 
-  const subjectRows = await db
-    .select()
-    .from(subjects)
-    .where(eq(subjects.householdId, householdId))
+  // Build a Map<learnerId, Map<subjectId, Score[]>> for efficient lookup
+  const scoreMap = new Map<string, Map<string, Score[]>>()
+  for (const row of allScoreRows) {
+    const score = rowToScore(row)
+    if (!scoreMap.has(score.learnerId)) {
+      scoreMap.set(score.learnerId, new Map())
+    }
+    const subMap = scoreMap.get(score.learnerId)!
+    const key = score.subjectId || ''
+    if (!subMap.has(key)) subMap.set(key, [])
+    subMap.get(key)!.push(score)
+  }
 
   return learnerRows.map(learner => {
     const learnerSubjects = subjectRows.filter(
       s => s.learnerId === learner.id || s.learnerId === null,
     )
 
-    const scores: Score[] = []
-
-    const subjectResults = learnerSubjects.map(sub =>
-      computeSubjectGrade(sub.id, sub.name, scores),
-    )
+    const subjectResults = learnerSubjects.map(sub => {
+      const subScores = scoreMap.get(learner.id)?.get(sub.id) ?? []
+      return computeSubjectGrade(sub.id, sub.name, subScores)
+    })
 
     const config: SubjectGradingConfig[] = learnerSubjects.map(sub => ({
       subjectId: sub.id,
@@ -73,17 +161,4 @@ export async function listGradebookSummaries(householdId: string): Promise<Grade
       needsAttentionSubjects,
     }
   })
-}
-
-/**
- * Returns scores for a specific learner + subject.
- * Scores table does not exist in Layer 2; returns empty array.
- * Layer 3 swaps this to a real Drizzle query against the scores table.
- */
-export async function listScores(
-  _householdId: string,
-  _learnerId: string,
-  _subjectId: string,
-): Promise<Score[]> {
-  return []
 }

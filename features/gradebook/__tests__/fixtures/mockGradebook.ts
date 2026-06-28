@@ -1,10 +1,9 @@
-import type { Score, SubjectGradeResult, GradebookSummary, Attempt, NeedsAttentionItem } from '@/features/gradebook/types'
+import type { Score, SubjectGradeResult, GradebookSummary, NeedsAttentionItem } from '@/features/gradebook/types'
 import { SEED_IDS, DEV_PG_SEED } from '@/features/lib/seedIds'
 
 export const mockScores: Score[] = [
   {
     id: 'score_fix_001',
-    attemptId: 'attempt_fix_001',
     subjectId: DEV_PG_SEED.subLaythMath,
     learnerId: SEED_IDS.layth,
     householdId: SEED_IDS.household,
@@ -16,7 +15,6 @@ export const mockScores: Score[] = [
   },
   {
     id: 'score_fix_002',
-    attemptId: 'attempt_fix_002',
     subjectId: DEV_PG_SEED.subLaythMath,
     learnerId: SEED_IDS.layth,
     householdId: SEED_IDS.household,
@@ -28,7 +26,6 @@ export const mockScores: Score[] = [
   // missing score — must never count as 0
   {
     id: 'score_fix_003',
-    attemptId: 'attempt_fix_003',
     subjectId: DEV_PG_SEED.subLaythQuran,
     learnerId: SEED_IDS.layth,
     householdId: SEED_IDS.household,
@@ -40,7 +37,6 @@ export const mockScores: Score[] = [
   // excused — must never count as 0
   {
     id: 'score_fix_004',
-    attemptId: 'attempt_fix_004',
     subjectId: DEV_PG_SEED.subLaythArabic,
     learnerId: SEED_IDS.layth,
     householdId: SEED_IDS.household,
@@ -52,32 +48,12 @@ export const mockScores: Score[] = [
   // Hawa — sparse (only one score)
   {
     id: 'score_fix_005',
-    attemptId: 'attempt_fix_005',
     subjectId: DEV_PG_SEED.subHawaMath,
     learnerId: SEED_IDS.hawa,
     householdId: SEED_IDS.household,
     state: 'graded',
     numericValue: 76,
     source: 'parent',
-    occurredAt: '2026-05-08',
-  },
-]
-
-export const mockAttempts: Attempt[] = [
-  {
-    id: 'attempt_fix_001',
-    learnerId: SEED_IDS.layth,
-    subjectId: DEV_PG_SEED.subLaythMath,
-    householdId: SEED_IDS.household,
-    scores: [mockScores[0], mockScores[1]],
-    occurredAt: '2026-05-01',
-  },
-  {
-    id: 'attempt_fix_005',
-    learnerId: SEED_IDS.hawa,
-    subjectId: DEV_PG_SEED.subHawaMath,
-    householdId: SEED_IDS.household,
-    scores: [mockScores[4]],
     occurredAt: '2026-05-08',
   },
 ]

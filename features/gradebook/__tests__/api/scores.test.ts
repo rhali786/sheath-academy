@@ -17,7 +17,6 @@ const mockList = listScores as jest.Mock
 function makeScore(id = 'score_1') {
   return {
     id,
-    attemptId: 'attempt_1',
     subjectId: 'sub_1',
     learnerId: 'l1',
     householdId: 'hh_test',
