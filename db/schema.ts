@@ -412,6 +412,8 @@ export const portfolioEvidence = pgTable(
     index('portfolio_evidence_household_subject_idx').on(t.householdId, t.subjectId),
     // Admin aggregate: scan by date across all households, group by household_id
     index('portfolio_evidence_date_household_idx').on(t.evidenceDate, t.householdId),
+    // Composite UNIQUE so badge_award_evidence can use a composite FK (evidenceId, householdId)
+    unique('portfolio_evidence_id_household_uq').on(t.id, t.householdId),
   ],
 )
 
@@ -563,6 +565,131 @@ export const complianceSubmissions = pgTable(
       columns: [t.schoolYearId, t.householdId],
       foreignColumns: [schoolYears.id, schoolYears.householdId],
       name: 'compliance_submissions_school_year_household_fk',
+    }),
+  ],
+)
+
+// ─── Badges ──────────────────────────────────────────────────────────────────
+// badge_definitions: template rows (householdId null = platform starter badges)
+// badge_awards: learner's in-progress or earned badges
+// badge_award_evidence: portfolio evidence linked to an award (onDelete cascade on FK)
+// badge_settings: household preference for platform-wide starter badges
+// autonomy_unlocks: privileges granted to a learner after earning a badge
+//
+// badge_awards uses composite (learnerId, householdId) FK → learners.
+// badge_award_evidence uses composite FKs to both badge_awards (id, householdId)
+//   and portfolioEvidence (id, householdId) — portfolioEvidence gained a composite
+//   UNIQUE(id, householdId) in this same migration.
+// badgeId (badge_awards.badgeId, autonomy_unlocks.badgeId) is intentionally a
+// SIMPLE FK — badge_definitions.householdId is nullable (null = platform starter),
+// so a composite FK targeting (id, householdId) would be impossible. Tenant
+// integrity for badgeId is enforced at the repository layer instead.
+
+export const badgeDefinitions = pgTable(
+  'badge_definitions',
+  {
+    id: text('id').primaryKey(),
+    // null = platform starter badge (visible to all households)
+    householdId: text('household_id').references(() => households.id),
+    title: text('title').notNull(),
+    description: text('description').notNull(),
+    criteria: text('criteria').notNull(),
+    emblemKey: text('emblem_key').notNull(),
+    gradeBands: jsonb('grade_bands').notNull().default([]),
+    verificationRequirement: text('verification_requirement').notNull().default('none'), // none|parent|external
+    isStarter: boolean('is_starter').notNull().default(false),
+    enabled: boolean('enabled').notNull().default(true),
+    visibility: text('visibility').notNull().default('household'), // household|platform
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('badge_definitions_household_idx').on(t.householdId),
+  ],
+)
+
+export const badgeAwards = pgTable(
+  'badge_awards',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    learnerId: text('learner_id').notNull(),
+    // badgeId is intentionally a SIMPLE FK — badge_definitions.householdId is nullable
+    // (null = platform starter badge); a composite FK would be impossible. Tenant
+    // integrity for badgeId is enforced at the repository layer.
+    badgeId: text('badge_id').notNull().references(() => badgeDefinitions.id),
+    status: text('status').notNull().default('draft'), // draft|submitted|verified
+    submittedAt: timestamp('submitted_at'),
+    verifiedAt: timestamp('verified_at'),
+    approvedAt: timestamp('approved_at'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('badge_awards_household_learner_idx').on(t.householdId, t.learnerId),
+    index('badge_awards_badge_idx').on(t.badgeId),
+    // Composite UNIQUE so badge_award_evidence can use a composite FK (badgeAwardId, householdId)
+    unique('badge_awards_id_household_uq').on(t.id, t.householdId),
+    // Composite FK — enforce cross-tenant integrity at the DB level
+    foreignKey({
+      columns: [t.learnerId, t.householdId],
+      foreignColumns: [learners.id, learners.householdId],
+      name: 'badge_awards_learner_household_fk',
+    }),
+  ],
+)
+
+export const badgeAwardEvidence = pgTable(
+  'badge_award_evidence',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    badgeAwardId: text('badge_award_id').notNull(),
+    evidenceId: text('evidence_id').notNull(),
+    addedAt: timestamp('added_at').notNull(),
+  },
+  (t) => [
+    index('badge_award_evidence_award_idx').on(t.badgeAwardId),
+    // Composite FKs — enforce cross-tenant integrity at the DB level
+    foreignKey({
+      columns: [t.badgeAwardId, t.householdId],
+      foreignColumns: [badgeAwards.id, badgeAwards.householdId],
+      name: 'badge_award_evidence_award_household_fk',
+    }),
+    foreignKey({
+      columns: [t.evidenceId, t.householdId],
+      foreignColumns: [portfolioEvidence.id, portfolioEvidence.householdId],
+      name: 'badge_award_evidence_evidence_household_fk',
+    }),
+  ],
+)
+
+export const badgeSettings = pgTable('badge_settings', {
+  householdId: text('household_id').primaryKey().references(() => households.id, { onDelete: 'cascade' }),
+  platformBadgesEnabled: boolean('platform_badges_enabled').notNull().default(true),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull(),
+})
+
+export const autonomyUnlocks = pgTable(
+  'autonomy_unlocks',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    learnerId: text('learner_id').notNull(),
+    // badgeId is intentionally a SIMPLE FK — see badge_awards.badgeId comment above
+    badgeId: text('badge_id').notNull().references(() => badgeDefinitions.id),
+    unlockedAt: timestamp('unlocked_at').notNull(),
+    grantedBy: text('granted_by').notNull(),
+    createdAt: timestamp('created_at').notNull(),
+  },
+  (t) => [
+    index('autonomy_unlocks_household_learner_idx').on(t.householdId, t.learnerId),
+    // Composite FK — enforce cross-tenant integrity at the DB level
+    foreignKey({
+      columns: [t.learnerId, t.householdId],
+      foreignColumns: [learners.id, learners.householdId],
+      name: 'autonomy_unlocks_learner_household_fk',
     }),
   ],
 )
