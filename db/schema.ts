@@ -173,7 +173,11 @@ export const schoolYears = pgTable(
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),
   },
-  (t) => [index('school_years_household_active_idx').on(t.householdId, t.isActive)],
+  (t) => [
+    index('school_years_household_active_idx').on(t.householdId, t.isActive),
+    // Composite UNIQUE so compliance tables can use a composite FK (schoolYearId, householdId)
+    unique('school_years_id_household_uq').on(t.id, t.householdId),
+  ],
 )
 
 // ─── Subjects ─────────────────────────────────────────────────────────────────
@@ -453,6 +457,112 @@ export const scores = pgTable(
       columns: [t.lessonTaskId, t.householdId],
       foreignColumns: [lessonTasks.id, lessonTasks.householdId],
       name: 'scores_lesson_task_household_fk',
+    }),
+  ],
+)
+
+// ─── Compliance ───────────────────────────────────────────────────────────────
+// compliance_rulesets: platform-wide reference rows (no householdId — seeded from docs/compliance-research/)
+// household_compliance_config: one row per household pointing at the active ruleset
+// compliance_overrides: household-specific overrides per school year
+// compliance_deadlines: household-specific deadline rows per school year
+// compliance_submissions: annual filing/submission records per school year
+//
+// compliance_overrides, compliance_deadlines, and compliance_submissions use composite
+// (schoolYearId, householdId) FKs → schoolYears, which has a composite UNIQUE(id, householdId).
+
+export const complianceRulesets = pgTable(
+  'compliance_rulesets',
+  {
+    id: text('id').primaryKey(),
+    state: text('state').notNull(),
+    pathwayKey: text('pathway_key').notNull(),
+    requirementType: text('requirement_type').notNull(),
+    value: numeric('value', { precision: 8, scale: 2 }),
+    unit: text('unit').notNull().default('days'),
+    sourceUrl: text('source_url'),
+    lastVerifiedAt: timestamp('last_verified_at'),
+    isVerified: boolean('is_verified').notNull().default(false),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('compliance_rulesets_state_pathway_idx').on(t.state, t.pathwayKey),
+  ],
+)
+
+export const householdComplianceConfig = pgTable('household_compliance_config', {
+  householdId: text('household_id').primaryKey().references(() => households.id),
+  activeRulesetId: text('active_ruleset_id').references(() => complianceRulesets.id),
+  pathwayKey: text('pathway_key'),
+  updatedAt: timestamp('updated_at').notNull(),
+})
+
+export const complianceOverrides = pgTable(
+  'compliance_overrides',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    schoolYearId: text('school_year_id').notNull(),
+    requirementType: text('requirement_type').notNull(),
+    overrideValue: numeric('override_value', { precision: 8, scale: 2 }).notNull(),
+    reason: text('reason'),
+    appliedAt: timestamp('applied_at').notNull(),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('compliance_overrides_household_year_idx').on(t.householdId, t.schoolYearId),
+    foreignKey({
+      columns: [t.schoolYearId, t.householdId],
+      foreignColumns: [schoolYears.id, schoolYears.householdId],
+      name: 'compliance_overrides_school_year_household_fk',
+    }),
+  ],
+)
+
+export const complianceDeadlines = pgTable(
+  'compliance_deadlines',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    schoolYearId: text('school_year_id').notNull(),
+    label: text('label').notNull(),
+    dueDate: date('due_date').notNull(),
+    isCompleted: boolean('is_completed').notNull().default(false),
+    requirementType: text('requirement_type').notNull(),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('compliance_deadlines_household_year_idx').on(t.householdId, t.schoolYearId),
+    foreignKey({
+      columns: [t.schoolYearId, t.householdId],
+      foreignColumns: [schoolYears.id, schoolYears.householdId],
+      name: 'compliance_deadlines_school_year_household_fk',
+    }),
+  ],
+)
+
+export const complianceSubmissions = pgTable(
+  'compliance_submissions',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    schoolYearId: text('school_year_id').notNull(),
+    status: text('status').notNull().default('drafted'), // drafted|sent|accepted
+    submittedAt: timestamp('submitted_at'),
+    acceptedAt: timestamp('accepted_at'),
+    snapshotJson: jsonb('snapshot_json'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('compliance_submissions_household_year_idx').on(t.householdId, t.schoolYearId),
+    foreignKey({
+      columns: [t.schoolYearId, t.householdId],
+      foreignColumns: [schoolYears.id, schoolYears.householdId],
+      name: 'compliance_submissions_school_year_household_fk',
     }),
   ],
 )
