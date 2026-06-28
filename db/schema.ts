@@ -694,6 +694,36 @@ export const autonomyUnlocks = pgTable(
   ],
 )
 
+// ─── Lesson Steps ─────────────────────────────────────────────────────────────
+//
+// lesson_steps: ordered sub-steps within a lesson task.
+//
+// Deliberately has NO householdId column — this is a leaf table reached only
+// through its parent lessonTask, which is tenant-scoped. The simple
+// lessonTaskId → lesson_tasks.id FK with onDelete:'cascade' is correct; tenant
+// isolation is inherited via the parent task. Repository functions scope reads
+// and writes by lessonTaskId (updateLessonStep/deleteLessonStep guard on
+// id AND lessonTaskId) — no composite FK needed.
+
+export const lessonSteps = pgTable(
+  'lesson_steps',
+  {
+    id: text('id').primaryKey(),
+    lessonTaskId: text('lesson_task_id')
+      .notNull()
+      .references(() => lessonTasks.id, { onDelete: 'cascade' }),
+    order: integer('order').notNull().default(0),
+    stepText: text('step_text').notNull(),
+    // values: instruction | reading | practice | discussion | assessment
+    type: text('type').notNull().default('instruction'),
+    doneCriteria: text('done_criteria'),
+    quantity: integer('quantity'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [index('lesson_steps_lesson_task_idx').on(t.lessonTaskId)],
+)
+
 // ─── User Settings ────────────────────────────────────────────────────────────
 
 export const userSettings = pgTable(
