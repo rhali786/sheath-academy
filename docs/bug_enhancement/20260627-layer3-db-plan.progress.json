@@ -159,11 +159,25 @@
       "id": "8-plan-lesson-steps",
       "title": "Lesson Planner — lesson_steps schema + migration + repository CRUD + .db.test.ts",
       "gated": false,
-      "status": "in_progress",
+      "status": "complete",
       "model": "claude-sonnet-4-6",
       "startedAt": "2026-06-28T04:00:00.000Z",
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "completedAt": "2026-06-28T04:30:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "db/schema.ts",
+          "db/migrations/0030_fat_carmella_unuscione.sql",
+          "features/plan/server/repository.ts",
+          "features/plan/__tests__/integration/lesson-steps.db.test.ts"
+        ],
+        "testsRun": [
+          "npm run test:db -- --testPathPattern lesson-steps.db: PASS — 4 new tests green (22 total across 5 suites)",
+          "npm test: 1033 passed, 2 pre-existing failures in run-classify.test.ts (unrelated)",
+          "npm run build: Compiled successfully in 4.5s",
+          "npm run db:generate (2nd run): No schema changes, nothing to migrate — drift check passed"
+        ],
+        "notes": "Migration file: 0030_fat_carmella_unuscione.sql. lesson_steps table created with simple lessonTaskId FK (onDelete: cascade) — no householdId, no composite FK (deliberate leaf-table design, tenant isolation inherited via parent lessonTask). Repository functions added: listLessonSteps, createLessonStep, updateLessonStep, deleteLessonStep. updateLessonStep and deleteLessonStep guard on both id AND lessonTaskId to prevent cross-task mutation. Initial test failure was due to missing @jest-environment node directive; fixed by adding it plus proper fixture setup (users→households→learners→lessonTasks chain for FK integrity)."
+      },
       "failureReason": null
     },
     {
