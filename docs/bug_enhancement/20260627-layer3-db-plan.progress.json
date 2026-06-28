@@ -1,29 +1,45 @@
 {
   "plan": "docs/bug_enhancement/20260627-layer3-db-plan.json",
   "createdAt": "2026-06-27T00:00:00.000Z",
-  "updatedAt": "2026-06-27T12:00:00.000Z",
+  "updatedAt": "2026-06-27T12:05:00.000Z",
   "branch": "feat/layer3-db",
   "phases": [
     {
       "id": "1-test-db-plumbing",
       "title": "Fix test:db plumbing so .db.test.ts files actually run",
       "gated": false,
-      "status": "in_progress",
+      "status": "complete",
       "model": "claude-sonnet-4-6",
       "startedAt": "2026-06-27T12:00:00.000Z",
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "completedAt": "2026-06-27T12:05:00.000Z",
+      "outputs": {
+        "filesChanged": ["package.json"],
+        "testsRun": [
+          "npm run test:db -- --passWithNoTests=false: PASS — found features/lib/__tests__/integration/tenant.db.test.ts, 3 tests passed (resolveTenant + household repository real DB integration)",
+          "npm test: 1033 passed, 2 failed (pre-existing failures in scripts/feedback-steward/__tests__/run-classify.test.ts unrelated to this change — verified by stashing change and confirming same failure count before)"
+        ],
+        "notes": "Added --testPathIgnorePatterns \"/node_modules/\" to the test:db script in package.json. This overrides jest.config.js testPathIgnorePatterns (which contained '/__tests__/integration/' and silently excluded all .db.test.ts files). After the fix, test:db finds and runs features/lib/__tests__/integration/tenant.db.test.ts successfully — all 3 tests passed against the real DB (DATABASE_URL was set in .env.local). The 2 failures in npm test are pre-existing in run-classify.test.ts and unrelated to this change."
+      },
       "failureReason": null
     },
     {
       "id": "2-gradebook-schema",
       "title": "Gradebook schema — add a single scores table to db/schema.ts, generate + apply migration",
       "gated": true,
-      "status": "pending",
+      "status": "complete",
       "model": "claude-sonnet-4-6",
-      "startedAt": null,
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "startedAt": "2026-06-27T13:00:00.000Z",
+      "completedAt": "2026-06-27T13:30:00.000Z",
+      "outputs": {
+        "filesChanged": ["db/schema.ts", "db/migrations/0027_sticky_swarm.sql"],
+        "testsRun": [
+          "npx tsc --noEmit: pre-existing test file errors only (not from schema.ts) — schema compiles correctly",
+          "npm run db:generate: produced db/migrations/0027_sticky_swarm.sql — scores table, 5 subjects columns, 3 composite UNIQUEs",
+          "npm run db:migrate: applied successfully after reordering SQL to add UNIQUE constraints before composite FK constraints",
+          "npm run build: passed"
+        ],
+        "notes": "Migration file: 0027_sticky_swarm.sql. The scores table was created with composite (learnerId, householdId) FK → learners, (subjectId, householdId) FK → subjects, (lessonTaskId, householdId) FK → lesson_tasks. No attempts table. subjects table now has gradingScaleId, aggregationRuleId, isFormalCourse, creditHours, termModel columns. learners/subjects/lesson_tasks each gained a composite UNIQUE(id, household_id). The SQL was reordered to place UNIQUE constraint additions before FK additions — drizzle-kit generated them in FK-first order which would fail in Postgres (FK must reference a PK or UNIQUE that already exists)."
+      },
       "failureReason": null
     },
     {

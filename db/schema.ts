@@ -11,6 +11,7 @@ import {
   numeric,
   primaryKey,
   customType,
+  foreignKey,
 } from 'drizzle-orm/pg-core'
 
 // Drizzle pg-core has no native bytea — define it via customType.
@@ -146,7 +147,10 @@ export const learners = pgTable(
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),
   },
-  (t) => [index('learners_household_active_idx').on(t.householdId, t.isActive)],
+  (t) => [
+    index('learners_household_active_idx').on(t.householdId, t.isActive),
+    unique('learners_id_household_uq').on(t.id, t.householdId),
+  ],
 )
 
 // ─── School Years ─────────────────────────────────────────────────────────────
@@ -187,12 +191,19 @@ export const subjects = pgTable(
     color: text('color'),
     sortOrder: integer('sort_order').notNull().default(0),
     isActive: boolean('is_active').notNull().default(true),
+    // Gradebook extension columns (Layer 3 — no FK in v1; grading_scales is out of scope)
+    gradingScaleId: text('grading_scale_id'),
+    aggregationRuleId: text('aggregation_rule_id'),
+    isFormalCourse: boolean('is_formal_course').notNull().default(false),
+    creditHours: numeric('credit_hours', { precision: 4, scale: 2 }),
+    termModel: text('term_model'),
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),
   },
   (t) => [
     index('subjects_household_active_idx').on(t.householdId, t.isActive),
     index('subjects_household_school_year_idx').on(t.householdId, t.schoolYearId),
+    unique('subjects_id_household_uq').on(t.id, t.householdId),
   ],
 )
 
@@ -270,6 +281,8 @@ export const lessonTasks = pgTable(
     index('lesson_tasks_household_status_idx').on(t.householdId, t.status),
     // Admin aggregate: scan by date across all households, group by household_id
     index('lesson_tasks_due_household_idx').on(t.dueDate, t.householdId),
+    // Composite unique so scores can use a composite FK (lessonTaskId, householdId) → (id, householdId)
+    unique('lesson_tasks_id_household_uq').on(t.id, t.householdId),
   ],
 )
 
@@ -395,6 +408,52 @@ export const portfolioEvidence = pgTable(
     index('portfolio_evidence_household_subject_idx').on(t.householdId, t.subjectId),
     // Admin aggregate: scan by date across all households, group by household_id
     index('portfolio_evidence_date_household_idx').on(t.evidenceDate, t.householdId),
+  ],
+)
+
+// ─── Scores (Gradebook) ───────────────────────────────────────────────────────
+// One row = one graded data point. No separate attempts table (YAGNI — the
+// aggregation layer in features/gradebook/server/aggregation.ts operates on a
+// flat Score[] and never groups by attempt).
+// Composite (learnerId, householdId) and (subjectId, householdId) FKs replace
+// the plain .references() so a score can never point at a parent row in a
+// different household. lessonTaskId uses the same pattern (nullable → MATCH SIMPLE).
+
+export const scores = pgTable(
+  'scores',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    learnerId: text('learner_id').notNull(),
+    subjectId: text('subject_id'),
+    lessonTaskId: text('lesson_task_id'),
+    state: text('state').notNull().default('not_graded'), // graded|not_graded|missing|excused|complete
+    numericValue: numeric('numeric_value', { precision: 5, scale: 2 }),
+    source: text('source').notNull().default('parent'), // auto|parent|publisher|outside|ai
+    occurredAt: timestamp('occurred_at').notNull(),
+    comment: text('comment'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('scores_household_learner_subject_idx').on(t.householdId, t.learnerId, t.subjectId),
+    index('scores_lesson_task_idx').on(t.lessonTaskId),
+    // Composite FKs — enforce cross-tenant integrity at the DB level
+    foreignKey({
+      columns: [t.learnerId, t.householdId],
+      foreignColumns: [learners.id, learners.householdId],
+      name: 'scores_learner_household_fk',
+    }),
+    foreignKey({
+      columns: [t.subjectId, t.householdId],
+      foreignColumns: [subjects.id, subjects.householdId],
+      name: 'scores_subject_household_fk',
+    }),
+    foreignKey({
+      columns: [t.lessonTaskId, t.householdId],
+      foreignColumns: [lessonTasks.id, lessonTasks.householdId],
+      name: 'scores_lesson_task_household_fk',
+    }),
   ],
 )
 
