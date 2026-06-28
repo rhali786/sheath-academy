@@ -46,11 +46,27 @@
       "id": "3-gradebook-repo",
       "title": "Gradebook repository — implement real listScores(), add createScore(), drop the Attempt type, write .db.test.ts",
       "gated": false,
-      "status": "pending",
+      "status": "complete",
       "model": "claude-sonnet-4-6",
-      "startedAt": null,
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "startedAt": "2026-06-27T14:00:00.000Z",
+      "completedAt": "2026-06-27T14:30:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/gradebook/types.ts",
+          "features/lib/types.ts",
+          "features/gradebook/server/repository.ts",
+          "features/gradebook/__tests__/integration/repository.db.test.ts",
+          "features/gradebook/__tests__/fixtures/mockGradebook.ts",
+          "features/gradebook/__tests__/server/aggregation.test.ts",
+          "features/gradebook/__tests__/api/scores.test.ts"
+        ],
+        "testsRun": [
+          "npm run test:db -- --passWithNoTests=false: PASS — 4 new DB tests in repository.db.test.ts all green (7 total suites including existing tenant.db.test.ts)",
+          "npm test: 1033 passed, 2 pre-existing failures in run-classify.test.ts (unrelated, same as phase 1)",
+          "npm run build: passed"
+        ],
+        "notes": "Removed Score.attemptId field and the Attempt interface from gradebook/types.ts. Updated GradingSource.ingestMark return type in lib/types.ts to drop attemptId. Implemented createScore() inserting into the scores table, real listScores() querying by (householdId, learnerId, subjectId). Updated listGradebookSummaries() to fetch all household scores in one query and group into Map<learnerId, Map<subjectId, Score[]>> before aggregating. Drizzle numeric columns return strings — converted to number via parseFloat(); timestamp columns return Date — converted to ISO string via .toISOString(). Updated all fixtures and unit tests to remove attemptId. Exported functions: createScore(householdId, input): Promise<ScoreRow>; listScores(householdId, learnerId, subjectId): Promise<Score[]>; listGradebookSummaries(householdId): Promise<GradebookSummary[]>. Also exported ScoreRow type and CreateScoreInput interface."
+      },
       "failureReason": null
     },
     {
