@@ -1,0 +1,377 @@
+{
+  "title": "Layer 3 — DB (Gradebook, Compliance, Badges, Lesson Planner)",
+  "source": "docs/bug_enhancement/20260627-four-features-ui-api-db-plan.md",
+  "branch": "feat/layer3-db",
+  "phases": [
+    {
+      "id": "1-test-db-plumbing",
+      "title": "Fix test:db plumbing so .db.test.ts files actually run",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [],
+      "fileScope": [
+        "package.json"
+      ],
+      "testsFirst": [
+        "RUN before fixing: npx jest --testPathPattern \"__tests__/integration/.*\\.db\\.test\\.(ts|tsx)$\" --forceExit --passWithNoTests=false 2>&1 | tail -5 — expect 0 test suites found (confirms the bug)",
+        "After fix, RUN: npm run test:db -- --passWithNoTests=false 2>&1 | tail -10 — expect at least 1 suite found (features/lib/__tests__/integration/tenant.db.test.ts)"
+      ],
+      "implementationSteps": [
+        "In package.json, update the 'test:db' script from: \"dotenv -e .env.local -- jest --testPathPattern \\\"__tests__/integration/.*\\\\.db\\\\.test\\\\.(ts|tsx)$\\\" --forceExit\" to: \"dotenv -e .env.local -- jest --testPathPattern \\\"__tests__/integration/.*\\\\.db\\\\.test\\\\.(ts|tsx)$\\\" --testPathIgnorePatterns \\\"/node_modules/\\\" --forceExit\" — the added --testPathIgnorePatterns flag replaces jest.config.js testPathIgnorePatterns (which contains '/__tests__/integration/' and silently excludes all .db.test.ts files before --testPathPattern can match them)"
+      ],
+      "doneWhen": [
+        "RUN: npm run test:db -- --passWithNoTests=false (must exit 0 and show >=1 test suite found, not 'No tests found')",
+        "RUN: npm test (must still pass — the main suite must be unaffected by this change)"
+      ],
+      "invariants": [],
+      "writeBack": "Confirmed test:db now finds features/lib/__tests__/integration/tenant.db.test.ts. Record whether it passed or errored (a real DB error is expected in CI without DATABASE_URL — that's fine; 'No tests found' is the bug we fixed)."
+    },
+    {
+      "id": "2-gradebook-schema",
+      "title": "Gradebook schema — add a single scores table to db/schema.ts, generate + apply migration",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": [
+        "Phase 1 complete — test:db plumbing is fixed",
+        "MANDATORY: Confirm DATABASE_URL in .env.local does NOT point at the production database before running db:generate or db:migrate. If you cannot confirm this, stop and report — do not run migrations."
+      ],
+      "fileScope": [
+        "db/schema.ts",
+        "db/migrations"
+      ],
+      "testsFirst": [
+        "No separate test file for schema shape — the .db.test.ts in phase 3 exercises the tables. Confirm schema.ts compiles: RUN: npx tsc --noEmit (must pass before opening a migration)"
+      ],
+      "implementationSteps": [
+        "DECISION (2026-06-27): The original plan had two tables (attempts + scores) in a 1→many relationship. This was collapsed to a SINGLE 'scores' table. Rationale verified against code: features/gradebook/server/aggregation.ts (computeSubjectGrade, masteryStatus, decayStatus) operates on a FLAT Score[] and never groups by attempt; the Attempt.scores grouping in types.ts is never exercised. The separate attempts table only duplicated householdId/learnerId/subjectId/occurredAt onto scores with no consumer. One graded data point = one scores row. If a real rubric feature (multiple scored dimensions per assessment event) ever lands, reintroduce attempts as an additive migration then — do not pre-build it (YAGNI).",
+        "In db/schema.ts, after the portfolioEvidence table block, add ONE table:",
+        "Table 'scores': id text PK, householdId text notNull references households.id, learnerId text notNull references learners.id, subjectId text nullable references subjects.id, lessonTaskId text nullable references lessonTasks.id, state text notNull default 'not_graded' (values: graded|not_graded|missing|excused|complete), numericValue numeric nullable (precision 5 scale 2), source text notNull default 'parent' (values: auto|parent|publisher|outside|ai), occurredAt timestamp notNull, comment text nullable, createdAt timestamp notNull, updatedAt timestamp notNull. Indexes: index('scores_household_learner_subject_idx').on(householdId, learnerId, subjectId), index('scores_lesson_task_idx').on(lessonTaskId). NOTE: no attemptId column and no attempts table — they were removed per the DECISION above.",
+        "Also add nullable columns to the existing 'subjects' table (ALTER equivalent — add fields at the end of the subjects pgTable definition): gradingScaleId text nullable (no FK in v1 — grading_scales table is out of scope for Layer 3 MVP), aggregationRuleId text nullable (same), isFormalCourse boolean notNull default false, creditHours numeric nullable (precision 4 scale 2), termModel text nullable. All nullable or have defaults — no backfill needed.",
+        "COMPOSITE FK PREP (parent tables): the scores table will reference learners, subjects, and lessonTasks via composite (id, householdId) foreign keys so a score can never point at a parent in a different household. A composite FK must target a PK or UNIQUE constraint, so first add a composite UNIQUE to each of those three EXISTING tables: in each table's (t) => [...] array add unique('learners_id_household_uq').on(t.id, t.householdId) / unique('subjects_id_household_uq').on(t.id, t.householdId) / unique('lesson_tasks_id_household_uq').on(t.id, t.householdId). This is ADDITIVE and CANNOT fail validation — (id) is already the PK, so (id, householdId) is trivially unique. Import `unique` from 'drizzle-orm/pg-core' if not already imported.",
+        "COMPOSITE FKs (scores): in the scores (t) => [...] array, add composite FKs using the foreignKey() helper (import { foreignKey } from 'drizzle-orm/pg-core'): foreignKey({ columns: [t.learnerId, t.householdId], foreignColumns: [learners.id, learners.householdId], name: 'scores_learner_household_fk' }); foreignKey({ columns: [t.subjectId, t.householdId], foreignColumns: [subjects.id, subjects.householdId], name: 'scores_subject_household_fk' }); foreignKey({ columns: [t.lessonTaskId, t.householdId], foreignColumns: [lessonTasks.id, lessonTasks.householdId], name: 'scores_lesson_task_household_fk' }). Do NOT also declare a plain .references() on learnerId/subjectId/lessonTaskId — the composite FK replaces it. Keep householdId → households.id as a simple .references() (households has no householdId column). Nullable columns (subjectId, lessonTaskId) use Postgres default MATCH SIMPLE: the FK is only enforced when the column is non-null, so optional links still work.",
+        "Run: npm run db:generate — this should produce exactly one new migration file (e.g. 0020_gradebook_core.sql). Verify the generated SQL adds the single scores table (with the three composite FKs), the five new columns on subjects, and the composite UNIQUE constraints on learners/subjects/lessonTasks (NOT an attempts table). Do not edit the generated SQL.",
+        "Run: npm run db:migrate — apply to the non-prod database pointed at by .env.local DATABASE_URL."
+      ],
+      "doneWhen": [
+        "RUN: npx tsc --noEmit (no type errors)",
+        "RUN: npm run db:generate (one new migration file produced, no schema drift)",
+        "RUN: npm run db:migrate (applies cleanly — the parent UNIQUE adds and composite FKs validate, since all new tables are empty and the parent UNIQUE is a superset of the existing PK)",
+        "RUN: npm run build (build passes)"
+      ],
+      "invariants": ["drizzle-migrations"],
+      "writeBack": "Record the migration file number/name produced (e.g. 0020_gradebook_core.sql). Record that subjects table now has gradingScaleId, aggregationRuleId, isFormalCourse, creditHours, termModel columns. Confirm a single scores table was created (no attempts table) with composite (id, householdId) FKs to learners/subjects/lessonTasks, and that learners/subjects/lessonTasks gained a composite UNIQUE(id, householdId). Phase 3 depends on scores existing."
+    },
+    {
+      "id": "3-gradebook-repo",
+      "title": "Gradebook repository — implement real listScores(), add createScore(), drop the Attempt type, write .db.test.ts",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [
+        "Phase 2 complete — the scores table exists and is migrated (no attempts table)",
+        "DATABASE_URL in .env.local points at the migrated non-prod database"
+      ],
+      "fileScope": [
+        "features/gradebook/server/repository.ts",
+        "features/gradebook/types.ts",
+        "features/lib/types.ts",
+        "features/gradebook/__tests__/integration/repository.db.test.ts"
+      ],
+      "testsFirst": [
+        "NEW features/gradebook/__tests__/integration/repository.db.test.ts — this file goes under __tests__/integration/ so it only runs via 'npm run test:db', not 'npm test'. Write these tests FIRST (they will fail until the implementation is complete):",
+        "Test 'createScore + listScores returns the score': call createScore({householdId, learnerId, subjectId, state:'graded', numericValue:85, source:'parent', occurredAt}), then listScores(householdId, learnerId, subjectId) — expect array of length 1 with numericValue 85.",
+        "Test 'listScores with missing/excused state — numericValue is null': createScore({state:'missing', numericValue:null}), listScores — expect score with numericValue null (not 0, not omitted).",
+        "Test 'listScores is household-isolated': create two scores under different householdIds for the same learnerId — listScores for householdId A must not return householdId B's scores.",
+        "Test 'listGradebookSummaries includes real scores': create learner + subject + score (state:'graded', numericValue:90), call listGradebookSummaries(householdId) — expect the summary for that learner to have pointsAverage close to 90 (not null).",
+        "Each test must use real DB via getDb() — do NOT mock getDb(). Clean up inserted rows in afterEach using the same householdId scoped deletes. Use unique test-scoped IDs (crypto.randomUUID() or a counter prefix) so parallel runs don't collide."
+      ],
+      "implementationSteps": [
+        "In features/gradebook/types.ts: remove the 'attemptId: string' field from the Score interface, and remove the now-unused Attempt interface (and its section comment). Grep first to confirm no remaining consumer reads Score.attemptId or imports Attempt (verified 2026-06-27: only the type declaration itself and a type-only return shape in features/lib/types.ts reference them).",
+        "In features/lib/types.ts: change the ingestMark() return type from Promise<{ attemptId: string; scoreId: string }> to Promise<{ scoreId: string }>. This is a type-only interface contract with no implementation — pure type edit, zero runtime impact. (Add features/lib/types.ts to fileScope if the executor flags it as out of scope.)",
+        "In features/gradebook/server/repository.ts, add these imports: { and, eq } from 'drizzle-orm' (already imported), plus import { scores } from '@/db/schema' alongside the existing import of learners/subjects.",
+        "Add type export: export type ScoreRow = typeof scores.$inferSelect.",
+        "Add interface CreateScoreInput { learnerId: string; subjectId?: string; lessonTaskId?: string; state: ScoreState; numericValue: number | null; source: ScoreSource; occurredAt: string; comment?: string }.",
+        "Implement: export async function createScore(householdId: string, input: CreateScoreInput): Promise<ScoreRow> — inserts into scores with id: `score_${Date.now()}_${Math.random().toString(36).slice(2,7)}`, householdId, and all input fields. Returns inserted row.",
+        "Replace the existing stub listScores(): instead of returning [], query: db.select().from(scores).where(and(eq(scores.householdId, householdId), eq(scores.learnerId, learnerId), eq(scores.subjectId, subjectId))). Map each ScoreRow to a Score object (the interface in types.ts) — occurredAt is a Date in Drizzle, convert to .toISOString() for the string field.",
+        "Update listGradebookSummaries(): instead of passing empty scores[], fetch all scores for the household in one query: db.select().from(scores).where(eq(scores.householdId, householdId)). Group into a Map<learnerId, Map<subjectId, Score[]>>. For each learner/subject pair, pass the relevant scores to computeSubjectGrade().",
+        "The Score interface (features/gradebook/types.ts) has field 'occurredAt: string' — when constructing from ScoreRow, call row.occurredAt.toISOString() if it is a Date, or leave as-is if Drizzle returns it as string."
+      ],
+      "doneWhen": [
+        "RUN: npm run test:db (must find and pass features/gradebook/__tests__/integration/repository.db.test.ts — all 4 tests green)",
+        "RUN: npm test (must still pass — no regressions in the unit suite)",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Real listScores() and createScore() are implemented (no createAttempt). Score.attemptId and the Attempt interface are removed. listGradebookSummaries() now aggregates real scores. Record the exported function signatures for later phases that may reference them."
+    },
+    {
+      "id": "4-compliance-schema",
+      "title": "Compliance schema — add 5 compliance tables to db/schema.ts, generate + apply migration",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": [
+        "Phase 3 complete — gradebook repo tests pass",
+        "MANDATORY: Confirm DATABASE_URL in .env.local does NOT point at production before running db:generate or db:migrate."
+      ],
+      "fileScope": [
+        "db/schema.ts",
+        "db/migrations"
+      ],
+      "testsFirst": [
+        "RUN: npx tsc --noEmit (must pass before generating migration)"
+      ],
+      "implementationSteps": [
+        "In db/schema.ts, after the scores table block, add these five tables:",
+        "Table 'compliance_rulesets': id text PK, state text notNull, pathwayKey text notNull, requirementType text notNull, value numeric nullable (precision 8 scale 2), unit text notNull default 'days', sourceUrl text nullable, lastVerifiedAt timestamp nullable, isVerified boolean notNull default false, createdAt timestamp notNull, updatedAt timestamp notNull. Index: index('compliance_rulesets_state_pathway_idx').on(state, pathwayKey). NOTE: no householdId — these are platform-wide reference rows seeded from docs/compliance-research/.",
+        "Table 'household_compliance_config': householdId text PK references households.id, activeRulesetId text nullable references compliance_rulesets.id, pathwayKey text nullable, updatedAt timestamp notNull. (Single row per household — householdId is the PK.)",
+        "Table 'compliance_overrides': id text PK, householdId text notNull references households.id, schoolYearId text notNull references school_years.id, requirementType text notNull, overrideValue numeric notNull (precision 8 scale 2), reason text nullable, appliedAt timestamp notNull, createdAt timestamp notNull, updatedAt timestamp notNull. Index: index('compliance_overrides_household_year_idx').on(householdId, schoolYearId).",
+        "Table 'compliance_deadlines': id text PK, householdId text notNull references households.id, schoolYearId text notNull references school_years.id, label text notNull, dueDate date notNull, isCompleted boolean notNull default false, requirementType text notNull, createdAt timestamp notNull, updatedAt timestamp notNull. Index: index('compliance_deadlines_household_year_idx').on(householdId, schoolYearId).",
+        "Table 'compliance_submissions': id text PK, householdId text notNull references households.id, schoolYearId text notNull references school_years.id, status text notNull default 'drafted' (values: drafted|sent|accepted), submittedAt timestamp nullable, acceptedAt timestamp nullable, snapshotJson jsonb nullable, createdAt timestamp notNull, updatedAt timestamp notNull. Index: index('compliance_submissions_household_year_idx').on(householdId, schoolYearId).",
+        "COMPOSITE FK PREP: compliance_overrides, compliance_deadlines, and compliance_submissions each carry householdId AND schoolYearId. Add a composite UNIQUE to the EXISTING schoolYears table so it can be a composite-FK target: in its (t) => [...] array add unique('school_years_id_household_uq').on(t.id, t.householdId). Additive, cannot fail (id is already PK).",
+        "COMPOSITE FKs: for EACH of compliance_overrides, compliance_deadlines, compliance_submissions, replace the plain schoolYearId .references(() => schoolYears.id) with a composite FK in the (t) => [...] array: foreignKey({ columns: [t.schoolYearId, t.householdId], foreignColumns: [schoolYears.id, schoolYears.householdId], name: '<table>_school_year_household_fk' }). Keep householdId → households.id as a simple .references(). NOTE: compliance_rulesets is platform-wide (no householdId) so it gets no composite FK; household_compliance_config.activeRulesetId → compliance_rulesets.id stays a simple FK (rulesets are not tenant-scoped).",
+        "Run: npm run db:generate — produces one new migration for the 5 compliance tables (plus the schoolYears composite UNIQUE). Verify the SQL. Do not edit it.",
+        "Run: npm run db:migrate — apply to the non-prod DB."
+      ],
+      "doneWhen": [
+        "RUN: npx tsc --noEmit",
+        "RUN: npm run db:generate (one new migration produced)",
+        "RUN: npm run db:migrate (applies cleanly)",
+        "RUN: npm run build"
+      ],
+      "invariants": ["drizzle-migrations"],
+      "writeBack": "Record migration file name. Tables compliance_rulesets, household_compliance_config, compliance_overrides, compliance_deadlines, compliance_submissions now exist; the three household+schoolYear tables use composite (schoolYearId, householdId) FKs to schoolYears, which gained a composite UNIQUE(id, householdId). Phase 5 depends on all five."
+    },
+    {
+      "id": "5-compliance-repo",
+      "title": "Compliance repository — implement real getActiveRuleset(), listDeadlines(), listSubmissions(), write .db.test.ts",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [
+        "Phase 4 complete — compliance tables exist and are migrated"
+      ],
+      "fileScope": [
+        "features/compliance/server/repository.ts",
+        "features/compliance/__tests__/integration/repository.db.test.ts"
+      ],
+      "testsFirst": [
+        "NEW features/compliance/__tests__/integration/repository.db.test.ts — write these tests FIRST:",
+        "Test 'getActiveRuleset returns null when no config row exists': call getActiveRuleset(newHouseholdId) — expect null.",
+        "Test 'getActiveRuleset returns ruleset after config row inserted': insert a compliance_rulesets row (id:'ruleset_test_1', state:'TX', pathwayKey:'private-school-exemption', requirementType:'days', value:null, unit:'days', isVerified:true), insert a household_compliance_config row (householdId, activeRulesetId:'ruleset_test_1', pathwayKey:'private-school-exemption'), call getActiveRuleset(householdId) — expect ComplianceRuleset with state='TX' and isVerified=true.",
+        "Test 'listDeadlines returns rows for the correct household+schoolYear only': insert two deadline rows for householdA/schoolYearA and one for householdB/schoolYearA, call listDeadlines(householdA, schoolYearA) — expect 2 rows, not 3.",
+        "Test 'listSubmissions returns submissions ordered by createdAt desc': insert two submissions with different createdAt, call listSubmissions(householdId, schoolYearId) — expect both rows.",
+        "Test 'createDeadline + markDeadlineComplete round-trip': createDeadline({householdId, schoolYearId, label:'Annual filing', dueDate:'2026-09-01', requirementType:'filing'}), then markDeadlineComplete(deadline.id, householdId) — listDeadlines should return the row with isCompleted=true.",
+        "Use real DB via getDb(). Unique scoped IDs per test. afterEach cleanup."
+      ],
+      "implementationSteps": [
+        "Add imports to features/compliance/server/repository.ts: import { complianceRulesets, householdComplianceConfig, complianceOverrides, complianceDeadlines, complianceSubmissions } from '@/db/schema' (add these to the existing import from '@/db/schema' alongside attendanceEvents, schoolYears).",
+        "Replace the stub getActiveRuleset(): query db.select().from(complianceRulesets).innerJoin(householdComplianceConfig, eq(householdComplianceConfig.activeRulesetId, complianceRulesets.id)).where(eq(householdComplianceConfig.householdId, householdId)).limit(1). Map the first row to ComplianceRuleset shape (fields: id, state, pathwayKey, requirementType, value→Number or null, unit, sourceUrl, lastVerifiedAt→.toISOString() or null, isVerified). Return null if no row.",
+        "Replace the stub listDeadlines(): db.select().from(complianceDeadlines).where(and(eq(complianceDeadlines.householdId, householdId), eq(complianceDeadlines.schoolYearId, schoolYearId))). Map each row to ComplianceDeadline shape.",
+        "Replace the stub listSubmissions(): db.select().from(complianceSubmissions).where(and(eq(complianceSubmissions.householdId, householdId), eq(complianceSubmissions.schoolYearId, schoolYearId))). Map each row to ComplianceSubmission shape (snapshotJson is jsonb — cast as Record<string,unknown>|null).",
+        "Update getComplianceStatusInput(): after building StatusEngineInput, replace 'ruleset: null' with 'ruleset: await getActiveRuleset(householdId)' and replace 'overrides: []' with a new query: db.select().from(complianceOverrides).where(and(eq(complianceOverrides.householdId, householdId), eq(complianceOverrides.schoolYearId, schoolYearId))). Map each row to ComplianceOverride shape.",
+        "Add new exported functions: async createDeadline(householdId, input:{schoolYearId,label,dueDate,requirementType}):Promise<ComplianceDeadline>; async markDeadlineComplete(id, householdId):Promise<void>; async createSubmission(householdId, input:{schoolYearId,status?}):Promise<ComplianceSubmission>; async updateSubmissionStatus(id, householdId, status:SubmissionStatus, extra?:{submittedAt?,acceptedAt?,snapshotJson?}):Promise<ComplianceSubmission|null>. These are needed by the routes that already stub them in Layer 2.",
+        "Add async setHouseholdComplianceConfig(householdId, input:{activeRulesetId?|null, pathwayKey?|null}):Promise<void> — upsert household_compliance_config row (insert or update on conflict on householdId)."
+      ],
+      "doneWhen": [
+        "RUN: npm run test:db (must find and pass features/compliance/__tests__/integration/repository.db.test.ts — all 5 tests green)",
+        "RUN: npm test",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "Real compliance repo functions implemented. getComplianceStatusInput() now includes real ruleset + overrides. Record exported function names (createDeadline, markDeadlineComplete, createSubmission, updateSubmissionStatus, setHouseholdComplianceConfig) — the compliance routes reference these."
+    },
+    {
+      "id": "6-badges-schema",
+      "title": "Badges schema — add 5 badge tables to db/schema.ts, generate + apply migration",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": [
+        "Phase 5 complete — compliance repo tests pass",
+        "MANDATORY: Confirm DATABASE_URL in .env.local does NOT point at production before running db:generate or db:migrate."
+      ],
+      "fileScope": [
+        "db/schema.ts",
+        "db/migrations"
+      ],
+      "testsFirst": [
+        "RUN: npx tsc --noEmit (must pass before generating migration)"
+      ],
+      "implementationSteps": [
+        "In db/schema.ts, after the compliance_submissions table block, add these five tables:",
+        "Table 'badge_definitions': id text PK, householdId text nullable references households.id (null = platform starter badge), title text notNull, description text notNull, criteria text notNull, emblemKey text notNull, gradeBands jsonb notNull default '[]', verificationRequirement text notNull default 'none' (values: none|parent|external), isStarter boolean notNull default false, enabled boolean notNull default true, visibility text notNull default 'household' (values: household|platform), createdAt timestamp notNull, updatedAt timestamp notNull. Index: index('badge_definitions_household_idx').on(householdId) (nullable index is fine).",
+        "Table 'badge_awards': id text PK, householdId text notNull references households.id, learnerId text notNull references learners.id, badgeId text notNull references badge_definitions.id, status text notNull default 'draft' (values: draft|submitted|verified), submittedAt timestamp nullable, verifiedAt timestamp nullable, approvedAt timestamp nullable, createdAt timestamp notNull, updatedAt timestamp notNull. Indexes: index('badge_awards_household_learner_idx').on(householdId, learnerId), index('badge_awards_badge_idx').on(badgeId).",
+        "Table 'badge_award_evidence': id text PK, householdId text notNull references households.id, badgeAwardId text notNull references badge_awards.id (onDelete: 'cascade'), evidenceId text notNull references portfolio_evidence.id, addedAt timestamp notNull. Index: index('badge_award_evidence_award_idx').on(badgeAwardId).",
+        "Table 'badge_settings': householdId text PK references households.id (onDelete: 'cascade'), platformBadgesEnabled boolean notNull default true, createdAt timestamp notNull, updatedAt timestamp notNull.",
+        "Table 'autonomy_unlocks': id text PK, householdId text notNull references households.id, learnerId text notNull references learners.id, badgeId text notNull references badge_definitions.id, unlockedAt timestamp notNull, grantedBy text notNull, createdAt timestamp notNull. Index: index('autonomy_unlocks_household_learner_idx').on(householdId, learnerId).",
+        "COMPOSITE FK PREP: add a composite UNIQUE to the EXISTING portfolioEvidence table — unique('portfolio_evidence_id_household_uq').on(t.id, t.householdId) — so badge_award_evidence can composite-reference it. Additive, cannot fail. Also add unique('badge_awards_id_household_uq').on(t.id, t.householdId) to the NEW badge_awards table (zero rows, free) so badge_award_evidence can composite-reference the award.",
+        "COMPOSITE FKs: badge_awards — replace the plain learnerId .references() with foreignKey({ columns: [t.learnerId, t.householdId], foreignColumns: [learners.id, learners.householdId], name: 'badge_awards_learner_household_fk' }). autonomy_unlocks — same composite (learnerId, householdId) → learners. badge_award_evidence — add foreignKey({ columns: [t.badgeAwardId, t.householdId], foreignColumns: [badgeAwards.id, badgeAwards.householdId], name: 'badge_award_evidence_award_household_fk' }) AND foreignKey({ columns: [t.evidenceId, t.householdId], foreignColumns: [portfolioEvidence.id, portfolioEvidence.householdId], name: 'badge_award_evidence_evidence_household_fk' }), replacing the plain references on those columns. Keep householdId → households.id as a simple .references() on every table.",
+        "DELIBERATE EXCEPTION — badgeId stays a SIMPLE FK: badge_awards.badgeId, autonomy_unlocks.badgeId, and badge_award_evidence (none) reference badge_definitions.id with a plain .references(). Do NOT make badgeId a composite (badgeId, householdId) FK, because badge_definitions.householdId is NULLABLE (null = platform starter badge): a household's award legitimately references a platform badge whose householdId is null, so a composite match would be impossible. Tenant integrity for badgeId is enforced at the repository layer instead (listBadgeDefinitions already scopes to householdId-null-or-own). Note this in a code comment on the badgeId column.",
+        "Run: npm run db:generate — produces one new migration for the 5 badge tables (plus the portfolioEvidence composite UNIQUE). Verify the SQL.",
+        "Run: npm run db:migrate — apply to the non-prod DB."
+      ],
+      "doneWhen": [
+        "RUN: npx tsc --noEmit",
+        "RUN: npm run db:generate (one new migration produced)",
+        "RUN: npm run db:migrate (applies cleanly)",
+        "RUN: npm run build"
+      ],
+      "invariants": ["drizzle-migrations"],
+      "writeBack": "Record migration file name. Tables badge_definitions, badge_awards, badge_award_evidence, badge_settings, autonomy_unlocks now exist. badge_awards/autonomy_unlocks use composite (learnerId, householdId) FKs; badge_award_evidence uses composite FKs to both badge_awards and portfolioEvidence (which gained a composite UNIQUE). badgeId is intentionally a simple FK (badge_definitions.householdId is nullable for platform badges). Phase 7 depends on all five."
+    },
+    {
+      "id": "7-badges-repo",
+      "title": "Badges repository — implement all stub functions, add createAward()/addEvidence(), write .db.test.ts",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [
+        "Phase 6 complete — badge tables exist and are migrated"
+      ],
+      "fileScope": [
+        "features/badges/server/repository.ts",
+        "features/badges/__tests__/integration/repository.db.test.ts"
+      ],
+      "testsFirst": [
+        "NEW features/badges/__tests__/integration/repository.db.test.ts — write these tests FIRST:",
+        "Test 'listBadgeDefinitions returns starter badges (householdId null) plus household custom': insert one starter definition (householdId null, isStarter:true) and one custom (householdId:testHousehold, isStarter:false). listBadgeDefinitions(testHousehold) must return both rows.",
+        "Test 'listBadgeCollection marks earned badges isEarned:true': insert a badge_definition and a badge_award (status:'verified', approvedAt: now). listBadgeCollection(householdId, learnerId) — expect the item for that badge to have isEarned:true and award.status='verified'.",
+        "Test 'listBadgeCollection marks unearned badges isEarned:false': insert a badge_definition with no corresponding award. listBadgeCollection(householdId, learnerId) — expect the item to have isEarned:false and award:null.",
+        "Test 'getBadgeSettings returns default true when no row exists': getBadgeSettings(unknownHouseholdId) — expect {householdId, platformBadgesEnabled:true}.",
+        "Test 'createAward + listBadgeAwards round-trip': createAward({householdId, learnerId, badgeId, status:'draft'}), listBadgeAwards(householdId, learnerId) — expect 1 item.",
+        "Test 'badge_award_evidence is household-isolated': addEvidenceToAward links an evidence row to an award. listBadgeAwards for a different household must not return that award.",
+        "Use real DB. Unique scoped IDs. afterEach cleanup."
+      ],
+      "implementationSteps": [
+        "Add imports to features/badges/server/repository.ts: import { getDb } from '@/features/lib/server/db'; import { eq, or, isNull, and } from 'drizzle-orm'; import { badgeDefinitions, badgeAwards, badgeAwardEvidence, badgeSettings, autonomyUnlocks } from '@/db/schema'.",
+        "Add type exports: export type BadgeDefinitionRow = typeof badgeDefinitions.$inferSelect; export type BadgeAwardRow = typeof badgeAwards.$inferSelect.",
+        "Replace stub listBadgeDefinitions(): add { desc } to the drizzle-orm import, then query db.select().from(badgeDefinitions).where(or(isNull(badgeDefinitions.householdId), eq(badgeDefinitions.householdId, householdId))).orderBy(desc(badgeDefinitions.isStarter), badgeDefinitions.title). Map rows to BadgeDefinition interface (gradeBands jsonb → cast as GradeBand[], verificationRequirement cast to VerificationRequirement, visibility to BadgeVisibility).",
+        "Replace stub listBadgeCollection(): (1) fetch definitions via listBadgeDefinitions(householdId), (2) fetch awards: db.select().from(badgeAwards).where(and(eq(badgeAwards.householdId, householdId), eq(badgeAwards.learnerId, learnerId))). Build a Map<badgeId, BadgeAward> from awards. (3) For each definition, return {definition, award: map.get(def.id) ?? null, isEarned: award?.approvedAt != null}.",
+        "Replace stub listBadgeAwards(): db.select().from(badgeAwards).where(and(eq(badgeAwards.householdId, householdId), eq(badgeAwards.learnerId, learnerId))). For each award row, also query badgeAwardEvidence to get evidenceIds. Map to BadgeAward interface (evidenceIds: string[]).",
+        "Replace stub getBadgeSettings(): query db.select().from(badgeSettings).where(eq(badgeSettings.householdId, householdId)).limit(1). If no row, return default {householdId, platformBadgesEnabled:true}.",
+        "Add: async createAward(householdId, input:{learnerId,badgeId,status?}):Promise<BadgeAward> — insert into badge_awards with id:`award_${Date.now()}_${Math.random().toString(36).slice(2,7)}`.",
+        "Add: async updateAwardStatus(id, householdId, status:BadgeStatus, extra?:{submittedAt?,verifiedAt?,approvedAt?}):Promise<BadgeAward|null> — update badge_awards where id+householdId, set status+timestamps, return updated row mapped to BadgeAward.",
+        "Add: async addEvidenceToAward(householdId, input:{badgeAwardId,evidenceId}):Promise<BadgeAwardEvidence> — insert into badge_award_evidence.",
+        "Add: async setBadgeSettings(householdId, input:{platformBadgesEnabled:boolean}):Promise<void> — upsert badge_settings (insert or update on conflict on householdId).",
+        "The BadgeAward interface has evidenceIds: string[] — populate this by fetching badge_award_evidence rows for each award in listBadgeAwards (can be a secondary query per award or a join; a secondary query is fine for Layer 3)."
+      ],
+      "doneWhen": [
+        "RUN: npm run test:db (must find and pass features/badges/__tests__/integration/repository.db.test.ts — all 6 tests green)",
+        "RUN: npm test",
+        "RUN: npm run build"
+      ],
+      "invariants": [],
+      "writeBack": "All badge repo functions are real. listBadgeCollection() is implemented. Record exported function names (createAward, updateAwardStatus, addEvidenceToAward, setBadgeSettings)."
+    },
+    {
+      "id": "8-plan-lesson-steps",
+      "title": "Lesson Planner — lesson_steps schema + migration + repository CRUD + .db.test.ts",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": [
+        "Phase 7 complete — badge repo tests pass",
+        "MANDATORY: Confirm DATABASE_URL in .env.local does NOT point at production before running db:generate or db:migrate."
+      ],
+      "fileScope": [
+        "db/schema.ts",
+        "db/migrations",
+        "features/plan/server/repository.ts",
+        "features/plan/__tests__/integration/lesson-steps.db.test.ts"
+      ],
+      "testsFirst": [
+        "Write the .db.test.ts BEFORE implementing the repository functions (tests will fail until implementation is done):",
+        "NEW features/plan/__tests__/integration/lesson-steps.db.test.ts:",
+        "Test 'createLessonStep + listLessonSteps round-trip': insert a lesson_task row first (use existing lessonTasks table), then createLessonStep({lessonTaskId, order:1, stepText:'Read pages 1-5', type:'reading'}), then listLessonSteps(lessonTaskId) — expect 1 step.",
+        "Test 'listLessonSteps is ordered by order column': createLessonStep order:2, createLessonStep order:1, createLessonStep order:3 — listLessonSteps must return [1,2,3].",
+        "Test 'updateLessonStep changes stepText': createLessonStep, updateLessonStep(id, lessonTaskId, {stepText:'Updated text'}), listLessonSteps — expect updated text.",
+        "Test 'deleteLessonStep removes the row': createLessonStep, deleteLessonStep(id, lessonTaskId), listLessonSteps — expect empty array.",
+        "Use real DB. Unique scoped IDs. afterEach cleanup including lesson_tasks row."
+      ],
+      "implementationSteps": [
+        "In db/schema.ts, after the autonomy_unlocks table block, add table 'lesson_steps': id text PK, lessonTaskId text notNull references lessonTasks.id (onDelete: 'cascade'), order integer notNull default 0, stepText text notNull, type text notNull default 'instruction' (values: instruction|reading|practice|discussion|assessment), doneCriteria text nullable, quantity integer nullable, createdAt timestamp notNull, updatedAt timestamp notNull. Index: index('lesson_steps_lesson_task_idx').on(lessonTaskId).",
+        "NO COMPOSITE FK HERE (deliberate): lesson_steps does NOT carry householdId — it is a leaf child always reached through its lessonTask, which is tenant-scoped. A simple lessonTaskId → lessonTasks.id FK with onDelete:'cascade' is correct; tenant isolation is inherited via the parent task. Repository reads/writes scope by lessonTaskId (see updateLessonStep/deleteLessonStep guarding on id AND lessonTaskId). Do not add householdId just to enable a composite FK.",
+        "Run: npm run db:generate — produces one new migration for lesson_steps. Verify SQL. Do not edit it.",
+        "Run: npm run db:migrate.",
+        "Add to features/plan/server/repository.ts: import { lessonSteps } from '@/db/schema' alongside the existing import of lessonTasks. Add these types: export type LessonStepRow = typeof lessonSteps.$inferSelect; export interface CreateLessonStepInput { lessonTaskId: string; order: number; stepText: string; type?: string; doneCriteria?: string; quantity?: number }; export interface UpdateLessonStepInput { order?: number; stepText?: string; type?: string; doneCriteria?: string | null; quantity?: number | null }.",
+        "Add: export async function listLessonSteps(lessonTaskId: string): Promise<LessonStepRow[]> — db.select().from(lessonSteps).where(eq(lessonSteps.lessonTaskId, lessonTaskId)).orderBy(lessonSteps.order).",
+        "Add: export async function createLessonStep(input: CreateLessonStepInput): Promise<LessonStepRow> — insert with id:`step_${Date.now()}_${Math.random().toString(36).slice(2,7)}`.",
+        "Add: export async function updateLessonStep(id: string, lessonTaskId: string, patch: UpdateLessonStepInput): Promise<LessonStepRow | null> — update where id AND lessonTaskId (prevents cross-task mutation), return updated row or null.",
+        "Add: export async function deleteLessonStep(id: string, lessonTaskId: string): Promise<boolean> — delete where id AND lessonTaskId, return true if a row was deleted."
+      ],
+      "doneWhen": [
+        "RUN: npm run test:db (must find and pass features/plan/__tests__/integration/lesson-steps.db.test.ts — all 4 tests green)",
+        "RUN: npm test",
+        "RUN: npm run build"
+      ],
+      "invariants": ["drizzle-migrations"],
+      "writeBack": "lesson_steps table exists and is migrated. Repository functions listLessonSteps, createLessonStep, updateLessonStep, deleteLessonStep are implemented. Record migration file name."
+    },
+    {
+      "id": "9-reference-seed",
+      "title": "Reference data seed — compliance_rulesets + starter badge_definitions from JSON research file",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [
+        "Phases 4 and 6 complete — compliance_rulesets and badge_definitions tables exist",
+        "docs/compliance-research/homeschool-requirements-2026-06-27.json exists and is readable"
+      ],
+      "fileScope": [
+        "scripts/seed-reference-data.ts",
+        "package.json"
+      ],
+      "testsFirst": [
+        "No automated test for the seed script itself — idempotency is verified by running it twice (doneWhen check). The seed is a script, not a library function. Verify correctness by running and inspecting output."
+      ],
+      "implementationSteps": [
+        "Create scripts/seed-reference-data.ts. This is an idempotent reference-data seeder — it inserts platform-wide rows with stable deterministic IDs using ON CONFLICT DO NOTHING. It must NEVER truncate existing rows.",
+        "Guard at top: if (!process.env.DATABASE_URL) { console.error('DATABASE_URL not set'); process.exit(1) }",
+        "COMPLIANCE RULESETS: Read docs/compliance-research/homeschool-requirements-2026-06-27.json (import fs/path, JSON.parse). For each state entry in the array, for each pathway within it, for each requirement key (instructionDaysPerYear, instructionHoursPerYear, requiredSubjects, filings, evaluationOrTesting, recordRetention), generate a stable deterministic ID: `ruleset_${state.state.toLowerCase()}_${pathway.key}_${requirementKey}` (e.g. 'ruleset_tx_private-school-exemption_instructionDaysPerYear'). Map to compliance_rulesets row: { id, state: state.state, pathwayKey: pathway.key, requirementType: requirementKey, value: req.value is a number ? req.value : null, unit: (requirementKey.includes('Hour') ? 'hours' : requirementKey === 'requiredSubjects' ? 'subjects' : 'days'), sourceUrl: req.source_url ?? null, lastVerifiedAt: req.verified && state.last_verified ? new Date(state.last_verified) : null, isVerified: req.verified === true, createdAt: now, updatedAt: now }. Insert all rows via a single db.insert(complianceRulesets).values([...rows]).onConflictDoNothing(). Log count of rows attempted.",
+        "STARTER BADGE DEFINITIONS: Define a static inline array of 8 starter badges (do not read from file — badge data is not in the compliance JSON). Use stable IDs prefixed 'badge_starter_': badge_starter_quran_memorizer, badge_starter_math_champion, badge_starter_avid_reader, badge_starter_science_explorer, badge_starter_history_detective, badge_starter_creative_writer, badge_starter_language_learner, badge_starter_community_helper. Each has: { id, householdId: null, title, description, criteria, emblemKey (same as id suffix, e.g. 'quran_memorizer'), gradeBands: ['g1_4','g5_8','g9_12'], verificationRequirement: 'parent', isStarter: true, enabled: true, visibility: 'platform', createdAt: now, updatedAt: now }. Insert via db.insert(badgeDefinitions).values([...badges]).onConflictDoNothing(). Log count.",
+        "Add 'db:seed:reference' script to package.json scripts: 'dotenv -e .env.local -- tsx scripts/seed-reference-data.ts'.",
+        "The script must print a clear summary: 'Inserted N compliance_rulesets rows (M already existed)' — use the returning() count vs attempted count to calculate. Alternatively log 'Attempted N rows, onConflictDoNothing applied — re-run is a no-op'."
+      ],
+      "doneWhen": [
+        "RUN: npm run db:seed:reference (first run — expect rows inserted, no errors)",
+        "RUN: npm run db:seed:reference (second run — same command, expect 0 rows inserted / no-op confirmed by log)",
+        "RUN: npm run build (seed script should not affect build, but verify it compiles)",
+        "Manually inspect: connect to DB (npm run db:studio or psql) and confirm compliance_rulesets has rows for TX and FL (minimum), and badge_definitions has 8 starter rows with householdId null."
+      ],
+      "invariants": [],
+      "writeBack": "Reference seed script created at scripts/seed-reference-data.ts. db:seed:reference added to package.json. Idempotency confirmed by running twice. Record how many compliance_rulesets rows were inserted and which states are covered. NOTE: rows where requirementType is 'requiredSubjects' will have value:null in the DB even though the JSON contains a string array — the seeder intentionally discards non-numeric values since the column is numeric; the authoritative subject list is reachable via sourceUrl."
+    },
+    {
+      "id": "10-demo-seed-extension",
+      "title": "Demo seed extension — add gradebook, compliance, and badge rows to the demo households",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [
+        "Phases 2, 4, 6, 8 complete — all new tables are migrated",
+        "Phase 9 complete — reference seed has inserted compliance_rulesets and starter badge_definitions",
+        "DATABASE_URL points at a non-prod database (mandatory — never run demo seed against prod)"
+      ],
+      "fileScope": [
+        "scripts/seed/buildPayload.ts",
+        "scripts/seed/loadPayload.ts",
+        "scripts/seed/demoConfig.ts"
+      ],
+      "testsFirst": [
+        "No separate test. Verify via running: npm run db:seed:demo (must succeed on an empty DB). Then run npm run db:seed:reference first if needed (rulesets + badges must exist for FK references in badge_awards). Then run npm run db:seed:demo."
+      ],
+      "implementationSteps": [
+        "Read scripts/seed/buildPayload.ts to understand the existing payload structure (what tables it builds rows for, how it returns the payload object). Do not modify the build strategy — only ADD new fields to the payload object and new rows to the existing build loops.",
+        "Read scripts/seed/loadPayload.ts to understand how chunks are inserted (db.insert(...).values(chunk).onConflictDoNothing()). Add new insert blocks for the new tables at the end of loadDemoSeedPayload(), after all existing inserts.",
+        "In buildPayload.ts, for each demo household's learners + subjects, generate 4-8 score rows per learner per subject spread over the 150-day history (state:'graded', numericValue: random 70-100, source:'parent', occurredAt within the window). Use counter-based IDs not Date.now() (to avoid collisions in bulk build): e.g. `score_demo_${householdIdx}_${learnerIdx}_${subjectIdx}_${n}`. Missing/excused: include ~10% of scores as state:'excused' with numericValue:null to exercise the no-zero guarantee. NOTE: there is no attempts table — scores are inserted directly (lessonTaskId may be left null for demo data).",
+        "Add 1-3 compliance_deadline rows per demo household per school year (e.g. 'Annual notification', 'Portfolio submission', 'Year-end assessment') with realistic dueDate values within the school year. These are household-specific deadline rows (not rulesets). IDs: `deadline_demo_${householdIdx}_${n}`.",
+        "Add badge_awards for 2-3 of the 8 starter badges per learner in demo households. Status:'verified', approvedAt: a date within the 150-day history. badgeId must reference the starter badge IDs seeded by seed-reference-data.ts (e.g. 'badge_starter_avid_reader'). NOTE: load db:seed:reference BEFORE db:seed:demo for FK integrity. IDs: `award_demo_${householdIdx}_${learnerIdx}_${badgeIdx}`.",
+        "In loadPayload.ts, add insert blocks: db.insert(scores).values(chunk).onConflictDoNothing() (chunked at 200 rows); db.insert(complianceDeadlines).values(chunk).onConflictDoNothing() (chunked at 50); db.insert(badgeAwards).values(chunk).onConflictDoNothing() (chunked at 100). There is no attempts insert — the attempts table was removed.",
+        "Update summarizePayload() to include counts for the new tables so the console output shows them.",
+        "IMPORTANT: badge_awards reference badge_definitions rows that are inserted by seed-reference-data.ts, not by the demo seed itself. The demo seed loadPayload must run AFTER db:seed:reference or FK inserts will fail. Add a log warning at the top of loadPayload if it detects badge_definitions is empty: 'WARNING: badge_definitions is empty — run npm run db:seed:reference before npm run db:seed:demo for badge award rows to succeed'."
+      ],
+      "doneWhen": [
+        "RUN: npm run db:seed:reference (insert reference data first)",
+        "RUN: npm run db:seed:demo (on a fresh/empty DB — should complete without FK errors)",
+        "Verify console output shows score, compliance_deadline, and badge_award counts > 0",
+        "RUN: npm run build",
+        "Browser check: open /growth/gradebook — learners should show non-null grades (not all null averages); open /growth/badges — trophy case should show 2-3 earned badges per learner; open /compliance — deadline timeline should show rows"
+      ],
+      "invariants": [],
+      "writeBack": "Demo seed extended. Records the new row counts for scores, compliance_deadlines, badge_awards. Confirmed that seeding order (reference seed first, then demo seed) is documented in the log warning and the doneWhen steps."
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "plan": "docs/bug_enhancement/20260627-layer3-db-plan.json",
   "createdAt": "2026-06-27T00:00:00.000Z",
-  "updatedAt": "2026-06-28T00:30:00.000Z",
+  "updatedAt": "2026-06-28T07:00:00.000Z",
   "branch": "feat/layer3-db",
   "phases": [
     {
@@ -184,22 +184,43 @@
       "id": "9-reference-seed",
       "title": "Reference data seed — compliance_rulesets + starter badge_definitions from JSON research file",
       "gated": false,
-      "status": "pending",
+      "status": "complete",
       "model": "claude-sonnet-4-6",
-      "startedAt": null,
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "startedAt": "2026-06-28T05:00:00.000Z",
+      "completedAt": "2026-06-28T05:15:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "scripts/seed-reference-data.ts",
+          "package.json"
+        ],
+        "testsRun": [
+          "npm run db:seed:reference (first run): 66 compliance_rulesets rows + 8 badge_definitions rows inserted — no errors",
+          "npm run db:seed:reference (second run): same output — onConflictDoNothing confirmed no-op",
+          "npm run build: passed (Compiled successfully)"
+        ],
+        "notes": "Created scripts/seed-reference-data.ts. Reads docs/compliance-research/homeschool-requirements-2026-06-27.json, iterates over 7 states (TX, FL, NY, PA, CA, MI, CT), 3+ pathways total, 6 requirement keys each, generating stable deterministic IDs of form ruleset_<state>_<pathway>_<requirementKey>. Non-numeric values (arrays, objects, null) are intentionally discarded — numeric column only stores a number when value is typeof 'number'; authoritative details reachable via sourceUrl. Inserted 66 compliance_rulesets rows. Also inserted 8 starter badge_definitions rows (householdId: null) with IDs: badge_starter_quran_memorizer, badge_starter_math_champion, badge_starter_avid_reader, badge_starter_science_explorer, badge_starter_history_detective, badge_starter_creative_writer, badge_starter_language_learner, badge_starter_community_helper. Added db:seed:reference script to package.json. Idempotency confirmed by running twice — second run is a no-op (no errors, same log output)."
+      },
       "failureReason": null
     },
     {
       "id": "10-demo-seed-extension",
       "title": "Demo seed extension — add gradebook, compliance, and badge rows to the demo households",
       "gated": false,
-      "status": "pending",
+      "status": "complete",
       "model": "claude-sonnet-4-6",
-      "startedAt": null,
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "startedAt": "2026-06-28T06:00:00.000Z",
+      "completedAt": "2026-06-28T07:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "scripts/seed/buildPayload.ts",
+          "scripts/seed/loadPayload.ts"
+        ],
+        "testsRun": [
+          "npm test: 1033 passed, 2 pre-existing failures in run-classify.test.ts (unrelated — same as all prior phases)",
+          "npm run build: Compiled successfully"
+        ],
+        "notes": "Demo seed extended. DemoSeedPayload type now includes scores, complianceDeadlines, badgeAwards arrays. buildPayload.ts: added buildNewTableRows() helper that generates per-household scores (4-8 graded/excused rows per learner per subject, counter-based IDs: score_demo_{hhIdx}_{learnerIdx}_{subjectIdx}_{n}), compliance_deadlines (3 rows per household: Annual notification/Portfolio submission/Year-end assessment, IDs: deadline_demo_{hhIdx}_{n}), and badge_awards (2-3 verified starter badges per learner using STARTER_BADGE_IDS from seed-reference-data.ts, IDs: award_demo_{hhIdx}_{learnerIdx}_{badgeIdx}). summarizePayload() now includes counts for all three new tables. loadPayload.ts: added imports for scores/complianceDeadlines/badgeAwards/badgeDefinitions; added FK warning if badge_definitions is empty (must run db:seed:reference first); added bulkInsertRows calls for all three new tables after existing tables. Seeding order: npm run db:seed:reference THEN npm run db:seed:demo."
+      },
       "failureReason": null
     }
   ]
