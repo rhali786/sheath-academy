@@ -198,16 +198,64 @@ export async function createDeadline(
 
 /**
  * Marks a compliance deadline as completed.
+ * Thin wrapper over updateDeadline — kept for callers that only toggle completion.
  */
 export async function markDeadlineComplete(
   id: string,
   householdId: string,
 ): Promise<void> {
+  await updateDeadline(id, householdId, { isCompleted: true })
+}
+
+/**
+ * Patches a compliance deadline (label/dueDate/requirementType and/or completion),
+ * scoped to the owning household. Returns the updated row, or null when none matched.
+ */
+export async function updateDeadline(
+  id: string,
+  householdId: string,
+  patch: {
+    label?: string
+    dueDate?: string
+    requirementType?: string
+    isCompleted?: boolean
+  },
+): Promise<ComplianceDeadline | null> {
   const db = getDb()
-  await db
+  const updates: Record<string, unknown> = { updatedAt: new Date() }
+  if (patch.label !== undefined) updates.label = patch.label
+  if (patch.dueDate !== undefined) updates.dueDate = patch.dueDate
+  if (patch.requirementType !== undefined) updates.requirementType = patch.requirementType
+  if (patch.isCompleted !== undefined) updates.isCompleted = patch.isCompleted
+
+  const [row] = await db
     .update(complianceDeadlines)
-    .set({ isCompleted: true, updatedAt: new Date() })
+    .set(updates)
     .where(and(eq(complianceDeadlines.id, id), eq(complianceDeadlines.householdId, householdId)))
+    .returning()
+
+  if (!row) return null
+  return {
+    id: row.id,
+    householdId: row.householdId,
+    schoolYearId: row.schoolYearId,
+    label: row.label,
+    dueDate: row.dueDate,
+    isCompleted: row.isCompleted,
+    requirementType: row.requirementType,
+  }
+}
+
+/**
+ * Hard-delete a compliance deadline scoped to the household. Returns true when removed.
+ */
+export async function deleteDeadline(id: string, householdId: string): Promise<boolean> {
+  const db = getDb()
+  const removed = await db
+    .delete(complianceDeadlines)
+    .where(and(eq(complianceDeadlines.id, id), eq(complianceDeadlines.householdId, householdId)))
+    .returning({ id: complianceDeadlines.id })
+  return removed.length > 0
 }
 
 /**
@@ -291,6 +339,38 @@ export async function updateSubmissionStatus(
     acceptedAt: row.acceptedAt != null ? row.acceptedAt.toISOString() : null,
     snapshotJson: (row.snapshotJson as Record<string, unknown> | null) ?? null,
   }
+}
+
+/**
+ * Hard-delete a compliance submission scoped to the household. Returns true when removed.
+ */
+export async function deleteSubmission(id: string, householdId: string): Promise<boolean> {
+  const db = getDb()
+  const removed = await db
+    .delete(complianceSubmissions)
+    .where(and(eq(complianceSubmissions.id, id), eq(complianceSubmissions.householdId, householdId)))
+    .returning({ id: complianceSubmissions.id })
+  return removed.length > 0
+}
+
+/**
+ * Lists all platform compliance rulesets (reference rows, no householdId) so the
+ * config picker has a source of selectable rulesets.
+ */
+export async function listRulesets(): Promise<ComplianceRuleset[]> {
+  const db = getDb()
+  const rows = await db.select().from(complianceRulesets)
+  return rows.map(row => ({
+    id: row.id,
+    state: row.state,
+    pathwayKey: row.pathwayKey,
+    requirementType: row.requirementType,
+    value: row.value != null ? Number(row.value) : null,
+    unit: row.unit,
+    sourceUrl: row.sourceUrl ?? null,
+    lastVerifiedAt: row.lastVerifiedAt != null ? row.lastVerifiedAt.toISOString() : null,
+    isVerified: row.isVerified,
+  }))
 }
 
 /**
