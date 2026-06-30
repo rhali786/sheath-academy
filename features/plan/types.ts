@@ -2,6 +2,18 @@ export type LessonTaskStatus = 'not_started' | 'completed' | 'skipped'
 
 export type LessonDuration = '15min' | '30min' | '45min' | '1hr' | 'custom'
 
+export type LessonStepType = 'instruction' | 'reading' | 'practice' | 'discussion' | 'assessment'
+
+export interface LessonStep {
+  id: string
+  lessonTaskId: string
+  order: number
+  stepText: string
+  type: string
+  doneCriteria: string | null
+  quantity: number | null
+}
+
 export interface LessonTask {
   id: string
   childId: string

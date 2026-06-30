@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import * as lessonsHandler from './routes/lessons'
 import * as lessonHandler from './routes/lesson'
+import * as lessonStepsHandler from './routes/lesson-steps'
 import * as progressHandler from './routes/progress'
 import * as historyHandler from './routes/history'
 
@@ -38,6 +39,26 @@ export async function handlePlanRoute(
   // DELETE /lessons/:id — delete lesson
   if (slug.length === 2 && slug[0] === 'lessons' && method === 'DELETE') {
     return lessonHandler.DELETE(slug[1], request)
+  }
+
+  // GET /lessons/:id/steps — list steps for a lesson
+  if (slug.length === 3 && slug[0] === 'lessons' && slug[2] === 'steps' && method === 'GET') {
+    return lessonStepsHandler.GET(slug[1])
+  }
+
+  // POST /lessons/:id/steps — create a step
+  if (slug.length === 3 && slug[0] === 'lessons' && slug[2] === 'steps' && method === 'POST') {
+    return lessonStepsHandler.POST(slug[1], request)
+  }
+
+  // PATCH /lessons/:id/steps/:stepId — update a step
+  if (slug.length === 4 && slug[0] === 'lessons' && slug[2] === 'steps' && method === 'PATCH') {
+    return lessonStepsHandler.PATCH(slug[1], slug[3], request)
+  }
+
+  // DELETE /lessons/:id/steps/:stepId — delete a step
+  if (slug.length === 4 && slug[0] === 'lessons' && slug[2] === 'steps' && method === 'DELETE') {
+    return lessonStepsHandler.DELETE(slug[1], slug[3])
   }
 
   // GET /progress — progress by subject
