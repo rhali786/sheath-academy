@@ -10,6 +10,7 @@ import type {
   BadgeDefinition,
   BadgeAward,
   BadgeAwardEvidence,
+  BadgeAwardEvidenceLink,
   BadgeCollectionItem,
   BadgeSettings,
   BadgeStatus,
@@ -41,7 +42,7 @@ function rowToDefinition(row: BadgeDefinitionRow): BadgeDefinition {
   }
 }
 
-function rowToAward(row: BadgeAwardRow, evidenceIds: string[]): BadgeAward {
+function rowToAward(row: BadgeAwardRow, evidence: BadgeAwardEvidenceLink[]): BadgeAward {
   return {
     id: row.id,
     householdId: row.householdId,
@@ -51,7 +52,8 @@ function rowToAward(row: BadgeAwardRow, evidenceIds: string[]): BadgeAward {
     submittedAt: row.submittedAt instanceof Date ? row.submittedAt.toISOString() : (row.submittedAt ?? null),
     verifiedAt: row.verifiedAt instanceof Date ? row.verifiedAt.toISOString() : (row.verifiedAt ?? null),
     approvedAt: row.approvedAt instanceof Date ? row.approvedAt.toISOString() : (row.approvedAt ?? null),
-    evidenceIds,
+    evidenceIds: evidence.map(e => e.evidenceId),
+    evidence,
   }
 }
 
@@ -125,15 +127,14 @@ export async function listBadgeAwards(
       ),
     )
 
-  // For each award, fetch evidence IDs
+  // For each award, fetch evidence links
   const results: BadgeAward[] = []
   for (const row of rows) {
     const evidenceRows = await db
       .select()
       .from(badgeAwardEvidence)
       .where(eq(badgeAwardEvidence.badgeAwardId, row.id))
-    const evidenceIds = evidenceRows.map(e => e.evidenceId)
-    results.push(rowToAward(row, evidenceIds))
+    results.push(rowToAward(row, evidenceRows.map(e => ({ id: e.id, evidenceId: e.evidenceId }))))
   }
   return results
 }
@@ -232,7 +233,7 @@ export async function updateAwardStatus(
     .from(badgeAwardEvidence)
     .where(eq(badgeAwardEvidence.badgeAwardId, id))
 
-  return rowToAward(rows[0], evidenceRows.map(e => e.evidenceId))
+  return rowToAward(rows[0], evidenceRows.map(e => ({ id: e.id, evidenceId: e.evidenceId })))
 }
 
 /**
@@ -264,6 +265,39 @@ export async function addEvidenceToAward(
     evidenceId: row.evidenceId,
     addedAt: row.addedAt instanceof Date ? row.addedAt.toISOString() : String(row.addedAt),
   }
+}
+
+/**
+ * Revokes (hard-deletes) a badge award scoped to the household, removing any
+ * linked evidence first (composite FK badge_award_evidence → badge_awards).
+ * Returns true when the award was removed.
+ */
+export async function deleteAward(id: string, householdId: string): Promise<boolean> {
+  const db = getDb()
+  await db
+    .delete(badgeAwardEvidence)
+    .where(and(eq(badgeAwardEvidence.badgeAwardId, id), eq(badgeAwardEvidence.householdId, householdId)))
+  const removed = await db
+    .delete(badgeAwards)
+    .where(and(eq(badgeAwards.id, id), eq(badgeAwards.householdId, householdId)))
+    .returning({ id: badgeAwards.id })
+  return removed.length > 0
+}
+
+/**
+ * Unlinks a single evidence item from an award, scoped to the household.
+ * Returns true when a link row was removed.
+ */
+export async function removeEvidenceFromAward(
+  badgeAwardEvidenceId: string,
+  householdId: string,
+): Promise<boolean> {
+  const db = getDb()
+  const removed = await db
+    .delete(badgeAwardEvidence)
+    .where(and(eq(badgeAwardEvidence.id, badgeAwardEvidenceId), eq(badgeAwardEvidence.householdId, householdId)))
+    .returning({ id: badgeAwardEvidence.id })
+  return removed.length > 0
 }
 
 /**

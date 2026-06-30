@@ -1,11 +1,17 @@
 import React from 'react'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react'
 import { BadgesPage } from '@/features/badges/front/pages/BadgesPage'
 
 jest.mock('@/features/badges/front/services/api', () => ({
   badgesApi: {
     getCollection: jest.fn(),
     getSettings: jest.fn(),
+    createAward: jest.fn(),
+    advanceAward: jest.fn(),
+    deleteAward: jest.fn(),
+    addEvidence: jest.fn(),
+    removeEvidence: jest.fn(),
+    setSettings: jest.fn(),
   },
 }))
 
@@ -24,6 +30,12 @@ import { mockBadgeCollection } from '@/features/badges/__tests__/fixtures/mockBa
 
 const mockGetCollection = badgesApi.getCollection as jest.Mock
 const mockGetSettings = badgesApi.getSettings as jest.Mock
+const mockCreateAward = badgesApi.createAward as jest.Mock
+const mockAdvanceAward = badgesApi.advanceAward as jest.Mock
+const mockDeleteAward = badgesApi.deleteAward as jest.Mock
+const mockAddEvidence = badgesApi.addEvidence as jest.Mock
+const mockRemoveEvidence = badgesApi.removeEvidence as jest.Mock
+const mockSetSettings = badgesApi.setSettings as jest.Mock
 const mockUseHousehold = useHousehold as jest.Mock
 const mockUseLearner = useLearner as jest.Mock
 
@@ -50,6 +62,12 @@ describe('BadgesPage', () => {
     mockUseLearner.mockImplementation(() => ({ selectedChildId: 'student_seed_layth_001', setSelectedChildId: jest.fn() }))
     mockGetCollection.mockImplementation(() => ok(mockBadgeCollection))
     mockGetSettings.mockImplementation(() => ok({ householdId: 'hh_fix_001', platformBadgesEnabled: true }))
+    mockCreateAward.mockImplementation(() => ok(null))
+    mockAdvanceAward.mockImplementation(() => ok(null))
+    mockDeleteAward.mockImplementation(() => ok(null))
+    mockAddEvidence.mockImplementation(() => ok(null))
+    mockRemoveEvidence.mockImplementation(() => ok(null))
+    mockSetSettings.mockImplementation(() => ok({ householdId: 'hh_fix_001', platformBadgesEnabled: false }))
   })
 
   afterEach(() => {
@@ -57,6 +75,12 @@ describe('BadgesPage', () => {
     mockUseLearner.mockReset()
     mockGetCollection.mockReset()
     mockGetSettings.mockReset()
+    mockCreateAward.mockReset()
+    mockAdvanceAward.mockReset()
+    mockDeleteAward.mockReset()
+    mockAddEvidence.mockReset()
+    mockRemoveEvidence.mockReset()
+    mockSetSettings.mockReset()
   })
 
   it('shows loading state initially', () => {
@@ -140,5 +164,78 @@ describe('BadgesPage', () => {
     render(<BadgesPage />)
     await waitFor(() => expect(screen.getByTestId('badges-trophy-case')).toBeInTheDocument())
     expect(mockGetCollection).toHaveBeenCalledWith('hh_fix_001', 'student_seed_layth_001')
+  })
+
+  // ─── Phase 3: award lifecycle / evidence / settings interactions ──────────
+  it('starts an award on a badge with no award yet', async () => {
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByTestId('start-award-badge_fix_003')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('start-award-badge_fix_003'))
+    await waitFor(() => expect(mockCreateAward).toHaveBeenCalledWith('student_seed_layth_001', 'badge_fix_003'))
+    await waitFor(() => expect(screen.getByText('Award started')).toBeInTheDocument())
+  })
+
+  it('advances an in-progress award', async () => {
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByTestId('badge-locked-badge_fix_002')).toBeInTheDocument())
+    const card = within(screen.getByTestId('badge-locked-badge_fix_002'))
+    fireEvent.click(card.getByRole('button', { name: 'Verify' }))
+    await waitFor(() => expect(mockAdvanceAward).toHaveBeenCalledWith('award_fix_002', 'verified'))
+  })
+
+  it('revokes an award through the styled confirmation (confirm path)', async () => {
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByTestId('badge-earned-badge_fix_001')).toBeInTheDocument())
+    const card = within(screen.getByTestId('badge-earned-badge_fix_001'))
+    fireEvent.click(card.getByRole('button', { name: 'Remove award' }))
+    await waitFor(() => expect(screen.getByText('Remove this award?')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    await waitFor(() => expect(mockDeleteAward).toHaveBeenCalledWith('award_fix_001'))
+  })
+
+  it('cancels an award revoke without calling the API', async () => {
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByTestId('badge-earned-badge_fix_001')).toBeInTheDocument())
+    const card = within(screen.getByTestId('badge-earned-badge_fix_001'))
+    fireEvent.click(card.getByRole('button', { name: 'Remove award' }))
+    await waitFor(() => expect(screen.getByText('Remove this award?')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(screen.queryByText('Remove this award?')).not.toBeInTheDocument())
+    expect(mockDeleteAward).not.toHaveBeenCalled()
+  })
+
+  it('links evidence to an award', async () => {
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByTestId('badge-locked-badge_fix_002')).toBeInTheDocument())
+    const card = within(screen.getByTestId('badge-locked-badge_fix_002'))
+    fireEvent.click(card.getByRole('button', { name: /add evidence/i }))
+    fireEvent.change(card.getByLabelText('Evidence ID'), { target: { value: 'ev_new' } })
+    fireEvent.click(card.getByRole('button', { name: 'Link evidence' }))
+    await waitFor(() => expect(mockAddEvidence).toHaveBeenCalledWith('award_fix_002', 'ev_new'))
+  })
+
+  it('unlinks evidence from an award', async () => {
+    mockGetCollection.mockImplementation(() => ok([
+      {
+        definition: mockBadgeCollection[1].definition,
+        award: {
+          ...mockBadgeCollection[1].award,
+          evidence: [{ id: 'bae_1', evidenceId: 'ev_fix_003' }],
+        },
+        isEarned: false,
+      },
+    ]))
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByTestId('badge-locked-badge_fix_002')).toBeInTheDocument())
+    const card = within(screen.getByTestId('badge-locked-badge_fix_002'))
+    fireEvent.click(card.getByRole('button', { name: 'Unlink evidence' }))
+    await waitFor(() => expect(mockRemoveEvidence).toHaveBeenCalledWith('award_fix_002', 'bae_1'))
+  })
+
+  it('toggles the platform-badges setting', async () => {
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByLabelText('Platform badges enabled')).toBeInTheDocument())
+    fireEvent.click(screen.getByLabelText('Platform badges enabled'))
+    await waitFor(() => expect(mockSetSettings).toHaveBeenCalledWith(false))
   })
 })
