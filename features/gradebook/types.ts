@@ -34,6 +34,11 @@ export interface SubjectGradeResult {
   creditHours: number
   /** true when mastery is decaying / needs review */
   needsReview: boolean
+  // ─── Course-config (Phase 6) — present so the gradebook UI can populate the panel ──
+  isFormalCourse?: boolean
+  termModel?: string | null
+  gradingScaleId?: string | null
+  aggregationRuleId?: string | null
 }
 
 export interface GpaResult {
@@ -63,4 +68,38 @@ export interface NeedsAttentionItem {
   subjectId: string
   label: string
   reason: 'missing' | 'decaying' | 'no_scores'
+}
+
+// ─── Gradebook config (Phase 6) ─────────────────────────────────────────────────
+
+export interface GradingScaleBand {
+  /** Minimum percentage (0–100) for this band, inclusive. */
+  minPercent: number
+  letter: string
+  gpaPoints: number
+}
+
+export interface GradingScale {
+  id: string
+  householdId: string
+  name: string
+  bands: GradingScaleBand[]
+}
+
+export type AggregationStrategy = 'average' | 'most_recent' | 'highest'
+
+export interface AggregationRule {
+  id: string
+  householdId: string
+  name: string
+  strategy: AggregationStrategy
+}
+
+/** Course-config fields stored on a subject. */
+export interface SubjectCourseConfig {
+  creditHours: number | null
+  isFormalCourse: boolean
+  termModel: string | null
+  gradingScaleId: string | null
+  aggregationRuleId: string | null
 }

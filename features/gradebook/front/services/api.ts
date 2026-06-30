@@ -1,5 +1,5 @@
 import type { ApiResponse } from '@/features/lib/types'
-import type { GradebookSummary, Score, SubjectGradeResult, NeedsAttentionItem, ScoreState } from '@/features/gradebook/types'
+import type { GradebookSummary, Score, SubjectGradeResult, NeedsAttentionItem, ScoreState, GradingScale, GradingScaleBand, AggregationRule, AggregationStrategy, SubjectCourseConfig } from '@/features/gradebook/types'
 
 function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') return window.location.origin
@@ -12,7 +12,7 @@ async function get<T>(path: string): Promise<ApiResponse<T>> {
   return res.json()
 }
 
-async function mutate<T>(path: string, method: 'POST' | 'PATCH' | 'DELETE', body?: unknown): Promise<ApiResponse<T>> {
+async function mutate<T>(path: string, method: 'POST' | 'PATCH' | 'PUT' | 'DELETE', body?: unknown): Promise<ApiResponse<T>> {
   const res = await fetch(`${getApiBaseUrl()}${path}`, {
     method,
     headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
@@ -53,6 +53,31 @@ export const gradebookApi = {
   deleteScore: async (id: string): Promise<ApiResponse<null>> => {
     return mutate<null>(`/api/gradebook/scores/${encodeURIComponent(id)}`, 'DELETE')
   },
+
+  // ─── Grading scales (Phase 6) ──────────────────────────────────────────────
+  getGradingScales: async (): Promise<ApiResponse<GradingScale[]>> => get<GradingScale[]>('/api/gradebook/grading-scales'),
+  createGradingScale: async (name: string, bands: GradingScaleBand[]): Promise<ApiResponse<GradingScale | null>> =>
+    mutate<GradingScale | null>('/api/gradebook/grading-scales', 'POST', { name, bands }),
+  updateGradingScale: async (id: string, patch: { name?: string; bands?: GradingScaleBand[] }): Promise<ApiResponse<GradingScale | null>> =>
+    mutate<GradingScale | null>(`/api/gradebook/grading-scales/${encodeURIComponent(id)}`, 'PATCH', patch),
+  deleteGradingScale: async (id: string): Promise<ApiResponse<null>> =>
+    mutate<null>(`/api/gradebook/grading-scales/${encodeURIComponent(id)}`, 'DELETE'),
+
+  // ─── Aggregation rules (Phase 6) ───────────────────────────────────────────
+  getAggregationRules: async (): Promise<ApiResponse<AggregationRule[]>> => get<AggregationRule[]>('/api/gradebook/aggregation-rules'),
+  createAggregationRule: async (name: string, strategy: AggregationStrategy): Promise<ApiResponse<AggregationRule | null>> =>
+    mutate<AggregationRule | null>('/api/gradebook/aggregation-rules', 'POST', { name, strategy }),
+  updateAggregationRule: async (id: string, patch: { name?: string; strategy?: AggregationStrategy }): Promise<ApiResponse<AggregationRule | null>> =>
+    mutate<AggregationRule | null>(`/api/gradebook/aggregation-rules/${encodeURIComponent(id)}`, 'PATCH', patch),
+  deleteAggregationRule: async (id: string): Promise<ApiResponse<null>> =>
+    mutate<null>(`/api/gradebook/aggregation-rules/${encodeURIComponent(id)}`, 'DELETE'),
+
+  /**
+   * Persists a subject's course-config. Writes through the subject's owner route
+   * (PUT /api/subjects/:id) — gradebook does not own the subjects table.
+   */
+  updateSubjectConfig: async (subjectId: string, config: Partial<SubjectCourseConfig>): Promise<ApiResponse<unknown>> =>
+    mutate<unknown>(`/api/subjects/${encodeURIComponent(subjectId)}`, 'PUT', config),
 
   getSubjectGrades: async (learnerId: string): Promise<ApiResponse<SubjectGradeResult[]>> => {
     const summaries = await get<GradebookSummary[]>('/api/gradebook/summaries')

@@ -463,6 +463,45 @@ export const scores = pgTable(
   ],
 )
 
+// ─── Gradebook config (Phase 6) ───────────────────────────────────────────────
+//
+// grading_scales: household-defined letter/GPA-point bands a subject can reference.
+// aggregation_rules: household-defined strategy for collapsing a subject's scores
+//   into a representative value (average | most_recent | highest).
+//
+// subjects.gradingScaleId / subjects.aggregationRuleId reference these by value.
+// They are intentionally NOT DB-level foreign keys: existing subject rows may carry
+// stale ids, and the columns predate these tables. Referential validity is enforced
+// at the repository/UI layer (only ids returned by these tables are selectable).
+
+export const gradingScales = pgTable(
+  'grading_scales',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    name: text('name').notNull(),
+    // bands: [{ minPercent, letter, gpaPoints }]
+    bands: jsonb('bands').notNull().default([]),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [index('grading_scales_household_idx').on(t.householdId)],
+)
+
+export const aggregationRules = pgTable(
+  'aggregation_rules',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    name: text('name').notNull(),
+    // strategy: average | most_recent | highest
+    strategy: text('strategy').notNull().default('average'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [index('aggregation_rules_household_idx').on(t.householdId)],
+)
+
 // ─── Compliance ───────────────────────────────────────────────────────────────
 // compliance_rulesets: platform-wide reference rows (no householdId — seeded from docs/compliance-research/)
 // household_compliance_config: one row per household pointing at the active ruleset

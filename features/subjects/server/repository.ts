@@ -29,6 +29,12 @@ export interface UpdateSubjectInput {
   learnerIds?: string[]
   /** Replace linked resources when provided. */
   resourceIds?: string[]
+  // ─── Gradebook course-config (Phase 6) ───────────────────────────────────────
+  creditHours?: number | null
+  isFormalCourse?: boolean
+  termModel?: string | null
+  gradingScaleId?: string | null
+  aggregationRuleId?: string | null
 }
 
 /** Attach subject_learners rows for a subject, deduplicating. */
@@ -257,6 +263,14 @@ export async function updateSubjectRow(
   if (input.learnerIds !== undefined) {
     patch.learnerId = input.learnerIds[0] ?? null
   }
+  // Gradebook course-config (Phase 6). creditHours is a numeric column → string|null.
+  if (input.creditHours !== undefined) {
+    patch.creditHours = input.creditHours !== null ? String(input.creditHours) : null
+  }
+  if (input.isFormalCourse !== undefined) patch.isFormalCourse = input.isFormalCourse
+  if (input.termModel !== undefined) patch.termModel = input.termModel
+  if (input.gradingScaleId !== undefined) patch.gradingScaleId = input.gradingScaleId
+  if (input.aggregationRuleId !== undefined) patch.aggregationRuleId = input.aggregationRuleId
 
   const result = await db
     .update(subjects)

@@ -10,6 +10,13 @@ jest.mock('@/features/gradebook/front/services/api', () => ({
     createScore: jest.fn(),
     updateScore: jest.fn(),
     deleteScore: jest.fn(),
+    getGradingScales: jest.fn(),
+    getAggregationRules: jest.fn(),
+    createGradingScale: jest.fn(),
+    deleteGradingScale: jest.fn(),
+    createAggregationRule: jest.fn(),
+    deleteAggregationRule: jest.fn(),
+    updateSubjectConfig: jest.fn(),
   },
 }))
 
@@ -27,6 +34,13 @@ const mockGetScores = gradebookApi.getScores as jest.Mock
 const mockCreateScore = gradebookApi.createScore as jest.Mock
 const mockUpdateScore = gradebookApi.updateScore as jest.Mock
 const mockDeleteScore = gradebookApi.deleteScore as jest.Mock
+const mockGetScales = gradebookApi.getGradingScales as jest.Mock
+const mockGetRules = gradebookApi.getAggregationRules as jest.Mock
+const mockCreateScale = gradebookApi.createGradingScale as jest.Mock
+const mockDeleteScale = gradebookApi.deleteGradingScale as jest.Mock
+const mockCreateRule = gradebookApi.createAggregationRule as jest.Mock
+const mockDeleteRule = gradebookApi.deleteAggregationRule as jest.Mock
+const mockUpdateSubjectConfig = gradebookApi.updateSubjectConfig as jest.Mock
 const mockUseLearner = useLearner as jest.Mock
 
 function ok<T>(data: T) {
@@ -42,6 +56,13 @@ describe('GradebookPage', () => {
     mockCreateScore.mockImplementation(() => ok(null))
     mockUpdateScore.mockImplementation(() => ok(null))
     mockDeleteScore.mockImplementation(() => ok(null))
+    mockGetScales.mockImplementation(() => ok([{ id: 'gs1', householdId: 'hh', name: 'Standard', bands: [] }]))
+    mockGetRules.mockImplementation(() => ok([{ id: 'ar1', householdId: 'hh', name: 'Best', strategy: 'highest' }]))
+    mockCreateScale.mockImplementation(() => ok(null))
+    mockDeleteScale.mockImplementation(() => ok(null))
+    mockCreateRule.mockImplementation(() => ok(null))
+    mockDeleteRule.mockImplementation(() => ok(null))
+    mockUpdateSubjectConfig.mockImplementation(() => ok(null))
   })
 
   afterEach(() => {
@@ -52,6 +73,13 @@ describe('GradebookPage', () => {
     mockCreateScore.mockReset()
     mockUpdateScore.mockReset()
     mockDeleteScore.mockReset()
+    mockGetScales.mockReset()
+    mockGetRules.mockReset()
+    mockCreateScale.mockReset()
+    mockDeleteScale.mockReset()
+    mockCreateRule.mockReset()
+    mockDeleteRule.mockReset()
+    mockUpdateSubjectConfig.mockReset()
   })
 
   it('shows loading state initially', () => {
@@ -224,5 +252,53 @@ describe('GradebookPage', () => {
     mockGetScores.mockImplementation(() => Promise.reject(new Error('boom')))
     await expandLaythMath()
     await waitFor(() => expect(screen.getByText(/could not load scores/i)).toBeInTheDocument())
+  })
+
+  // ─── Phase 6: course-config + scale/rule management ───────────────────────
+  it('saves subject course-config through the owner route and refetches summaries', async () => {
+    await expandLaythMath()
+    fireEvent.click(screen.getByTestId(`course-config-toggle-${laythMathSubjectId}`))
+    await waitFor(() => expect(screen.getByTestId(`subject-config-${laythMathSubjectId}`)).toBeInTheDocument())
+
+    fireEvent.change(screen.getByLabelText('Credit hours'), { target: { value: '4' } })
+    fireEvent.change(screen.getByLabelText('Grading scale'), { target: { value: 'gs1' } })
+    fireEvent.change(screen.getByLabelText('Aggregation rule'), { target: { value: 'ar1' } })
+    const summariesCallsBefore = mockGetSummaries.mock.calls.length
+    fireEvent.click(screen.getByRole('button', { name: 'Save config' }))
+
+    await waitFor(() => expect(mockUpdateSubjectConfig).toHaveBeenCalledWith(laythMathSubjectId, expect.objectContaining({
+      creditHours: 4, gradingScaleId: 'gs1', aggregationRuleId: 'ar1',
+    })))
+    // GPA is re-derived by refetching summaries after the config save
+    await waitFor(() => expect(mockGetSummaries.mock.calls.length).toBeGreaterThan(summariesCallsBefore))
+  })
+
+  it('creates a grading scale from the config manager', async () => {
+    render(<GradebookPage />)
+    await waitFor(() => expect(screen.getByTestId('toggle-grading-config')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('toggle-grading-config'))
+    fireEvent.change(screen.getByLabelText('New grading scale name'), { target: { value: 'Mastery' } })
+    fireEvent.click(screen.getAllByRole('button', { name: /add/i })[0])
+    await waitFor(() => expect(mockCreateScale).toHaveBeenCalledWith('Mastery', expect.any(Array)))
+  })
+
+  it('creates an aggregation rule from the config manager', async () => {
+    render(<GradebookPage />)
+    await waitFor(() => expect(screen.getByTestId('toggle-grading-config')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('toggle-grading-config'))
+    fireEvent.change(screen.getByLabelText('New aggregation rule name'), { target: { value: 'Latest' } })
+    fireEvent.change(screen.getByLabelText('New aggregation rule strategy'), { target: { value: 'most_recent' } })
+    fireEvent.click(screen.getAllByRole('button', { name: /add/i })[1])
+    await waitFor(() => expect(mockCreateRule).toHaveBeenCalledWith('Latest', 'most_recent'))
+  })
+
+  it('deletes a grading scale through the styled confirmation', async () => {
+    render(<GradebookPage />)
+    await waitFor(() => expect(screen.getByTestId('toggle-grading-config')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('toggle-grading-config'))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete grading scale Standard' }))
+    await waitFor(() => expect(screen.getByText('Delete this grading scale?')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await waitFor(() => expect(mockDeleteScale).toHaveBeenCalledWith('gs1'))
   })
 })

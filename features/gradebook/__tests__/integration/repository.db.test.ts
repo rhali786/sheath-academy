@@ -7,9 +7,13 @@
  */
 
 import { getDb, closeDb } from '@/features/lib/server/db'
-import { users, households, learners, subjects, scores } from '@/db/schema'
+import { users, households, learners, subjects, scores, gradingScales, aggregationRules } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { createScore, listScores, listGradebookSummaries, updateScore, deleteScore } from '@/features/gradebook/server/repository'
+import {
+  createScore, listScores, listGradebookSummaries, updateScore, deleteScore,
+  createGradingScale, listGradingScales, updateGradingScale, deleteGradingScale,
+  createAggregationRule, listAggregationRules, updateAggregationRule, deleteAggregationRule,
+} from '@/features/gradebook/server/repository'
 
 const hasDb = !!process.env.DATABASE_URL
 const describeDb = hasDb ? describe : describe.skip
@@ -69,6 +73,8 @@ async function cleanupFixtures(ids: ReturnType<typeof testIds>) {
   // Delete in FK-safe reverse order
   await db.delete(scores).where(eq(scores.householdId, ids.hid))
   await db.delete(subjects).where(eq(subjects.householdId, ids.hid))
+  await db.delete(gradingScales).where(eq(gradingScales.householdId, ids.hid))
+  await db.delete(aggregationRules).where(eq(aggregationRules.householdId, ids.hid))
   await db.delete(learners).where(eq(learners.householdId, ids.hid))
   await db.delete(households).where(eq(households.id, ids.hid))
   await db.delete(users).where(eq(users.id, ids.uid))
@@ -310,6 +316,85 @@ describeDb('gradebook repository (real DB)', () => {
 
       const again = await deleteScore(created.id, ids.hid)
       expect(again).toBe(false)
+    }, DB_TIMEOUT_MS)
+  })
+
+  // ─── Phase 6: grading scales + aggregation rules CRUD ─────────────────────────
+
+  describe('grading scales CRUD', () => {
+    const ids = testIds('gs')
+    beforeAll(async () => { await insertFixtures(ids) })
+    afterAll(async () => { await cleanupFixtures(ids) })
+
+    it('create/list/update/delete grading scales', async () => {
+      const scale = await createGradingScale(ids.hid, {
+        name: 'Standard', bands: [{ minPercent: 90, letter: 'A', gpaPoints: 4 }, { minPercent: 0, letter: 'F', gpaPoints: 0 }],
+      })
+      expect(scale.id).toBeTruthy()
+      expect((await listGradingScales(ids.hid)).find(s => s.id === scale.id)).toBeDefined()
+
+      const updated = await updateGradingScale(scale.id, ids.hid, { name: 'Renamed' })
+      expect(updated!.name).toBe('Renamed')
+      expect(await updateGradingScale(scale.id, 'hh_nope', { name: 'x' })).toBeNull()
+
+      expect(await deleteGradingScale(scale.id, ids.hid)).toBe(true)
+      expect(await deleteGradingScale(scale.id, ids.hid)).toBe(false)
+    }, DB_TIMEOUT_MS)
+  })
+
+  describe('aggregation rules CRUD', () => {
+    const ids = testIds('ar')
+    beforeAll(async () => { await insertFixtures(ids) })
+    afterAll(async () => { await cleanupFixtures(ids) })
+
+    it('create/list/update/delete aggregation rules', async () => {
+      const rule = await createAggregationRule(ids.hid, { name: 'Latest', strategy: 'most_recent' })
+      expect(rule.strategy).toBe('most_recent')
+      expect((await listAggregationRules(ids.hid)).find(r => r.id === rule.id)).toBeDefined()
+
+      const updated = await updateAggregationRule(rule.id, ids.hid, { strategy: 'highest' })
+      expect(updated!.strategy).toBe('highest')
+
+      expect(await deleteAggregationRule(rule.id, ids.hid)).toBe(true)
+      expect(await deleteAggregationRule(rule.id, ids.hid)).toBe(false)
+    }, DB_TIMEOUT_MS)
+  })
+
+  describe('listGradebookSummaries — honours per-subject scale + aggregation rule', () => {
+    const ids = testIds('cfg')
+    const sid = `${ids.sid}_cfg`
+
+    beforeAll(async () => { await insertFixtures(ids) })
+    afterAll(async () => { await cleanupFixtures(ids) })
+
+    it('uses the highest-strategy rule and a custom scale for GPA', async () => {
+      // Custom scale: ≥85 → 4 points, else 0. Rule: highest score wins.
+      const scale = await createGradingScale(ids.hid, {
+        name: 'Pass85', bands: [{ minPercent: 85, letter: 'P', gpaPoints: 4 }, { minPercent: 0, letter: 'N', gpaPoints: 0 }],
+      })
+      const rule = await createAggregationRule(ids.hid, { name: 'Best', strategy: 'highest' })
+
+      const db = getDb()
+      const now = new Date()
+      await db.insert(subjects).values({
+        id: sid, householdId: ids.hid, learnerId: ids.lid, name: 'Configured Course',
+        creditHours: '2', gradingScaleId: scale.id, aggregationRuleId: rule.id,
+        createdAt: now, updatedAt: now,
+      }).onConflictDoNothing()
+
+      // Two scores: 70 and 88. Average would be 79 (→ N/0 pts); highest is 88 (→ P/4 pts).
+      await createScore(ids.hid, { learnerId: ids.lid, subjectId: sid, state: 'graded', numericValue: 70, source: 'parent', occurredAt: new Date('2026-05-01').toISOString() })
+      await createScore(ids.hid, { learnerId: ids.lid, subjectId: sid, state: 'graded', numericValue: 88, source: 'parent', occurredAt: new Date('2026-05-02').toISOString() })
+
+      const summaries = await listGradebookSummaries(ids.hid)
+      const summary = summaries.find(s => s.learnerId === ids.lid)!
+      const subjectResult = summary.subjects.find(s => s.subjectId === sid)!
+
+      // Representative score = highest = 88 → letter P
+      expect(subjectResult.pointsAverage).toBe(88)
+      expect(subjectResult.gradeLetter).toBe('P')
+      // GPA points = 4 (≥85 band), single graded subject → GPA 4.0
+      expect(summary.gpa.weighted).toBeCloseTo(4.0, 5)
     }, DB_TIMEOUT_MS)
   })
 })

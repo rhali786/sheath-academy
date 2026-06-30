@@ -1,11 +1,26 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { GraduationCap, AlertCircle, CheckCircle2, TrendingDown, BookOpen, ChevronDown, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react'
+import { GraduationCap, AlertCircle, CheckCircle2, TrendingDown, BookOpen, ChevronDown, ChevronRight, Plus, Pencil, Trash2, SlidersHorizontal } from 'lucide-react'
 import { gradebookApi } from '@/features/gradebook/front/services/api'
 import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import { InlineSuccess } from '@/features/lib/front/components/InlineSuccess'
-import type { GradebookSummary, NeedsAttentionItem, Score, ScoreState } from '@/features/gradebook/types'
+import type { GradebookSummary, NeedsAttentionItem, Score, ScoreState, SubjectGradeResult, GradingScale, AggregationRule, AggregationStrategy } from '@/features/gradebook/types'
+
+const AGGREGATION_STRATEGIES: { value: AggregationStrategy; label: string }[] = [
+  { value: 'average', label: 'Average' },
+  { value: 'most_recent', label: 'Most recent' },
+  { value: 'highest', label: 'Highest' },
+]
+
+// Default A–F bands used when authoring a new grading scale.
+const DEFAULT_NEW_SCALE_BANDS = [
+  { minPercent: 90, letter: 'A', gpaPoints: 4 },
+  { minPercent: 80, letter: 'B', gpaPoints: 3 },
+  { minPercent: 70, letter: 'C', gpaPoints: 2 },
+  { minPercent: 60, letter: 'D', gpaPoints: 1 },
+  { minPercent: 0, letter: 'F', gpaPoints: 0 },
+]
 
 const STATE_OPTIONS: { value: ScoreState; label: string }[] = [
   { value: 'graded', label: 'Graded' },
@@ -310,10 +325,176 @@ function NeedsAttentionQueue({ items }: { items: NeedsAttentionItem[] }) {
   )
 }
 
-function LearnerCard({ summary }: { summary: GradebookSummary }) {
+interface GradebookConfig {
+  scales: GradingScale[]
+  rules: AggregationRule[]
+  onReload: () => void
+}
+
+function SubjectConfigPanel({ subject, config }: { subject: SubjectGradeResult; config: GradebookConfig }) {
+  const [creditHours, setCreditHours] = useState(subject.creditHours != null ? String(subject.creditHours) : '')
+  const [isFormalCourse, setIsFormalCourse] = useState(subject.isFormalCourse ?? false)
+  const [termModel, setTermModel] = useState(subject.termModel ?? '')
+  const [gradingScaleId, setGradingScaleId] = useState(subject.gradingScaleId ?? '')
+  const [aggregationRuleId, setAggregationRuleId] = useState(subject.aggregationRuleId ?? '')
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function save() {
+    setError(null)
+    setPending(true)
+    try {
+      await gradebookApi.updateSubjectConfig(subject.subjectId, {
+        creditHours: creditHours === '' ? null : Number(creditHours),
+        isFormalCourse,
+        termModel: termModel || null,
+        gradingScaleId: gradingScaleId || null,
+        aggregationRuleId: aggregationRuleId || null,
+      })
+      config.onReload()
+    } catch {
+      setError('Could not save course config. Please try again.')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <div data-testid={`subject-config-${subject.subjectId}`} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3 pl-6 text-left">
+      <div className="flex flex-wrap gap-3">
+        <label className="flex flex-col text-xs text-slate-500">
+          Credit hours
+          <input aria-label="Credit hours" type="number" min={0} step="0.5" value={creditHours} onChange={e => setCreditHours(e.target.value)} className="mt-0.5 w-20 rounded border border-slate-300 px-2 py-1 text-sm" />
+        </label>
+        <label className="flex flex-col text-xs text-slate-500">
+          Term model
+          <input aria-label="Term model" type="text" placeholder="semester" value={termModel} onChange={e => setTermModel(e.target.value)} className="mt-0.5 w-28 rounded border border-slate-300 px-2 py-1 text-sm" />
+        </label>
+        <label className="flex items-center gap-1 text-xs text-slate-600 self-end pb-1">
+          <input aria-label="Formal course" type="checkbox" checked={isFormalCourse} onChange={e => setIsFormalCourse(e.target.checked)} className="rounded border-slate-300" />
+          Formal course
+        </label>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <label className="flex flex-col text-xs text-slate-500">
+          Grading scale
+          <select aria-label="Grading scale" value={gradingScaleId} onChange={e => setGradingScaleId(e.target.value)} className="mt-0.5 rounded border border-slate-300 px-2 py-1 text-sm">
+            <option value="">Default (A–F)</option>
+            {config.scales.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </label>
+        <label className="flex flex-col text-xs text-slate-500">
+          Aggregation rule
+          <select aria-label="Aggregation rule" value={aggregationRuleId} onChange={e => setAggregationRuleId(e.target.value)} className="mt-0.5 rounded border border-slate-300 px-2 py-1 text-sm">
+            <option value="">Average (default)</option>
+            {config.rules.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+          </select>
+        </label>
+      </div>
+      {error && <p className="text-xs text-red-600" role="alert">{error}</p>}
+      <div className="flex justify-end">
+        <button type="button" onClick={save} disabled={pending} className="rounded-lg bg-forest-900 px-3 py-1 text-xs font-medium text-white hover:bg-forest-800 disabled:opacity-50">{pending ? 'Saving…' : 'Save config'}</button>
+      </div>
+    </div>
+  )
+}
+
+function GradebookConfigManager({ config }: { config: GradebookConfig }) {
+  const [open, setOpen] = useState(false)
+  const [scaleName, setScaleName] = useState('')
+  const [ruleName, setRuleName] = useState('')
+  const [ruleStrategy, setRuleStrategy] = useState<AggregationStrategy>('average')
+  const [confirmDelete, setConfirmDelete] = useState<{ kind: 'scale' | 'rule'; id: string } | null>(null)
+
+  async function addScale() {
+    if (!scaleName.trim()) return
+    await gradebookApi.createGradingScale(scaleName.trim(), DEFAULT_NEW_SCALE_BANDS)
+    setScaleName('')
+    config.onReload()
+  }
+  async function addRule() {
+    if (!ruleName.trim()) return
+    await gradebookApi.createAggregationRule(ruleName.trim(), ruleStrategy)
+    setRuleName('')
+    config.onReload()
+  }
+  async function doDelete() {
+    if (!confirmDelete) return
+    if (confirmDelete.kind === 'scale') await gradebookApi.deleteGradingScale(confirmDelete.id)
+    else await gradebookApi.deleteAggregationRule(confirmDelete.id)
+    setConfirmDelete(null)
+    config.onReload()
+  }
+
+  return (
+    <div className="card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+          <SlidersHorizontal className="w-4 h-4 text-slate-400" /> Grading scales &amp; aggregation rules
+        </h2>
+        <button type="button" data-testid="toggle-grading-config" onClick={() => setOpen(v => !v)} className="text-xs text-forest-700 hover:text-forest-900 underline underline-offset-2">
+          {open ? 'Hide' : 'Manage'}
+        </button>
+      </div>
+
+      {open && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-slate-500">Grading scales</p>
+            <ul className="space-y-1">
+              {config.scales.map(s => (
+                <li key={s.id} className="flex items-center justify-between text-sm text-slate-700">
+                  <span className="truncate">{s.name}</span>
+                  <button type="button" aria-label={`Delete grading scale ${s.name}`} onClick={() => setConfirmDelete({ kind: 'scale', id: s.id })} className="text-slate-400 hover:text-red-600"><Trash2 className="w-3 h-3" /></button>
+                </li>
+              ))}
+            </ul>
+            <div className="flex items-center gap-1">
+              <input aria-label="New grading scale name" type="text" placeholder="Scale name" value={scaleName} onChange={e => setScaleName(e.target.value)} className="flex-1 rounded border border-slate-300 px-2 py-1 text-xs" />
+              <button type="button" onClick={addScale} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-forest-700 hover:bg-forest-50 flex items-center gap-1"><Plus className="w-3 h-3" /> Add</button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-slate-500">Aggregation rules</p>
+            <ul className="space-y-1">
+              {config.rules.map(r => (
+                <li key={r.id} className="flex items-center justify-between text-sm text-slate-700">
+                  <span className="truncate">{r.name} <span className="text-xs text-slate-400">({r.strategy})</span></span>
+                  <button type="button" aria-label={`Delete aggregation rule ${r.name}`} onClick={() => setConfirmDelete({ kind: 'rule', id: r.id })} className="text-slate-400 hover:text-red-600"><Trash2 className="w-3 h-3" /></button>
+                </li>
+              ))}
+            </ul>
+            <div className="flex items-center gap-1">
+              <input aria-label="New aggregation rule name" type="text" placeholder="Rule name" value={ruleName} onChange={e => setRuleName(e.target.value)} className="flex-1 rounded border border-slate-300 px-2 py-1 text-xs" />
+              <select aria-label="New aggregation rule strategy" value={ruleStrategy} onChange={e => setRuleStrategy(e.target.value as AggregationStrategy)} className="rounded border border-slate-300 px-1 py-1 text-xs">
+                {AGGREGATION_STRATEGIES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+              <button type="button" onClick={addRule} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-forest-700 hover:bg-forest-50 flex items-center gap-1"><Plus className="w-3 h-3" /> Add</button>
+            </div>
+          </div>
+
+          {confirmDelete && (
+            <div className="sm:col-span-2">
+              <InlineConfirm
+                message={`Delete this ${confirmDelete.kind === 'scale' ? 'grading scale' : 'aggregation rule'}?`}
+                confirmLabel="Delete"
+                onConfirm={doDelete}
+                onCancel={() => setConfirmDelete(null)}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function LearnerCard({ summary, config }: { summary: GradebookSummary; config: GradebookConfig }) {
   const hasSubjects = summary.subjects.length > 0
   const hasGpa = summary.gpa.unweighted !== null
   const [expandedSubjectId, setExpandedSubjectId] = useState<string | null>(null)
+  const [configSubjectId, setConfigSubjectId] = useState<string | null>(null)
 
   function toggleSubject(subjectId: string) {
     setExpandedSubjectId(prev => prev === subjectId ? null : subjectId)
@@ -389,6 +570,19 @@ function LearnerCard({ summary }: { summary: GradebookSummary }) {
                 </button>
                 {isExpanded && (
                   <div data-testid={`score-history-${summary.learnerId}-${subject.subjectId}`}>
+                    <div className="pl-6 pt-1">
+                      <button
+                        type="button"
+                        data-testid={`course-config-toggle-${subject.subjectId}`}
+                        onClick={() => setConfigSubjectId(prev => prev === subject.subjectId ? null : subject.subjectId)}
+                        className="flex items-center gap-1 text-xs text-forest-700 hover:text-forest-900"
+                      >
+                        <SlidersHorizontal className="w-3 h-3" /> {configSubjectId === subject.subjectId ? 'Hide course config' : 'Course config'}
+                      </button>
+                    </div>
+                    {configSubjectId === subject.subjectId && (
+                      <SubjectConfigPanel subject={subject} config={config} />
+                    )}
                     <ScoreHistory learnerId={summary.learnerId} subjectId={subject.subjectId} />
                   </div>
                 )}
@@ -403,6 +597,8 @@ function LearnerCard({ summary }: { summary: GradebookSummary }) {
 
 export function GradebookPage() {
   const [summaries, setSummaries] = useState<GradebookSummary[]>([])
+  const [scales, setScales] = useState<GradingScale[]>([])
+  const [rules, setRules] = useState<AggregationRule[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -417,6 +613,19 @@ export function GradebookPage() {
     })
   ).slice(0, 5)
 
+  const loadConfig = useCallback(() => {
+    Promise.all([gradebookApi.getGradingScales(), gradebookApi.getAggregationRules()])
+      .then(([scalesRes, rulesRes]) => {
+        setScales(scalesRes.data)
+        setRules(rulesRes.data)
+      })
+      .catch(() => { /* config is optional — leave defaults */ })
+  }, [])
+
+  const reloadSummaries = useCallback(() => {
+    gradebookApi.getSummaries('').then(res => setSummaries(res.data)).catch(() => {})
+  }, [])
+
   useEffect(() => {
     gradebookApi.getSummaries('').then(res => {
       setSummaries(res.data)
@@ -425,7 +634,14 @@ export function GradebookPage() {
       setError('Could not load gradebook. Please try again.')
       setLoading(false)
     })
-  }, [])
+    loadConfig()
+  }, [loadConfig])
+
+  const config: GradebookConfig = {
+    scales,
+    rules,
+    onReload: () => { reloadSummaries(); loadConfig() },
+  }
 
   if (loading) {
     return (
@@ -459,9 +675,11 @@ export function GradebookPage() {
 
       <NeedsAttentionQueue items={needsAttention} />
 
+      <GradebookConfigManager config={config} />
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {summaries.map(summary => (
-          <LearnerCard key={summary.learnerId} summary={summary} />
+          <LearnerCard key={summary.learnerId} summary={summary} config={config} />
         ))}
       </div>
     </div>
