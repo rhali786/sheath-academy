@@ -32,7 +32,7 @@ function normalizeGradeBand(gradeLevel: string | null): GradeBand {
 }
 
 /** Map a ScoreRow (from Drizzle) to the Score domain interface. */
-function rowToScore(row: ScoreRow): Score {
+export function rowToScore(row: ScoreRow): Score {
   return {
     id: row.id,
     subjectId: row.subjectId ?? '',
@@ -75,6 +75,53 @@ export async function createScore(householdId: string, input: CreateScoreInput):
     .returning()
 
   return row
+}
+
+export interface UpdateScoreInput {
+  state?: ScoreState
+  numericValue?: number | null
+  occurredAt?: string
+  comment?: string | null
+}
+
+/**
+ * Patch an existing score, scoped to the owning household.
+ * Returns the updated row, or undefined when no row matched (wrong id/household).
+ */
+export async function updateScore(
+  id: string,
+  householdId: string,
+  patch: UpdateScoreInput,
+): Promise<ScoreRow | undefined> {
+  const db = getDb()
+  const updates: Partial<typeof scores.$inferInsert> = { updatedAt: new Date() }
+  if (patch.state !== undefined) updates.state = patch.state
+  if (patch.numericValue !== undefined) {
+    updates.numericValue = patch.numericValue !== null ? String(patch.numericValue) : null
+  }
+  if (patch.occurredAt !== undefined) updates.occurredAt = new Date(patch.occurredAt)
+  if (patch.comment !== undefined) updates.comment = patch.comment
+
+  const [row] = await db
+    .update(scores)
+    .set(updates)
+    .where(and(eq(scores.id, id), eq(scores.householdId, householdId)))
+    .returning()
+
+  return row
+}
+
+/**
+ * Hard-delete a score, scoped to the owning household.
+ * Returns true when a row was removed, false otherwise.
+ */
+export async function deleteScore(id: string, householdId: string): Promise<boolean> {
+  const db = getDb()
+  const removed = await db
+    .delete(scores)
+    .where(and(eq(scores.id, id), eq(scores.householdId, householdId)))
+    .returning({ id: scores.id })
+  return removed.length > 0
 }
 
 /**

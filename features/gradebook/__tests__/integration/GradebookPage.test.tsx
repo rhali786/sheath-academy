@@ -7,6 +7,9 @@ jest.mock('@/features/gradebook/front/services/api', () => ({
     getSummaries: jest.fn(),
     getNeedsAttention: jest.fn(),
     getScores: jest.fn(),
+    createScore: jest.fn(),
+    updateScore: jest.fn(),
+    deleteScore: jest.fn(),
   },
 }))
 
@@ -21,6 +24,9 @@ import { mockGradebookSummaries, mockScores } from '@/features/gradebook/__tests
 const mockGetSummaries = gradebookApi.getSummaries as jest.Mock
 const mockGetNeedsAttention = gradebookApi.getNeedsAttention as jest.Mock
 const mockGetScores = gradebookApi.getScores as jest.Mock
+const mockCreateScore = gradebookApi.createScore as jest.Mock
+const mockUpdateScore = gradebookApi.updateScore as jest.Mock
+const mockDeleteScore = gradebookApi.deleteScore as jest.Mock
 const mockUseLearner = useLearner as jest.Mock
 
 function ok<T>(data: T) {
@@ -33,6 +39,9 @@ describe('GradebookPage', () => {
     mockGetSummaries.mockImplementation(() => ok(mockGradebookSummaries))
     mockGetNeedsAttention.mockImplementation(() => ok([]))
     mockGetScores.mockImplementation(() => ok([]))
+    mockCreateScore.mockImplementation(() => ok(null))
+    mockUpdateScore.mockImplementation(() => ok(null))
+    mockDeleteScore.mockImplementation(() => ok(null))
   })
 
   afterEach(() => {
@@ -40,6 +49,9 @@ describe('GradebookPage', () => {
     mockGetSummaries.mockReset()
     mockGetNeedsAttention.mockReset()
     mockGetScores.mockReset()
+    mockCreateScore.mockReset()
+    mockUpdateScore.mockReset()
+    mockDeleteScore.mockReset()
   })
 
   it('shows loading state initially', () => {
@@ -132,5 +144,85 @@ describe('GradebookPage', () => {
     await waitFor(() => expect(screen.getByTestId(`score-history-${mockGradebookSummaries[0].learnerId}-${mockGradebookSummaries[0].subjects[0].subjectId}`)).toBeInTheDocument())
     fireEvent.click(screen.getByTestId(rowId))
     expect(screen.queryByTestId(`score-history-${mockGradebookSummaries[0].learnerId}-${mockGradebookSummaries[0].subjects[0].subjectId}`)).not.toBeInTheDocument()
+  })
+
+  // ─── Phase 1: score CRUD interactions ─────────────────────────────────────
+  const laythMathSubjectId = mockGradebookSummaries[0].subjects[0].subjectId
+  const laythId = mockGradebookSummaries[0].learnerId
+
+  async function expandLaythMath() {
+    render(<GradebookPage />)
+    await waitFor(() => expect(screen.getByText('Layth')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId(`subject-row-${laythId}-${laythMathSubjectId}`))
+    await waitFor(() => expect(screen.getByTestId(`add-score-toggle-${laythMathSubjectId}`)).toBeInTheDocument())
+  }
+
+  it('adds a score via the collapsible add-form', async () => {
+    await expandLaythMath()
+    fireEvent.click(screen.getByTestId(`add-score-toggle-${laythMathSubjectId}`))
+    await waitFor(() => expect(screen.getByTestId(`add-score-form-${laythMathSubjectId}`)).toBeInTheDocument())
+
+    fireEvent.change(screen.getByLabelText('Numeric score'), { target: { value: '91' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add score' }))
+
+    await waitFor(() => expect(mockCreateScore).toHaveBeenCalledWith(
+      expect.objectContaining({ learnerId: laythId, subjectId: laythMathSubjectId, state: 'graded', numericValue: 91 }),
+    ))
+    await waitFor(() => expect(screen.getByText('Score added')).toBeInTheDocument())
+  })
+
+  it('blocks adding a graded score with no numeric value', async () => {
+    await expandLaythMath()
+    fireEvent.click(screen.getByTestId(`add-score-toggle-${laythMathSubjectId}`))
+    await waitFor(() => expect(screen.getByTestId(`add-score-form-${laythMathSubjectId}`)).toBeInTheDocument())
+    // leave numeric blank
+    fireEvent.click(screen.getByRole('button', { name: 'Add score' }))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/score/i))
+    expect(mockCreateScore).not.toHaveBeenCalled()
+  })
+
+  it('edits an existing score', async () => {
+    mockGetScores.mockImplementation(() => ok([
+      { id: 'sc_1', subjectId: laythMathSubjectId, learnerId: laythId, householdId: 'hh', state: 'graded', numericValue: 80, source: 'parent', occurredAt: '2026-05-01', comment: '' },
+    ]))
+    await expandLaythMath()
+    await waitFor(() => expect(screen.getByText('80%')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Edit score' }))
+    fireEvent.change(screen.getByLabelText('Numeric score'), { target: { value: '95' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mockUpdateScore).toHaveBeenCalledWith('sc_1', expect.objectContaining({ numericValue: 95, state: 'graded' })))
+    await waitFor(() => expect(screen.getByText('Score updated')).toBeInTheDocument())
+  })
+
+  it('deletes a score through the styled confirmation (confirm path)', async () => {
+    mockGetScores.mockImplementation(() => ok([
+      { id: 'sc_1', subjectId: laythMathSubjectId, learnerId: laythId, householdId: 'hh', state: 'graded', numericValue: 80, source: 'parent', occurredAt: '2026-05-01', comment: '' },
+    ]))
+    await expandLaythMath()
+    await waitFor(() => expect(screen.getByText('80%')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Delete score' }))
+    await waitFor(() => expect(screen.getByText('Delete this score?')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await waitFor(() => expect(mockDeleteScore).toHaveBeenCalledWith('sc_1'))
+    await waitFor(() => expect(screen.getByText('Score deleted')).toBeInTheDocument())
+  })
+
+  it('cancels a delete without calling the API (cancel path)', async () => {
+    mockGetScores.mockImplementation(() => ok([
+      { id: 'sc_1', subjectId: laythMathSubjectId, learnerId: laythId, householdId: 'hh', state: 'graded', numericValue: 80, source: 'parent', occurredAt: '2026-05-01', comment: '' },
+    ]))
+    await expandLaythMath()
+    await waitFor(() => expect(screen.getByText('80%')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Delete score' }))
+    await waitFor(() => expect(screen.getByText('Delete this score?')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(screen.queryByText('Delete this score?')).not.toBeInTheDocument())
+    expect(mockDeleteScore).not.toHaveBeenCalled()
+  })
+
+  it('shows an error when score loading fails', async () => {
+    mockGetScores.mockImplementation(() => Promise.reject(new Error('boom')))
+    await expandLaythMath()
+    await waitFor(() => expect(screen.getByText(/could not load scores/i)).toBeInTheDocument())
   })
 })

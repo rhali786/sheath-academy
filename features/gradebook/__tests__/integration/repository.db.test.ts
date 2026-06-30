@@ -9,7 +9,7 @@
 import { getDb, closeDb } from '@/features/lib/server/db'
 import { users, households, learners, subjects, scores } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { createScore, listScores, listGradebookSummaries } from '@/features/gradebook/server/repository'
+import { createScore, listScores, listGradebookSummaries, updateScore, deleteScore } from '@/features/gradebook/server/repository'
 
 const hasDb = !!process.env.DATABASE_URL
 const describeDb = hasDb ? describe : describe.skip
@@ -252,6 +252,64 @@ describeDb('gradebook repository (real DB)', () => {
 
       const heavy = summary.subjects.find(s => s.subjectId === sidA)!
       expect(heavy.creditHours).toBe(4)
+    }, DB_TIMEOUT_MS)
+  })
+
+  describe('updateScore + deleteScore (Phase 1)', () => {
+    const ids = testIds('crud')
+
+    beforeAll(async () => { await insertFixtures(ids) })
+    afterAll(async () => { await cleanupFixtures(ids) })
+
+    it('updateScore patches state/numericValue/comment and bumps the row', async () => {
+      const created = await createScore(ids.hid, {
+        learnerId: ids.lid, subjectId: ids.sid, state: 'graded',
+        numericValue: 70, source: 'parent', occurredAt: new Date('2026-05-06').toISOString(),
+      })
+
+      const updated = await updateScore(created.id, ids.hid, {
+        state: 'graded', numericValue: 95, comment: 'retake',
+      })
+      expect(updated).toBeDefined()
+
+      const list = await listScores(ids.hid, ids.lid, ids.sid)
+      const row = list.find(s => s.id === created.id)!
+      expect(row.numericValue).toBe(95)
+      expect(row.comment).toBe('retake')
+    }, DB_TIMEOUT_MS)
+
+    it('updateScore can clear numericValue when state becomes excused', async () => {
+      const created = await createScore(ids.hid, {
+        learnerId: ids.lid, subjectId: ids.sid, state: 'graded',
+        numericValue: 80, source: 'parent', occurredAt: new Date('2026-05-07').toISOString(),
+      })
+      await updateScore(created.id, ids.hid, { state: 'excused', numericValue: null })
+      const row = (await listScores(ids.hid, ids.lid, ids.sid)).find(s => s.id === created.id)!
+      expect(row.state).toBe('excused')
+      expect(row.numericValue).toBeNull()
+    }, DB_TIMEOUT_MS)
+
+    it('updateScore returns undefined for a foreign household', async () => {
+      const created = await createScore(ids.hid, {
+        learnerId: ids.lid, subjectId: ids.sid, state: 'graded',
+        numericValue: 50, source: 'parent', occurredAt: new Date('2026-05-08').toISOString(),
+      })
+      const result = await updateScore(created.id, 'hh_does_not_exist', { numericValue: 99 })
+      expect(result).toBeUndefined()
+    }, DB_TIMEOUT_MS)
+
+    it('deleteScore removes the row and returns true; false when already gone', async () => {
+      const created = await createScore(ids.hid, {
+        learnerId: ids.lid, subjectId: ids.sid, state: 'graded',
+        numericValue: 88, source: 'parent', occurredAt: new Date('2026-05-09').toISOString(),
+      })
+      const ok = await deleteScore(created.id, ids.hid)
+      expect(ok).toBe(true)
+      const list = await listScores(ids.hid, ids.lid, ids.sid)
+      expect(list.find(s => s.id === created.id)).toBeUndefined()
+
+      const again = await deleteScore(created.id, ids.hid)
+      expect(again).toBe(false)
     }, DB_TIMEOUT_MS)
   })
 })

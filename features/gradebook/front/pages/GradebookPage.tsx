@@ -1,9 +1,269 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { GraduationCap, AlertCircle, CheckCircle2, TrendingDown, BookOpen, ChevronDown, ChevronRight } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { GraduationCap, AlertCircle, CheckCircle2, TrendingDown, BookOpen, ChevronDown, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react'
 import { gradebookApi } from '@/features/gradebook/front/services/api'
-import type { GradebookSummary, NeedsAttentionItem, Score } from '@/features/gradebook/types'
+import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
+import { InlineSuccess } from '@/features/lib/front/components/InlineSuccess'
+import type { GradebookSummary, NeedsAttentionItem, Score, ScoreState } from '@/features/gradebook/types'
+
+const STATE_OPTIONS: { value: ScoreState; label: string }[] = [
+  { value: 'graded', label: 'Graded' },
+  { value: 'complete', label: 'Complete' },
+  { value: 'not_graded', label: 'Not graded' },
+  { value: 'missing', label: 'Missing' },
+  { value: 'excused', label: 'Excused' },
+]
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+/** occurredAt may arrive as a full ISO timestamp (from the DB) or a date-only string. */
+function formatScoreDate(occurredAt: string): string {
+  const d = new Date(occurredAt.length === 10 ? `${occurredAt}T00:00:00` : occurredAt)
+  if (Number.isNaN(d.getTime())) return occurredAt
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+interface ScoreFormValues {
+  state: ScoreState
+  numericValue: number | null
+  occurredAt: string
+  comment: string
+}
+
+function ScoreForm({
+  initial,
+  submitLabel,
+  onSubmit,
+  onCancel,
+}: {
+  initial?: { state: ScoreState; numericValue: number | null; occurredAt: string; comment?: string }
+  submitLabel: string
+  onSubmit: (values: ScoreFormValues) => Promise<void>
+  onCancel: () => void
+}) {
+  const [state, setState] = useState<ScoreState>(initial?.state ?? 'graded')
+  const [numericValue, setNumericValue] = useState(initial?.numericValue != null ? String(initial.numericValue) : '')
+  const [occurredAt, setOccurredAt] = useState(initial?.occurredAt ?? todayISO())
+  const [comment, setComment] = useState(initial?.comment ?? '')
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (state === 'graded' && (numericValue === '' || Number.isNaN(Number(numericValue)))) {
+      setError('Enter a score (0–100) for graded entries.')
+      return
+    }
+    setPending(true)
+    try {
+      await onSubmit({
+        state,
+        numericValue: state === 'graded' ? Number(numericValue) : null,
+        occurredAt,
+        comment: comment.trim(),
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save. Please try again.')
+      setPending(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3 mt-1">
+      <div className="flex flex-wrap gap-2">
+        <label className="flex flex-col text-xs text-slate-500">
+          State
+          <select
+            aria-label="Score state"
+            value={state}
+            onChange={e => setState(e.target.value as ScoreState)}
+            className="mt-0.5 rounded border border-slate-300 px-2 py-1 text-sm text-slate-700"
+          >
+            {STATE_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </label>
+        {state === 'graded' && (
+          <label className="flex flex-col text-xs text-slate-500">
+            Score
+            <input
+              aria-label="Numeric score"
+              type="number"
+              min={0}
+              max={100}
+              value={numericValue}
+              onChange={e => setNumericValue(e.target.value)}
+              className="mt-0.5 w-20 rounded border border-slate-300 px-2 py-1 text-sm text-slate-700"
+            />
+          </label>
+        )}
+        <label className="flex flex-col text-xs text-slate-500">
+          Date
+          <input
+            aria-label="Score date"
+            type="date"
+            value={occurredAt.slice(0, 10)}
+            onChange={e => setOccurredAt(e.target.value)}
+            className="mt-0.5 rounded border border-slate-300 px-2 py-1 text-sm text-slate-700"
+          />
+        </label>
+      </div>
+      <input
+        aria-label="Score comment"
+        type="text"
+        placeholder="Comment (optional)"
+        value={comment}
+        onChange={e => setComment(e.target.value)}
+        className="w-full rounded border border-slate-300 px-2 py-1 text-sm text-slate-700"
+      />
+      {error && <p className="text-xs text-red-600" role="alert">{error}</p>}
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={pending}
+          className="rounded-lg border border-slate-200 px-3 py-1 text-xs text-slate-500 hover:text-slate-700 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={pending}
+          className="rounded-lg bg-forest-900 px-3 py-1 text-xs font-medium text-white hover:bg-forest-800 disabled:opacity-50"
+        >
+          {pending ? 'Saving…' : submitLabel}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+function ScoreHistory({ learnerId, subjectId }: { learnerId: string; subjectId: string }) {
+  const [scores, setScores] = useState<Score[] | null>(null)
+  const [loadError, setLoadError] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+
+  const load = useCallback(() => {
+    setLoadError(false)
+    gradebookApi.getScores(learnerId, subjectId)
+      .then(res => setScores(res.data))
+      .catch(() => { setScores([]); setLoadError(true) })
+  }, [learnerId, subjectId])
+
+  useEffect(() => { load() }, [load])
+
+  async function handleAdd(values: ScoreFormValues) {
+    await gradebookApi.createScore({ learnerId, subjectId, ...values, comment: values.comment || undefined })
+    setShowAddForm(false)
+    setSuccess('Score added')
+    load()
+  }
+
+  async function handleEdit(id: string, values: ScoreFormValues) {
+    await gradebookApi.updateScore(id, { ...values, comment: values.comment })
+    setEditingId(null)
+    setSuccess('Score updated')
+    load()
+  }
+
+  async function handleDelete(id: string) {
+    await gradebookApi.deleteScore(id)
+    setConfirmDeleteId(null)
+    setSuccess('Score deleted')
+    load()
+  }
+
+  return (
+    <div className="pl-6 pt-1 space-y-2">
+      <div className="flex items-center justify-between">
+        {scores === null
+          ? <span className="text-xs text-slate-400 animate-pulse">Loading…</span>
+          : <span className="text-xs text-slate-400">{scores.length === 0 ? 'No scored attempts yet.' : 'Score history'}</span>}
+        <button
+          type="button"
+          data-testid={`add-score-toggle-${subjectId}`}
+          onClick={() => { setShowAddForm(v => !v); setEditingId(null) }}
+          className="flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-0.5 text-xs text-forest-700 hover:bg-forest-50"
+        >
+          <Plus className="w-3 h-3" /> {showAddForm ? 'Cancel' : 'Add score'}
+        </button>
+      </div>
+
+      {loadError && <p className="text-xs text-red-600" role="alert">Could not load scores. Please try again.</p>}
+
+      {success && (
+        <InlineSuccess message={success} onDismiss={() => setSuccess(null)} />
+      )}
+
+      {showAddForm && (
+        <div data-testid={`add-score-form-${subjectId}`}>
+          <ScoreForm submitLabel="Add score" onSubmit={handleAdd} onCancel={() => setShowAddForm(false)} />
+        </div>
+      )}
+
+      {scores !== null && scores.length > 0 && (
+        <ul className="space-y-1 border-l-2 border-forest-100">
+          {scores.map(score => (
+            <li key={score.id} className="text-xs text-slate-600 pl-2">
+              {editingId === score.id ? (
+                <ScoreForm
+                  submitLabel="Save"
+                  initial={{ state: score.state, numericValue: score.numericValue, occurredAt: score.occurredAt.slice(0, 10), comment: score.comment }}
+                  onSubmit={values => handleEdit(score.id, values)}
+                  onCancel={() => setEditingId(null)}
+                />
+              ) : confirmDeleteId === score.id ? (
+                <InlineConfirm
+                  message="Delete this score?"
+                  detail={`${formatScoreDate(score.occurredAt)} · ${score.state === 'graded' ? `${score.numericValue}%` : score.state}`}
+                  confirmLabel="Delete"
+                  onConfirm={() => handleDelete(score.id)}
+                  onCancel={() => setConfirmDeleteId(null)}
+                />
+              ) : (
+                <div className="flex items-center gap-2 py-0.5">
+                  <span className="text-slate-400 w-12 flex-shrink-0">{formatScoreDate(score.occurredAt)}</span>
+                  {score.state === 'graded' && score.numericValue !== null ? (
+                    <span className={gradeLetter(score.numericValue >= 90 ? 'A' : score.numericValue >= 80 ? 'B' : score.numericValue >= 70 ? 'C' : 'F') ?? ''}>
+                      {score.numericValue}%
+                    </span>
+                  ) : (
+                    <span className="badge-amber capitalize">{score.state}</span>
+                  )}
+                  {score.comment && <span className="text-slate-400 truncate flex-1">{score.comment}</span>}
+                  <button
+                    type="button"
+                    aria-label="Edit score"
+                    onClick={() => { setEditingId(score.id); setShowAddForm(false) }}
+                    className="ml-auto text-slate-400 hover:text-forest-700"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Delete score"
+                    onClick={() => setConfirmDeleteId(score.id)}
+                    className="text-slate-400 hover:text-red-600"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
 
 function gradeLetter(letter: string | null) {
   if (!letter) return null
@@ -47,41 +307,6 @@ function NeedsAttentionQueue({ items }: { items: NeedsAttentionItem[] }) {
         ))}
       </ul>
     </div>
-  )
-}
-
-function ScoreHistory({ learnerId, subjectId }: { learnerId: string; subjectId: string }) {
-  const [scores, setScores] = useState<Score[] | null>(null)
-
-  useEffect(() => {
-    gradebookApi.getScores(learnerId, subjectId).then(res => setScores(res.data))
-  }, [learnerId, subjectId])
-
-  if (scores === null) {
-    return <p className="text-xs text-slate-400 py-1 pl-6 animate-pulse">Loading…</p>
-  }
-  if (scores.length === 0) {
-    return <p className="text-xs text-slate-400 py-1 pl-6">No scored attempts yet.</p>
-  }
-  return (
-    <ul className="mt-1 space-y-1 pl-6 border-l-2 border-forest-100">
-      {scores.map(score => {
-        const dateStr = new Date(`${score.occurredAt}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-        return (
-          <li key={score.id} className="text-xs text-slate-600 flex items-center gap-2 py-0.5">
-            <span className="text-slate-400 w-12 flex-shrink-0">{dateStr}</span>
-            {score.state === 'graded' && score.numericValue !== null ? (
-              <span className={gradeLetter(score.numericValue >= 90 ? 'A' : score.numericValue >= 80 ? 'B' : score.numericValue >= 70 ? 'C' : 'F') ?? ''}>
-                {score.numericValue}%
-              </span>
-            ) : (
-              <span className="badge-amber capitalize">{score.state}</span>
-            )}
-            {score.comment && <span className="text-slate-400 truncate">{score.comment}</span>}
-          </li>
-        )
-      })}
-    </ul>
   )
 }
 
