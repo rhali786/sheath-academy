@@ -130,15 +130,24 @@ export async function listGradebookSummaries(householdId: string): Promise<Grade
       s => s.learnerId === learner.id || s.learnerId === null,
     )
 
+    // creditHours is a numeric column — Drizzle returns it as a string (or null
+    // when unset). Fall back to 1 credit so subjects without a configured value
+    // still weight evenly. (Phase 0: stop hardcoding 1 across the board.)
+    const creditHoursFor = (raw: string | null): number => {
+      if (raw === null) return 1
+      const parsed = parseFloat(raw)
+      return Number.isFinite(parsed) ? parsed : 1
+    }
+
     const subjectResults = learnerSubjects.map(sub => {
       const subScores = scoreMap.get(learner.id)?.get(sub.id) ?? []
-      return computeSubjectGrade(sub.id, sub.name, subScores)
+      return computeSubjectGrade(sub.id, sub.name, subScores, creditHoursFor(sub.creditHours))
     })
 
     const config: SubjectGradingConfig[] = learnerSubjects.map(sub => ({
       subjectId: sub.id,
       label: sub.name,
-      creditHours: 1,
+      creditHours: creditHoursFor(sub.creditHours),
     }))
 
     const gradeMap = new Map<string, number>()

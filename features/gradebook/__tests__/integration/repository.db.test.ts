@@ -193,4 +193,65 @@ describeDb('gradebook repository (real DB)', () => {
       expect(subjectResult!.pointsAverage).toBeCloseTo(90, 1)
     }, DB_TIMEOUT_MS)
   })
+
+  describe('listGradebookSummaries — GPA reflects stored creditHours (Phase 0)', () => {
+    const ids = testIds('credits')
+    // Two subjects with different credit hours on the same learner.
+    const sidA = `${ids.sid}_a` // creditHours 4, grade 100 → A (4.0)
+    const sidB = `${ids.sid}_b` // creditHours 1, grade 60  → D (1.0)
+
+    beforeAll(async () => {
+      await insertFixtures(ids)
+      const db = getDb()
+      const now = new Date()
+      await db.insert(subjects).values([
+        {
+          id: sidA,
+          householdId: ids.hid,
+          learnerId: ids.lid,
+          name: 'Heavy Course',
+          creditHours: '4',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: sidB,
+          householdId: ids.hid,
+          learnerId: ids.lid,
+          name: 'Light Course',
+          creditHours: '1',
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]).onConflictDoNothing()
+    })
+    afterAll(async () => {
+      const db = getDb()
+      await db.delete(scores).where(eq(scores.householdId, ids.hid))
+      await db.delete(subjects).where(eq(subjects.householdId, ids.hid))
+      await cleanupFixtures(ids)
+    })
+
+    it('weights GPA by stored creditHours, not a constant 1', async () => {
+      await createScore(ids.hid, {
+        learnerId: ids.lid, subjectId: sidA, state: 'graded',
+        numericValue: 100, source: 'parent', occurredAt: new Date('2026-05-05').toISOString(),
+      })
+      await createScore(ids.hid, {
+        learnerId: ids.lid, subjectId: sidB, state: 'graded',
+        numericValue: 60, source: 'parent', occurredAt: new Date('2026-05-05').toISOString(),
+      })
+
+      const summaries = await listGradebookSummaries(ids.hid)
+      const summary = summaries.find(s => s.learnerId === ids.lid)!
+
+      // With real credit hours: (4.0*4 + 1.0*1) / 5 = 3.4
+      // With the old hardcode of 1 for both: (4.0 + 1.0) / 2 = 2.5
+      expect(summary.gpa.totalCreditHours).toBe(5)
+      expect(summary.gpa.unweighted).toBeCloseTo(3.4, 2)
+
+      const heavy = summary.subjects.find(s => s.subjectId === sidA)!
+      expect(heavy.creditHours).toBe(4)
+    }, DB_TIMEOUT_MS)
+  })
 })
