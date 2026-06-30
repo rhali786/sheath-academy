@@ -26,6 +26,9 @@ import {
   addEvidenceToAward,
   deleteAward,
   removeEvidenceFromAward,
+  createBadgeDefinition,
+  updateBadgeDefinition,
+  deleteBadgeDefinition,
 } from '@/features/badges/server/repository'
 
 const hasDb = !!process.env.DATABASE_URL
@@ -426,6 +429,53 @@ describeDb('badges repository (real DB)', () => {
       expect(awards.find(a => a.id === award.id)).toBeUndefined()
 
       expect(await deleteAward(award.id, ids.hid)).toBe(false)
+    }, DB_TIMEOUT_MS)
+  })
+
+  // ─── custom badge definition CRUD (Phase 5) ───────────────────────────────────
+
+  describe('createBadgeDefinition + update + delete', () => {
+    const ids = testIds('def')
+
+    beforeAll(async () => { await insertBaseFixtures(ids) })
+    afterAll(async () => {
+      const db = getDb()
+      await db.delete(badgeDefinitions).where(eq(badgeDefinitions.householdId, ids.hid))
+      await cleanupBaseFixtures(ids)
+    })
+
+    it('creates a household-owned (non-starter) definition', async () => {
+      const def = await createBadgeDefinition(ids.hid, {
+        title: 'Custom One', description: 'desc', criteria: 'do the thing', emblemKey: 'custom-1',
+        gradeBands: ['g5_8'], verificationRequirement: 'parent', visibility: 'household',
+      })
+      expect(def.householdId).toBe(ids.hid)
+      expect(def.isStarter).toBe(false)
+
+      const list = await listBadgeDefinitions(ids.hid)
+      expect(list.find(d => d.id === def.id)).toBeDefined()
+    }, DB_TIMEOUT_MS)
+
+    it('updates an owned definition; returns null for a foreign household', async () => {
+      const def = await createBadgeDefinition(ids.hid, {
+        title: 'Editable', description: 'd', criteria: 'c', emblemKey: 'e',
+      })
+      const updated = await updateBadgeDefinition(def.id, ids.hid, { title: 'Renamed', enabled: false })
+      expect(updated).not.toBeNull()
+      expect(updated!.title).toBe('Renamed')
+      expect(updated!.enabled).toBe(false)
+
+      const foreign = await updateBadgeDefinition(def.id, 'hh_nope', { title: 'Hacked' })
+      expect(foreign).toBeNull()
+    }, DB_TIMEOUT_MS)
+
+    it('deletes an owned definition; false for a foreign household', async () => {
+      const def = await createBadgeDefinition(ids.hid, {
+        title: 'Deletable', description: 'd', criteria: 'c', emblemKey: 'e',
+      })
+      expect(await deleteBadgeDefinition(def.id, 'hh_nope')).toBe(false)
+      expect(await deleteBadgeDefinition(def.id, ids.hid)).toBe(true)
+      expect((await listBadgeDefinitions(ids.hid)).find(d => d.id === def.id)).toBeUndefined()
     }, DB_TIMEOUT_MS)
   })
 })

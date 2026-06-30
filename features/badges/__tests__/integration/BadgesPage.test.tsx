@@ -12,6 +12,9 @@ jest.mock('@/features/badges/front/services/api', () => ({
     addEvidence: jest.fn(),
     removeEvidence: jest.fn(),
     setSettings: jest.fn(),
+    createDefinition: jest.fn(),
+    updateDefinition: jest.fn(),
+    deleteDefinition: jest.fn(),
   },
 }))
 
@@ -36,6 +39,9 @@ const mockDeleteAward = badgesApi.deleteAward as jest.Mock
 const mockAddEvidence = badgesApi.addEvidence as jest.Mock
 const mockRemoveEvidence = badgesApi.removeEvidence as jest.Mock
 const mockSetSettings = badgesApi.setSettings as jest.Mock
+const mockCreateDefinition = badgesApi.createDefinition as jest.Mock
+const mockUpdateDefinition = badgesApi.updateDefinition as jest.Mock
+const mockDeleteDefinition = badgesApi.deleteDefinition as jest.Mock
 const mockUseHousehold = useHousehold as jest.Mock
 const mockUseLearner = useLearner as jest.Mock
 
@@ -68,6 +74,9 @@ describe('BadgesPage', () => {
     mockAddEvidence.mockImplementation(() => ok(null))
     mockRemoveEvidence.mockImplementation(() => ok(null))
     mockSetSettings.mockImplementation(() => ok({ householdId: 'hh_fix_001', platformBadgesEnabled: false }))
+    mockCreateDefinition.mockImplementation(() => ok(null))
+    mockUpdateDefinition.mockImplementation(() => ok(null))
+    mockDeleteDefinition.mockImplementation(() => ok(null))
   })
 
   afterEach(() => {
@@ -81,6 +90,9 @@ describe('BadgesPage', () => {
     mockAddEvidence.mockReset()
     mockRemoveEvidence.mockReset()
     mockSetSettings.mockReset()
+    mockCreateDefinition.mockReset()
+    mockUpdateDefinition.mockReset()
+    mockDeleteDefinition.mockReset()
   })
 
   it('shows loading state initially', () => {
@@ -237,5 +249,50 @@ describe('BadgesPage', () => {
     await waitFor(() => expect(screen.getByLabelText('Platform badges enabled')).toBeInTheDocument())
     fireEvent.click(screen.getByLabelText('Platform badges enabled'))
     await waitFor(() => expect(mockSetSettings).toHaveBeenCalledWith(false))
+  })
+
+  // ─── Phase 5: custom badge authoring ──────────────────────────────────────
+  it('authors a custom badge via the create form', async () => {
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Create badge' })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Create badge' }))
+    await waitFor(() => expect(screen.getByTestId('create-badge-form')).toBeInTheDocument())
+    fireEvent.change(screen.getByLabelText('Badge title'), { target: { value: 'Tajweed Star' } })
+    fireEvent.change(screen.getByLabelText('Badge description'), { target: { value: 'Master tajweed' } })
+    fireEvent.change(screen.getByLabelText('Badge criteria'), { target: { value: 'Recite with tajweed' } })
+    fireEvent.change(screen.getByLabelText('Badge emblem key'), { target: { value: 'tajweed-star' } })
+    fireEvent.click(within(screen.getByTestId('create-badge-form')).getByRole('button', { name: 'Create badge' }))
+    await waitFor(() => expect(mockCreateDefinition).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Tajweed Star', emblemKey: 'tajweed-star', visibility: 'household',
+    })))
+    await waitFor(() => expect(screen.getByText('Badge created')).toBeInTheDocument())
+  })
+
+  it('shows edit/delete only on household-owned (custom) badges, not starters', async () => {
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByTestId('badge-locked-badge_fix_003')).toBeInTheDocument())
+    // Custom badge (badge_fix_003) is editable
+    expect(within(screen.getByTestId('badge-locked-badge_fix_003')).getByRole('button', { name: 'Edit badge' })).toBeInTheDocument()
+    // Starter badge (badge_fix_001) is not
+    expect(within(screen.getByTestId('badge-earned-badge_fix_001')).queryByRole('button', { name: 'Edit badge' })).not.toBeInTheDocument()
+  })
+
+  it('edits a custom badge', async () => {
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByTestId('badge-locked-badge_fix_003')).toBeInTheDocument())
+    fireEvent.click(within(screen.getByTestId('badge-locked-badge_fix_003')).getByRole('button', { name: 'Edit badge' }))
+    await waitFor(() => expect(screen.getByTestId('badge-editing-badge_fix_003')).toBeInTheDocument())
+    fireEvent.change(screen.getByLabelText('Badge title'), { target: { value: 'Arabic Ace' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mockUpdateDefinition).toHaveBeenCalledWith('badge_fix_003', expect.objectContaining({ title: 'Arabic Ace' })))
+  })
+
+  it('deletes a custom badge through the styled confirmation', async () => {
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByTestId('badge-locked-badge_fix_003')).toBeInTheDocument())
+    fireEvent.click(within(screen.getByTestId('badge-locked-badge_fix_003')).getByRole('button', { name: 'Delete badge' }))
+    await waitFor(() => expect(screen.getByText('Delete this badge?')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await waitFor(() => expect(mockDeleteDefinition).toHaveBeenCalledWith('badge_fix_003'))
   })
 })

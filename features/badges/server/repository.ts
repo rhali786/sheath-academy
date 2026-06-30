@@ -162,6 +162,100 @@ export async function getBadgeSettings(
 
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
+export interface BadgeDefinitionInput {
+  title: string
+  description: string
+  criteria: string
+  emblemKey: string
+  gradeBands?: GradeBand[]
+  verificationRequirement?: VerificationRequirement
+  visibility?: BadgeVisibility
+  enabled?: boolean
+}
+
+/** Fetch a single badge definition by id, regardless of ownership (for guard checks). */
+export async function getBadgeDefinitionById(id: string): Promise<BadgeDefinition | null> {
+  const db = getDb()
+  const rows = await db.select().from(badgeDefinitions).where(eq(badgeDefinitions.id, id)).limit(1)
+  return rows.length > 0 ? rowToDefinition(rows[0]) : null
+}
+
+/**
+ * Creates a household-owned custom badge definition (never a platform starter).
+ */
+export async function createBadgeDefinition(
+  householdId: string,
+  input: BadgeDefinitionInput,
+): Promise<BadgeDefinition> {
+  const db = getDb()
+  const now = new Date()
+  const id = `badgedef_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+
+  const [row] = await db
+    .insert(badgeDefinitions)
+    .values({
+      id,
+      householdId,
+      title: input.title,
+      description: input.description,
+      criteria: input.criteria,
+      emblemKey: input.emblemKey,
+      gradeBands: input.gradeBands ?? [],
+      verificationRequirement: input.verificationRequirement ?? 'none',
+      isStarter: false,
+      enabled: input.enabled ?? true,
+      visibility: input.visibility ?? 'household',
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning()
+
+  return rowToDefinition(row)
+}
+
+/**
+ * Updates a household-owned badge definition. Scoped to householdId so platform
+ * starters (householdId null) and other households' badges cannot be edited.
+ * Returns the updated definition, or null when no owned row matched.
+ */
+export async function updateBadgeDefinition(
+  id: string,
+  householdId: string,
+  patch: Partial<BadgeDefinitionInput>,
+): Promise<BadgeDefinition | null> {
+  const db = getDb()
+  const updates: Record<string, unknown> = { updatedAt: new Date() }
+  if (patch.title !== undefined) updates.title = patch.title
+  if (patch.description !== undefined) updates.description = patch.description
+  if (patch.criteria !== undefined) updates.criteria = patch.criteria
+  if (patch.emblemKey !== undefined) updates.emblemKey = patch.emblemKey
+  if (patch.gradeBands !== undefined) updates.gradeBands = patch.gradeBands
+  if (patch.verificationRequirement !== undefined) updates.verificationRequirement = patch.verificationRequirement
+  if (patch.visibility !== undefined) updates.visibility = patch.visibility
+  if (patch.enabled !== undefined) updates.enabled = patch.enabled
+
+  const [row] = await db
+    .update(badgeDefinitions)
+    .set(updates)
+    .where(and(eq(badgeDefinitions.id, id), eq(badgeDefinitions.householdId, householdId)))
+    .returning()
+
+  return row ? rowToDefinition(row) : null
+}
+
+/**
+ * Deletes a household-owned badge definition (starters/other households excluded
+ * by the householdId scope). Returns true when a row was removed.
+ */
+export async function deleteBadgeDefinition(id: string, householdId: string): Promise<boolean> {
+  const db = getDb()
+  const removed = await db
+    .delete(badgeDefinitions)
+    .where(and(eq(badgeDefinitions.id, id), eq(badgeDefinitions.householdId, householdId)))
+    .returning({ id: badgeDefinitions.id })
+  return removed.length > 0
+}
+
 /**
  * Creates a new badge award in 'draft' status (or the provided status).
  */

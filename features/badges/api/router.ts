@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import * as definitionsHandler from './routes/definitions'
+import * as definitionsIdHandler from './routes/definitions-id'
 import * as collectionHandler from './routes/collection'
 import * as awardsHandler from './routes/awards'
 import * as awardsIdHandler from './routes/awards-id'
@@ -15,6 +16,21 @@ export async function handleBadgesRoute(
   // GET /definitions
   if (slug.length === 1 && slug[0] === 'definitions' && method === 'GET') {
     return definitionsHandler.GET(request)
+  }
+
+  // POST /definitions — author a custom badge
+  if (slug.length === 1 && slug[0] === 'definitions' && method === 'POST') {
+    return definitionsHandler.POST(request)
+  }
+
+  // PATCH /definitions/:id
+  if (slug.length === 2 && slug[0] === 'definitions' && method === 'PATCH') {
+    return definitionsIdHandler.PATCH(slug[1], request)
+  }
+
+  // DELETE /definitions/:id
+  if (slug.length === 2 && slug[0] === 'definitions' && method === 'DELETE') {
+    return definitionsIdHandler.DELETE(slug[1])
   }
 
   // GET /collection?learnerId=

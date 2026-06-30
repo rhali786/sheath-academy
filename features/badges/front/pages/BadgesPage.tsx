@@ -1,14 +1,113 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Trophy, AlertCircle, Star, Plus, X } from 'lucide-react'
+import { Trophy, AlertCircle, Star, Plus, X, Pencil, Trash2 } from 'lucide-react'
 import { badgesApi } from '@/features/badges/front/services/api'
-import type { AwardTransition } from '@/features/badges/front/services/api'
+import type { AwardTransition, BadgeDefinitionInput } from '@/features/badges/front/services/api'
 import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import { InlineSuccess } from '@/features/lib/front/components/InlineSuccess'
 import { useHousehold } from '@/features/household/front/context'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
-import type { BadgeAward, BadgeCollectionItem, BadgeDefinition } from '@/features/badges/types'
+import type { BadgeAward, BadgeCollectionItem, BadgeDefinition, VerificationRequirement } from '@/features/badges/types'
+import type { GradeBand } from '@/features/gradebook/types'
+
+const GRADE_BANDS: { value: GradeBand; label: string }[] = [
+  { value: 'g1_4', label: 'G1–4' },
+  { value: 'g5_8', label: 'G5–8' },
+  { value: 'g9_12', label: 'G9–12' },
+]
+const VERIFICATION_OPTIONS: VerificationRequirement[] = ['none', 'parent', 'external']
+
+interface DefinitionActions {
+  onUpdate: (id: string, values: BadgeDefinitionInput) => Promise<void>
+  onDelete: (id: string) => Promise<void>
+}
+
+function BadgeDefinitionForm({
+  initial,
+  submitLabel,
+  onSubmit,
+  onCancel,
+}: {
+  initial?: BadgeDefinitionInput
+  submitLabel: string
+  onSubmit: (values: BadgeDefinitionInput) => Promise<void>
+  onCancel: () => void
+}) {
+  const [title, setTitle] = useState(initial?.title ?? '')
+  const [description, setDescription] = useState(initial?.description ?? '')
+  const [criteria, setCriteria] = useState(initial?.criteria ?? '')
+  const [emblemKey, setEmblemKey] = useState(initial?.emblemKey ?? '')
+  const [gradeBands, setGradeBands] = useState<GradeBand[]>(initial?.gradeBands ?? [])
+  const [verificationRequirement, setVerificationRequirement] = useState<VerificationRequirement>(initial?.verificationRequirement ?? 'none')
+  const [enabled, setEnabled] = useState(initial?.enabled ?? true)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function toggleBand(band: GradeBand) {
+    setGradeBands(prev => prev.includes(band) ? prev.filter(b => b !== band) : [...prev, band])
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (!title.trim() || !description.trim() || !criteria.trim() || !emblemKey.trim()) {
+      setError('Title, description, criteria, and emblem key are required.')
+      return
+    }
+    setPending(true)
+    try {
+      await onSubmit({
+        title: title.trim(),
+        description: description.trim(),
+        criteria: criteria.trim(),
+        emblemKey: emblemKey.trim(),
+        gradeBands,
+        verificationRequirement,
+        visibility: 'household',
+        enabled,
+      })
+    } catch {
+      setError('Could not save. Please try again.')
+      setPending(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-left">
+      <input aria-label="Badge title" type="text" placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} className="w-full rounded border border-slate-300 px-2 py-1 text-sm text-slate-700" />
+      <input aria-label="Badge description" type="text" placeholder="Description" value={description} onChange={e => setDescription(e.target.value)} className="w-full rounded border border-slate-300 px-2 py-1 text-sm text-slate-700" />
+      <input aria-label="Badge criteria" type="text" placeholder="How to earn this" value={criteria} onChange={e => setCriteria(e.target.value)} className="w-full rounded border border-slate-300 px-2 py-1 text-sm text-slate-700" />
+      <input aria-label="Badge emblem key" type="text" placeholder="Emblem key (e.g. quran-champion)" value={emblemKey} onChange={e => setEmblemKey(e.target.value)} className="w-full rounded border border-slate-300 px-2 py-1 text-sm text-slate-700" />
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-slate-500">Grade bands:</span>
+        {GRADE_BANDS.map(b => (
+          <label key={b.value} className="flex items-center gap-1 text-xs text-slate-600">
+            <input type="checkbox" aria-label={`Grade band ${b.label}`} checked={gradeBands.includes(b.value)} onChange={() => toggleBand(b.value)} className="rounded border-slate-300" />
+            {b.label}
+          </label>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-1 text-xs text-slate-600">
+          Verification
+          <select aria-label="Verification requirement" value={verificationRequirement} onChange={e => setVerificationRequirement(e.target.value as VerificationRequirement)} className="rounded border border-slate-300 px-1 py-0.5 text-xs capitalize">
+            {VERIFICATION_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
+          </select>
+        </label>
+        <label className="flex items-center gap-1 text-xs text-slate-600">
+          <input type="checkbox" aria-label="Badge enabled" checked={enabled} onChange={e => setEnabled(e.target.checked)} className="rounded border-slate-300" />
+          Enabled
+        </label>
+      </div>
+      {error && <p className="text-xs text-red-600" role="alert">{error}</p>}
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancel} disabled={pending} className="rounded-lg border border-slate-200 px-3 py-1 text-xs text-slate-500 hover:text-slate-700 disabled:opacity-50">Cancel</button>
+        <button type="submit" disabled={pending} className="rounded-lg bg-forest-900 px-3 py-1 text-xs font-medium text-white hover:bg-forest-800 disabled:opacity-50">{pending ? 'Saving…' : submitLabel}</button>
+      </div>
+    </form>
+  )
+}
 
 interface BadgeActions {
   learnerId: string
@@ -160,15 +259,43 @@ function AwardManagement({ definition, award, actions }: { definition: BadgeDefi
   )
 }
 
-function BadgeCard({ item, actions }: { item: BadgeCollectionItem; actions?: BadgeActions }) {
+function BadgeCard({ item, actions, definitionActions }: { item: BadgeCollectionItem; actions?: BadgeActions; definitionActions?: DefinitionActions }) {
   const { definition, award, isEarned } = item
+  const [editingDef, setEditingDef] = useState(false)
+  const [confirmDeleteDef, setConfirmDeleteDef] = useState(false)
   const earnedDate = award?.approvedAt
     ? new Date(award.approvedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     : null
 
+  // A custom (household-authored) badge is editable; platform starters are read-only.
+  const isCustom = definition.householdId !== null && !definition.isStarter
+  const canManageDef = isCustom && !!definitionActions
+
   const ariaLabel = isEarned
     ? `${definition.title}, earned${earnedDate ? ` ${earnedDate}` : ''}`
     : `${definition.title}, not yet earned — ${definition.criteria}`
+
+  if (canManageDef && editingDef) {
+    return (
+      <div data-testid={`badge-editing-${definition.id}`} className="card p-4">
+        <BadgeDefinitionForm
+          submitLabel="Save"
+          initial={{
+            title: definition.title,
+            description: definition.description,
+            criteria: definition.criteria,
+            emblemKey: definition.emblemKey,
+            gradeBands: definition.gradeBands,
+            verificationRequirement: definition.verificationRequirement,
+            visibility: definition.visibility,
+            enabled: definition.enabled,
+          }}
+          onSubmit={async values => { await definitionActions!.onUpdate(definition.id, values); setEditingDef(false) }}
+          onCancel={() => setEditingDef(false)}
+        />
+      </div>
+    )
+  }
 
   return (
     <div
@@ -200,6 +327,29 @@ function BadgeCard({ item, actions }: { item: BadgeCollectionItem; actions?: Bad
           </div>
         )}
       </div>
+
+      {canManageDef && (
+        confirmDeleteDef ? (
+          <div className="w-full">
+            <InlineConfirm
+              message="Delete this badge?"
+              detail={definition.title}
+              confirmLabel="Delete"
+              onConfirm={async () => { await definitionActions!.onDelete(definition.id); setConfirmDeleteDef(false) }}
+              onCancel={() => setConfirmDeleteDef(false)}
+            />
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button type="button" aria-label="Edit badge" onClick={() => setEditingDef(true)} className="text-slate-400 hover:text-forest-700">
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button type="button" aria-label="Delete badge" onClick={() => setConfirmDeleteDef(true)} className="text-slate-400 hover:text-red-600">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )
+      )}
 
       {actions && actions.learnerId && (
         <div className="w-full border-t border-slate-100 pt-2">
@@ -239,6 +389,7 @@ export function BadgesPage() {
   const { selectedChildId } = useLearner()
   const [collection, setCollection] = useState<BadgeCollectionItem[]>([])
   const [platformBadgesEnabled, setPlatformBadgesEnabled] = useState(true)
+  const [showCreateForm, setShowCreateForm] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -303,6 +454,26 @@ export function BadgesPage() {
     setSuccess('Settings updated')
   }
 
+  const definitionActions: DefinitionActions = {
+    onUpdate: async (id, values) => {
+      await badgesApi.updateDefinition(id, values)
+      setSuccess('Badge updated')
+      await reloadCollection()
+    },
+    onDelete: async (id) => {
+      await badgesApi.deleteDefinition(id)
+      setSuccess('Badge deleted')
+      await reloadCollection()
+    },
+  }
+
+  async function handleCreateDefinition(values: BadgeDefinitionInput) {
+    await badgesApi.createDefinition(values)
+    setShowCreateForm(false)
+    setSuccess('Badge created')
+    await reloadCollection()
+  }
+
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4" data-testid="badges-loading">
@@ -348,17 +519,35 @@ export function BadgesPage() {
             </span>
           )}
         </div>
-        <label className="flex items-center gap-2 text-xs text-slate-600">
-          <input
-            type="checkbox"
-            aria-label="Platform badges enabled"
-            checked={platformBadgesEnabled}
-            onChange={handleToggleSettings}
-            className="rounded border-slate-300"
-          />
-          Platform badges
-        </label>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              aria-label="Platform badges enabled"
+              checked={platformBadgesEnabled}
+              onChange={handleToggleSettings}
+              className="rounded border-slate-300"
+            />
+            Platform badges
+          </label>
+          <button
+            type="button"
+            onClick={() => setShowCreateForm(v => !v)}
+            className="px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800"
+          >
+            {showCreateForm ? 'Cancel' : 'Create badge'}
+          </button>
+        </div>
       </div>
+
+      {showCreateForm && (
+        <div data-testid="create-badge-form">
+          <h2 className="form-section-heading">Create badge</h2>
+          <div className="add-form-card">
+            <BadgeDefinitionForm submitLabel="Create badge" onSubmit={handleCreateDefinition} onCancel={() => setShowCreateForm(false)} />
+          </div>
+        </div>
+      )}
 
       {success && (
         <InlineSuccess message={success} onDismiss={() => setSuccess(null)} />
@@ -369,7 +558,7 @@ export function BadgesPage() {
         className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
       >
         {collection.map(item => (
-          <BadgeCard key={item.definition.id} item={item} actions={actions} />
+          <BadgeCard key={item.definition.id} item={item} actions={actions} definitionActions={definitionActions} />
         ))}
       </div>
     </div>

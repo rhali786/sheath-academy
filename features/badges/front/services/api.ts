@@ -1,8 +1,20 @@
 import type { ApiResponse } from '@/features/lib/types'
-import type { BadgeDefinition, BadgeAward, BadgeAwardEvidence, BadgeCollectionItem, BadgeSettings } from '@/features/badges/types'
+import type { BadgeDefinition, BadgeAward, BadgeAwardEvidence, BadgeCollectionItem, BadgeSettings, VerificationRequirement, BadgeVisibility } from '@/features/badges/types'
+import type { GradeBand } from '@/features/gradebook/types'
 
 /** Award lifecycle transitions the UI can request. */
 export type AwardTransition = 'submitted' | 'verified' | 'approved'
+
+export interface BadgeDefinitionInput {
+  title: string
+  description: string
+  criteria: string
+  emblemKey: string
+  gradeBands?: GradeBand[]
+  verificationRequirement?: VerificationRequirement
+  visibility?: BadgeVisibility
+  enabled?: boolean
+}
 
 function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') return window.location.origin
@@ -64,6 +76,18 @@ export const badgesApi = {
 
   setSettings: async (platformBadgesEnabled: boolean): Promise<ApiResponse<BadgeSettings | null>> => {
     return mutate<BadgeSettings | null>('/api/badges/settings', 'PUT', { platformBadgesEnabled })
+  },
+
+  createDefinition: async (input: BadgeDefinitionInput): Promise<ApiResponse<BadgeDefinition | null>> => {
+    return mutate<BadgeDefinition | null>('/api/badges/definitions', 'POST', input)
+  },
+
+  updateDefinition: async (id: string, patch: Partial<BadgeDefinitionInput>): Promise<ApiResponse<BadgeDefinition | null>> => {
+    return mutate<BadgeDefinition | null>(`/api/badges/definitions/${encodeURIComponent(id)}`, 'PATCH', patch)
+  },
+
+  deleteDefinition: async (id: string): Promise<ApiResponse<null>> => {
+    return mutate<null>(`/api/badges/definitions/${encodeURIComponent(id)}`, 'DELETE')
   },
 
   /** Backwards-compatible alias — now backed by a real route. */
