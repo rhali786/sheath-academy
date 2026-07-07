@@ -155,9 +155,12 @@ describe('LessonGenerationPanel — learner/course selectors', () => {
     expect(screen.getByRole('option', { name: 'Arabic Level 2' })).toBeInTheDocument()
   })
 
-  it('does not render a "Save to plan" button when no lessons have been generated', () => {
+  it('renders a disabled "Save to plan" button (with a hint) before any lessons have been generated — regression for c75d361b', () => {
     render(<LessonGenerationPanel resource={resource} />)
-    expect(screen.queryByRole('button', { name: /save to plan/i })).not.toBeInTheDocument()
+    const saveButton = screen.getByRole('button', { name: /save to plan/i })
+    expect(saveButton).toBeInTheDocument()
+    expect(saveButton).toBeDisabled()
+    expect(screen.getByText(/generate lessons.*pick learner.*pick course/i)).toBeInTheDocument()
   })
 
   it('renders a disabled "Save to plan" button until a learner and course are chosen, after generating lessons', async () => {

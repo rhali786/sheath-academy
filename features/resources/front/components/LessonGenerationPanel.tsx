@@ -250,7 +250,7 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
         </div>
       </div>
 
-      {generated.length > 0 && (
+      <div>
         <button
           type="button"
           onClick={handleSave}
@@ -260,7 +260,12 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
         >
           {saving ? 'Saving…' : 'Save to plan'}
         </button>
-      )}
+        {!canSave && !saved && (
+          <p className="text-xs text-slate-400 mt-1">
+            Generate lessons → pick learner(s) → pick course to enable saving.
+          </p>
+        )}
+      </div>
 
       {saveMessage && <p className="text-xs text-green-700">{saveMessage}</p>}
       {saveError && <p className="text-xs text-red-600">{saveError}</p>}
