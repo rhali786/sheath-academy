@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useHousehold } from '@/features/household/front/context'
+import { subjectsApi } from '@/features/subjects/front/services/api'
 import { resourcesApi } from '../services/api'
 import { ResourceForm } from '../components/ResourceForm'
 import { PacingCard } from '../components/PacingCard'
@@ -10,7 +11,7 @@ import { VerificationBadge } from '../components/VerificationBadge'
 import type { Resource } from '@/features/resources/types'
 
 export function ResourcesPage() {
-  const { householdProfile, loading: householdLoading } = useHousehold()
+  const { householdProfile, allSubjects, loading: householdLoading, refetch } = useHousehold()
   const [resources, setResources] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -29,11 +30,28 @@ export function ResourcesPage() {
       .finally(() => setLoading(false))
   }, [householdProfile?.id, householdLoading])
 
-  async function handleCreate(data: Parameters<typeof resourcesApi.createResource>[0]) {
-    const res = await resourcesApi.createResource(data)
+  async function handleCreate(
+    data: Parameters<typeof resourcesApi.createResource>[0] & { courseIds?: string[] }
+  ) {
+    const { courseIds, ...resourceData } = data
+    const res = await resourcesApi.createResource(resourceData)
     setResources(prev => [...prev, res.data])
     setSelected(res.data)
     setShowForm(false)
+
+    if (courseIds && courseIds.length > 0) {
+      await Promise.all(
+        courseIds.map(courseId => {
+          const course = allSubjects.find(c => c.id === courseId)
+          const existingResourceIds = course?.resourceIds ?? []
+          const nextResourceIds = existingResourceIds.includes(res.data.id)
+            ? existingResourceIds
+            : [...existingResourceIds, res.data.id]
+          return subjectsApi.updateSubject(courseId, { resourceIds: nextResourceIds })
+        })
+      )
+      refetch()
+    }
   }
 
   return (
@@ -59,6 +77,7 @@ export function ResourcesPage() {
           <div className="add-form-card">
             <ResourceForm
               workspaceId={householdProfile.id}
+              courses={allSubjects.map(c => ({ id: c.id, name: c.name }))}
               onSubmit={handleCreate}
               onCancel={() => setShowForm(false)}
             />

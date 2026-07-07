@@ -12,8 +12,15 @@ const RESOURCE_TYPES: { value: ResourceType; label: string }[] = [
   { value: 'other',         label: 'Other' },
 ]
 
+export interface ResourceCourseOption {
+  id: string
+  name: string
+}
+
 interface ResourceFormProps {
   workspaceId: string
+  /** Enrolled (active) courses available to link this resource to. Omit or pass [] to hide the section. */
+  courses?: ResourceCourseOption[]
   onSubmit: (data: {
     workspaceId: string
     title: string
@@ -27,11 +34,13 @@ interface ResourceFormProps {
     totalPages?: number
     totalLessons?: number
     totalChapters?: number
+    /** IDs of enrolled courses selected to link this resource to. */
+    courseIds?: string[]
   }) => Promise<void>
   onCancel?: () => void
 }
 
-export function ResourceForm({ workspaceId, onSubmit, onCancel }: ResourceFormProps) {
+export function ResourceForm({ workspaceId, courses = [], onSubmit, onCancel }: ResourceFormProps) {
   const [title, setTitle] = useState('')
   const [resourceType, setResourceType] = useState<ResourceType>('textbook')
   const [publisher, setPublisher] = useState('')
@@ -42,9 +51,16 @@ export function ResourceForm({ workspaceId, onSubmit, onCancel }: ResourceFormPr
   const [isbn, setIsbn] = useState('')
   const [totalPages, setTotalPages] = useState('')
   const [totalChapters, setTotalChapters] = useState('')
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
 
   const canGenerate = totalPages.length > 0 || totalChapters.length > 0
+
+  function toggleCourse(courseId: string) {
+    setSelectedCourseIds(prev =>
+      prev.includes(courseId) ? prev.filter(id => id !== courseId) : [...prev, courseId]
+    )
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -63,6 +79,7 @@ export function ResourceForm({ workspaceId, onSubmit, onCancel }: ResourceFormPr
         isbn: isbn.trim() || undefined,
         totalPages: totalPages ? parseInt(totalPages, 10) : undefined,
         totalChapters: totalChapters ? parseInt(totalChapters, 10) : undefined,
+        courseIds: selectedCourseIds,
       })
     } finally {
       setSubmitting(false)
@@ -200,6 +217,28 @@ export function ResourceForm({ workspaceId, onSubmit, onCancel }: ResourceFormPr
         <p className="text-xs text-forest-700 font-medium" data-testid="lesson-generation-hint">
           Lesson generation available — save this resource to generate lessons from it.
         </p>
+      )}
+
+      {courses.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Link to enrolled course(s)
+          </label>
+          <div className="flex flex-col gap-2" data-testid="resource-course-options">
+            {courses.map(course => (
+              <label key={course.id} className="flex items-center gap-2 cursor-pointer min-h-[32px]">
+                <input
+                  type="checkbox"
+                  checked={selectedCourseIds.includes(course.id)}
+                  onChange={() => toggleCourse(course.id)}
+                  className="rounded"
+                  data-testid={`resource-course-checkbox-${course.id}`}
+                />
+                <span className="text-sm text-slate-700">{course.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
       )}
 
       <div className="flex gap-3 pt-2">

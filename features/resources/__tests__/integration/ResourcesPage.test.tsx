@@ -25,6 +25,12 @@ jest.mock('@/features/resources/front/services/api', () => ({
   },
 }))
 
+jest.mock('@/features/subjects/front/services/api', () => ({
+  subjectsApi: {
+    updateSubject: jest.fn(),
+  },
+}))
+
 jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: {
     createLesson: jest.fn(),
@@ -36,6 +42,9 @@ const { useHousehold } = jest.requireMock('@/features/household/front/context') 
 }
 const { resourcesApi: mockResourcesApi } = jest.requireMock('@/features/resources/front/services/api') as {
   resourcesApi: { listResources: jest.Mock; createResource: jest.Mock; generateLessons: jest.Mock }
+}
+const { subjectsApi: mockSubjectsApi } = jest.requireMock('@/features/subjects/front/services/api') as {
+  subjectsApi: { updateSubject: jest.Mock }
 }
 
 // ── ResourceForm ──────────────────────────────────────────────────────────────
@@ -83,6 +92,57 @@ describe('ResourceForm', () => {
     render(<ResourceForm workspaceId="ws_001" onSubmit={onSubmit} onCancel={onCancel} />)
     await userEvent.click(screen.getByRole('button', { name: /cancel/i }))
     expect(onCancel).toHaveBeenCalled()
+  })
+
+  it('does not render the course-linking section when no courses are provided', () => {
+    render(<ResourceForm workspaceId="ws_001" onSubmit={onSubmit} />)
+    expect(screen.queryByTestId('resource-course-options')).not.toBeInTheDocument()
+  })
+
+  it('renders a checkbox for each enrolled course when courses are provided', () => {
+    render(
+      <ResourceForm
+        workspaceId="ws_001"
+        onSubmit={onSubmit}
+        courses={[{ id: 'subject_1', name: 'Algebra' }, { id: 'subject_2', name: 'Biology' }]}
+      />
+    )
+    expect(screen.getByTestId('resource-course-checkbox-subject_1')).toBeInTheDocument()
+    expect(screen.getByTestId('resource-course-checkbox-subject_2')).toBeInTheDocument()
+    expect(screen.getByText('Algebra')).toBeInTheDocument()
+    expect(screen.getByText('Biology')).toBeInTheDocument()
+  })
+
+  it('calls onSubmit with courseIds for each selected course (multiselect)', async () => {
+    render(
+      <ResourceForm
+        workspaceId="ws_001"
+        onSubmit={onSubmit}
+        courses={[{ id: 'subject_1', name: 'Algebra' }, { id: 'subject_2', name: 'Biology' }]}
+      />
+    )
+    await userEvent.type(screen.getByTestId('resource-title-input'), 'Saxon Math 7/6')
+    await userEvent.click(screen.getByTestId('resource-course-checkbox-subject_1'))
+    await userEvent.click(screen.getByTestId('resource-course-checkbox-subject_2'))
+    fireEvent.submit(screen.getByTestId('resource-form'))
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ courseIds: ['subject_1', 'subject_2'] })
+    ))
+  })
+
+  it('calls onSubmit with an empty courseIds array when no course is selected', async () => {
+    render(
+      <ResourceForm
+        workspaceId="ws_001"
+        onSubmit={onSubmit}
+        courses={[{ id: 'subject_1', name: 'Algebra' }]}
+      />
+    )
+    await userEvent.type(screen.getByTestId('resource-title-input'), 'Saxon Math 7/6')
+    fireEvent.submit(screen.getByTestId('resource-form'))
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ courseIds: [] })
+    ))
   })
 })
 
@@ -208,5 +268,56 @@ describe('ResourcesPage', () => {
 
     expect(await screen.findByTestId('lesson-generation-panel')).toBeInTheDocument()
     expect(screen.getByTestId(`resource-expand-${newResource.id}`)).toHaveTextContent('Hide')
+  })
+
+  it('linking a new resource to a selected course calls subjectsApi.updateSubject with the resource id merged into resourceIds', async () => {
+    mockResourcesApi.listResources.mockResolvedValue({
+      status: 'success', data: [], message: '', timestamp: '',
+    })
+    const newResource: Resource = {
+      id: 'resource_003',
+      workspaceId: 'household_001',
+      title: 'Algebra Workbook',
+      resourceType: 'workbook',
+      verificationStatus: 'user-submitted',
+      createdAt: '2026-01-03T00:00:00.000Z',
+      updatedAt: '2026-01-03T00:00:00.000Z',
+    }
+    mockResourcesApi.createResource.mockResolvedValue({
+      status: 'success', data: newResource, message: '', timestamp: '',
+    })
+    mockSubjectsApi.updateSubject.mockResolvedValue({
+      status: 'success', data: {}, message: '', timestamp: '',
+    })
+    const refetch = jest.fn()
+    useHousehold.mockReturnValue({
+      ...loadedHousehold,
+      allSubjects: [{
+        id: 'subject_1',
+        childId: 'child_1',
+        learnerIds: ['child_1'],
+        resourceIds: ['resource_existing'],
+        name: 'Algebra',
+        category: 'Math',
+        isActive: true,
+        order: 0,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }],
+      refetch,
+    })
+
+    render(<ResourcesPage />)
+    await waitFor(() => expect(mockResourcesApi.listResources).toHaveBeenCalled())
+
+    await userEvent.click(screen.getByTestId('add-resource-button'))
+    await userEvent.type(screen.getByTestId('resource-title-input'), 'Algebra Workbook')
+    await userEvent.click(screen.getByTestId('resource-course-checkbox-subject_1'))
+    fireEvent.submit(screen.getByTestId('resource-form'))
+
+    await waitFor(() => expect(mockSubjectsApi.updateSubject).toHaveBeenCalledWith(
+      'subject_1',
+      { resourceIds: ['resource_existing', 'resource_003'] }
+    ))
+    expect(refetch).toHaveBeenCalled()
   })
 })
