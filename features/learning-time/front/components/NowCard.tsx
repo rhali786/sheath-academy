@@ -340,6 +340,12 @@ export function NowCard({ learnerId }: NowCardProps) {
             </div>
           )}
 
+          {timeChannelType === 'scheduled' && (
+            <p className="text-xs text-slate-400 -mt-2 mb-3">
+              Applies to this session only, today — not a recurring daily schedule.
+            </p>
+          )}
+
           <div className="flex gap-2">
             <button type="button" onClick={handleConfigSubmit} disabled={savingConfig} data-testid="start-button" className={primaryButtonClass}>
               Start

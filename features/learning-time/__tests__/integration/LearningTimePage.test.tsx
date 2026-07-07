@@ -233,6 +233,17 @@ describe('LearningTimePage', () => {
     expect(screen.getByTestId('scheduled-end-input')).toBeInTheDocument()
   })
 
+  it('shows helper text under the Scheduled window time inputs — regression for 36f30694', async () => {
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('start-session-button'))
+    await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByLabelText(/scheduled window/i))
+
+    expect(screen.getByText(/applies to this session only.*not.*recurring/i)).toBeInTheDocument()
+  })
+
   it('"Cancel" returns from the configuration form to idle', async () => {
     renderPage()
     await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
