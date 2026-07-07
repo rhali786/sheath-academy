@@ -131,7 +131,7 @@ afterAll(() => {
 })
 
 describe('runClassifySkill', () => {
-  it('invokes Claude with a JSON schema contract and closed stdin', () => {
+  it('invokes Claude with a JSON schema contract and the prompt passed via stdin', () => {
     mockSpawnSync.mockReturnValue({
       status: 0,
       stdout: JSON.stringify(makeClassifyOutput()),
@@ -149,7 +149,7 @@ describe('runClassifySkill', () => {
       expect.arrayContaining(['-p', '--output-format', 'json', '--json-schema']),
       expect.objectContaining({
         encoding: 'utf8',
-        input: '',
+        input: expect.stringContaining('Classify this feedback item'),
         timeout: 45_000,
       })
     )
@@ -310,7 +310,7 @@ describe('runClassifySkillBatch', () => {
     expect(mockSpawnSync).toHaveBeenCalledWith(
       expect.stringMatching(/^claude(\.cmd)?$/),
       expect.arrayContaining(['-p', '--output-format', 'json', '--json-schema', '--append-system-prompt']),
-      expect.objectContaining({ encoding: 'utf8', input: '' }),
+      expect.objectContaining({ encoding: 'utf8', input: expect.stringContaining('Classify these') }),
     )
   })
 

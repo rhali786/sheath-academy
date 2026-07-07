@@ -7,6 +7,15 @@ import type { DashboardRecord, QuranSession } from '@/features/dashboard/front/t
 import type { StudentProfile } from '@/features/lib/types'
 import type { Alert } from '@/features/alerts/types'
 
+jest.mock('@/features/household/front/context', () => ({
+  useHousehold: jest.fn(() => ({
+    studentProfiles: [
+      { id: 'student_seed_layth_001', householdId: 'hh_001', name: 'Layth', gradeLabel: '5th', isActive: true, username: 'layth', password: 'pw', createdAt: '2026-01-01T00:00:00Z' },
+      { id: 'child_002', householdId: 'hh_001', name: 'Hawa', gradeLabel: '3rd', isActive: true, username: 'hawa', password: 'pw', createdAt: '2026-01-01T00:00:00Z' },
+    ],
+  })),
+}))
+
 const CHILD_ID = 'student_seed_layth_001'
 
 const mockRecords: DashboardRecord[] = [
