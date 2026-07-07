@@ -134,7 +134,7 @@ export function PortfolioPage() {
   children.forEach(c => { childMap[c.id] = c.name })
   const subjectMap: Record<string, string> = {}
   subjects.forEach(s => { subjectMap[s.id] = s.name })
-  const subjectOptions = subjects.map(s => ({ id: s.id, name: s.name, childId: s.childId }))
+  const subjectOptions = subjects.map(s => ({ id: s.id, name: s.name, childId: s.childId, learnerIds: s.learnerIds }))
   const lessonOptions = lessons.map(l => ({ id: l.id, title: l.title, dueDate: l.dueDate, childId: l.childId, subjectId: l.subjectId }))
 
   return (

@@ -22,6 +22,8 @@ interface SubjectOption {
   id: string
   name: string
   childId: string
+  /** All enrolled learners (primary + secondary). Falls back to [childId] when absent. */
+  learnerIds?: string[]
 }
 
 interface LessonOption {
@@ -158,7 +160,7 @@ export function EvidenceForm({
   }
 
   const filteredSubjects = childId
-    ? subjects.filter(s => s.childId === childId)
+    ? subjects.filter(s => (s.learnerIds ?? [s.childId]).includes(childId))
     : subjects
 
   const filteredLessons = childId

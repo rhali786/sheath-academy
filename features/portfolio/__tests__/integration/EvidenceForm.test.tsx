@@ -38,8 +38,8 @@ const mockChildren = [
 ]
 
 const mockSubjects = [
-  { id: 'sub_a', name: 'Math', childId: 'child_a' },
-  { id: 'sub_b', name: 'Science', childId: 'child_b' },
+  { id: 'sub_a', name: 'Math', childId: 'child_a', learnerIds: ['child_a'] },
+  { id: 'sub_b', name: 'Science', childId: 'child_b', learnerIds: ['child_b'] },
 ]
 
 const mockLessons = [
@@ -209,6 +209,27 @@ describe('EvidenceForm', () => {
     const options = Array.from(subjectSelect.options).map(o => o.text)
     expect(options).toContain('Math')
     expect(options).not.toContain('Science')
+  })
+
+  it('shows subject for a child enrolled as a SECONDARY learner — regression for cb15ba12', () => {
+    const sharedCourseSubjects = [
+      { id: 'sub_a', name: 'Math', childId: 'child_a', learnerIds: ['child_a'] },
+      // child_b is enrolled as a secondary learner; primary is child_a
+      { id: 'sub_shared', name: 'Group Science', childId: 'child_a', learnerIds: ['child_a', 'child_b'] },
+    ]
+    render(
+      <EvidenceForm
+        children={mockChildren}
+        subjects={sharedCourseSubjects}
+        lessons={mockLessons}
+        onSave={jest.fn().mockResolvedValue(FAKE_SAVED_ITEM)}
+        initialChildId="child_b"
+      />
+    )
+    const subjectSelect = screen.getByLabelText(/subject/i) as HTMLSelectElement
+    const options = Array.from(subjectSelect.options).map(o => o.text)
+    expect(options).toContain('Group Science')
+    expect(options).not.toContain('Math')
   })
 
   it('subject dropdown updates when initialChildId prop changes — regression for async load bug', () => {

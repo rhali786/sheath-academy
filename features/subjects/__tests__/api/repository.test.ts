@@ -177,6 +177,40 @@ describe('subjects repository — multi-learner via subject_learners join table'
   })
 })
 
+describe('subjects repository — listSubjectRows enrollment-based filtering (secondary learners)', () => {
+  itDb('listSubjectRows(householdId, secondaryLearnerId) returns a course where the learner is a secondary (non-primary) enrollee', async () => {
+    const { createLearner } = await import('@/features/children/server/repository')
+    const { getDb } = await import('@/features/lib/server/db')
+    const { subjects: subjectsTable, subjectLearners } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    const secondary = await createLearner(householdId, { name: 'Secondary Learner' })
+    let subjectId = ''
+    try {
+      const row = await createSubjectRow(householdId, {
+        name: 'Group Science',
+        category: 'Science',
+        learnerIds: [learnerId, secondary.id],
+      })
+      subjectId = row.id
+      // primary column only holds the first learner
+      expect(row.learnerId).toBe(learnerId)
+
+      const rowsForSecondary = await listSubjectRows(householdId, secondary.id)
+      const found = rowsForSecondary.find((r) => r.id === subjectId)
+      expect(found).toBeDefined()
+      expect(found?.learnerIds).toContain(secondary.id)
+    } finally {
+      if (subjectId) {
+        await getDb().delete(subjectLearners).where(eq(subjectLearners.subjectId, subjectId))
+        await getDb().delete(subjectsTable).where(eq(subjectsTable.id, subjectId))
+      }
+      const { learners: learnersTable } = await import('@/db/schema')
+      await getDb().delete(learnersTable).where(eq(learnersTable.id, secondary.id))
+    }
+  })
+})
+
 describe('subjects repository — resourceIds via subject_resources join table', () => {
   itDb('createSubjectRow returns resourceIds: [] and updateSubjectRow with resourceIds persists link rows', async () => {
     const { createResourceRow } = await import('@/features/resources/server/repository')

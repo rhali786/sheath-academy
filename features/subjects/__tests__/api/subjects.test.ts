@@ -55,6 +55,30 @@ describe('GET /api/subjects', () => {
     expect(mockList).toHaveBeenCalledWith('hh_test', undefined, false, undefined)
   })
 
+  it('GET ?childId=<secondary> includes a course where the child is a secondary enrollee', async () => {
+    mockList.mockResolvedValue([
+      {
+        id: 'subject_shared',
+        learnerIds: ['learner_primary', 'learner_secondary'],
+        learnerId: 'learner_primary',
+        resourceIds: [],
+        name: 'Group Science',
+        category: 'Science',
+        schoolYearId: 'sy_active',
+        isActive: true,
+        sortOrder: 0,
+        createdAt: new Date(),
+      },
+    ])
+    const res = await GET(new Request('http://localhost/api/subjects?childId=learner_secondary'))
+    const body = await res.json()
+
+    expect(mockList).toHaveBeenCalledWith('hh_test', 'learner_secondary', false, {
+      schoolYearId: 'sy_active',
+    })
+    expect(body.data.map((s: { id: string }) => s.id)).toContain('subject_shared')
+  })
+
   it('includes resourceIds in each returned subject', async () => {
     mockList.mockResolvedValue([
       {
