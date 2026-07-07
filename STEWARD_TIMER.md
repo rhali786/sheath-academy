@@ -156,3 +156,60 @@
 - Haiku handles structural work fine; **Sonnet needed for Waves 3–4 when reasoning about automation logic intensifies.**
 - **Timestamps:** Always run `date -u +"%Y-%m-%dT%H:%M:%SZ"` to get the real UTC time before writing a completion timestamp. Never guess or estimate times — if a prior session's timestamp cannot be verified, mark it as `(unverified, from prior context)`.
 
+---
+
+## Estimation Findings — Feedback Queue run (2026-07-06)
+
+Second measured data point, comparing **estimate → actual** on the Feedback Queue plan
+(`docs/bug_enhancement/20260706-feedback-queue-plan.md`). Actuals verified against **git
+committer timestamps**, not the progress tracker (the tracker's first `startedAt` was a
+fabricated round number — see caveat below).
+
+| Unit | Estimate (raw) | Estimate (÷5 "reality") | Actual (git) |
+|------|----------------|-------------------------|--------------|
+| Task 1 — 2 bug commits | 3–4h | ~35–45 min | **~15 min** |
+| Task 2 — 3 UX commits | 2–3h | ~30–40 min | **~11 min** |
+| Tasks 1+2 combined (5 commits) | — | ~1h | **~27 min** |
+| Real inter-commit gaps | — | — | 11, 4, 8, 1, 1 min |
+
+### What the estimates got wrong
+
+1. **Even the corrected numbers were 2–3× too high.** Actual ≈ raw ÷ 8–10, not ÷ 5. The
+   STEWARD_TIMER Wave 1–3 data (2–3 day estimate → 20 min actual) was available and still
+   under-applied.
+2. **Risk was mispriced as time.** Bug 1.1 (shared-query change) carried the biggest time
+   weight because it was "risky"; it took ≤11 min with no rework. A risk that doesn't
+   materialize costs zero. Price risk as a probability-weighted tail, not flat padding.
+3. **The build/test gate was overestimated.** Predicted "2–4 min × N commits" as the
+   tentpole cost; real commits were 1–8 min apart *including* writing test + code + running
+   the gate.
+4. **The dominant variable is human turn-gaps, not compute.** "With user in the loop"
+   estimate was 4–6h; the same work ran in 27 min uninterrupted (~10× difference).
+
+### The meta-lesson
+Accuracy improved every time real evidence replaced intuition (code audit → STEWARD_TIMER →
+git commit times). **Verify the "actual" too** — trusting the progress file's inflated 47 min
+would have taught the wrong throughput.
+
+### Data-integrity caveat (why we almost learned the wrong thing)
+The subagent wrote `1.1.startedAt = 22:45:00`, ~20 min *before* the preceding commit
+(`f14899e`, 23:04:51) even existed — a guessed value. `completedAt` values were accurate
+(they matched commit times). Reinforces the timestamp rule above: **read the clock, never
+guess.** When recording durations, derive `startedAt` from the prior commit time or a real
+clock read, not a round number.
+
+### Estimation method to use going forward
+Quote **two separate numbers**, and anchor to measured throughput:
+
+```
+execution_time   = commits × minutes_per_commit     # anchor 1–8 min/commit from measured runs; default ~5
+collaboration_time = human_checkpoints × turn_gap     # the real cost when a human is in the loop
+risk_premium     = Σ (probability_i × time_if_it_hits_i)   # weighted tail, NOT flat padding
+estimate         = execution_time + collaboration_time + risk_premium
+```
+
+Report execution and collaboration separately (they differ ~10×). Discount `minutes_per_commit`
+when: the code path is already audited, the infra/seam already exists, and the change is
+additive/type-only. Inflate only the specific commit with a materialized-risk tail (shared query,
+new write path, migration).
+
