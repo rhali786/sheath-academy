@@ -120,7 +120,7 @@ export function RecordsProof({ records, selectedChildId }: RecordsProofProps) {
     <section className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8 pb-16">
       <h2 className="text-xl font-bold text-slate-900 mb-2">Records Readiness</h2>
       <p className="text-xs text-slate-400 mb-6" data-testid="records-readiness-indicator">
-        Proof of learning across all subjects and activities.
+        This week&apos;s proof of learning across all subjects and activities.
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

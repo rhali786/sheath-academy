@@ -101,6 +101,11 @@ describe('RecordsProof — dashboard exports', () => {
     jest.clearAllMocks()
   })
 
+  it('states the Records Readiness tiles cover the current week — regression for ba88751d', () => {
+    render(<RecordsProof records={mockRecords} selectedChildId="child_001" />)
+    expect(screen.getByTestId('records-readiness-indicator')).toHaveTextContent(/this week/i)
+  })
+
   it('clicking Attendance Report does not show "being prepared" text', async () => {
     render(<RecordsProof records={mockRecords} selectedChildId="child_001" />)
 
