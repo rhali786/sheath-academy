@@ -79,7 +79,7 @@ const laythQuranSubject: SubjectGradeResult = {
 }
 
 const laythNeedsAttention: NeedsAttentionItem[] = [
-  { subjectId: DEV_PG_SEED.subLaythQuran, label: 'Quran', reason: 'missing' },
+  { learnerId: SEED_IDS.layth, subjectId: DEV_PG_SEED.subLaythQuran, label: 'Quran', reason: 'missing' },
 ]
 
 export const mockGradebookSummaries: GradebookSummary[] = [

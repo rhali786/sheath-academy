@@ -122,6 +122,24 @@ describe('GradebookPage', () => {
     })
   })
 
+  it('clicking a needs-attention item expands that subject and opens its Add score form', async () => {
+    render(<GradebookPage />)
+    await waitFor(() => expect(screen.getByTestId('gradebook-needs-attention')).toBeInTheDocument())
+
+    // Not expanded yet — score history for Layth's Quran subject isn't rendered.
+    expect(screen.queryByTestId(`score-history-${mockGradebookSummaries[0].learnerId}-${mockGradebookSummaries[0].subjects[1].subjectId}`)).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /missing.*quran/i }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId(`score-history-${mockGradebookSummaries[0].learnerId}-${mockGradebookSummaries[0].subjects[1].subjectId}`)).toBeInTheDocument()
+    })
+    // The Add score form auto-opens (toggle button now reads "Cancel").
+    await waitFor(() => {
+      expect(screen.getByTestId(`add-score-toggle-${mockGradebookSummaries[0].subjects[1].subjectId}`)).toHaveTextContent('Cancel')
+    })
+  })
+
   it('renders subject grade pills with letter grades', async () => {
     render(<GradebookPage />)
     await waitFor(() => {

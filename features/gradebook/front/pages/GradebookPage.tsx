@@ -7,6 +7,15 @@ import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import { InlineSuccess } from '@/features/lib/front/components/InlineSuccess'
 import type { GradebookSummary, NeedsAttentionItem, Score, ScoreState, SubjectGradeResult, GradingScale, AggregationRule, AggregationStrategy } from '@/features/gradebook/types'
 
+// A "Needs attention" click: expand + scroll to this subject row and auto-open its Add
+// score form. `token` is bumped on every click so re-selecting the same subject re-triggers
+// the effect even though learnerId/subjectId are unchanged.
+interface FocusTarget {
+  learnerId: string
+  subjectId: string
+  token: number
+}
+
 const AGGREGATION_STRATEGIES: { value: AggregationStrategy; label: string }[] = [
   { value: 'average', label: 'Average' },
   { value: 'most_recent', label: 'Most recent' },
@@ -158,13 +167,25 @@ function ScoreForm({
   )
 }
 
-function ScoreHistory({ learnerId, subjectId }: { learnerId: string; subjectId: string }) {
+function ScoreHistory({
+  learnerId,
+  subjectId,
+  autoOpenToken,
+}: {
+  learnerId: string
+  subjectId: string
+  autoOpenToken?: number
+}) {
   const [scores, setScores] = useState<Score[] | null>(null)
   const [loadError, setLoadError] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (autoOpenToken !== undefined) setShowAddForm(true)
+  }, [autoOpenToken])
 
   const load = useCallback(() => {
     setLoadError(false)
@@ -292,7 +313,13 @@ function gradeLetter(letter: string | null) {
   return map[letter] ?? 'badge-amber'
 }
 
-function NeedsAttentionQueue({ items }: { items: NeedsAttentionItem[] }) {
+function NeedsAttentionQueue({
+  items,
+  onSelect,
+}: {
+  items: NeedsAttentionItem[]
+  onSelect: (item: NeedsAttentionItem) => void
+}) {
   if (items.length === 0) {
     return (
       <div
@@ -313,11 +340,18 @@ function NeedsAttentionQueue({ items }: { items: NeedsAttentionItem[] }) {
       </h3>
       <ul className="space-y-1">
         {items.slice(0, 5).map(item => (
-          <li key={item.subjectId} className="flex items-center gap-2 text-sm text-slate-600">
-            <span className={`badge-${item.reason === 'missing' ? 'amber' : 'red'}`}>
-              {item.reason === 'missing' ? 'Missing' : item.reason === 'decaying' ? 'Needs review' : 'No scores'}
-            </span>
-            <span>{item.label}</span>
+          <li key={item.subjectId}>
+            <button
+              type="button"
+              onClick={() => onSelect(item)}
+              className="w-full flex items-center gap-2 text-sm text-slate-600 rounded py-1 -mx-1 px-1 hover:bg-slate-50 transition-colors text-left"
+            >
+              <span className={`badge-${item.reason === 'missing' ? 'amber' : 'red'}`}>
+                {item.reason === 'missing' ? 'Missing' : item.reason === 'decaying' ? 'Needs review' : 'No scores'}
+              </span>
+              <span>{item.label}</span>
+              <span className="text-xs text-slate-400 ml-auto">Log score →</span>
+            </button>
           </li>
         ))}
       </ul>
@@ -490,7 +524,15 @@ function GradebookConfigManager({ config }: { config: GradebookConfig }) {
   )
 }
 
-function LearnerCard({ summary, config }: { summary: GradebookSummary; config: GradebookConfig }) {
+function LearnerCard({
+  summary,
+  config,
+  focusTarget,
+}: {
+  summary: GradebookSummary
+  config: GradebookConfig
+  focusTarget?: FocusTarget | null
+}) {
   const hasSubjects = summary.subjects.length > 0
   const hasGpa = summary.gpa.unweighted !== null
   const [expandedSubjectId, setExpandedSubjectId] = useState<string | null>(null)
@@ -499,6 +541,15 @@ function LearnerCard({ summary, config }: { summary: GradebookSummary; config: G
   function toggleSubject(subjectId: string) {
     setExpandedSubjectId(prev => prev === subjectId ? null : subjectId)
   }
+
+  useEffect(() => {
+    if (!focusTarget || focusTarget.learnerId !== summary.learnerId) return
+    setExpandedSubjectId(focusTarget.subjectId)
+    const row = document.querySelector(
+      `[data-testid="subject-row-${summary.learnerId}-${focusTarget.subjectId}"]`
+    )
+    row?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [focusTarget, summary.learnerId])
 
   return (
     <div className="card p-5 space-y-4">
@@ -583,7 +634,15 @@ function LearnerCard({ summary, config }: { summary: GradebookSummary; config: G
                     {configSubjectId === subject.subjectId && (
                       <SubjectConfigPanel subject={subject} config={config} />
                     )}
-                    <ScoreHistory learnerId={summary.learnerId} subjectId={subject.subjectId} />
+                    <ScoreHistory
+                      learnerId={summary.learnerId}
+                      subjectId={subject.subjectId}
+                      autoOpenToken={
+                        focusTarget?.learnerId === summary.learnerId && focusTarget.subjectId === subject.subjectId
+                          ? focusTarget.token
+                          : undefined
+                      }
+                    />
                   </div>
                 )}
               </div>
@@ -601,11 +660,13 @@ export function GradebookPage() {
   const [rules, setRules] = useState<AggregationRule[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [focusTarget, setFocusTarget] = useState<FocusTarget | null>(null)
 
   const needsAttention: NeedsAttentionItem[] = summaries.flatMap(s =>
     s.needsAttentionSubjects.map(subjectId => {
       const subject = s.subjects.find(sub => sub.subjectId === subjectId)
       return {
+        learnerId: s.learnerId,
         subjectId,
         label: subject?.label ?? subjectId,
         reason: (subject?.gradeLetter === null ? 'missing' : 'no_scores') as NeedsAttentionItem['reason'],
@@ -673,13 +734,16 @@ export function GradebookPage() {
         <h1 className="page-title">Gradebook</h1>
       </div>
 
-      <NeedsAttentionQueue items={needsAttention} />
+      <NeedsAttentionQueue
+        items={needsAttention}
+        onSelect={item => setFocusTarget({ learnerId: item.learnerId, subjectId: item.subjectId, token: Date.now() })}
+      />
 
       <GradebookConfigManager config={config} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {summaries.map(summary => (
-          <LearnerCard key={summary.learnerId} summary={summary} config={config} />
+          <LearnerCard key={summary.learnerId} summary={summary} config={config} focusTarget={focusTarget} />
         ))}
       </div>
     </div>

@@ -96,6 +96,7 @@ export const gradebookApi = {
     const items: NeedsAttentionItem[] = (summary?.needsAttentionSubjects ?? []).map(subjectId => {
       const sub = summary?.subjects.find(s => s.subjectId === subjectId)
       return {
+        learnerId,
         subjectId,
         label: sub?.label ?? subjectId,
         reason: sub?.needsReview ? 'decaying' : sub?.pointsAverage === null ? 'no_scores' : 'missing',

@@ -65,6 +65,7 @@ export interface GradebookSummary {
 }
 
 export interface NeedsAttentionItem {
+  learnerId: string
   subjectId: string
   label: string
   reason: 'missing' | 'decaying' | 'no_scores'
