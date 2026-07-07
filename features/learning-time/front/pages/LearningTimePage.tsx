@@ -95,7 +95,7 @@ export function LearningTimePage() {
             <>
               <NowCard
                 learnerId={selectedChildId}
-                defaultCourse={selectedCourse ? { id: selectedCourse.id, name: selectedCourse.name } : undefined}
+                course={selectedCourse ? { id: selectedCourse.id, name: selectedCourse.name } : undefined}
               />
               <SessionHistoryList learnerId={selectedChildId} />
             </>

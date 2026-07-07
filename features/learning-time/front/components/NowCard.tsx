@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import { learningTimeApi } from '@/features/learning-time/front/services/api'
 import { formatElapsed } from '@/features/learning-time/front/lib/formatElapsed'
 import { plannerApi } from '@/features/plan/front/services/api'
-import { subjectsApi } from '@/features/subjects/front/services/api'
 import {
   OUTCOMES,
   TIME_CHANNEL_TYPES,
@@ -14,12 +13,11 @@ import {
   type TimeChannelType,
 } from '@/features/learning-time/types'
 import type { LessonTask } from '@/features/plan/types'
-import type { SubjectCourse } from '@/features/subjects/types'
 
 interface NowCardProps {
   learnerId: string
-  /** Pre-fills the ad-hoc session's Course field from the page-level filter — a suggestion, not a lock; always overridable per session. */
-  defaultCourse?: { id: string; name: string }
+  /** The course chosen in the page-level filter. Scopes the Lesson list to it and tags any ad-hoc session with it — there is no separate in-form Course picker. */
+  course?: { id: string; name: string }
 }
 
 const TIME_CHANNEL_LABELS: Record<TimeChannelType, string> = {
@@ -49,7 +47,7 @@ const inputClass = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm 
 const primaryButtonClass = 'px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800 disabled:opacity-60'
 const secondaryButtonClass = 'px-4 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50'
 
-export function NowCard({ learnerId, defaultCourse }: NowCardProps) {
+export function NowCard({ learnerId, course }: NowCardProps) {
   const [loading, setLoading] = useState(true)
   const [session, setSession] = useState<LearningTimeSession | null>(null)
   const [finalized, setFinalized] = useState<LearningTimeSession | null>(null)
@@ -57,10 +55,8 @@ export function NowCard({ learnerId, defaultCourse }: NowCardProps) {
   const [configuring, setConfiguring] = useState(false)
   const [next, setNext] = useState<LessonTask | null | undefined>(undefined)
   const [openLessons, setOpenLessons] = useState<LessonTask[]>([])
-  const [subjects, setSubjects] = useState<SubjectCourse[]>([])
 
   const [lessonChoice, setLessonChoice] = useState<string>('adhoc')
-  const [subjectId, setSubjectId] = useState<string>('')
   const [timeChannelType, setTimeChannelType] = useState<TimeChannelType>('stopwatch')
   const [targetMinutes, setTargetMinutes] = useState<string>('')
   const [scheduledStart, setScheduledStart] = useState<string>('')
@@ -83,7 +79,6 @@ export function NowCard({ learnerId, defaultCourse }: NowCardProps) {
 
   function resetConfigForm() {
     setLessonChoice('adhoc')
-    setSubjectId('')
     setTimeChannelType('stopwatch')
     setTargetMinutes('')
     setScheduledStart('')
@@ -109,7 +104,7 @@ export function NowCard({ learnerId, defaultCourse }: NowCardProps) {
   }, [learnerId])
 
   useEffect(() => {
-    plannerApi.getLessons(undefined, [learnerId], defaultCourse ? [defaultCourse.id] : undefined)
+    plannerApi.getLessons(undefined, [learnerId], course ? [course.id] : undefined)
       .then(lessons => {
         const open = lessons
           .filter(l => l.status === 'not_started')
@@ -122,24 +117,13 @@ export function NowCard({ learnerId, defaultCourse }: NowCardProps) {
         setOpenLessons([])
         setNext(null)
       })
-  }, [learnerId, defaultCourse?.id])
-
-  useEffect(() => {
-    subjectsApi.getSubjects(learnerId)
-      .then(res => setSubjects(res.data))
-      .catch(() => setSubjects([]))
-  }, [learnerId])
+  }, [learnerId, course?.id])
 
   useEffect(() => {
     if (session?.status !== 'running') return
     const interval = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(interval)
   }, [session?.status])
-
-  // Default the ad-hoc Course field from the page-level pick, without clobbering an in-progress edit.
-  useEffect(() => {
-    if (!configuring) setSubjectId(defaultCourse?.id ?? '')
-  }, [defaultCourse?.id, configuring])
 
   const elapsedSeconds = session
     ? session.elapsedSeconds + (session.status === 'running' ? Math.floor((now - fetchedAtRef.current) / 1000) : 0)
@@ -158,7 +142,7 @@ export function NowCard({ learnerId, defaultCourse }: NowCardProps) {
           timeChannelType,
         }
         if (lessonChoice !== 'adhoc') input.lessonTaskId = lessonChoice
-        if (subjectId) input.subjectId = subjectId
+        if (course) input.subjectId = course.id
         if (timeChannelType === 'timer' && targetMinutes) input.targetMinutes = Number(targetMinutes)
         if (timeChannelType === 'scheduled') {
           const today = todayLocal()
@@ -277,28 +261,6 @@ export function NowCard({ learnerId, defaultCourse }: NowCardProps) {
             </select>
           </div>
 
-          {lessonChoice === 'adhoc' && (
-            <div className="mb-3">
-              <label htmlFor="lt-subject" className="block text-sm font-medium text-slate-700 mb-1">Course (optional)</label>
-              <select
-                id="lt-subject"
-                data-testid="subject-select"
-                value={subjectId}
-                onChange={e => setSubjectId(e.target.value)}
-                className={inputClass}
-              >
-                <option value="">No course</option>
-                {subjects.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-              {defaultCourse && (
-                <p className="text-xs text-slate-400 mt-1">
-                  Defaults to {defaultCourse.name} from the filter above — change or clear it for just this session.
-                </p>
-              )}
-            </div>
-          )}
 
           <fieldset className="mb-3">
             <legend className="block text-sm font-medium text-slate-700 mb-1">Time channel</legend>
