@@ -467,7 +467,7 @@ describe('LearningTimePage — course selection (feedback 66087f44)', () => {
     expect(screen.getByTestId('course-select-hint')).toHaveTextContent(/only learners enrolled in this course/i)
   })
 
-  it('when a course is chosen, the session form shows it as a locked, read-only Course value (no duplicate picker)', async () => {
+  it('when a course is chosen at the top, the session form pre-fills it but stays editable', async () => {
     mockGetSubjects.mockResolvedValue(ok([mathSubject]))
     renderPage()
     await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
@@ -478,11 +478,32 @@ describe('LearningTimePage — course selection (feedback 66087f44)', () => {
     fireEvent.click(screen.getByTestId('start-session-button'))
     await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
 
-    expect(screen.getByTestId('course-locked-value')).toHaveTextContent('Math')
-    expect(screen.queryByTestId('subject-select')).not.toBeInTheDocument()
+    expect(screen.getByTestId('subject-select')).toHaveValue('subj_math')
   })
 
-  it('when no course is chosen ("All courses"), the session form keeps an editable Course dropdown', async () => {
+  it('an ad-hoc session can still be started with no course, even when a course is selected in the page filter', async () => {
+    mockGetSubjects.mockResolvedValue(ok([mathSubject]))
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
+
+    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'subj_math' } })
+    await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByTestId('start-session-button'))
+    await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
+
+    const subjectSelect = screen.getByTestId('subject-select') as HTMLSelectElement
+    expect(subjectSelect).toHaveValue('subj_math')
+
+    fireEvent.change(subjectSelect, { target: { value: '' } })
+    fireEvent.click(screen.getByTestId('start-button'))
+
+    await waitFor(() => {
+      expect(mockCreateSession).toHaveBeenCalledWith(expect.not.objectContaining({ subjectId: expect.anything() }))
+    })
+  })
+
+  it('when no course is chosen ("All courses"), the session form keeps an editable Course dropdown defaulting to none', async () => {
     mockGetSubjects.mockResolvedValue(ok([mathSubject, readingSubject]))
     renderPage()
     await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
@@ -490,7 +511,6 @@ describe('LearningTimePage — course selection (feedback 66087f44)', () => {
     fireEvent.click(screen.getByTestId('start-session-button'))
     await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
 
-    expect(screen.queryByTestId('course-locked-value')).not.toBeInTheDocument()
     const subjectSelect = screen.getByTestId('subject-select') as HTMLSelectElement
     expect(subjectSelect).toHaveValue('')
     expect(screen.getByText('No course')).toBeInTheDocument()
