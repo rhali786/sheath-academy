@@ -198,18 +198,51 @@ The subagent wrote `1.1.startedAt = 22:45:00`, ~20 min *before* the preceding co
 guess.** When recording durations, derive `startedAt` from the prior commit time or a real
 clock read, not a round number.
 
-### Estimation method to use going forward
-Quote **two separate numbers**, and anchor to measured throughput:
+### Full-run actuals (all 9 commits, git-verified)
+
+| Boundary | Value |
+|----------|-------|
+| Task 1 (2 commits) | ~15 min |
+| Task 2 (3 commits) | ~11 min |
+| Task 3 (4 commits) | ~9 min |
+| **All 9 task commits (first→last)** | **24m 6s** |
+| Including pre-first-commit discovery | ~35 min |
+| **Measured rate** | **~2.7 min/commit** (pure), ~3.9 min/commit (with discovery) |
+
+### Correction to the method above — don't over-parameterize
+
+The first version of this method proposed four `minutes_per_commit` buckets (1–2 / 2–5 / 5–8 / 8).
+Tested against the full run it estimated **~40 min** vs **24–35 min actual** — still 15–40% high.
+Root cause: **the per-shape constants were guessed, not measured.** A four-parameter model on two
+data points is intuition with decimal places. It was *worse* than the trivial model.
+
+**Use the simplest estimator the data supports:**
 
 ```
-execution_time   = commits × minutes_per_commit     # anchor 1–8 min/commit from measured runs; default ~5
-collaboration_time = human_checkpoints × turn_gap     # the real cost when a human is in the loop
-risk_premium     = Σ (probability_i × time_if_it_hits_i)   # weighted tail, NOT flat padding
-estimate         = execution_time + collaboration_time + risk_premium
+execution_time     = commits × measured_rate      # ONE rate from the ledger (~3 min/commit today)
+collaboration_time = human_checkpoints × turn_gap  # the real ~10× cost when a human is in the loop
+estimate           = [p50 .. p90] range, NOT a point
 ```
 
-Report execution and collaboration separately (they differ ~10×). Discount `minutes_per_commit`
-when: the code path is already audited, the infra/seam already exists, and the change is
-additive/type-only. Inflate only the specific commit with a materialized-risk tail (shared query,
-new write path, migration).
+- Report execution and collaboration **separately** (they differ ~10×) — this split was the only
+  part of the original algorithm that generalized.
+- Quote a **range**, not a point. A point estimate on 2 samples is false confidence.
+- **Do not add a bucket until it has ≥5 measured commits behind it.** Add per-shape rates only
+  once the ledger earns them.
+- Risk = a **weighted tail** (`prob × time_if_hit`), never flat padding. Bug 1.1 was flagged risky
+  and carried the biggest weight; it took ≤11 min with zero rework. Unrealized risk costs zero.
+- Estimation here is a **data-lookup problem, not a modeling problem** — look the rate up, widen the
+  band when extrapolating.
+
+### Measured development speed (rolling ledger)
+
+| Run | Unit basis | Work | Wall-clock | Rate |
+|-----|-----------|------|-----------|------|
+| Steward Wave 1 | sub-tasks | 7 (schema+types+routes+pages+32 tests) | 20m 53s | ~3 min/sub-task |
+| Steward Wave 2 | sub-tasks | 10 | ~19 min | ~1.9 min/sub-task |
+| Steward Wave 3 | sub-tasks | 6 | ~16 min | ~2.7 min/sub-task |
+| Feedback Queue | commits | 9 (2 bug, 3 copy, 4 feat) | 24m 6s | **~2.7 min/commit** |
+
+**Working anchor: ~2–3 min per commit-sized unit, uninterrupted, when the code path is already
+audited.** Widen sharply once a human checkpoint enters the loop.
 
