@@ -1,3 +1,5 @@
+import type { DayOfWeek } from '@/features/lib/types'
+
 export type ResourceType =
   | 'textbook'
   | 'workbook'
@@ -73,6 +75,13 @@ export interface GenerateLessonsInput {
   cadence?: LessonCadence
   /** Required when cadence === 'everyNDays' — number of calendar days between lessons */
   cadenceDays?: number
+  /**
+   * Weekday set the household actually schools on (e.g. household.schoolDays).
+   * When provided, every generated dueDate is guaranteed to fall on one of these
+   * weekdays for every cadence. When omitted, falls back to Mon–Fri for 'schoolDay'
+   * cadence and no weekday guard for 'weekly'/'everyNDays' (back-compat).
+   */
+  schoolDaysOfWeek?: DayOfWeek[]
 }
 
 export interface GeneratedLesson {

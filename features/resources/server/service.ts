@@ -7,6 +7,7 @@ import type {
   GenerateLessonsInput,
   GeneratedLesson,
 } from '@/features/resources/types'
+import type { DayOfWeek } from '@/features/lib/types'
 import {
   createResourceRow,
   getResourceRow,
@@ -52,7 +53,7 @@ export function calculatePace(input: PaceInput): PaceResult {
  * Each lesson gets a `dueDate` by advancing through school days (Mon–Fri).
  */
 export function generateLessons(input: GenerateLessonsInput): GeneratedLesson[] {
-  const { resource, strategy, chapters, schoolDays, startDate, cadence, cadenceDays } = input
+  const { resource, strategy, chapters, schoolDays, startDate, cadence, cadenceDays, schoolDaysOfWeek } = input
 
   let count = 0
   switch (strategy) {
@@ -73,7 +74,7 @@ export function generateLessons(input: GenerateLessonsInput): GeneratedLesson[] 
 
   const start = startDate ? parseLocalDate(startDate) : new Date()
   const lessons: GeneratedLesson[] = []
-  const dueDates = computeDueDates(count, schoolDays, start, cadence, cadenceDays)
+  const dueDates = computeDueDates(count, schoolDays, start, cadence, cadenceDays, schoolDaysOfWeek)
 
   for (let i = 0; i < count; i++) {
     const dueDate = dueDates[i]
@@ -89,12 +90,43 @@ export function generateLessons(input: GenerateLessonsInput): GeneratedLesson[] 
   return lessons
 }
 
+const DAY_NAME_TO_INDEX: Record<DayOfWeek, number> = {
+  Sunday: 0,
+  Monday: 1,
+  Tuesday: 2,
+  Wednesday: 3,
+  Thursday: 4,
+  Friday: 5,
+  Saturday: 6,
+}
+
+/** Builds the allowed-weekday set from a household's `schoolDaysOfWeek`, or `null` when omitted. */
+function allowedWeekdaySet(schoolDaysOfWeek?: DayOfWeek[]): Set<number> | null {
+  if (!schoolDaysOfWeek || schoolDaysOfWeek.length === 0) return null
+  return new Set(schoolDaysOfWeek.map((d) => DAY_NAME_TO_INDEX[d]))
+}
+
+/** Advances `date` forward (in place on a copy) until its weekday is in `allowed`. No-op when `allowed` is null. */
+function rollForwardToAllowed(date: Date, allowed: Set<number> | null): Date {
+  if (!allowed) return date
+  const cursor = new Date(date)
+  while (!allowed.has(cursor.getDay())) {
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return cursor
+}
+
 /**
  * Computes `count` due dates starting from `start`, according to `cadence`:
  * - 'weekly': steps 7 calendar days apart from `start`
  * - 'everyNDays': steps `cadenceDays` calendar days apart from `start`
- * - 'schoolDay' (default/undefined): steps through weekdays (Mon–Fri) only,
+ * - 'schoolDay' (default/undefined): steps through allowed weekdays only,
  *   distributed across `schoolDays`, repeating the last day if `count > schoolDays`
+ *
+ * When `schoolDaysOfWeek` is provided, every returned date's weekday is guaranteed
+ * to be in that set for every cadence — 'weekly'/'everyNDays' roll forward to the
+ * next allowed weekday whenever a step lands on a disallowed one. When omitted,
+ * falls back to Mon–Fri for 'schoolDay' and no weekday guard otherwise (back-compat).
  */
 function computeDueDates(
   count: number,
@@ -102,24 +134,29 @@ function computeDueDates(
   start: Date,
   cadence: GenerateLessonsInput['cadence'],
   cadenceDays: GenerateLessonsInput['cadenceDays'],
+  schoolDaysOfWeek?: DayOfWeek[],
 ): string[] {
+  const allowed = allowedWeekdaySet(schoolDaysOfWeek)
+
   if (cadence === 'weekly' || cadence === 'everyNDays') {
     const stepDays = cadence === 'weekly' ? 7 : Math.max(1, cadenceDays ?? 1)
     const dates: string[] = []
-    const cursor = new Date(start)
+    let cursor = rollForwardToAllowed(start, allowed)
     for (let i = 0; i < count; i++) {
       dates.push(formatDate(cursor))
       cursor.setDate(cursor.getDate() + stepDays)
+      cursor = rollForwardToAllowed(cursor, allowed)
     }
     return dates
   }
 
-  // Default: 'schoolDay' — advance through weekdays (Mon–Fri) only
+  // Default: 'schoolDay' — advance through allowed weekdays only (Mon–Fri when unset)
   const schoolDayDates: string[] = []
   const cursor = new Date(start)
   while (schoolDayDates.length < schoolDays) {
     const dow = cursor.getDay() // 0=Sun, 6=Sat
-    if (dow !== 0 && dow !== 6) {
+    const isAllowed = allowed ? allowed.has(dow) : dow !== 0 && dow !== 6
+    if (isAllowed) {
       schoolDayDates.push(formatDate(cursor))
     }
     cursor.setDate(cursor.getDate() + 1)

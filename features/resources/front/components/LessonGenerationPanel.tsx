@@ -27,7 +27,7 @@ interface LessonGenerationPanelProps {
 }
 
 export function LessonGenerationPanel({ resource, startDate, onGenerate }: LessonGenerationPanelProps) {
-  const { studentProfiles, allSubjects } = useHousehold()
+  const { studentProfiles, allSubjects, householdProfile } = useHousehold()
   const [strategy, setStrategy] = useState<LessonGenerationStrategy>('byChapter')
   const [chapters, setChapters] = useState(String(resource.totalChapters ?? ''))
   const [schoolDays, setSchoolDays] = useState('36')
@@ -71,6 +71,7 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
         startDate,
         cadence,
         ...(cadence === 'everyNDays' ? { cadenceDays: parseInt(cadenceDays, 10) || 1 } : {}),
+        schoolDaysOfWeek: householdProfile?.schoolDays,
       })
       setGenerated(res.data)
       onGenerate?.(res.data)

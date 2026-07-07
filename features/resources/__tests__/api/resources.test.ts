@@ -191,6 +191,97 @@ describe('generateLessons', () => {
   })
 })
 
+describe('generateLessons — schoolDaysOfWeek (household school-day awareness)', () => {
+  it('schoolDay cadence: schoolDaysOfWeek=[Mon..Fri], start=Saturday → first due date is the following Monday; no weekend dates', () => {
+    // 2026-09-05 is a Saturday
+    const lessons = generateLessons({
+      resource: BASE_RESOURCE,
+      strategy: 'byChapter',
+      chapters: 10,
+      schoolDays: 36,
+      startDate: '2026-09-05',
+      schoolDaysOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    })
+    expect(lessons[0].dueDate).toBe('2026-09-07') // following Monday
+    for (const lesson of lessons) {
+      const dow = new Date(`${lesson.dueDate}T00:00:00`).getDay()
+      expect(dow).not.toBe(0)
+      expect(dow).not.toBe(6)
+    }
+  })
+
+  it('weekly cadence: schoolDaysOfWeek=[Mon..Fri], start=Friday → all dates land on allowed weekdays, never Sat/Sun', () => {
+    // 2026-09-04 is a Friday; +7 each step keeps landing on Friday, so this alone would not
+    // exercise the roll-forward, but confirms no weekend dates ever appear once the guard is active.
+    const lessons = generateLessons({
+      resource: BASE_RESOURCE,
+      strategy: 'byChapter',
+      chapters: 4,
+      schoolDays: 36,
+      startDate: '2026-09-04',
+      cadence: 'weekly',
+      schoolDaysOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    })
+    for (const lesson of lessons) {
+      const dow = new Date(`${lesson.dueDate}T00:00:00`).getDay()
+      expect(dow).not.toBe(0)
+      expect(dow).not.toBe(6)
+    }
+  })
+
+  it('weekly cadence with a weekend-only schoolDaysOfWeek: start on the allowed day rolls forward past disallowed steps', () => {
+    // Only Monday allowed. Weekly (7-day) steps from a Monday should all remain Mondays already,
+    // so use everyNDays to force a step that lands off-Monday and must roll forward.
+    const lessons = generateLessons({
+      resource: BASE_RESOURCE,
+      strategy: 'byChapter',
+      chapters: 3,
+      schoolDays: 36,
+      startDate: '2026-09-07', // Monday
+      cadence: 'everyNDays',
+      cadenceDays: 3,
+      schoolDaysOfWeek: ['Monday'],
+    })
+    for (const lesson of lessons) {
+      const dow = new Date(`${lesson.dueDate}T00:00:00`).getDay()
+      expect(dow).toBe(1) // Monday only
+    }
+  })
+
+  it('back-compat: omitting schoolDaysOfWeek reproduces existing Mon-Fri schoolDay-cadence output', () => {
+    const lessons = generateLessons({
+      resource: BASE_RESOURCE,
+      strategy: 'byChapter',
+      chapters: 30,
+      schoolDays: 36,
+      startDate: '2026-09-01',
+    })
+    expect(lessons).toHaveLength(30)
+    for (const lesson of lessons) {
+      const dow = new Date(`${lesson.dueDate}T00:00:00`).getDay()
+      expect(dow).not.toBe(0)
+      expect(dow).not.toBe(6)
+    }
+  })
+
+  it('back-compat: omitting schoolDaysOfWeek reproduces existing weekly-cadence output (no guard)', () => {
+    const lessons = generateLessons({
+      resource: BASE_RESOURCE,
+      strategy: 'byChapter',
+      chapters: 4,
+      schoolDays: 36,
+      startDate: '2026-09-01',
+      cadence: 'weekly',
+    })
+    expect(lessons.map(l => l.dueDate)).toEqual([
+      '2026-09-01',
+      '2026-09-08',
+      '2026-09-15',
+      '2026-09-22',
+    ])
+  })
+})
+
 describe('mapGeneratedLessonToTaskInput', () => {
   it('maps a GeneratedLesson to a plannerApi.createLesson payload', () => {
     const lesson = {
