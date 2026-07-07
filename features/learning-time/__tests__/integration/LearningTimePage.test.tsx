@@ -520,6 +520,81 @@ describe('LearningTimePage — course selection (feedback 66087f44)', () => {
   })
 })
 
+describe('LearningTimePage — Lesson dropdown tied to course (feedback follow-up)', () => {
+  const historySubject = { id: 'subj_history', name: 'History', learnerIds: ['child_001'], isActive: true } as SubjectCourse
+  const mathSubject2 = { id: 'subj_math', name: 'Math', learnerIds: ['child_001'], isActive: true } as SubjectCourse
+
+  const historyLesson = makeLesson({
+    id: 'lesson_hist',
+    subjectId: 'subj_history',
+    title: 'History reading',
+    dueDate: '2026-07-09',
+    status: 'not_started',
+  })
+  const mathLesson = makeLesson({
+    id: 'lesson_math',
+    subjectId: 'subj_math',
+    title: 'Algebra worksheet',
+    dueDate: todayLocal(),
+    status: 'not_started',
+  })
+
+  beforeEach(() => {
+    mockUseHousehold.mockImplementation(() => ({
+      householdProfile: { id: 'hh_001' },
+      studentProfiles: mockChildren,
+      allSubjects: [historySubject, mathSubject2],
+      loading: false,
+      needsSetup: false,
+      familyName: '',
+      error: null,
+      refetch: jest.fn(),
+    }))
+  })
+
+  it('lists all open lessons for the learner in the Lesson dropdown, not just a single "next" pick', async () => {
+    mockGetLessons.mockResolvedValue([historyLesson, mathLesson])
+
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('start-session-button'))
+    await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
+
+    const lessonSelect = screen.getByTestId('lesson-select') as HTMLSelectElement
+    const labels = Array.from(lessonSelect.options).map(o => o.textContent ?? '')
+    expect(labels.some(l => l.includes('History reading'))).toBe(true)
+    expect(labels.some(l => l.includes('Algebra worksheet'))).toBe(true)
+  })
+
+  it("selecting a course filters the Lesson dropdown to that course's lessons only", async () => {
+    mockGetLessons.mockImplementation((_week, childIds, subjectIds) => {
+      const all = [historyLesson, mathLesson]
+      if (subjectIds && subjectIds.length > 0) {
+        return Promise.resolve(all.filter(l => subjectIds.includes(l.subjectId as string)))
+      }
+      return Promise.resolve(all)
+    })
+
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
+
+    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'subj_history' } })
+    await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByTestId('start-session-button'))
+    await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
+
+    await waitFor(() => {
+      expect(mockGetLessons).toHaveBeenCalledWith(undefined, ['child_001'], ['subj_history'])
+    })
+
+    const lessonSelect = screen.getByTestId('lesson-select') as HTMLSelectElement
+    const labels = Array.from(lessonSelect.options).map(o => o.textContent ?? '')
+    expect(labels.some(l => l.includes('History reading'))).toBe(true)
+    expect(labels.some(l => l.includes('Algebra worksheet'))).toBe(false)
+  })
+})
+
 describe('LearningTimePage — session history', () => {
   it('shows a loading state for session history before the list resolves', async () => {
     let resolveList: (value: ApiResponse<LearningTimeSession[]>) => void = () => {}

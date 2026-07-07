@@ -56,6 +56,7 @@ export function NowCard({ learnerId, defaultCourse }: NowCardProps) {
   const [error, setError] = useState<string | null>(null)
   const [configuring, setConfiguring] = useState(false)
   const [next, setNext] = useState<LessonTask | null | undefined>(undefined)
+  const [openLessons, setOpenLessons] = useState<LessonTask[]>([])
   const [subjects, setSubjects] = useState<SubjectCourse[]>([])
 
   const [lessonChoice, setLessonChoice] = useState<string>('adhoc')
@@ -108,16 +109,20 @@ export function NowCard({ learnerId, defaultCourse }: NowCardProps) {
   }, [learnerId])
 
   useEffect(() => {
-    plannerApi.getLessons(undefined, [learnerId])
+    plannerApi.getLessons(undefined, [learnerId], defaultCourse ? [defaultCourse.id] : undefined)
       .then(lessons => {
+        const open = lessons
+          .filter(l => l.status === 'not_started')
+          .sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.title.localeCompare(b.title))
+        setOpenLessons(open)
         const today = todayLocal()
-        const upcoming = lessons
-          .filter(l => l.status === 'not_started' && l.dueDate === today)
-          .sort((a, b) => a.title.localeCompare(b.title))
-        setNext(upcoming[0] ?? null)
+        setNext(open.find(l => l.dueDate === today) ?? null)
       })
-      .catch(() => setNext(null))
-  }, [learnerId])
+      .catch(() => {
+        setOpenLessons([])
+        setNext(null)
+      })
+  }, [learnerId, defaultCourse?.id])
 
   useEffect(() => {
     subjectsApi.getSubjects(learnerId)
@@ -266,7 +271,9 @@ export function NowCard({ learnerId, defaultCourse }: NowCardProps) {
               className={inputClass}
             >
               <option value="adhoc">Ad-hoc</option>
-              {next && <option value={next.id}>{next.title}</option>}
+              {openLessons.map(l => (
+                <option key={l.id} value={l.id}>{l.title} (due {l.dueDate})</option>
+              ))}
             </select>
           </div>
 
