@@ -44,7 +44,7 @@ if (!connStr) {
 }
 
 const APPLY = process.argv.includes('--apply');
-const VERSION = '2.82.7';
+const VERSION = '2.86.0';
 
 // Items to mark shipped — action: 'ship'
 // Items to mark cancelled — action: 'cancel'
@@ -83,6 +83,18 @@ const KNOWN_ITEMS = [
   { prefix: 'c71a4161', action: 'ship', wave: 'Growth-Badges',     description: 'Badge system brief — award lifecycle, evidence link, custom badge authoring' },
   { prefix: '1032a087', action: 'ship', wave: 'Growth-Gradebook',  description: 'Gradebook brief — score CRUD, grading scales, aggregation rules, GPA' },
   { prefix: '418c2940', action: 'ship', wave: 'Growth-Planner',    description: 'Lesson Planner v2 brief — lesson steps CRUD + author UI (grid/reschedule partial)' },
+  // Feedback Queue (2026-07-06) — task-1-bugs
+  { prefix: 'cb15ba12', action: 'ship', wave: 'FQ-1', description: 'Evidence subject dropdown missing course for secondary-enrolled learner' },
+  { prefix: '713d0753', action: 'ship', wave: 'FQ-1', description: 'Generated lesson due dates ignored household school days' },
+  // Feedback Queue (2026-07-06) — task-2-ux
+  { prefix: 'c75d361b', action: 'ship', wave: 'FQ-2', description: 'Save-to-plan hidden until lessons generated' },
+  { prefix: '36f30694', action: 'ship', wave: 'FQ-2', description: 'Scheduled Start/End time read as a recurring schedule' },
+  { prefix: 'ba88751d', action: 'ship', wave: 'FQ-2', description: 'Records Readiness tiles missing current-week scope label' },
+  // Feedback Queue (2026-07-06) — task-3-resources
+  { prefix: '2bc4d916', action: 'ship', wave: 'FQ-3', description: 'No way to start lesson generation from a chosen chapter/page' },
+  { prefix: 'adfe3188', action: 'ship', wave: 'FQ-3', description: 'No way to choose which weekdays a generated course is taught' },
+  { prefix: 'bb573f78', action: 'ship', wave: 'FQ-3', description: 'No way to link a resource to an enrolled course' },
+  { prefix: '3a73264e', action: 'ship', wave: 'FQ-3', description: 'Resource form had no enrolled-course dropdown' },
 ];
 
 async function main() {
