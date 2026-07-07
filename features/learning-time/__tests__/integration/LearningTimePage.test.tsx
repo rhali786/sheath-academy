@@ -32,23 +32,23 @@ jest.mock('@/features/plan/front/services/api', () => ({
   },
 }))
 
-jest.mock('@/features/subjects/front/services/api', () => ({
-  subjectsApi: {
-    getSubjects: jest.fn(),
+jest.mock('@/features/school-year/front/services/api', () => ({
+  schoolYearApi: {
+    getActiveSchoolYear: jest.fn(),
   },
 }))
 
 import { useHousehold } from '@/features/household/front/context'
 import { learningTimeApi } from '@/features/learning-time/front/services/api'
 import { plannerApi } from '@/features/plan/front/services/api'
-import { subjectsApi } from '@/features/subjects/front/services/api'
+import { schoolYearApi } from '@/features/school-year/front/services/api'
 
 const mockUseHousehold = useHousehold as jest.Mock
 const mockGetActive = learningTimeApi.getActive as jest.Mock
 const mockCreateSession = learningTimeApi.createSession as jest.Mock
 const mockTransition = learningTimeApi.transition as jest.Mock
 const mockGetLessons = plannerApi.getLessons as jest.Mock
-const mockGetSubjects = subjectsApi.getSubjects as jest.Mock
+const mockGetActiveSchoolYear = schoolYearApi.getActiveSchoolYear as jest.Mock
 const mockList = learningTimeApi.list as jest.Mock
 
 const mockChildren: StudentProfile[] = [
@@ -127,7 +127,7 @@ beforeEach(() => {
   }))
   mockGetActive.mockResolvedValue(ok(null))
   mockGetLessons.mockResolvedValue([])
-  mockGetSubjects.mockResolvedValue(ok([]))
+  mockGetActiveSchoolYear.mockResolvedValue(ok(null))
   mockCreateSession.mockResolvedValue(ok(makeSession({ status: 'draft', startedAt: null })))
   mockTransition.mockResolvedValue(ok(makeSession()))
   mockList.mockResolvedValue(ok([]))
@@ -436,7 +436,7 @@ describe('LearningTimePage — course selection (feedback 66087f44)', () => {
     renderPage()
     await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
 
-    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'subj_reading' } })
+    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'Reading' } })
 
     await waitFor(() => {
       expect(screen.getByTestId('learner-select')).toHaveValue('child_002')
@@ -449,7 +449,7 @@ describe('LearningTimePage — course selection (feedback 66087f44)', () => {
   it('selecting "All courses" restores the full learner list', async () => {
     renderPage()
     await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
-    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'subj_reading' } })
+    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'Reading' } })
     await waitFor(() => expect(screen.getByTestId('learner-select')).toHaveValue('child_002'))
 
     fireEvent.change(screen.getByTestId('course-select'), { target: { value: '' } })
@@ -468,11 +468,10 @@ describe('LearningTimePage — course selection (feedback 66087f44)', () => {
   })
 
   it('does not show a second Course picker inside the session form — the top selector is the only one', async () => {
-    mockGetSubjects.mockResolvedValue(ok([mathSubject]))
     renderPage()
     await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
 
-    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'subj_math' } })
+    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'Math' } })
     await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
 
     fireEvent.click(screen.getByTestId('start-session-button'))
@@ -482,11 +481,10 @@ describe('LearningTimePage — course selection (feedback 66087f44)', () => {
   })
 
   it('starting an ad-hoc session tags it with the course selected at the top', async () => {
-    mockGetSubjects.mockResolvedValue(ok([mathSubject]))
     renderPage()
     await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
 
-    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'subj_math' } })
+    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'Math' } })
     await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
 
     fireEvent.click(screen.getByTestId('start-session-button'))
@@ -499,7 +497,6 @@ describe('LearningTimePage — course selection (feedback 66087f44)', () => {
   })
 
   it('starting an ad-hoc session with "All courses" selected has no course tag', async () => {
-    mockGetSubjects.mockResolvedValue(ok([mathSubject, readingSubject]))
     renderPage()
     await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
 
@@ -509,6 +506,154 @@ describe('LearningTimePage — course selection (feedback 66087f44)', () => {
 
     await waitFor(() => {
       expect(mockCreateSession).toHaveBeenCalledWith(expect.not.objectContaining({ subjectId: expect.anything() }))
+    })
+  })
+})
+
+describe('LearningTimePage — Course dropdown de-duplication across school years', () => {
+  const historyPriorYear = {
+    id: 'subj_hist_2025',
+    name: 'History',
+    learnerIds: ['child_001'],
+    isActive: true,
+    schoolYearId: 'sy_2025',
+  } as SubjectCourse
+  const historyCurrentYear = {
+    id: 'subj_hist_2026',
+    name: 'History',
+    learnerIds: ['child_001'],
+    isActive: true,
+    schoolYearId: 'sy_2026',
+  } as SubjectCourse
+
+  it('rolled-over courses from a prior school year do not appear twice in the Course dropdown', async () => {
+    mockUseHousehold.mockImplementation(() => ({
+      householdProfile: { id: 'hh_001' },
+      studentProfiles: mockChildren,
+      allSubjects: [historyPriorYear, historyCurrentYear],
+      loading: false,
+      needsSetup: false,
+      familyName: '',
+      error: null,
+      refetch: jest.fn(),
+    }))
+    mockGetActiveSchoolYear.mockResolvedValue(ok({ id: 'sy_2026', name: '2026-2027' }))
+
+    renderPage()
+
+    await waitFor(() => {
+      const courseSelect = screen.getByTestId('course-select') as HTMLSelectElement
+      const historyOptions = Array.from(courseSelect.options).filter(o => o.textContent === 'History')
+      expect(historyOptions).toHaveLength(1)
+    })
+  })
+})
+
+describe('LearningTimePage — merges same-named per-learner course rows (real seed-data shape)', () => {
+  const idrisChild: StudentProfile = {
+    id: 'child_001',
+    householdId: 'hh_001',
+    name: 'Idris',
+    gradeLabel: '4th',
+    isActive: true,
+    username: 'idris',
+    password: 'pw',
+    createdAt: '2026-01-01T00:00:00Z',
+  }
+  const hawaChild: StudentProfile = {
+    id: 'child_002',
+    householdId: 'hh_001',
+    name: 'Hawa',
+    gradeLabel: '2nd',
+    isActive: true,
+    username: 'hawa',
+    password: 'pw',
+    createdAt: '2026-01-01T00:00:00Z',
+  }
+  const zaydChild: StudentProfile = {
+    id: 'child_003',
+    householdId: 'hh_001',
+    name: 'Zayd',
+    gradeLabel: '6th',
+    isActive: true,
+    username: 'zayd',
+    password: 'pw',
+    createdAt: '2026-01-01T00:00:00Z',
+  }
+
+  const mathIdris = {
+    id: 'sub_math_idris',
+    name: 'Mathematics',
+    learnerIds: ['child_001'],
+    isActive: true,
+    schoolYearId: 'sy1',
+  } as SubjectCourse
+  const mathHawa = {
+    id: 'sub_math_hawa',
+    name: 'Mathematics',
+    learnerIds: ['child_002'],
+    isActive: true,
+    schoolYearId: 'sy1',
+  } as SubjectCourse
+
+  beforeEach(() => {
+    mockUseHousehold.mockImplementation(() => ({
+      householdProfile: { id: 'hh_001' },
+      studentProfiles: [idrisChild, hawaChild, zaydChild],
+      allSubjects: [mathIdris, mathHawa],
+      loading: false,
+      needsSetup: false,
+      familyName: '',
+      error: null,
+      refetch: jest.fn(),
+    }))
+    mockGetActiveSchoolYear.mockResolvedValue(ok({ id: 'sy1', name: '2026-2027' }))
+  })
+
+  it('shows one "Mathematics" entry in the Course dropdown, not one per learner', async () => {
+    renderPage()
+
+    await waitFor(() => {
+      const courseSelect = screen.getByTestId('course-select') as HTMLSelectElement
+      const mathOptions = Array.from(courseSelect.options).filter(o => o.textContent === 'Mathematics')
+      expect(mathOptions).toHaveLength(1)
+    })
+  })
+
+  it('selecting the merged course narrows the Learner list to every learner enrolled across the per-learner rows', async () => {
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
+
+    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'Mathematics' } })
+
+    await waitFor(() => {
+      const learnerSelect = screen.getByTestId('learner-select') as HTMLSelectElement
+      const labels = Array.from(learnerSelect.options).map(o => o.textContent)
+      expect(labels).toEqual(['Idris', 'Hawa'])
+      expect(labels).not.toContain('Zayd')
+    })
+  })
+
+  it("tags an ad-hoc session with the specific learner's own underlying course row, not an arbitrary one", async () => {
+    mockGetLessons.mockResolvedValue([])
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
+
+    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'Mathematics' } })
+    await waitFor(() => expect(screen.getByTestId('learner-select')).toHaveValue('child_001'))
+
+    fireEvent.change(screen.getByTestId('learner-select'), { target: { value: 'child_002' } })
+    await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByTestId('start-session-button'))
+    await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('start-button'))
+
+    await waitFor(() => {
+      expect(mockCreateSession).toHaveBeenCalledWith(expect.objectContaining({
+        learnerId: 'child_002',
+        subjectId: 'sub_math_hawa',
+      }))
     })
   })
 })
@@ -571,7 +716,7 @@ describe('LearningTimePage — Lesson dropdown tied to course (feedback follow-u
     renderPage()
     await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
 
-    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'subj_history' } })
+    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'History' } })
     await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
 
     fireEvent.click(screen.getByTestId('start-session-button'))
@@ -585,6 +730,20 @@ describe('LearningTimePage — Lesson dropdown tied to course (feedback follow-u
     const labels = Array.from(lessonSelect.options).map(o => o.textContent ?? '')
     expect(labels.some(l => l.includes('History reading'))).toBe(true)
     expect(labels.some(l => l.includes('Algebra worksheet'))).toBe(false)
+  })
+
+  it('shows each lesson\'s course name in parentheses, so "All courses" is unambiguous', async () => {
+    mockGetLessons.mockResolvedValue([historyLesson, mathLesson])
+
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('start-session-button'))
+    await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
+
+    const lessonSelect = screen.getByTestId('lesson-select') as HTMLSelectElement
+    const labels = Array.from(lessonSelect.options).map(o => o.textContent ?? '')
+    expect(labels.some(l => l.includes('History reading') && l.includes('(History)'))).toBe(true)
+    expect(labels.some(l => l.includes('Algebra worksheet') && l.includes('(Math)'))).toBe(true)
   })
 })
 

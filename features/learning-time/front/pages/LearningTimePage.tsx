@@ -4,26 +4,59 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useHousehold } from '@/features/household/front/context'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
+import { schoolYearApi } from '@/features/school-year/front/services/api'
 import { NowCard } from '@/features/learning-time/front/components/NowCard'
 import { SessionHistoryList } from '@/features/learning-time/front/components/SessionHistoryList'
+import type { SubjectCourse } from '@/features/subjects/types'
 
 export function LearningTimePage() {
   const { studentProfiles: children, allSubjects } = useHousehold()
   const searchParams = useSearchParams()
   const { selectedChildId, setSelectedChildId } = useLearner()
-  const [selectedCourseId, setSelectedCourseId] = useState('')
+  const [selectedCourseName, setSelectedCourseName] = useState('')
+  const [activeSchoolYearId, setActiveSchoolYearId] = useState<string | null>(null)
+
+  useEffect(() => {
+    schoolYearApi.getActiveSchoolYear()
+      .then(res => setActiveSchoolYearId(res.data?.id ?? null))
+      .catch(() => setActiveSchoolYearId(null))
+  }, [])
 
   const activeChildren = children.filter(c => c.isActive)
-  const activeSubjects = allSubjects.filter(s => s.isActive !== false)
-
-  const selectedCourse = useMemo(
-    () => activeSubjects.find(s => s.id === selectedCourseId) ?? null,
-    [activeSubjects, selectedCourseId],
+  // Rollover clones a course into the new school year but leaves the source row active too,
+  // so the same course name can legitimately appear more than once — keep only the current year's copy.
+  const activeSubjects = allSubjects.filter(
+    s => s.isActive !== false && (!activeSchoolYearId || !s.schoolYearId || s.schoolYearId === activeSchoolYearId),
   )
 
-  const filteredChildren = selectedCourse
-    ? activeChildren.filter(c => selectedCourse.learnerIds.includes(c.id))
+  // Existing data can have one course row per learner sharing the same name (e.g. seed data
+  // creates a separate "Mathematics" row per child instead of one shared row with multiple
+  // learnerIds). Group by name so the dropdown shows each course once regardless of how the
+  // underlying rows are split, and narrow the Learner list by the union of their learnerIds.
+  const courseGroups = useMemo(() => {
+    const map = new Map<string, SubjectCourse[]>()
+    for (const s of activeSubjects) {
+      const list = map.get(s.name) ?? []
+      list.push(s)
+      map.set(s.name, list)
+    }
+    return map
+  }, [activeSubjects])
+
+  const courseNames = useMemo(() => Array.from(courseGroups.keys()), [courseGroups])
+  const selectedCourseMembers = selectedCourseName ? courseGroups.get(selectedCourseName) ?? [] : []
+
+  const filteredChildren = selectedCourseName
+    ? activeChildren.filter(c => selectedCourseMembers.some(m => m.learnerIds.includes(c.id)))
     : activeChildren
+
+  // Once a specific learner is chosen, resolve which single underlying row is actually theirs —
+  // that's what gets passed to NowCard for the Lesson list and the session's course tag.
+  const resolvedCourse = useMemo(() => {
+    if (!selectedCourseName || !selectedChildId) return null
+    const member = selectedCourseMembers.find(m => m.learnerIds.includes(selectedChildId))
+    return member ? { id: member.id, name: member.name } : null
+  }, [selectedCourseName, selectedChildId, selectedCourseMembers])
 
   // Seed shared learner selection from ?childId= when present; otherwise default to the first learner.
   useEffect(() => {
@@ -61,13 +94,13 @@ export function LearningTimePage() {
               <select
                 id="learning-time-course"
                 data-testid="course-select"
-                value={selectedCourseId}
-                onChange={e => setSelectedCourseId(e.target.value)}
+                value={selectedCourseName}
+                onChange={e => setSelectedCourseName(e.target.value)}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
               >
                 <option value="">All courses</option>
-                {activeSubjects.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
+                {courseNames.map(name => (
+                  <option key={name} value={name}>{name}</option>
                 ))}
               </select>
               <p data-testid="course-select-hint" className="text-xs text-slate-400 mt-1">
@@ -95,7 +128,8 @@ export function LearningTimePage() {
             <>
               <NowCard
                 learnerId={selectedChildId}
-                course={selectedCourse ? { id: selectedCourse.id, name: selectedCourse.name } : undefined}
+                course={resolvedCourse ?? undefined}
+                allSubjects={activeSubjects}
               />
               <SessionHistoryList learnerId={selectedChildId} />
             </>

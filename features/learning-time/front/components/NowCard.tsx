@@ -13,11 +13,14 @@ import {
   type TimeChannelType,
 } from '@/features/learning-time/types'
 import type { LessonTask } from '@/features/plan/types'
+import type { SubjectCourse } from '@/features/subjects/types'
 
 interface NowCardProps {
   learnerId: string
   /** The course chosen in the page-level filter. Scopes the Lesson list to it and tags any ad-hoc session with it — there is no separate in-form Course picker. */
   course?: { id: string; name: string }
+  /** Current-school-year courses, for labeling each Lesson option with its course name. */
+  allSubjects: SubjectCourse[]
 }
 
 const TIME_CHANNEL_LABELS: Record<TimeChannelType, string> = {
@@ -47,7 +50,7 @@ const inputClass = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm 
 const primaryButtonClass = 'px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800 disabled:opacity-60'
 const secondaryButtonClass = 'px-4 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50'
 
-export function NowCard({ learnerId, course }: NowCardProps) {
+export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
   const [loading, setLoading] = useState(true)
   const [session, setSession] = useState<LearningTimeSession | null>(null)
   const [finalized, setFinalized] = useState<LearningTimeSession | null>(null)
@@ -255,9 +258,14 @@ export function NowCard({ learnerId, course }: NowCardProps) {
               className={inputClass}
             >
               <option value="adhoc">Ad-hoc</option>
-              {openLessons.map(l => (
-                <option key={l.id} value={l.id}>{l.title} (due {l.dueDate})</option>
-              ))}
+              {openLessons.map(l => {
+                const courseName = allSubjects.find(s => s.id === l.subjectId)?.name
+                return (
+                  <option key={l.id} value={l.id}>
+                    {l.title} {courseName ? `(${courseName}) ` : ''}(due {l.dueDate})
+                  </option>
+                )
+              })}
             </select>
           </div>
 
