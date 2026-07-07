@@ -73,6 +73,10 @@ export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
 
   const [now, setNow] = useState<number>(Date.now())
   const fetchedAtRef = useRef<number>(Date.now())
+  // Only the very first session check should blank the whole panel with the loading
+  // placeholder. Later learnerId changes (switching learners while this card stays mounted)
+  // re-validate in the background instead of hiding whatever view is currently showing.
+  const hasLoadedOnceRef = useRef(false)
 
   function applySession(s: LearningTimeSession | null) {
     fetchedAtRef.current = Date.now()
@@ -91,7 +95,7 @@ export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
+    if (!hasLoadedOnceRef.current) setLoading(true)
     learningTimeApi.getActive(learnerId)
       .then(res => {
         if (cancelled) return
@@ -101,7 +105,9 @@ export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
         if (!cancelled) setError('Failed to load session')
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (cancelled) return
+        setLoading(false)
+        hasLoadedOnceRef.current = true
       })
     return () => { cancelled = true }
   }, [learnerId])

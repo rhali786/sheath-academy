@@ -708,6 +708,34 @@ describe('LearningTimePage — merges same-named per-learner course rows (real s
     const callsAfterCourseChange = mockGetLessons.mock.calls.slice(callsBeforeCourseChange)
     expect(callsAfterCourseChange).not.toContainEqual([undefined, ['child_001'], undefined])
   })
+
+  it('switching learners via the course selector while the Configure session form is open does not flash a full-panel loading state', async () => {
+    let resolveSecondGetActive: (v: ApiResponse<LearningTimeSession | null>) => void = () => {}
+    let callCount = 0
+    mockGetActive.mockImplementation(() => {
+      callCount += 1
+      if (callCount === 1) return Promise.resolve(ok(null))
+      return new Promise(resolve => { resolveSecondGetActive = resolve })
+    })
+
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByTestId('start-session-button'))
+    await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
+
+    // Switching to a course only Hawa is enrolled in switches the learner mid-configuration.
+    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'Reading' } })
+    await waitFor(() => expect(screen.getByTestId('learner-select')).toHaveValue('child_002'))
+
+    // The second getActive() call (for Hawa) is still pending — the config form must stay visible,
+    // not get replaced by the full-panel "Loading…" placeholder.
+    expect(screen.queryByTestId('now-card-loading')).not.toBeInTheDocument()
+    expect(screen.getByTestId('now-card-config')).toBeInTheDocument()
+
+    resolveSecondGetActive(ok(null))
+    await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
+  })
 })
 
 describe('LearningTimePage — Lesson dropdown tied to course (feedback follow-up)', () => {
