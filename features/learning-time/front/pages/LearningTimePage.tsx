@@ -50,13 +50,20 @@ export function LearningTimePage() {
     ? activeChildren.filter(c => selectedCourseMembers.some(m => m.learnerIds.includes(c.id)))
     : activeChildren
 
-  // Once a specific learner is chosen, resolve which single underlying row is actually theirs —
+  // Derived synchronously (not via effect): whenever the course narrows the eligible list,
+  // this is already correct on the very same render — nothing downstream (the Lesson fetch
+  // in NowCard) can ever see a learner who isn't valid for the selected course.
+  const effectiveChildId = selectedChildId && filteredChildren.some(c => c.id === selectedChildId)
+    ? selectedChildId
+    : filteredChildren[0]?.id ?? null
+
+  // Once a specific learner is resolved, find which single underlying row is actually theirs —
   // that's what gets passed to NowCard for the Lesson list and the session's course tag.
   const resolvedCourse = useMemo(() => {
-    if (!selectedCourseName || !selectedChildId) return null
-    const member = selectedCourseMembers.find(m => m.learnerIds.includes(selectedChildId))
+    if (!selectedCourseName || !effectiveChildId) return null
+    const member = selectedCourseMembers.find(m => m.learnerIds.includes(effectiveChildId))
     return member ? { id: member.id, name: member.name } : null
-  }, [selectedCourseName, selectedChildId, selectedCourseMembers])
+  }, [selectedCourseName, effectiveChildId, selectedCourseMembers])
 
   // Seed shared learner selection from ?childId= when present; otherwise default to the first learner.
   useEffect(() => {
@@ -70,13 +77,14 @@ export function LearningTimePage() {
     }
   }, [searchParams, activeChildren, selectedChildId, setSelectedChildId])
 
-  // Keep the learner selection valid whenever the course narrows the eligible list.
+  // Persist the course-corrected learner into the shared cross-page context in the background.
+  // This is not load-bearing for this page's own rendering/fetching — effectiveChildId already
+  // reflects the correction synchronously — it only keeps other pages/URLs in sync.
   useEffect(() => {
-    if (filteredChildren.length === 0) return
-    if (!selectedChildId || !filteredChildren.some(c => c.id === selectedChildId)) {
-      setSelectedChildId(filteredChildren[0].id)
+    if (effectiveChildId && effectiveChildId !== selectedChildId) {
+      setSelectedChildId(effectiveChildId)
     }
-  }, [filteredChildren, selectedChildId, setSelectedChildId])
+  }, [effectiveChildId, selectedChildId, setSelectedChildId])
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -113,7 +121,7 @@ export function LearningTimePage() {
               <select
                 id="learning-time-learner"
                 data-testid="learner-select"
-                value={selectedChildId ?? ''}
+                value={effectiveChildId ?? ''}
                 onChange={e => setSelectedChildId(e.target.value)}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
               >
@@ -124,14 +132,14 @@ export function LearningTimePage() {
             </div>
           </div>
 
-          {selectedChildId && (
+          {effectiveChildId && (
             <>
               <NowCard
-                learnerId={selectedChildId}
+                learnerId={effectiveChildId}
                 course={resolvedCourse ?? undefined}
                 allSubjects={activeSubjects}
               />
-              <SessionHistoryList learnerId={selectedChildId} />
+              <SessionHistoryList learnerId={effectiveChildId} />
             </>
           )}
         </>

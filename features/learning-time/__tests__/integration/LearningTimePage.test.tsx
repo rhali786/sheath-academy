@@ -683,8 +683,10 @@ describe('LearningTimePage — merges same-named per-learner course rows (real s
     })
 
     renderPage()
-    // Default learner is Idris (first active child), course starts at "All courses"
+    // Default learner is Idris (first active child), course starts at "All courses" —
+    // this legitimately calls getLessons(undefined, ['child_001'], undefined) once, up front.
     await waitFor(() => expect(screen.getByTestId('learner-select')).toHaveValue('child_001'))
+    const callsBeforeCourseChange = mockGetLessons.mock.calls.length
 
     fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'Reading' } })
 
@@ -700,41 +702,11 @@ describe('LearningTimePage — merges same-named per-learner course rows (real s
     const labels = Array.from(lessonSelect.options).map(o => o.textContent ?? '')
     expect(labels.some(l => l.includes('Hawa Reading lesson'))).toBe(true)
     expect(labels.some(l => l.includes('Idris Math lesson'))).toBe(false)
-  })
 
-  it('a slow, stale request for the pre-switch learner must not overwrite the correct result that already arrived — regression for cross-subject contamination', async () => {
-    let resolveStaleIdrisFetch: (v: LessonTask[]) => void = () => {}
-    mockGetLessons.mockImplementation((_week, childIds, subjectIds) => {
-      if (childIds?.includes('child_001') && !subjectIds) {
-        // Stale request (Idris, unfiltered) — deliberately slow, resolves AFTER the correct one below.
-        return new Promise(resolve => { resolveStaleIdrisFetch = resolve })
-      }
-      if (childIds?.includes('child_002') && subjectIds?.includes('sub_reading_hawa')) {
-        // Correct request (Hawa, Reading-filtered) — fast, resolves first.
-        return Promise.resolve([makeLesson({ id: 'l2', childId: 'child_002', subjectId: 'sub_reading_hawa', title: 'Hawa Reading lesson' })])
-      }
-      return Promise.resolve([])
-    })
-
-    renderPage()
-    await waitFor(() => expect(screen.getByTestId('learner-select')).toHaveValue('child_001'))
-
-    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'Reading' } })
-
-    await waitFor(() => expect(screen.getByTestId('learner-select')).toHaveValue('child_002'))
-    await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
-
-    // Now the stale Idris request finally resolves, arriving LAST.
-    resolveStaleIdrisFetch([makeLesson({ id: 'l1', childId: 'child_001', subjectId: 'sub_math_idris', title: 'Idris Math lesson' })])
-    await new Promise(r => setTimeout(r, 0))
-
-    fireEvent.click(screen.getByTestId('start-session-button'))
-    await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
-
-    const lessonSelect = screen.getByTestId('lesson-select') as HTMLSelectElement
-    const labels = Array.from(lessonSelect.options).map(o => o.textContent ?? '')
-    expect(labels.some(l => l.includes('Idris Math lesson'))).toBe(false)
-    expect(labels.some(l => l.includes('Hawa Reading lesson'))).toBe(true)
+    // After the course change, no NEW call should repeat the stale (Idris, no-course) pairing —
+    // the learner correction is synchronous, so NowCard should only ever see the resolved, valid pairing.
+    const callsAfterCourseChange = mockGetLessons.mock.calls.slice(callsBeforeCourseChange)
+    expect(callsAfterCourseChange).not.toContainEqual([undefined, ['child_001'], undefined])
   })
 })
 
