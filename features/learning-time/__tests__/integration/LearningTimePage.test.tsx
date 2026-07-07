@@ -461,7 +461,13 @@ describe('LearningTimePage — course selection (feedback 66087f44)', () => {
     })
   })
 
-  it('selecting a course pre-fills the Subject on the session config form', async () => {
+  it('shows a hint explaining that the Learner list is narrowed by course', async () => {
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
+    expect(screen.getByTestId('course-select-hint')).toHaveTextContent(/only learners enrolled in this course/i)
+  })
+
+  it('when a course is chosen, the session form shows it as a locked, read-only Course value (no duplicate picker)', async () => {
     mockGetSubjects.mockResolvedValue(ok([mathSubject]))
     renderPage()
     await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
@@ -472,7 +478,25 @@ describe('LearningTimePage — course selection (feedback 66087f44)', () => {
     fireEvent.click(screen.getByTestId('start-session-button'))
     await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
 
-    expect(screen.getByTestId('subject-select')).toHaveValue('subj_math')
+    expect(screen.getByTestId('course-locked-value')).toHaveTextContent('Math')
+    expect(screen.queryByTestId('subject-select')).not.toBeInTheDocument()
+  })
+
+  it('when no course is chosen ("All courses"), the session form keeps an editable Course dropdown', async () => {
+    mockGetSubjects.mockResolvedValue(ok([mathSubject, readingSubject]))
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByTestId('start-session-button'))
+    await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
+
+    expect(screen.queryByTestId('course-locked-value')).not.toBeInTheDocument()
+    const subjectSelect = screen.getByTestId('subject-select') as HTMLSelectElement
+    expect(subjectSelect).toHaveValue('')
+    expect(screen.getByText('No course')).toBeInTheDocument()
+
+    fireEvent.change(subjectSelect, { target: { value: 'subj_math' } })
+    expect(subjectSelect).toHaveValue('subj_math')
   })
 })
 

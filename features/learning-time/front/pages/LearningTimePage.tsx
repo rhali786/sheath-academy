@@ -70,6 +70,9 @@ export function LearningTimePage() {
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
+              <p data-testid="course-select-hint" className="text-xs text-slate-400 mt-1">
+                Only learners enrolled in this course are shown below.
+              </p>
             </div>
 
             <div className="max-w-xs">
@@ -90,7 +93,10 @@ export function LearningTimePage() {
 
           {selectedChildId && (
             <>
-              <NowCard learnerId={selectedChildId} initialSubjectId={selectedCourseId || undefined} />
+              <NowCard
+                learnerId={selectedChildId}
+                lockedCourse={selectedCourse ? { id: selectedCourse.id, name: selectedCourse.name } : undefined}
+              />
               <SessionHistoryList learnerId={selectedChildId} />
             </>
           )}

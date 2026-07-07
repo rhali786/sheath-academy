@@ -18,8 +18,8 @@ import type { SubjectCourse } from '@/features/subjects/types'
 
 interface NowCardProps {
   learnerId: string
-  /** Pre-fills the ad-hoc session's Subject field, e.g. when a course was chosen page-level. */
-  initialSubjectId?: string
+  /** When set, the page-level Course selector already chose a course — lock the session to it instead of showing a second, divergible picker. */
+  lockedCourse?: { id: string; name: string }
 }
 
 const TIME_CHANNEL_LABELS: Record<TimeChannelType, string> = {
@@ -49,7 +49,7 @@ const inputClass = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm 
 const primaryButtonClass = 'px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800 disabled:opacity-60'
 const secondaryButtonClass = 'px-4 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50'
 
-export function NowCard({ learnerId, initialSubjectId }: NowCardProps) {
+export function NowCard({ learnerId, lockedCourse }: NowCardProps) {
   const [loading, setLoading] = useState(true)
   const [session, setSession] = useState<LearningTimeSession | null>(null)
   const [finalized, setFinalized] = useState<LearningTimeSession | null>(null)
@@ -131,10 +131,10 @@ export function NowCard({ learnerId, initialSubjectId }: NowCardProps) {
     return () => clearInterval(interval)
   }, [session?.status])
 
-  // Default the ad-hoc Subject field from the page-level course pick, without clobbering an in-progress edit.
+  // Lock the ad-hoc Course field to the page-level pick, without clobbering an in-progress edit.
   useEffect(() => {
-    if (!configuring) setSubjectId(initialSubjectId ?? '')
-  }, [initialSubjectId, configuring])
+    if (!configuring) setSubjectId(lockedCourse?.id ?? '')
+  }, [lockedCourse?.id, configuring])
 
   const elapsedSeconds = session
     ? session.elapsedSeconds + (session.status === 'running' ? Math.floor((now - fetchedAtRef.current) / 1000) : 0)
@@ -272,19 +272,29 @@ export function NowCard({ learnerId, initialSubjectId }: NowCardProps) {
 
           {lessonChoice === 'adhoc' && (
             <div className="mb-3">
-              <label htmlFor="lt-subject" className="block text-sm font-medium text-slate-700 mb-1">Subject (optional)</label>
-              <select
-                id="lt-subject"
-                data-testid="subject-select"
-                value={subjectId}
-                onChange={e => setSubjectId(e.target.value)}
-                className={inputClass}
-              >
-                <option value="">No subject</option>
-                {subjects.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+              <label htmlFor="lt-subject" className="block text-sm font-medium text-slate-700 mb-1">Course (optional)</label>
+              {lockedCourse ? (
+                <p
+                  id="lt-subject"
+                  data-testid="course-locked-value"
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-700"
+                >
+                  {lockedCourse.name}
+                </p>
+              ) : (
+                <select
+                  id="lt-subject"
+                  data-testid="subject-select"
+                  value={subjectId}
+                  onChange={e => setSubjectId(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">No course</option>
+                  {subjects.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
           )}
 
