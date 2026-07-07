@@ -101,6 +101,15 @@ describe('BadgesPage', () => {
     expect(screen.getByTestId('badges-loading')).toBeInTheDocument()
   })
 
+  it('prompts to select a learner instead of erroring when none is selected', async () => {
+    mockUseLearner.mockImplementation(() => ({ selectedChildId: null, setSelectedChildId: jest.fn() }))
+    render(<BadgesPage />)
+    await waitFor(() => {
+      expect(screen.getByTestId('badges-no-learner')).toBeInTheDocument()
+    })
+    expect(mockGetCollection).not.toHaveBeenCalled()
+  })
+
   it('shows error state when API fails', async () => {
     mockGetCollection.mockImplementation(() => Promise.reject(new Error('fail')))
     render(<BadgesPage />)

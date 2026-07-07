@@ -405,6 +405,10 @@ export function BadgesPage() {
 
   useEffect(() => {
     if (!householdId) return
+    if (!learnerId) {
+      setLoading(false)
+      return
+    }
     Promise.all([
       badgesApi.getCollection(householdId, learnerId),
       badgesApi.getSettings(householdId),
@@ -472,6 +476,20 @@ export function BadgesPage() {
     setShowCreateForm(false)
     setSuccess('Badge created')
     await reloadCollection()
+  }
+
+  if (!learnerId) {
+    return (
+      <div className="page-shell space-y-6">
+        <div className="flex items-center gap-3">
+          <Trophy className="w-6 h-6 text-forest-700" />
+          <h1 className="page-title">Badges</h1>
+        </div>
+        <div className="card p-6 text-center space-y-2" data-testid="badges-no-learner">
+          <p className="text-sm text-slate-600">Select a learner from the header to view their badges.</p>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
