@@ -18,6 +18,8 @@ import type { SubjectCourse } from '@/features/subjects/types'
 
 interface NowCardProps {
   learnerId: string
+  /** Pre-fills the ad-hoc session's Subject field, e.g. when a course was chosen page-level. */
+  initialSubjectId?: string
 }
 
 const TIME_CHANNEL_LABELS: Record<TimeChannelType, string> = {
@@ -47,7 +49,7 @@ const inputClass = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm 
 const primaryButtonClass = 'px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800 disabled:opacity-60'
 const secondaryButtonClass = 'px-4 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50'
 
-export function NowCard({ learnerId }: NowCardProps) {
+export function NowCard({ learnerId, initialSubjectId }: NowCardProps) {
   const [loading, setLoading] = useState(true)
   const [session, setSession] = useState<LearningTimeSession | null>(null)
   const [finalized, setFinalized] = useState<LearningTimeSession | null>(null)
@@ -128,6 +130,11 @@ export function NowCard({ learnerId }: NowCardProps) {
     const interval = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(interval)
   }, [session?.status])
+
+  // Default the ad-hoc Subject field from the page-level course pick, without clobbering an in-progress edit.
+  useEffect(() => {
+    if (!configuring) setSubjectId(initialSubjectId ?? '')
+  }, [initialSubjectId, configuring])
 
   const elapsedSeconds = session
     ? session.elapsedSeconds + (session.status === 'running' ? Math.floor((now - fetchedAtRef.current) / 1000) : 0)

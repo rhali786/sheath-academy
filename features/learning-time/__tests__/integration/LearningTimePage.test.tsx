@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react'
 import { LearningTimePage } from '@/features/learning-time/front/pages/LearningTimePage'
 import { LearnerProvider } from '@/features/layout/front/context/LearnerContext'
 import type { LearningTimeSession } from '@/features/learning-time/types'
@@ -397,6 +397,85 @@ describe('LearningTimePage', () => {
   })
 })
 
+describe('LearningTimePage — course selection (feedback 66087f44)', () => {
+  const secondChild: StudentProfile = {
+    id: 'child_002',
+    householdId: 'hh_001',
+    name: 'Sara',
+    gradeLabel: '3rd',
+    isActive: true,
+    username: 'sara',
+    password: 'pw',
+    createdAt: '2026-01-01T00:00:00Z',
+  }
+
+  const mathSubject = { id: 'subj_math', name: 'Math', learnerIds: ['child_001'], isActive: true } as SubjectCourse
+  const readingSubject = { id: 'subj_reading', name: 'Reading', learnerIds: ['child_002'], isActive: true } as SubjectCourse
+
+  beforeEach(() => {
+    mockUseHousehold.mockImplementation(() => ({
+      householdProfile: { id: 'hh_001' },
+      studentProfiles: [...mockChildren, secondChild],
+      allSubjects: [mathSubject, readingSubject],
+      loading: false,
+      needsSetup: false,
+      familyName: '',
+      error: null,
+      refetch: jest.fn(),
+    }))
+  })
+
+  it('shows a Course selector defaulting to "All courses"', async () => {
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
+    expect(screen.getByTestId('course-select')).toHaveValue('')
+    expect(screen.getByText('All courses')).toBeInTheDocument()
+  })
+
+  it('selecting a course narrows the Learner dropdown to its enrolled learners and switches the selection', async () => {
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
+
+    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'subj_reading' } })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('learner-select')).toHaveValue('child_002')
+    })
+    const learnerSelect = screen.getByTestId('learner-select') as HTMLSelectElement
+    const optionLabels = Array.from(learnerSelect.options).map(o => o.textContent)
+    expect(optionLabels).toEqual(['Sara'])
+  })
+
+  it('selecting "All courses" restores the full learner list', async () => {
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
+    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'subj_reading' } })
+    await waitFor(() => expect(screen.getByTestId('learner-select')).toHaveValue('child_002'))
+
+    fireEvent.change(screen.getByTestId('course-select'), { target: { value: '' } })
+
+    await waitFor(() => {
+      const learnerSelect = screen.getByTestId('learner-select') as HTMLSelectElement
+      const optionLabels = Array.from(learnerSelect.options).map(o => o.textContent)
+      expect(optionLabels).toEqual(['Adam', 'Sara'])
+    })
+  })
+
+  it('selecting a course pre-fills the Subject on the session config form', async () => {
+    mockGetSubjects.mockResolvedValue(ok([mathSubject]))
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('course-select')).toBeInTheDocument())
+
+    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'subj_math' } })
+    await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByTestId('start-session-button'))
+    await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
+
+    expect(screen.getByTestId('subject-select')).toHaveValue('subj_math')
+  })
+})
+
 describe('LearningTimePage — session history', () => {
   it('shows a loading state for session history before the list resolves', async () => {
     let resolveList: (value: ApiResponse<LearningTimeSession[]>) => void = () => {}
@@ -461,12 +540,13 @@ describe('LearningTimePage — session history', () => {
     await waitFor(() => {
       expect(screen.getByTestId('session-history-list')).toBeInTheDocument()
     })
-    expect(screen.getByText('Algebra')).toBeInTheDocument()
-    expect(screen.getByText('No subject')).toBeInTheDocument()
-    expect(screen.getByText('30:00')).toBeInTheDocument()
-    expect(screen.getByText('10:00')).toBeInTheDocument()
-    expect(screen.getByText(/complete/i)).toBeInTheDocument()
-    expect(screen.getByText(/partial/i)).toBeInTheDocument()
+    const historyList = within(screen.getByTestId('session-history-list'))
+    expect(historyList.getByText('Algebra')).toBeInTheDocument()
+    expect(historyList.getByText('No subject')).toBeInTheDocument()
+    expect(historyList.getByText('30:00')).toBeInTheDocument()
+    expect(historyList.getByText('10:00')).toBeInTheDocument()
+    expect(historyList.getByText(/complete/i)).toBeInTheDocument()
+    expect(historyList.getByText(/partial/i)).toBeInTheDocument()
   })
 
   it('switching the learner re-fetches session history for the new learner', async () => {
