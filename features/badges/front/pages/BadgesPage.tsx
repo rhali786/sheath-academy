@@ -228,20 +228,20 @@ function AwardManagement({ definition, award, actions }: { definition: BadgeDefi
       )}
 
       {showEvidence ? (
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1 min-w-0">
           <input
             aria-label="Evidence ID"
             type="text"
             value={evidenceId}
             onChange={e => setEvidenceId(e.target.value)}
             placeholder="Evidence ID"
-            className="flex-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-700"
+            className="flex-1 min-w-0 rounded border border-slate-300 px-2 py-1 text-xs text-slate-700"
           />
           <button
             type="button"
             disabled={busy || !evidenceId.trim()}
             onClick={() => run(async () => { await actions.onAddEvidence(award.id, evidenceId.trim()); setEvidenceId(''); setShowEvidence(false) })}
-            className="rounded-lg bg-forest-900 px-2 py-1 text-xs font-medium text-white hover:bg-forest-800 disabled:opacity-50"
+            className="shrink-0 whitespace-nowrap rounded-lg bg-forest-900 px-2 py-1 text-xs font-medium text-white hover:bg-forest-800 disabled:opacity-50"
           >
             Link evidence
           </button>
@@ -301,7 +301,7 @@ function BadgeCard({ item, actions, definitionActions }: { item: BadgeCollection
     <div
       data-testid={isEarned ? `badge-earned-${definition.id}` : `badge-locked-${definition.id}`}
       aria-label={ariaLabel}
-      className={`card p-4 flex flex-col items-center gap-3 text-center transition-all ${
+      className={`card p-4 flex flex-col items-center gap-3 text-center transition-all min-w-0 ${
         isEarned ? '' : 'opacity-75'
       }`}
     >

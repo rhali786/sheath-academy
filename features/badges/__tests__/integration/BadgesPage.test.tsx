@@ -226,6 +226,19 @@ describe('BadgesPage', () => {
     await waitFor(() => expect(mockAddEvidence).toHaveBeenCalledWith('award_fix_002', 'ev_new'))
   })
 
+  it('evidence row and card stay overflow-safe on narrow (2-col) layouts', async () => {
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByTestId('badge-locked-badge_fix_002')).toBeInTheDocument())
+    const cardEl = screen.getByTestId('badge-locked-badge_fix_002')
+    expect(cardEl.className).toMatch(/\bmin-w-0\b/)
+    const card = within(cardEl)
+    fireEvent.click(card.getByRole('button', { name: /add evidence/i }))
+    const linkButton = card.getByRole('button', { name: 'Link evidence' })
+    expect(linkButton.className).toMatch(/\bshrink-0\b/)
+    expect(linkButton.className).toMatch(/\bwhitespace-nowrap\b/)
+    expect(card.getByLabelText('Evidence ID').className).toMatch(/\bmin-w-0\b/)
+  })
+
   it('unlinks evidence from an award', async () => {
     mockGetCollection.mockImplementation(() => ok([
       {
