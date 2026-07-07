@@ -44,7 +44,7 @@ if (!connStr) {
 }
 
 const APPLY = process.argv.includes('--apply');
-const VERSION = '2.69.1';
+const VERSION = '2.82.7';
 
 // Items to mark shipped — action: 'ship'
 // Items to mark cancelled — action: 'cancel'
@@ -78,6 +78,11 @@ const KNOWN_ITEMS = [
   { prefix: 'b67114eb', action: 'ship', wave: 'QA-3', description: 'No way to mark a lesson complete from lessons page' },
   // Lesson quick-actions — Phase 4: dashboard edit button (addresses "change times for classes")
   { prefix: 'a47b444e', action: 'ship', wave: 'QA-4', description: 'Not sure how to change times for classes on dashboard' },
+  // Growth wave — feature briefs built out across layer1/layer2/layer3-db (commits 6/27–6/30)
+  { prefix: '78ec6a48', action: 'ship', wave: 'Growth-Compliance', description: 'Compliance system brief — deadline/submission CRUD + ruleset config' },
+  { prefix: 'c71a4161', action: 'ship', wave: 'Growth-Badges',     description: 'Badge system brief — award lifecycle, evidence link, custom badge authoring' },
+  { prefix: '1032a087', action: 'ship', wave: 'Growth-Gradebook',  description: 'Gradebook brief — score CRUD, grading scales, aggregation rules, GPA' },
+  { prefix: '418c2940', action: 'ship', wave: 'Growth-Planner',    description: 'Lesson Planner v2 brief — lesson steps CRUD + author UI (grid/reschedule partial)' },
 ];
 
 async function main() {
