@@ -91,23 +91,6 @@ function StatusHero({ result }: { result: StatusEngineResult }) {
   )
 }
 
-function IllustrativeBanner() {
-  return (
-    <div
-      data-testid="compliance-illustrative-banner"
-      className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
-    >
-      <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
-      <div>
-        <p className="font-medium">Sample data — not computed from your records yet.</p>
-        <p className="text-amber-700 mt-0.5 text-xs">
-          This status will reflect your real attendance once attendance data and state rules are configured (coming in the next update).
-        </p>
-      </div>
-    </div>
-  )
-}
-
 function RulesetCard({
   ruleset,
   rulesets,
@@ -629,8 +612,6 @@ export function CompliancePage() {
         <ShieldCheck className="w-6 h-6 text-forest-700" />
         <h1 className="page-title">Compliance</h1>
       </div>
-
-      <IllustrativeBanner />
 
       {success && (
         <InlineSuccess message={success} onDismiss={() => setSuccess(null)} />

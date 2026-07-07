@@ -112,12 +112,13 @@ describe('CompliancePage', () => {
     })
   })
 
-  it('shows the illustrative banner (US2 — Layer 1 data not from real records)', async () => {
+  it('does not show the Layer-1 illustrative banner now that status is computed from real records', async () => {
     render(<CompliancePage />)
     await waitFor(() => {
-      expect(screen.getByTestId('compliance-illustrative-banner')).toBeInTheDocument()
-      expect(screen.getByText(/Sample data/i)).toBeInTheDocument()
+      expect(screen.getByTestId('compliance-status-hero')).toBeInTheDocument()
     })
+    expect(screen.queryByTestId('compliance-illustrative-banner')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Sample data/i)).not.toBeInTheDocument()
   })
 
   it('shows the status hero with status color', async () => {
