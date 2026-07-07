@@ -2,9 +2,9 @@ import { test, expect } from '@playwright/test'
 import { loginDev } from './helpers/auth'
 
 test.describe('Auth isolation', () => {
-  test('signed-out visit to / redirects to /login', async ({ page }) => {
+  test('signed-out visit to / is reachable (public landing page)', async ({ page }) => {
     await page.goto('/')
-    await expect(page).toHaveURL(/\/login/)
+    await expect(page).not.toHaveURL(/\/login/)
   })
 
   test('signed-out API call returns 401 JSON', async ({ request }) => {
