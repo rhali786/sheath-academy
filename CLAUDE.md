@@ -134,6 +134,10 @@ New REST surface: extend the dynamic slug handler and the feature router consist
 - Cast after fallback: `(x || fallback) as T`, not `(x as T) || fallback`.
 - Do not shadow TS utilities (e.g. use `DashboardRecord`, not `Record` for domain types).
 
+**Terminology — "Course," not "Subject," in new UI copy**
+
+The `SubjectCourse` entity (`features/subjects/`) has historically been labeled "Subject" across most of the app (Dashboard, Plan, Portfolio, Records). Going forward, **new or edited user-facing labels should say "Course"** — this is now the established direction (Settings already labels this feature's tab "Courses"; Resources and Learning Time both ship "Course" copy). This is a **UI-copy convention only**: do not rename the `SubjectCourse` type, the `features/subjects/` folder, or any internal identifiers as a side effect of an unrelated change — that's a separate, deliberate cross-cutting pass, not something to fold into a feature fix. When touching an existing screen that still says "Subject," prefer updating it to "Course" if the change is small and self-contained; don't go out of your way to relabel unrelated screens.
+
 **API responses**
 
 ```ts
