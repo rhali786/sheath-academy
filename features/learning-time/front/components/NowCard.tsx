@@ -107,8 +107,10 @@ export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
   }, [learnerId])
 
   useEffect(() => {
+    let cancelled = false
     plannerApi.getLessons(undefined, [learnerId], course ? [course.id] : undefined)
       .then(lessons => {
+        if (cancelled) return
         const open = lessons
           .filter(l => l.status === 'not_started')
           .sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.title.localeCompare(b.title))
@@ -117,9 +119,11 @@ export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
         setNext(open.find(l => l.dueDate === today) ?? null)
       })
       .catch(() => {
+        if (cancelled) return
         setOpenLessons([])
         setNext(null)
       })
+    return () => { cancelled = true }
   }, [learnerId, course?.id])
 
   useEffect(() => {

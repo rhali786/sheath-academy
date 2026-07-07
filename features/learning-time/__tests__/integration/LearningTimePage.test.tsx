@@ -595,12 +595,19 @@ describe('LearningTimePage — merges same-named per-learner course rows (real s
     isActive: true,
     schoolYearId: 'sy1',
   } as SubjectCourse
+  const readingHawa = {
+    id: 'sub_reading_hawa',
+    name: 'Reading',
+    learnerIds: ['child_002'],
+    isActive: true,
+    schoolYearId: 'sy1',
+  } as SubjectCourse
 
   beforeEach(() => {
     mockUseHousehold.mockImplementation(() => ({
       householdProfile: { id: 'hh_001' },
       studentProfiles: [idrisChild, hawaChild, zaydChild],
-      allSubjects: [mathIdris, mathHawa],
+      allSubjects: [mathIdris, mathHawa, readingHawa],
       loading: false,
       needsSetup: false,
       familyName: '',
@@ -655,6 +662,79 @@ describe('LearningTimePage — merges same-named per-learner course rows (real s
         subjectId: 'sub_math_hawa',
       }))
     })
+  })
+
+  it('picking a course the currently-selected learner is NOT enrolled in switches learners and fetches only their lessons — not the stale learner\'s whole lesson list', async () => {
+    mockGetLessons.mockImplementation((_week, childIds, subjectIds) => {
+      // Idris's full unfiltered lesson list (what a "no subject filter sent" bug would return)
+      const idrisEverything = [
+        makeLesson({ id: 'l1', childId: 'child_001', subjectId: 'sub_math_idris', title: 'Idris Math lesson' }),
+      ]
+      const hawaReading = [
+        makeLesson({ id: 'l2', childId: 'child_002', subjectId: 'sub_reading_hawa', title: 'Hawa Reading lesson' }),
+      ]
+      if (childIds?.includes('child_002') && subjectIds?.includes('sub_reading_hawa')) {
+        return Promise.resolve(hawaReading)
+      }
+      if (childIds?.includes('child_001') && !subjectIds) {
+        return Promise.resolve(idrisEverything)
+      }
+      return Promise.resolve([])
+    })
+
+    renderPage()
+    // Default learner is Idris (first active child), course starts at "All courses"
+    await waitFor(() => expect(screen.getByTestId('learner-select')).toHaveValue('child_001'))
+
+    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'Reading' } })
+
+    // The learner selection must switch to someone actually enrolled in Reading (Hawa)
+    await waitFor(() => {
+      expect(screen.getByTestId('learner-select')).toHaveValue('child_002')
+    })
+
+    fireEvent.click(screen.getByTestId('start-session-button'))
+    await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
+
+    const lessonSelect = screen.getByTestId('lesson-select') as HTMLSelectElement
+    const labels = Array.from(lessonSelect.options).map(o => o.textContent ?? '')
+    expect(labels.some(l => l.includes('Hawa Reading lesson'))).toBe(true)
+    expect(labels.some(l => l.includes('Idris Math lesson'))).toBe(false)
+  })
+
+  it('a slow, stale request for the pre-switch learner must not overwrite the correct result that already arrived — regression for cross-subject contamination', async () => {
+    let resolveStaleIdrisFetch: (v: LessonTask[]) => void = () => {}
+    mockGetLessons.mockImplementation((_week, childIds, subjectIds) => {
+      if (childIds?.includes('child_001') && !subjectIds) {
+        // Stale request (Idris, unfiltered) — deliberately slow, resolves AFTER the correct one below.
+        return new Promise(resolve => { resolveStaleIdrisFetch = resolve })
+      }
+      if (childIds?.includes('child_002') && subjectIds?.includes('sub_reading_hawa')) {
+        // Correct request (Hawa, Reading-filtered) — fast, resolves first.
+        return Promise.resolve([makeLesson({ id: 'l2', childId: 'child_002', subjectId: 'sub_reading_hawa', title: 'Hawa Reading lesson' })])
+      }
+      return Promise.resolve([])
+    })
+
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('learner-select')).toHaveValue('child_001'))
+
+    fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'Reading' } })
+
+    await waitFor(() => expect(screen.getByTestId('learner-select')).toHaveValue('child_002'))
+    await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
+
+    // Now the stale Idris request finally resolves, arriving LAST.
+    resolveStaleIdrisFetch([makeLesson({ id: 'l1', childId: 'child_001', subjectId: 'sub_math_idris', title: 'Idris Math lesson' })])
+    await new Promise(r => setTimeout(r, 0))
+
+    fireEvent.click(screen.getByTestId('start-session-button'))
+    await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
+
+    const lessonSelect = screen.getByTestId('lesson-select') as HTMLSelectElement
+    const labels = Array.from(lessonSelect.options).map(o => o.textContent ?? '')
+    expect(labels.some(l => l.includes('Idris Math lesson'))).toBe(false)
+    expect(labels.some(l => l.includes('Hawa Reading lesson'))).toBe(true)
   })
 })
 
