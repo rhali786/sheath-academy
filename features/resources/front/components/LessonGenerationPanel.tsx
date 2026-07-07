@@ -1,10 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { Resource, LessonGenerationStrategy, LessonCadence, GeneratedLesson } from '@/features/resources/types'
+import type { DayOfWeek } from '@/features/lib/types'
 import { resourcesApi } from '../services/api'
 import { plannerApi } from '@/features/plan/front/services/api'
 import { useHousehold } from '@/features/household/front/context'
+
+const DAYS_OF_WEEK: DayOfWeek[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const DEFAULT_COURSE_DAYS: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 
 const STRATEGIES: { value: LessonGenerationStrategy; label: string }[] = [
   { value: 'byChapter', label: 'By chapter' },
@@ -32,6 +36,8 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
   const [chapters, setChapters] = useState(String(resource.totalChapters ?? ''))
   const [schoolDays, setSchoolDays] = useState('36')
   const [startAt, setStartAt] = useState('')
+  const [courseDays, setCourseDays] = useState<DayOfWeek[]>(householdProfile?.schoolDays ?? DEFAULT_COURSE_DAYS)
+  const courseDaysInitialized = useRef(!!householdProfile?.schoolDays)
   const [cadence, setCadence] = useState<LessonCadence>('schoolDay')
   const [cadenceDays, setCadenceDays] = useState('1')
   const [generating, setGenerating] = useState(false)
@@ -43,6 +49,21 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+
+  // Sync course days from the household's school-days once they load, unless the
+  // user has already customized the selection (or the household never sets any).
+  useEffect(() => {
+    if (!courseDaysInitialized.current && householdProfile?.schoolDays) {
+      setCourseDays(householdProfile.schoolDays)
+      courseDaysInitialized.current = true
+    }
+  }, [householdProfile])
+
+  function toggleCourseDay(day: DayOfWeek) {
+    setCourseDays(prev =>
+      prev.includes(day) ? prev.filter(d => d !== day) : DAYS_OF_WEEK.filter(d => prev.includes(d) || d === day)
+    )
+  }
 
   function toggleLearner(id: string) {
     setSelectedLearnerIds(prev =>
@@ -72,7 +93,7 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
         startDate,
         cadence,
         ...(cadence === 'everyNDays' ? { cadenceDays: parseInt(cadenceDays, 10) || 1 } : {}),
-        schoolDaysOfWeek: householdProfile?.schoolDays,
+        schoolDaysOfWeek: courseDays,
         startAt: startAt ? parseInt(startAt, 10) : undefined,
       })
       setGenerated(res.data)
@@ -204,6 +225,24 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
             />
           </div>
         )}
+      </div>
+
+      <div>
+        <p className="block text-xs text-slate-600 mb-1">Course days</p>
+        <div className="flex flex-wrap gap-2">
+          {DAYS_OF_WEEK.map(day => (
+            <label key={day} className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={courseDays.includes(day)}
+                onChange={() => toggleCourseDay(day)}
+                className="rounded"
+                data-testid={`course-day-${day}`}
+              />
+              <span className="text-sm text-slate-700">{day}</span>
+            </label>
+          ))}
+        </div>
       </div>
 
       <button

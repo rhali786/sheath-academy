@@ -306,3 +306,47 @@ describe('LessonGenerationPanel — start-at control', () => {
     expect(call.startAt).toBeUndefined()
   })
 })
+
+describe('LessonGenerationPanel — course-days control', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    useHousehold.mockReturnValue(loadedHousehold)
+    resourcesApi.generateLessons.mockResolvedValue({ status: 'success', data: generated, message: '', timestamp: '' })
+  })
+
+  it('defaults course days to Mon-Fri checked, Sat/Sun unchecked, when the household has no schoolDays set', () => {
+    render(<LessonGenerationPanel resource={resource} />)
+    expect(screen.getByRole('checkbox', { name: 'Monday' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Tuesday' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Wednesday' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Thursday' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Friday' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Saturday' })).not.toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Sunday' })).not.toBeChecked()
+  })
+
+  it('deselecting Wednesday removes it from the schoolDaysOfWeek passed to generateLessons', async () => {
+    render(<LessonGenerationPanel resource={resource} />)
+
+    const wedCheckbox = screen.getByRole('checkbox', { name: 'Wednesday' })
+    expect(wedCheckbox).toBeChecked()
+    await userEvent.click(wedCheckbox)
+    expect(wedCheckbox).not.toBeChecked()
+
+    await userEvent.click(screen.getByTestId('generate-lessons-button'))
+    const call = resourcesApi.generateLessons.mock.calls[0][0]
+    expect(call.schoolDaysOfWeek).toEqual(['Monday', 'Tuesday', 'Thursday', 'Friday'])
+    expect(call.schoolDaysOfWeek).not.toContain('Wednesday')
+  })
+
+  it('selecting only Monday/Wednesday/Friday passes just those weekdays to generateLessons', async () => {
+    render(<LessonGenerationPanel resource={resource} />)
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Tuesday' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Thursday' }))
+
+    await userEvent.click(screen.getByTestId('generate-lessons-button'))
+    const call = resourcesApi.generateLessons.mock.calls[0][0]
+    expect(call.schoolDaysOfWeek).toEqual(['Monday', 'Wednesday', 'Friday'])
+  })
+})
