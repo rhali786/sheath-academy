@@ -190,6 +190,41 @@
       "when": 1781323071659,
       "tag": "0026_redundant_ultragirl",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1782605149624,
+      "tag": "0027_sticky_swarm",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1782647874598,
+      "tag": "0028_slim_emma_frost",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1782661157179,
+      "tag": "0029_overconfident_dracula",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1782674978866,
+      "tag": "0030_fat_carmella_unuscione",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1782796454524,
+      "tag": "0031_closed_wolverine",
+      "breakpoints": true
     }
   ]
 }

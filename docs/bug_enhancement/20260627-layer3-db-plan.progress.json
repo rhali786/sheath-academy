@@ -1,0 +1,227 @@
+{
+  "plan": "docs/bug_enhancement/20260627-layer3-db-plan.json",
+  "createdAt": "2026-06-27T00:00:00.000Z",
+  "updatedAt": "2026-06-28T07:00:00.000Z",
+  "branch": "feat/layer3-db",
+  "phases": [
+    {
+      "id": "1-test-db-plumbing",
+      "title": "Fix test:db plumbing so .db.test.ts files actually run",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-27T12:00:00.000Z",
+      "completedAt": "2026-06-27T12:05:00.000Z",
+      "outputs": {
+        "filesChanged": ["package.json"],
+        "testsRun": [
+          "npm run test:db -- --passWithNoTests=false: PASS — found features/lib/__tests__/integration/tenant.db.test.ts, 3 tests passed (resolveTenant + household repository real DB integration)",
+          "npm test: 1033 passed, 2 failed (pre-existing failures in scripts/feedback-steward/__tests__/run-classify.test.ts unrelated to this change — verified by stashing change and confirming same failure count before)"
+        ],
+        "notes": "Added --testPathIgnorePatterns \"/node_modules/\" to the test:db script in package.json. This overrides jest.config.js testPathIgnorePatterns (which contained '/__tests__/integration/' and silently excluded all .db.test.ts files). After the fix, test:db finds and runs features/lib/__tests__/integration/tenant.db.test.ts successfully — all 3 tests passed against the real DB (DATABASE_URL was set in .env.local). The 2 failures in npm test are pre-existing in run-classify.test.ts and unrelated to this change."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "2-gradebook-schema",
+      "title": "Gradebook schema — add a single scores table to db/schema.ts, generate + apply migration",
+      "gated": true,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-27T13:00:00.000Z",
+      "completedAt": "2026-06-27T13:30:00.000Z",
+      "outputs": {
+        "filesChanged": ["db/schema.ts", "db/migrations/0027_sticky_swarm.sql"],
+        "testsRun": [
+          "npx tsc --noEmit: pre-existing test file errors only (not from schema.ts) — schema compiles correctly",
+          "npm run db:generate: produced db/migrations/0027_sticky_swarm.sql — scores table, 5 subjects columns, 3 composite UNIQUEs",
+          "npm run db:migrate: applied successfully after reordering SQL to add UNIQUE constraints before composite FK constraints",
+          "npm run build: passed"
+        ],
+        "notes": "Migration file: 0027_sticky_swarm.sql. The scores table was created with composite (learnerId, householdId) FK → learners, (subjectId, householdId) FK → subjects, (lessonTaskId, householdId) FK → lesson_tasks. No attempts table. subjects table now has gradingScaleId, aggregationRuleId, isFormalCourse, creditHours, termModel columns. learners/subjects/lesson_tasks each gained a composite UNIQUE(id, household_id). The SQL was reordered to place UNIQUE constraint additions before FK additions — drizzle-kit generated them in FK-first order which would fail in Postgres (FK must reference a PK or UNIQUE that already exists)."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "3-gradebook-repo",
+      "title": "Gradebook repository — implement real listScores(), add createScore(), drop the Attempt type, write .db.test.ts",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-27T14:00:00.000Z",
+      "completedAt": "2026-06-27T14:30:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/gradebook/types.ts",
+          "features/lib/types.ts",
+          "features/gradebook/server/repository.ts",
+          "features/gradebook/__tests__/integration/repository.db.test.ts",
+          "features/gradebook/__tests__/fixtures/mockGradebook.ts",
+          "features/gradebook/__tests__/server/aggregation.test.ts",
+          "features/gradebook/__tests__/api/scores.test.ts"
+        ],
+        "testsRun": [
+          "npm run test:db -- --passWithNoTests=false: PASS — 4 new DB tests in repository.db.test.ts all green (7 total suites including existing tenant.db.test.ts)",
+          "npm test: 1033 passed, 2 pre-existing failures in run-classify.test.ts (unrelated, same as phase 1)",
+          "npm run build: passed"
+        ],
+        "notes": "Removed Score.attemptId field and the Attempt interface from gradebook/types.ts. Updated GradingSource.ingestMark return type in lib/types.ts to drop attemptId. Implemented createScore() inserting into the scores table, real listScores() querying by (householdId, learnerId, subjectId). Updated listGradebookSummaries() to fetch all household scores in one query and group into Map<learnerId, Map<subjectId, Score[]>> before aggregating. Drizzle numeric columns return strings — converted to number via parseFloat(); timestamp columns return Date — converted to ISO string via .toISOString(). Updated all fixtures and unit tests to remove attemptId. Exported functions: createScore(householdId, input): Promise<ScoreRow>; listScores(householdId, learnerId, subjectId): Promise<Score[]>; listGradebookSummaries(householdId): Promise<GradebookSummary[]>. Also exported ScoreRow type and CreateScoreInput interface."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "4-compliance-schema",
+      "title": "Compliance schema — add 5 compliance tables to db/schema.ts, generate + apply migration",
+      "gated": true,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-28T00:00:00.000Z",
+      "completedAt": "2026-06-28T00:30:00.000Z",
+      "outputs": {
+        "filesChanged": ["db/schema.ts", "db/migrations/0028_slim_emma_frost.sql"],
+        "testsRun": [
+          "npx tsc --noEmit: pre-existing test file errors only (run-classify.test.ts, drizzleAdapter.test.ts, feedback/repository.test.ts) — no errors from schema.ts or new compliance tables",
+          "npm run db:generate: produced db/migrations/0028_slim_emma_frost.sql — 5 compliance tables + schoolYears composite UNIQUE",
+          "npm run db:generate (second run): No schema changes, nothing to migrate — drift check passed",
+          "npm run db:migrate: applied successfully — truncation NOTICE for long FK name (household_compliance_config_active_ruleset_id_compliance_rulesets_id_fk) is a cosmetic warning, not an error",
+          "npm run build: passed (exit code 0)"
+        ],
+        "notes": "Migration file: 0028_slim_emma_frost.sql. Five tables added to db/schema.ts after the scores block: complianceRulesets (no householdId — platform-wide), householdComplianceConfig (householdId PK → households.id, activeRulesetId → complianceRulesets.id), complianceOverrides, complianceDeadlines, complianceSubmissions. The three household+schoolYear tables use composite (schoolYearId, householdId) FKs → schoolYears(id, household_id), which gained a composite UNIQUE(id, household_id) via the same migration. Migration SQL was reordered (same fix as phase 2): the schoolYears UNIQUE ALTER TABLE statement was moved BEFORE the FK constraint statements that reference it (drizzle-kit generates FK-first, but Postgres requires the referenced UNIQUE to exist first). Phase 5 depends on all five compliance tables existing."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "5-compliance-repo",
+      "title": "Compliance repository — implement real getActiveRuleset(), listDeadlines(), listSubmissions(), write .db.test.ts",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-28T01:00:00.000Z",
+      "completedAt": "2026-06-28T01:30:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/compliance/server/repository.ts",
+          "features/compliance/__tests__/integration/repository.db.test.ts"
+        ],
+        "testsRun": [
+          "npm run test:db -- --testPathPattern compliance.*repository.db: PASS — 5 tests green in features/compliance/__tests__/integration/repository.db.test.ts (12 total across 3 suites including tenant + gradebook)",
+          "npm test: 1033 passed, 2 pre-existing failures in run-classify.test.ts (unrelated — same as all prior phases)",
+          "npm run build: passed"
+        ],
+        "notes": "Implemented real getActiveRuleset() using innerJoin(householdComplianceConfig, ...) filtering by householdId; returns ComplianceRuleset or null. Implemented real listDeadlines() and listSubmissions() querying by (householdId, schoolYearId). Updated getComplianceStatusInput() to call real getActiveRuleset() and query complianceOverrides for the school year (replaces ruleset:null, overrides:[] stubs). Added new exported functions: createDeadline, markDeadlineComplete, createSubmission, updateSubmissionStatus, setHouseholdComplianceConfig. Drizzle numeric columns returned as strings — converted via Number(); timestamp columns returned as Date — converted via .toISOString(). The 5 test cases cover: null-config path, populated-config path, household isolation for listDeadlines, listSubmissions returns rows, and createDeadline+markDeadlineComplete round-trip."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "6-badges-schema",
+      "title": "Badges schema — add 5 badge tables to db/schema.ts, generate + apply migration",
+      "gated": true,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-28T02:00:00.000Z",
+      "completedAt": "2026-06-28T02:30:00.000Z",
+      "outputs": {
+        "filesChanged": ["db/schema.ts", "db/migrations/0029_overconfident_dracula.sql"],
+        "testsRun": [
+          "npx tsc --noEmit: pre-existing test file errors only (run-classify.test.ts) — no errors from schema.ts or new badge tables",
+          "npm run db:generate: produced db/migrations/0029_overconfident_dracula.sql — 5 badge tables + portfolioEvidence composite UNIQUE",
+          "npm run db:generate (second run): No schema changes, nothing to migrate — drift check passed",
+          "npm run db:migrate: applied successfully",
+          "npm run build: passed"
+        ],
+        "notes": "Migration file: 0029_overconfident_dracula.sql. Five tables added to db/schema.ts after the compliance_submissions block: badgeDefinitions (householdId nullable — null = platform starter), badgeAwards (composite UNIQUE(id, householdId), composite (learnerId, householdId) FK → learners, simple badgeId FK — intentional exception), badgeAwardEvidence (composite FKs to badge_awards and portfolioEvidence, both by (id, householdId)), badgeSettings (householdId PK, onDelete cascade), autonomyUnlocks (composite (learnerId, householdId) FK → learners, simple badgeId FK). portfolioEvidence table gained a composite UNIQUE(id, householdId) so badge_award_evidence can composite-reference it. SQL was reordered (same fix as phases 2 and 4): the portfolioEvidence UNIQUE ALTER TABLE was moved BEFORE the badge_award_evidence_evidence_household_fk FK constraint that references it. Phase 7 depends on all five badge tables existing."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "7-badges-repo",
+      "title": "Badges repository — implement all stub functions, add createAward()/addEvidence(), write .db.test.ts",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-28T03:00:00.000Z",
+      "completedAt": "2026-06-28T03:15:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/badges/server/repository.ts",
+          "features/badges/__tests__/integration/repository.db.test.ts"
+        ],
+        "testsRun": [
+          "npm run test:db -- --testPathPattern badges.*repository.db: PASS — 6 tests green in features/badges/__tests__/integration/repository.db.test.ts (18 total across 4 suites including tenant, gradebook, compliance)",
+          "npm test: 1033 passed, 2 pre-existing failures in run-classify.test.ts (unrelated — same as all prior phases)",
+          "npm run build: passed (Compiled successfully in 4.4s)"
+        ],
+        "notes": "All badge repository functions were already implemented (repository.ts and the .db.test.ts test file were complete from prior work). All 6 tests pass: listBadgeDefinitions returns starter+custom, listBadgeCollection marks earned isEarned:true, listBadgeCollection marks unearned isEarned:false, getBadgeSettings returns default when no row, createAward+listBadgeAwards round-trip, badge_award_evidence is household-isolated. Exported functions: listBadgeDefinitions, listBadgeCollection, listBadgeAwards, getBadgeSettings, createAward, updateAwardStatus, addEvidenceToAward, setBadgeSettings. Exported types: BadgeDefinitionRow, BadgeAwardRow."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "8-plan-lesson-steps",
+      "title": "Lesson Planner — lesson_steps schema + migration + repository CRUD + .db.test.ts",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-28T04:00:00.000Z",
+      "completedAt": "2026-06-28T04:30:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "db/schema.ts",
+          "db/migrations/0030_fat_carmella_unuscione.sql",
+          "features/plan/server/repository.ts",
+          "features/plan/__tests__/integration/lesson-steps.db.test.ts"
+        ],
+        "testsRun": [
+          "npm run test:db -- --testPathPattern lesson-steps.db: PASS — 4 new tests green (22 total across 5 suites)",
+          "npm test: 1033 passed, 2 pre-existing failures in run-classify.test.ts (unrelated)",
+          "npm run build: Compiled successfully in 4.5s",
+          "npm run db:generate (2nd run): No schema changes, nothing to migrate — drift check passed"
+        ],
+        "notes": "Migration file: 0030_fat_carmella_unuscione.sql. lesson_steps table created with simple lessonTaskId FK (onDelete: cascade) — no householdId, no composite FK (deliberate leaf-table design, tenant isolation inherited via parent lessonTask). Repository functions added: listLessonSteps, createLessonStep, updateLessonStep, deleteLessonStep. updateLessonStep and deleteLessonStep guard on both id AND lessonTaskId to prevent cross-task mutation. Initial test failure was due to missing @jest-environment node directive; fixed by adding it plus proper fixture setup (users→households→learners→lessonTasks chain for FK integrity)."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "9-reference-seed",
+      "title": "Reference data seed — compliance_rulesets + starter badge_definitions from JSON research file",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-28T05:00:00.000Z",
+      "completedAt": "2026-06-28T05:15:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "scripts/seed-reference-data.ts",
+          "package.json"
+        ],
+        "testsRun": [
+          "npm run db:seed:reference (first run): 66 compliance_rulesets rows + 8 badge_definitions rows inserted — no errors",
+          "npm run db:seed:reference (second run): same output — onConflictDoNothing confirmed no-op",
+          "npm run build: passed (Compiled successfully)"
+        ],
+        "notes": "Created scripts/seed-reference-data.ts. Reads docs/compliance-research/homeschool-requirements-2026-06-27.json, iterates over 7 states (TX, FL, NY, PA, CA, MI, CT), 3+ pathways total, 6 requirement keys each, generating stable deterministic IDs of form ruleset_<state>_<pathway>_<requirementKey>. Non-numeric values (arrays, objects, null) are intentionally discarded — numeric column only stores a number when value is typeof 'number'; authoritative details reachable via sourceUrl. Inserted 66 compliance_rulesets rows. Also inserted 8 starter badge_definitions rows (householdId: null) with IDs: badge_starter_quran_memorizer, badge_starter_math_champion, badge_starter_avid_reader, badge_starter_science_explorer, badge_starter_history_detective, badge_starter_creative_writer, badge_starter_language_learner, badge_starter_community_helper. Added db:seed:reference script to package.json. Idempotency confirmed by running twice — second run is a no-op (no errors, same log output)."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "10-demo-seed-extension",
+      "title": "Demo seed extension — add gradebook, compliance, and badge rows to the demo households",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-4-6",
+      "startedAt": "2026-06-28T06:00:00.000Z",
+      "completedAt": "2026-06-28T07:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "scripts/seed/buildPayload.ts",
+          "scripts/seed/loadPayload.ts"
+        ],
+        "testsRun": [
+          "npm test: 1033 passed, 2 pre-existing failures in run-classify.test.ts (unrelated — same as all prior phases)",
+          "npm run build: Compiled successfully"
+        ],
+        "notes": "Demo seed extended. DemoSeedPayload type now includes scores, complianceDeadlines, badgeAwards arrays. buildPayload.ts: added buildNewTableRows() helper that generates per-household scores (4-8 graded/excused rows per learner per subject, counter-based IDs: score_demo_{hhIdx}_{learnerIdx}_{subjectIdx}_{n}), compliance_deadlines (3 rows per household: Annual notification/Portfolio submission/Year-end assessment, IDs: deadline_demo_{hhIdx}_{n}), and badge_awards (2-3 verified starter badges per learner using STARTER_BADGE_IDS from seed-reference-data.ts, IDs: award_demo_{hhIdx}_{learnerIdx}_{badgeIdx}). summarizePayload() now includes counts for all three new tables. loadPayload.ts: added imports for scores/complianceDeadlines/badgeAwards/badgeDefinitions; added FK warning if badge_definitions is empty (must run db:seed:reference first); added bulkInsertRows calls for all three new tables after existing tables. Seeding order: npm run db:seed:reference THEN npm run db:seed:demo."
+      },
+      "failureReason": null
+    }
+  ]
+}

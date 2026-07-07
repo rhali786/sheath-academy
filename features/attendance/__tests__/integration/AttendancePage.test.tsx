@@ -278,8 +278,8 @@ describe('AttendancePage', () => {
     await waitFor(() => screen.getByRole('button', { name: /void record/i }))
     fireEvent.click(screen.getByRole('button', { name: /void record/i }))
     // Inline confirm UI should appear (no window.confirm)
-    await waitFor(() => expect(screen.getByRole('button', { name: /confirm void/i })).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: /confirm void/i }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Void' })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Void' }))
     await waitFor(() => {
       expect(mockArchiveRecord).toHaveBeenCalledWith('rec_001')
     })
@@ -290,8 +290,8 @@ describe('AttendancePage', () => {
     renderAttendance()
     await waitFor(() => screen.getByRole('button', { name: /void record/i }))
     fireEvent.click(screen.getByRole('button', { name: /void record/i }))
-    await waitFor(() => expect(screen.getByRole('button', { name: /cancel void/i })).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: /cancel void/i }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(mockArchiveRecord).not.toHaveBeenCalled()
     // Void button should be back
     expect(screen.getByRole('button', { name: /void record/i })).toBeInTheDocument()

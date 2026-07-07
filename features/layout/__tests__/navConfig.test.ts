@@ -70,10 +70,24 @@ describe('navConfig', () => {
     expect(isNavItemActive('/plan/schedule', calendar)).toBe(true)
   })
 
-  test('grades and progress is active on /growth and /portfolio', () => {
+  test('grades-progress (Portfolio) is active on /growth/portfolio and /portfolio', () => {
     const grades = NAV_ITEMS.find((i) => i.id === 'grades-progress')!
-    expect(isNavItemActive('/growth', grades)).toBe(true)
+    expect(isNavItemActive('/growth/portfolio', grades)).toBe(true)
     expect(isNavItemActive('/portfolio', grades)).toBe(true)
+    // bare /growth now belongs to the growth module redirect, not this item
+    expect(isNavItemActive('/growth', grades)).toBe(false)
+  })
+
+  test('gradebook nav item is active on /growth/gradebook', () => {
+    const gradebook = NAV_ITEMS.find((i) => i.id === 'gradebook')!
+    expect(gradebook.href).toBe('/growth/gradebook')
+    expect(isNavItemActive('/growth/gradebook', gradebook)).toBe(true)
+  })
+
+  test('badges nav item is active on /growth/badges', () => {
+    const badges = NAV_ITEMS.find((i) => i.id === 'badges')!
+    expect(badges.href).toBe('/growth/badges')
+    expect(isNavItemActive('/growth/badges', badges)).toBe(true)
   })
 
   test('people is active on /people', () => {
@@ -130,15 +144,31 @@ describe('NAV_MODULES (module config)', () => {
     expect(isNavModuleActive('/attendance', planbook)).toBe(false)
   })
 
-  test('getModuleItems(records) returns attendance, grades-progress, reports-records, compliance in order', () => {
+  test('getModuleItems(records) returns attendance, reports-records, compliance in order (grades-progress moved to growth)', () => {
     const records = NAV_MODULES.find(m => m.id === 'records')!
     const ids = getModuleItems(records).map(i => i.id)
-    expect(ids).toEqual(['attendance', 'grades-progress', 'reports-records', 'compliance'])
+    expect(ids).toEqual(['attendance', 'reports-records', 'compliance'])
   })
 
-  test('isNavModuleActive: records module active on /growth', () => {
+  test('isNavModuleActive: records module NOT active on /growth (growth module owns that now)', () => {
     const records = NAV_MODULES.find(m => m.id === 'records')!
-    expect(isNavModuleActive('/growth', records)).toBe(true)
+    expect(isNavModuleActive('/growth', records)).toBe(false)
+  })
+
+  test('growth module active on /growth/gradebook, /growth/badges, /growth/portfolio, /portfolio', () => {
+    const growth = NAV_MODULES.find(m => m.id === 'growth')!
+    expect(isNavModuleActive('/growth/gradebook', growth)).toBe(true)
+    expect(isNavModuleActive('/growth/badges', growth)).toBe(true)
+    expect(isNavModuleActive('/growth/portfolio', growth)).toBe(true)
+    expect(isNavModuleActive('/portfolio', growth)).toBe(true)
+  })
+
+  test('growth module contains gradebook, badges, grades-progress', () => {
+    const growth = NAV_MODULES.find(m => m.id === 'growth')!
+    const ids = getModuleItems(growth).map(i => i.id)
+    expect(ids).toContain('gradebook')
+    expect(ids).toContain('badges')
+    expect(ids).toContain('grades-progress')
   })
 
   test('NAV_MODULES has no separate progress module', () => {
@@ -159,7 +189,7 @@ describe('NAV_MODULES (module config)', () => {
     expect(finances.href).toBeUndefined()
   })
 
-  test('leaf hrefs unchanged for known nav items', () => {
+  test('leaf hrefs for known nav items', () => {
     const expectedHrefs: Record<string, string> = {
       dashboard: '/dashboard',
       'lesson-planner': '/plan',
@@ -169,7 +199,9 @@ describe('NAV_MODULES (module config)', () => {
       resources: '/resources',
       attendance: '/attendance',
       'reports-records': '/records',
-      'grades-progress': '/growth',
+      'grades-progress': '/growth/portfolio',
+      gradebook: '/growth/gradebook',
+      badges: '/growth/badges',
       messages: '/messages',
     }
     for (const [id, href] of Object.entries(expectedHrefs)) {
@@ -179,14 +211,14 @@ describe('NAV_MODULES (module config)', () => {
 })
 
 describe('Grade-discoverability nav label', () => {
-  test('grades-progress item label does not contain the word Grades', () => {
+  test('grades-progress item is now labeled Portfolio', () => {
     const item = NAV_ITEMS.find(i => i.id === 'grades-progress')!
-    expect(item.label).not.toMatch(/grades/i)
+    expect(item.label).toBe('Portfolio')
   })
 
-  test('grades-progress href and activePrefixes are unchanged', () => {
+  test('grades-progress href updated to /growth/portfolio', () => {
     const item = NAV_ITEMS.find(i => i.id === 'grades-progress')!
-    expect(item.href).toBe('/growth')
-    expect(item.activePrefixes).toEqual(['/growth', '/portfolio'])
+    expect(item.href).toBe('/growth/portfolio')
+    expect(item.activePrefixes).toEqual(['/growth/portfolio', '/portfolio'])
   })
 })

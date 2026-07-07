@@ -51,6 +51,14 @@ export async function PUT(id: string, request: Request): Promise<NextResponse> {
       sortOrder: body.order !== undefined ? Number(body.order) : undefined,
       learnerIds,
       resourceIds: body.resourceIds !== undefined ? (body.resourceIds as string[]) : undefined,
+      // Gradebook course-config (Phase 6)
+      creditHours: body.creditHours !== undefined
+        ? (body.creditHours === null ? null : Number(body.creditHours))
+        : undefined,
+      isFormalCourse: body.isFormalCourse !== undefined ? Boolean(body.isFormalCourse) : undefined,
+      termModel: body.termModel !== undefined ? (body.termModel === null ? null : String(body.termModel)) : undefined,
+      gradingScaleId: body.gradingScaleId !== undefined ? (body.gradingScaleId || null) : undefined,
+      aggregationRuleId: body.aggregationRuleId !== undefined ? (body.aggregationRuleId || null) : undefined,
     })
     if (!updated) return NextResponse.json({ status: 'error', data: null, message: 'Subject not found', timestamp: new Date().toISOString() }, { status: 404 })
     return NextResponse.json({ status: 'success', data: rowToSubject(updated), message: 'Subject updated', timestamp: new Date().toISOString() })

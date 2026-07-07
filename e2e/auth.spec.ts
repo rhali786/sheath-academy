@@ -13,9 +13,10 @@ test.describe('Authentication enforcement', () => {
     await expect(page).toHaveURL(/\/login/)
   })
 
-  test('/ redirects to /login when unauthenticated', async ({ page }) => {
+  test('/ is reachable without signing in (public landing page)', async ({ page }) => {
     await page.goto('/')
-    await expect(page).toHaveURL(/\/login/)
+    await expect(page).not.toHaveURL(/\/login/)
+    await expect(page.getByRole('heading', { name: /the school they built at home/i })).toBeVisible()
   })
 
   test('/reports redirects to /login when unauthenticated', async ({ page }) => {

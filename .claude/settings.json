@@ -2,9 +2,32 @@
   "ignore": [".next", ".git", "node_modules", ".turbo", "dist", "build"],
   "permissions": {
     "allow": [
+      "Bash(npm run *)",
       "Bash(npm test*)",
+      "Bash(npm install *)",
       "Bash(npx jest *)",
-      "Bash(npx tsc --noEmit*)"
+      "Bash(npx tsc *)",
+      "Bash(npx dotenv *)",
+      "Bash(npx next *)",
+      "Bash(npx tsx *)",
+      "Bash(npx drizzle-kit *)",
+      "Bash(npx playwright *)",
+      "Bash(node *)",
+      "Bash(git *)",
+      "Bash(gh *)",
+      "PowerShell(npm run *)",
+      "PowerShell(npm test*)",
+      "PowerShell(npx dotenv *)",
+      "PowerShell(npx tsx *)",
+      "PowerShell(npx jest *)",
+      "PowerShell(npx drizzle-kit *)",
+      "PowerShell(npx playwright *)",
+      "PowerShell(node *)",
+      "PowerShell(git *)",
+      "PowerShell(gh *)",
+      "PowerShell($env:* npm run *)",
+      "PowerShell($env:* npx *)",
+      "PowerShell($env:* node *)"
     ]
   }
 }

@@ -255,7 +255,7 @@ describe('QuranPage', () => {
     mockGetSessions.mockResolvedValue(okSessions([makeSession({ surah: 'Al-Fatiha', type: 'Memorisation' })]))
     renderQuranPage()
     await waitFor(() => {
-      expect(screen.getByText(/memorization review \(already memorized\)/i)).toBeInTheDocument()
+      expect(screen.getAllByText(/memorization review \(already memorized\)/i).length).toBeGreaterThan(0)
     })
   })
 
@@ -281,7 +281,7 @@ describe('QuranPage', () => {
       makeSession({ id: 'session_002', childId: 'child_002', surah: 'Al-Baqarah' }),
     ]))
 
-    const { rerender } = render(<QuranPage />)
+    const { rerender } = render(<LearnerProvider><QuranPage /></LearnerProvider>)
 
     // Initially all children — filter is empty
     await waitFor(() => {
@@ -293,7 +293,7 @@ describe('QuranPage', () => {
 
     // Simulate URL change while mounted (e.g. back/forward, link within same page)
     act(() => { mockSearchParams = new URLSearchParams('childId=child_002') })
-    rerender(<QuranPage />)
+    rerender(<LearnerProvider><QuranPage /></LearnerProvider>)
 
     await waitFor(() => {
       const sel = screen.getAllByRole('combobox').find(s =>

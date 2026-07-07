@@ -1,6 +1,6 @@
 import { and, eq, gte, lte, sql } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
-import { lessonTasks } from '@/db/schema'
+import { lessonTasks, lessonSteps } from '@/db/schema'
 
 export type LessonTaskRow = typeof lessonTasks.$inferSelect
 
@@ -291,6 +291,86 @@ export async function deleteLessonTaskRow(
   const result = await db
     .delete(lessonTasks)
     .where(and(eq(lessonTasks.id, id), eq(lessonTasks.householdId, householdId)))
+    .returning()
+  return result.length > 0
+}
+
+// ─── Lesson Steps ─────────────────────────────────────────────────────────────
+
+export type LessonStepRow = typeof lessonSteps.$inferSelect
+
+export interface CreateLessonStepInput {
+  lessonTaskId: string
+  order: number
+  stepText: string
+  type?: string
+  doneCriteria?: string
+  quantity?: number
+}
+
+export interface UpdateLessonStepInput {
+  order?: number
+  stepText?: string
+  type?: string
+  doneCriteria?: string | null
+  quantity?: number | null
+}
+
+export async function listLessonSteps(lessonTaskId: string): Promise<LessonStepRow[]> {
+  const db = getDb()
+  return db
+    .select()
+    .from(lessonSteps)
+    .where(eq(lessonSteps.lessonTaskId, lessonTaskId))
+    .orderBy(lessonSteps.order)
+}
+
+export async function createLessonStep(input: CreateLessonStepInput): Promise<LessonStepRow> {
+  const db = getDb()
+  const now = new Date()
+  const inserted = await db
+    .insert(lessonSteps)
+    .values({
+      id: `step_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      lessonTaskId: input.lessonTaskId,
+      order: input.order,
+      stepText: input.stepText,
+      type: input.type ?? 'instruction',
+      doneCriteria: input.doneCriteria ?? null,
+      quantity: input.quantity ?? null,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning()
+  return inserted[0]
+}
+
+export async function updateLessonStep(
+  id: string,
+  lessonTaskId: string,
+  patch: UpdateLessonStepInput,
+): Promise<LessonStepRow | null> {
+  const db = getDb()
+  const update: Partial<LessonStepRow> = { updatedAt: new Date() }
+  if (patch.order !== undefined) update.order = patch.order
+  if (patch.stepText !== undefined) update.stepText = patch.stepText
+  if (patch.type !== undefined) update.type = patch.type
+  if ('doneCriteria' in patch) update.doneCriteria = patch.doneCriteria ?? null
+  if ('quantity' in patch) update.quantity = patch.quantity ?? null
+
+  const result = await db
+    .update(lessonSteps)
+    .set(update)
+    .where(and(eq(lessonSteps.id, id), eq(lessonSteps.lessonTaskId, lessonTaskId)))
+    .returning()
+  return result[0] ?? null
+}
+
+export async function deleteLessonStep(id: string, lessonTaskId: string): Promise<boolean> {
+  const db = getDb()
+  const result = await db
+    .delete(lessonSteps)
+    .where(and(eq(lessonSteps.id, id), eq(lessonSteps.lessonTaskId, lessonTaskId)))
     .returning()
   return result.length > 0
 }

@@ -169,6 +169,10 @@ The default shell here is **PowerShell**, not bash. Automated runs (`steward:exe
 
 `db:migrate` / `db:generate` and any plan phase touching `db/schema.ts` mutate whatever **`DATABASE_URL`** points at — there is no local-only sandbox by default. Before approving a gated schema/migration phase, confirm which database is targeted. Running migrations from multiple feature branches against one shared dev database causes journal drift; prefer merging migration PRs in order, or point at a throwaway DB for execution.
 
+**drizzle-kit migration ordering bug (composite UNIQUEs + FKs)**
+
+When a migration adds both a composite `UNIQUE` constraint to an existing table **and** a `FOREIGN KEY` that references that UNIQUE in the same migration, drizzle-kit generates the SQL with FK constraints *before* the UNIQUE constraints they reference. Postgres rejects this (`there is no unique constraint matching given keys for referenced table`). **After every `npm run db:generate` that involves composite FKs, inspect the generated SQL and manually move any `ALTER TABLE ... ADD CONSTRAINT ... UNIQUE` statements above the `ALTER TABLE ... ADD CONSTRAINT ... FOREIGN KEY` statements that reference them before running `npm run db:migrate`.** This reordering is safe — the UNIQUE is a pure addition and the FK is never created on an empty table. The fix is in the generated `.sql` file only; `schema.ts` is not changed.
+
 ---
 
 ## Testing

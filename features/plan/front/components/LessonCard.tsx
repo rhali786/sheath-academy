@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Pencil, Trash2, Check, X } from 'lucide-react'
+import { Pencil, Trash2, Check, X, ListChecks } from 'lucide-react'
 import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
+import { LessonSteps } from '@/features/plan/front/components/LessonSteps'
 import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
 import { formatCompletionWindow } from '@/features/plan/utils/lessonCompletionWindow'
 import type { StudentProfile } from '@/features/lib/types'
@@ -52,6 +53,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
   const [isEditing, setIsEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [showSteps, setShowSteps] = useState(false)
   const [localStatus, setLocalStatus] = useState<LessonTaskStatus>(lesson.status)
 
   // Edit form state
@@ -361,6 +363,14 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
+          <button
+            onClick={() => setShowSteps(v => !v)}
+            aria-label="Toggle lesson steps"
+            aria-expanded={showSteps}
+            className="p-1.5 text-slate-400 hover:text-forest-600 hover:bg-forest-50 rounded-lg transition-colors"
+          >
+            <ListChecks className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
@@ -377,6 +387,12 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
         >
           {lesson.resourceLink}
         </a>
+      )}
+
+      {showSteps && (
+        <div className="border-t border-slate-100 pt-2">
+          <LessonSteps lessonTaskId={lesson.id} />
+        </div>
       )}
     </div>
   )

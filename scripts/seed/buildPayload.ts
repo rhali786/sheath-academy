@@ -13,6 +13,9 @@ import {
   userSettings,
   productValidationResponses,
   resources,
+  scores,
+  complianceDeadlines,
+  badgeAwards,
 } from '../../db/schema'
 import type { HouseholdSeedConfig, LearnerConfig } from './demoConfig'
 import { getHouseholdProfile, type HouseholdActivityProfile, type LearnerActivityProfile } from './householdProfiles'
@@ -48,6 +51,9 @@ export type DemoSeedPayload = {
   userSettings: (typeof userSettings.$inferInsert)[]
   productValidationResponses: (typeof productValidationResponses.$inferInsert)[]
   resources: (typeof resources.$inferInsert)[]
+  scores: (typeof scores.$inferInsert)[]
+  complianceDeadlines: (typeof complianceDeadlines.$inferInsert)[]
+  badgeAwards: (typeof badgeAwards.$inferInsert)[]
 }
 
 /** UTC calendar date for today — history ends here (offset 0). */
@@ -294,11 +300,118 @@ function buildHistoryRows(
   }
 }
 
+// Starter badge IDs — must match what seed-reference-data.ts inserts
+const STARTER_BADGE_IDS = [
+  'badge_starter_quran_memorizer',
+  'badge_starter_math_champion',
+  'badge_starter_avid_reader',
+  'badge_starter_science_explorer',
+  'badge_starter_history_detective',
+  'badge_starter_creative_writer',
+  'badge_starter_language_learner',
+  'badge_starter_community_helper',
+]
+
+function buildNewTableRows(
+  cfg: HouseholdSeedConfig,
+  hhIdx: number,
+  endDate: string,
+  seedNow: Date,
+): Pick<DemoSeedPayload, 'scores' | 'complianceDeadlines' | 'badgeAwards'> {
+  const scoresRows: (typeof scores.$inferInsert)[] = []
+  const complianceDeadlinesRows: (typeof complianceDeadlines.$inferInsert)[] = []
+  const badgeAwardsRows: (typeof badgeAwards.$inferInsert)[] = []
+
+  // ── Scores: 4-8 per learner per subject, spread over the 150-day history ──
+  for (let learnerIdx = 0; learnerIdx < cfg.learners.length; learnerIdx++) {
+    const lc = cfg.learners[learnerIdx]
+    for (let subjectIdx = 0; subjectIdx < lc.subjects.length; subjectIdx++) {
+      const sub = lc.subjects[subjectIdx]
+      // Deterministic number of scores per learner+subject (4-8)
+      const numScores = 4 + stableHash('nscores', hhIdx, learnerIdx, subjectIdx) % 5
+      for (let n = 0; n < numScores; n++) {
+        // Spread evenly across the 150-day history
+        const daysAgo = Math.floor((n + 1) * HISTORY_DAYS / (numScores + 1))
+        const occurredDate = daysBeforeEnd(endDate, daysAgo)
+        // ~10% excused with null numericValue, ~90% graded with 70-100
+        const roll = stableHash('state', hhIdx, learnerIdx, subjectIdx, n) % 100
+        const isExcused = roll < 10
+        const numericVal = isExcused
+          ? null
+          : String(70 + stableHash('grade', hhIdx, learnerIdx, subjectIdx, n) % 31)
+        scoresRows.push({
+          id: `score_demo_${hhIdx}_${learnerIdx}_${subjectIdx}_${n}`,
+          householdId: cfg.householdId,
+          learnerId: lc.id,
+          subjectId: sub.id,
+          lessonTaskId: null,
+          state: isExcused ? 'excused' : 'graded',
+          numericValue: numericVal,
+          source: 'parent',
+          occurredAt: new Date(`${occurredDate}T12:00:00Z`),
+          comment: null,
+          createdAt: seedNow,
+          updatedAt: seedNow,
+        })
+      }
+    }
+  }
+
+  // ── Compliance deadlines: 3 per demo household for the school year ──
+  const deadlineTemplates = [
+    { label: 'Annual notification', dueDate: '2025-09-01', requirementType: 'filing' },
+    { label: 'Portfolio submission', dueDate: '2026-04-15', requirementType: 'portfolio' },
+    { label: 'Year-end assessment', dueDate: '2026-05-30', requirementType: 'assessment' },
+  ]
+  for (let n = 0; n < deadlineTemplates.length; n++) {
+    const tmpl = deadlineTemplates[n]
+    complianceDeadlinesRows.push({
+      id: `deadline_demo_${hhIdx}_${n}`,
+      householdId: cfg.householdId,
+      schoolYearId: cfg.schoolYearId,
+      label: tmpl.label,
+      dueDate: tmpl.dueDate,
+      isCompleted: n === 0, // Annual notification already completed
+      requirementType: tmpl.requirementType,
+      createdAt: seedNow,
+      updatedAt: seedNow,
+    })
+  }
+
+  // ── Badge awards: 2-3 starter badges per learner ──
+  for (let learnerIdx = 0; learnerIdx < cfg.learners.length; learnerIdx++) {
+    const lc = cfg.learners[learnerIdx]
+    // Pick 2-3 badges deterministically per learner
+    const numBadges = 2 + stableHash('nbadges', hhIdx, learnerIdx) % 2
+    for (let badgeIdx = 0; badgeIdx < numBadges; badgeIdx++) {
+      const starterIdx = stableHash('badge', hhIdx, learnerIdx, badgeIdx) % STARTER_BADGE_IDS.length
+      const badgeId = STARTER_BADGE_IDS[starterIdx]
+      // Use a date within the 150-day history for approvedAt
+      const daysAgo = 20 + stableHash('badgedate', hhIdx, learnerIdx, badgeIdx) % 100
+      const approvedDate = daysBeforeEnd(endDate, daysAgo)
+      badgeAwardsRows.push({
+        id: `award_demo_${hhIdx}_${learnerIdx}_${badgeIdx}`,
+        householdId: cfg.householdId,
+        learnerId: lc.id,
+        badgeId,
+        status: 'verified',
+        submittedAt: new Date(`${approvedDate}T10:00:00Z`),
+        verifiedAt: new Date(`${approvedDate}T12:00:00Z`),
+        approvedAt: new Date(`${approvedDate}T12:00:00Z`),
+        createdAt: seedNow,
+        updatedAt: seedNow,
+      })
+    }
+  }
+
+  return { scores: scoresRows, complianceDeadlines: complianceDeadlinesRows, badgeAwards: badgeAwardsRows }
+}
+
 function buildHouseholdRows(
   cfg: HouseholdSeedConfig,
   endDate: string,
   seedNow: Date,
-): Omit<DemoSeedPayload, 'users' | 'householdMembers'> {
+): Omit<DemoSeedPayload, 'users' | 'householdMembers' | 'scores' | 'complianceDeadlines' | 'badgeAwards'> {
   const householdId = cfg.householdId
   const profile = getHouseholdProfile(cfg.hhKey)
 
@@ -524,9 +637,13 @@ export function buildDemoSeedPayload(
     userSettings: [],
     productValidationResponses: [],
     resources: [],
+    scores: [],
+    complianceDeadlines: [],
+    badgeAwards: [],
   }
 
-  for (const cfg of configs) {
+  for (let hhIdx = 0; hhIdx < configs.length; hhIdx++) {
+    const cfg = configs[hhIdx]
     const householdRows = buildHouseholdRows(cfg, endDate, seedNow)
     payload.households.push(...householdRows.households)
     payload.householdMembers.push({
@@ -548,6 +665,11 @@ export function buildDemoSeedPayload(
     payload.quranSessions.push(...householdRows.quranSessions)
     payload.portfolioEvidence.push(...householdRows.portfolioEvidence)
     payload.resources.push(...buildSeedResources(cfg.householdId, seedNow))
+
+    const newRows = buildNewTableRows(cfg, hhIdx, endDate, seedNow)
+    payload.scores.push(...newRows.scores)
+    payload.complianceDeadlines.push(...newRows.complianceDeadlines)
+    payload.badgeAwards.push(...newRows.badgeAwards)
   }
 
   return payload
@@ -569,6 +691,9 @@ export function summarizePayload(payload: DemoSeedPayload): Record<string, numbe
     userSettings: payload.userSettings.length,
     productValidationResponses: payload.productValidationResponses.length,
     resources: payload.resources.length,
+    scores: payload.scores.length,
+    complianceDeadlines: payload.complianceDeadlines.length,
+    badgeAwards: payload.badgeAwards.length,
   }
 }
 

@@ -11,6 +11,7 @@ import {
   numeric,
   primaryKey,
   customType,
+  foreignKey,
 } from 'drizzle-orm/pg-core'
 
 // Drizzle pg-core has no native bytea — define it via customType.
@@ -146,7 +147,10 @@ export const learners = pgTable(
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),
   },
-  (t) => [index('learners_household_active_idx').on(t.householdId, t.isActive)],
+  (t) => [
+    index('learners_household_active_idx').on(t.householdId, t.isActive),
+    unique('learners_id_household_uq').on(t.id, t.householdId),
+  ],
 )
 
 // ─── School Years ─────────────────────────────────────────────────────────────
@@ -169,7 +173,11 @@ export const schoolYears = pgTable(
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),
   },
-  (t) => [index('school_years_household_active_idx').on(t.householdId, t.isActive)],
+  (t) => [
+    index('school_years_household_active_idx').on(t.householdId, t.isActive),
+    // Composite UNIQUE so compliance tables can use a composite FK (schoolYearId, householdId)
+    unique('school_years_id_household_uq').on(t.id, t.householdId),
+  ],
 )
 
 // ─── Subjects ─────────────────────────────────────────────────────────────────
@@ -187,12 +195,19 @@ export const subjects = pgTable(
     color: text('color'),
     sortOrder: integer('sort_order').notNull().default(0),
     isActive: boolean('is_active').notNull().default(true),
+    // Gradebook extension columns (Layer 3 — no FK in v1; grading_scales is out of scope)
+    gradingScaleId: text('grading_scale_id'),
+    aggregationRuleId: text('aggregation_rule_id'),
+    isFormalCourse: boolean('is_formal_course').notNull().default(false),
+    creditHours: numeric('credit_hours', { precision: 4, scale: 2 }),
+    termModel: text('term_model'),
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),
   },
   (t) => [
     index('subjects_household_active_idx').on(t.householdId, t.isActive),
     index('subjects_household_school_year_idx').on(t.householdId, t.schoolYearId),
+    unique('subjects_id_household_uq').on(t.id, t.householdId),
   ],
 )
 
@@ -270,6 +285,8 @@ export const lessonTasks = pgTable(
     index('lesson_tasks_household_status_idx').on(t.householdId, t.status),
     // Admin aggregate: scan by date across all households, group by household_id
     index('lesson_tasks_due_household_idx').on(t.dueDate, t.householdId),
+    // Composite unique so scores can use a composite FK (lessonTaskId, householdId) → (id, householdId)
+    unique('lesson_tasks_id_household_uq').on(t.id, t.householdId),
   ],
 )
 
@@ -395,7 +412,355 @@ export const portfolioEvidence = pgTable(
     index('portfolio_evidence_household_subject_idx').on(t.householdId, t.subjectId),
     // Admin aggregate: scan by date across all households, group by household_id
     index('portfolio_evidence_date_household_idx').on(t.evidenceDate, t.householdId),
+    // Composite UNIQUE so badge_award_evidence can use a composite FK (evidenceId, householdId)
+    unique('portfolio_evidence_id_household_uq').on(t.id, t.householdId),
   ],
+)
+
+// ─── Scores (Gradebook) ───────────────────────────────────────────────────────
+// One row = one graded data point. No separate attempts table (YAGNI — the
+// aggregation layer in features/gradebook/server/aggregation.ts operates on a
+// flat Score[] and never groups by attempt).
+// Composite (learnerId, householdId) and (subjectId, householdId) FKs replace
+// the plain .references() so a score can never point at a parent row in a
+// different household. lessonTaskId uses the same pattern (nullable → MATCH SIMPLE).
+
+export const scores = pgTable(
+  'scores',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    learnerId: text('learner_id').notNull(),
+    subjectId: text('subject_id'),
+    lessonTaskId: text('lesson_task_id'),
+    state: text('state').notNull().default('not_graded'), // graded|not_graded|missing|excused|complete
+    numericValue: numeric('numeric_value', { precision: 5, scale: 2 }),
+    source: text('source').notNull().default('parent'), // auto|parent|publisher|outside|ai
+    occurredAt: timestamp('occurred_at').notNull(),
+    comment: text('comment'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('scores_household_learner_subject_idx').on(t.householdId, t.learnerId, t.subjectId),
+    index('scores_lesson_task_idx').on(t.lessonTaskId),
+    // Composite FKs — enforce cross-tenant integrity at the DB level
+    foreignKey({
+      columns: [t.learnerId, t.householdId],
+      foreignColumns: [learners.id, learners.householdId],
+      name: 'scores_learner_household_fk',
+    }),
+    foreignKey({
+      columns: [t.subjectId, t.householdId],
+      foreignColumns: [subjects.id, subjects.householdId],
+      name: 'scores_subject_household_fk',
+    }),
+    foreignKey({
+      columns: [t.lessonTaskId, t.householdId],
+      foreignColumns: [lessonTasks.id, lessonTasks.householdId],
+      name: 'scores_lesson_task_household_fk',
+    }),
+  ],
+)
+
+// ─── Gradebook config (Phase 6) ───────────────────────────────────────────────
+//
+// grading_scales: household-defined letter/GPA-point bands a subject can reference.
+// aggregation_rules: household-defined strategy for collapsing a subject's scores
+//   into a representative value (average | most_recent | highest).
+//
+// subjects.gradingScaleId / subjects.aggregationRuleId reference these by value.
+// They are intentionally NOT DB-level foreign keys: existing subject rows may carry
+// stale ids, and the columns predate these tables. Referential validity is enforced
+// at the repository/UI layer (only ids returned by these tables are selectable).
+
+export const gradingScales = pgTable(
+  'grading_scales',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    name: text('name').notNull(),
+    // bands: [{ minPercent, letter, gpaPoints }]
+    bands: jsonb('bands').notNull().default([]),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [index('grading_scales_household_idx').on(t.householdId)],
+)
+
+export const aggregationRules = pgTable(
+  'aggregation_rules',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    name: text('name').notNull(),
+    // strategy: average | most_recent | highest
+    strategy: text('strategy').notNull().default('average'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [index('aggregation_rules_household_idx').on(t.householdId)],
+)
+
+// ─── Compliance ───────────────────────────────────────────────────────────────
+// compliance_rulesets: platform-wide reference rows (no householdId — seeded from docs/compliance-research/)
+// household_compliance_config: one row per household pointing at the active ruleset
+// compliance_overrides: household-specific overrides per school year
+// compliance_deadlines: household-specific deadline rows per school year
+// compliance_submissions: annual filing/submission records per school year
+//
+// compliance_overrides, compliance_deadlines, and compliance_submissions use composite
+// (schoolYearId, householdId) FKs → schoolYears, which has a composite UNIQUE(id, householdId).
+
+export const complianceRulesets = pgTable(
+  'compliance_rulesets',
+  {
+    id: text('id').primaryKey(),
+    state: text('state').notNull(),
+    pathwayKey: text('pathway_key').notNull(),
+    requirementType: text('requirement_type').notNull(),
+    value: numeric('value', { precision: 8, scale: 2 }),
+    unit: text('unit').notNull().default('days'),
+    sourceUrl: text('source_url'),
+    lastVerifiedAt: timestamp('last_verified_at'),
+    isVerified: boolean('is_verified').notNull().default(false),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('compliance_rulesets_state_pathway_idx').on(t.state, t.pathwayKey),
+  ],
+)
+
+export const householdComplianceConfig = pgTable('household_compliance_config', {
+  householdId: text('household_id').primaryKey().references(() => households.id),
+  activeRulesetId: text('active_ruleset_id').references(() => complianceRulesets.id),
+  pathwayKey: text('pathway_key'),
+  updatedAt: timestamp('updated_at').notNull(),
+})
+
+export const complianceOverrides = pgTable(
+  'compliance_overrides',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    schoolYearId: text('school_year_id').notNull(),
+    requirementType: text('requirement_type').notNull(),
+    overrideValue: numeric('override_value', { precision: 8, scale: 2 }).notNull(),
+    reason: text('reason'),
+    appliedAt: timestamp('applied_at').notNull(),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('compliance_overrides_household_year_idx').on(t.householdId, t.schoolYearId),
+    foreignKey({
+      columns: [t.schoolYearId, t.householdId],
+      foreignColumns: [schoolYears.id, schoolYears.householdId],
+      name: 'compliance_overrides_school_year_household_fk',
+    }),
+  ],
+)
+
+export const complianceDeadlines = pgTable(
+  'compliance_deadlines',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    schoolYearId: text('school_year_id').notNull(),
+    label: text('label').notNull(),
+    dueDate: date('due_date').notNull(),
+    isCompleted: boolean('is_completed').notNull().default(false),
+    requirementType: text('requirement_type').notNull(),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('compliance_deadlines_household_year_idx').on(t.householdId, t.schoolYearId),
+    foreignKey({
+      columns: [t.schoolYearId, t.householdId],
+      foreignColumns: [schoolYears.id, schoolYears.householdId],
+      name: 'compliance_deadlines_school_year_household_fk',
+    }),
+  ],
+)
+
+export const complianceSubmissions = pgTable(
+  'compliance_submissions',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    schoolYearId: text('school_year_id').notNull(),
+    status: text('status').notNull().default('drafted'), // drafted|sent|accepted
+    submittedAt: timestamp('submitted_at'),
+    acceptedAt: timestamp('accepted_at'),
+    snapshotJson: jsonb('snapshot_json'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('compliance_submissions_household_year_idx').on(t.householdId, t.schoolYearId),
+    foreignKey({
+      columns: [t.schoolYearId, t.householdId],
+      foreignColumns: [schoolYears.id, schoolYears.householdId],
+      name: 'compliance_submissions_school_year_household_fk',
+    }),
+  ],
+)
+
+// ─── Badges ──────────────────────────────────────────────────────────────────
+// badge_definitions: template rows (householdId null = platform starter badges)
+// badge_awards: learner's in-progress or earned badges
+// badge_award_evidence: portfolio evidence linked to an award (onDelete cascade on FK)
+// badge_settings: household preference for platform-wide starter badges
+// autonomy_unlocks: privileges granted to a learner after earning a badge
+//
+// badge_awards uses composite (learnerId, householdId) FK → learners.
+// badge_award_evidence uses composite FKs to both badge_awards (id, householdId)
+//   and portfolioEvidence (id, householdId) — portfolioEvidence gained a composite
+//   UNIQUE(id, householdId) in this same migration.
+// badgeId (badge_awards.badgeId, autonomy_unlocks.badgeId) is intentionally a
+// SIMPLE FK — badge_definitions.householdId is nullable (null = platform starter),
+// so a composite FK targeting (id, householdId) would be impossible. Tenant
+// integrity for badgeId is enforced at the repository layer instead.
+
+export const badgeDefinitions = pgTable(
+  'badge_definitions',
+  {
+    id: text('id').primaryKey(),
+    // null = platform starter badge (visible to all households)
+    householdId: text('household_id').references(() => households.id),
+    title: text('title').notNull(),
+    description: text('description').notNull(),
+    criteria: text('criteria').notNull(),
+    emblemKey: text('emblem_key').notNull(),
+    gradeBands: jsonb('grade_bands').notNull().default([]),
+    verificationRequirement: text('verification_requirement').notNull().default('none'), // none|parent|external
+    isStarter: boolean('is_starter').notNull().default(false),
+    enabled: boolean('enabled').notNull().default(true),
+    visibility: text('visibility').notNull().default('household'), // household|platform
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('badge_definitions_household_idx').on(t.householdId),
+  ],
+)
+
+export const badgeAwards = pgTable(
+  'badge_awards',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    learnerId: text('learner_id').notNull(),
+    // badgeId is intentionally a SIMPLE FK — badge_definitions.householdId is nullable
+    // (null = platform starter badge); a composite FK would be impossible. Tenant
+    // integrity for badgeId is enforced at the repository layer.
+    badgeId: text('badge_id').notNull().references(() => badgeDefinitions.id),
+    status: text('status').notNull().default('draft'), // draft|submitted|verified
+    submittedAt: timestamp('submitted_at'),
+    verifiedAt: timestamp('verified_at'),
+    approvedAt: timestamp('approved_at'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [
+    index('badge_awards_household_learner_idx').on(t.householdId, t.learnerId),
+    index('badge_awards_badge_idx').on(t.badgeId),
+    // Composite UNIQUE so badge_award_evidence can use a composite FK (badgeAwardId, householdId)
+    unique('badge_awards_id_household_uq').on(t.id, t.householdId),
+    // Composite FK — enforce cross-tenant integrity at the DB level
+    foreignKey({
+      columns: [t.learnerId, t.householdId],
+      foreignColumns: [learners.id, learners.householdId],
+      name: 'badge_awards_learner_household_fk',
+    }),
+  ],
+)
+
+export const badgeAwardEvidence = pgTable(
+  'badge_award_evidence',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    badgeAwardId: text('badge_award_id').notNull(),
+    evidenceId: text('evidence_id').notNull(),
+    addedAt: timestamp('added_at').notNull(),
+  },
+  (t) => [
+    index('badge_award_evidence_award_idx').on(t.badgeAwardId),
+    // Composite FKs — enforce cross-tenant integrity at the DB level
+    foreignKey({
+      columns: [t.badgeAwardId, t.householdId],
+      foreignColumns: [badgeAwards.id, badgeAwards.householdId],
+      name: 'badge_award_evidence_award_household_fk',
+    }),
+    foreignKey({
+      columns: [t.evidenceId, t.householdId],
+      foreignColumns: [portfolioEvidence.id, portfolioEvidence.householdId],
+      name: 'badge_award_evidence_evidence_household_fk',
+    }),
+  ],
+)
+
+export const badgeSettings = pgTable('badge_settings', {
+  householdId: text('household_id').primaryKey().references(() => households.id, { onDelete: 'cascade' }),
+  platformBadgesEnabled: boolean('platform_badges_enabled').notNull().default(true),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull(),
+})
+
+export const autonomyUnlocks = pgTable(
+  'autonomy_unlocks',
+  {
+    id: text('id').primaryKey(),
+    householdId: text('household_id').notNull().references(() => households.id),
+    learnerId: text('learner_id').notNull(),
+    // badgeId is intentionally a SIMPLE FK — see badge_awards.badgeId comment above
+    badgeId: text('badge_id').notNull().references(() => badgeDefinitions.id),
+    unlockedAt: timestamp('unlocked_at').notNull(),
+    grantedBy: text('granted_by').notNull(),
+    createdAt: timestamp('created_at').notNull(),
+  },
+  (t) => [
+    index('autonomy_unlocks_household_learner_idx').on(t.householdId, t.learnerId),
+    // Composite FK — enforce cross-tenant integrity at the DB level
+    foreignKey({
+      columns: [t.learnerId, t.householdId],
+      foreignColumns: [learners.id, learners.householdId],
+      name: 'autonomy_unlocks_learner_household_fk',
+    }),
+  ],
+)
+
+// ─── Lesson Steps ─────────────────────────────────────────────────────────────
+//
+// lesson_steps: ordered sub-steps within a lesson task.
+//
+// Deliberately has NO householdId column — this is a leaf table reached only
+// through its parent lessonTask, which is tenant-scoped. The simple
+// lessonTaskId → lesson_tasks.id FK with onDelete:'cascade' is correct; tenant
+// isolation is inherited via the parent task. Repository functions scope reads
+// and writes by lessonTaskId (updateLessonStep/deleteLessonStep guard on
+// id AND lessonTaskId) — no composite FK needed.
+
+export const lessonSteps = pgTable(
+  'lesson_steps',
+  {
+    id: text('id').primaryKey(),
+    lessonTaskId: text('lesson_task_id')
+      .notNull()
+      .references(() => lessonTasks.id, { onDelete: 'cascade' }),
+    order: integer('order').notNull().default(0),
+    stepText: text('step_text').notNull(),
+    // values: instruction | reading | practice | discussion | assessment
+    type: text('type').notNull().default('instruction'),
+    doneCriteria: text('done_criteria'),
+    quantity: integer('quantity'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (t) => [index('lesson_steps_lesson_task_idx').on(t.lessonTaskId)],
 )
 
 // ─── User Settings ────────────────────────────────────────────────────────────

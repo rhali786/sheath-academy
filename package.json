@@ -1,6 +1,6 @@
 {
   "name": "sheath-academy",
-  "version": "2.69.1",
+  "version": "2.82.6",
   "private": true,
   "engines": {
     "node": ">=22.22.2"
@@ -13,7 +13,7 @@
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:db": "dotenv -e .env.local -- jest --testPathPattern \"__tests__/integration/.*\\.db\\.test\\.(ts|tsx)$\" --forceExit",
+    "test:db": "dotenv -e .env.local -- jest --testPathPattern \"__tests__/integration/.*\\.db\\.test\\.(ts|tsx)$\" --testPathIgnorePatterns \"/node_modules/\" --forceExit",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "smoke": "node scripts/smoke.cjs",
@@ -26,6 +26,7 @@
     "db:status:prod": "dotenv -e .env.local -- tsx scripts/prod-migration-status.ts",
     "db:studio": "dotenv -e .env.local -- drizzle-kit studio",
     "db:seed:demo": "dotenv -e .env.local -- tsx scripts/seed-demo-households.ts",
+    "db:seed:reference": "dotenv -e .env.local -- tsx scripts/seed-reference-data.ts",
     "steward:preflight": "dotenv -e .env.local -- tsx scripts/feedback-steward/steward-preflight.ts",
     "steward:daily": "dotenv -e .env.local -- tsx scripts/feedback-steward/run-daily.ts",
     "steward:execute": "dotenv -e .env.local -- tsx scripts/feedback-steward/run-execute.ts",

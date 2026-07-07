@@ -1,7 +1,16 @@
 import type { ApiResponse } from '@/features/lib/types'
 import { LessonTask } from '../../types'
+import type { LessonStep } from '../../types'
 import type { SubjectProgressSummary } from '@/features/plan/utils/progressBySubject'
 import type { LessonHistoryOptions } from '@/features/plan/utils/completedLessonHistory'
+
+export interface LessonStepInput {
+  stepText: string
+  type?: string
+  order?: number
+  doneCriteria?: string | null
+  quantity?: number | null
+}
 
 function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
@@ -107,6 +116,27 @@ export const plannerApi = {
     if (childId) params.set('childId', childId)
     const response = await get<SubjectProgressSummary[]>(`/api/plan/progress?${params}`)
     return response.data
+  },
+
+  // ─── Lesson steps ──────────────────────────────────────────────────────────
+  listSteps: async (lessonId: string): Promise<LessonStep[]> => {
+    const response = await get<LessonStep[]>(`/api/plan/lessons/${encodeURIComponent(lessonId)}/steps`)
+    return response.data
+  },
+
+  createStep: async (lessonId: string, input: LessonStepInput): Promise<LessonStep> => {
+    const response = await post<LessonStep>(`/api/plan/lessons/${encodeURIComponent(lessonId)}/steps`, input)
+    return response.data
+  },
+
+  updateStep: async (lessonId: string, stepId: string, patchBody: LessonStepInput): Promise<LessonStep> => {
+    const response = await patch<LessonStep>(`/api/plan/lessons/${encodeURIComponent(lessonId)}/steps/${encodeURIComponent(stepId)}`, patchBody)
+    return response.data
+  },
+
+  deleteStep: async (lessonId: string, stepId: string): Promise<void> => {
+    const res = await fetch(`${getApiBaseUrl()}/api/plan/lessons/${encodeURIComponent(lessonId)}/steps/${encodeURIComponent(stepId)}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error(`Request failed: ${res.status}`)
   },
 
   getHistory: async (options: LessonHistoryOptions = {}): Promise<LessonTask[]> => {

@@ -219,4 +219,27 @@ describe('Sidebar — module grouping', () => {
     expect(within(drawer).getByTestId('nav-item-courses')).toBeInTheDocument()
     expect(within(drawer).getByTestId('nav-item-attendance')).toBeInTheDocument()
   })
+
+  test('growth module is rendered with gradebook and badges sub-nav items', () => {
+    render(<Sidebar />)
+    expect(screen.getByTestId('nav-module-growth')).toBeInTheDocument()
+    expect(screen.getByTestId('nav-module-link-growth')).toHaveAttribute('href', '/growth/gradebook')
+    expect(screen.getByTestId('nav-item-gradebook')).toBeInTheDocument()
+    expect(screen.getByTestId('nav-item-badges')).toBeInTheDocument()
+    expect(screen.getByTestId('nav-item-grades-progress')).toBeInTheDocument()
+  })
+
+  test('growth module icon is rendered', () => {
+    render(<Sidebar />)
+    expect(screen.getByTestId('nav-module-icon-growth')).toBeInTheDocument()
+  })
+
+  test('growth module highlights when on /growth/gradebook', () => {
+    mockUsePathname.mockReturnValue('/growth/gradebook')
+    render(<Sidebar />)
+    const growthLink = screen.getByTestId('nav-module-link-growth')
+    expect(growthLink.className).toContain('bg-forest-100')
+    const gradebook = within(screen.getByTestId('nav-module-subnav-growth')).getByTestId('nav-item-gradebook')
+    expect(gradebook).toHaveAttribute('aria-current', 'page')
+  })
 })

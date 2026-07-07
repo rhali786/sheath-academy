@@ -26,4 +26,17 @@ if (typeof window !== 'undefined') {
     unobserve: jest.fn(),
     disconnect: jest.fn(),
   }))
+
+  // jsdom does not implement scrollIntoView; several pages call it (e.g. jump-to-item
+  // patterns in LessonsPage, GradebookPage) to bring a focused row into view.
+  Element.prototype.scrollIntoView = jest.fn()
 }
+
+// Clear sessionStorage/localStorage between tests so persisted state (e.g. LearnerContext's
+// `selectedChildId`) cannot leak from one test into the next within a file.
+afterEach(() => {
+  if (typeof window !== 'undefined') {
+    window.sessionStorage.clear()
+    window.localStorage.clear()
+  }
+})

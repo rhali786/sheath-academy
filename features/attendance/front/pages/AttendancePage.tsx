@@ -46,6 +46,10 @@ export function AttendancePage() {
   const [batchLoading, setBatchLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
 
+  // The header's shared learner selection may be null ("All children" for the records
+  // filter below). Marking attendance and the summary always need one concrete child,
+  // so fall back to the first child when nothing is explicitly selected yet.
+  const effectiveChildId = selectedChildId ?? children[0]?.id ?? null
 
   // Seed shared learner selection from ?childId= when present
   useEffect(() => {
@@ -83,14 +87,14 @@ export function AttendancePage() {
   }, [])
 
   useEffect(() => {
-    fetchSummary(selectedChildId)
-  }, [selectedChildId])
+    fetchSummary(effectiveChildId)
+  }, [effectiveChildId])
 
   async function markAttendance(status: AttendanceStatus) {
-    if (!selectedChildId) return
+    if (!effectiveChildId) return
     const householdId = householdProfile?.id ?? ''
     const data = {
-      childId: selectedChildId,
+      childId: effectiveChildId,
       householdId,
       date,
       status,
@@ -132,7 +136,7 @@ export function AttendancePage() {
   }
 
   const activeChildren = useMemo(() => children.filter(c => c.isActive), [children])
-  const selectedChild = children.find(c => c.id === selectedChildId)
+  const selectedChild = children.find(c => c.id === effectiveChildId)
 
   const filteredRecords = useMemo(() => {
     let list = records
@@ -187,7 +191,7 @@ export function AttendancePage() {
                     <label htmlFor="learner-select" className="block text-sm font-medium text-slate-700 mb-1">Learner</label>
                     <select
                       id="learner-select"
-                      value={selectedChildId ?? ''}
+                      value={effectiveChildId ?? ''}
                       onChange={e => setSelectedChildId(e.target.value)}
                       className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
                     >

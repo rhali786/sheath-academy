@@ -1,5 +1,5 @@
-import { PortfolioPage } from '@/features/portfolio/front/pages'
+import { redirect } from 'next/navigation'
 
-export default function Page() {
-  return <PortfolioPage />
+export default function GrowthPage() {
+  redirect('/growth/gradebook')
 }

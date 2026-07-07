@@ -8,6 +8,23 @@ jest.mock('@/features/dashboard/front/context/DashboardProvider', () => ({
   useContext_Dashboard: jest.fn(() => ({ selectedChildId: null, children: [] })),
 }))
 
+jest.mock('@/features/household/front/context', () => ({
+  useHousehold: jest.fn(() => ({
+    studentProfiles: [
+      {
+        id: 'child_001',
+        householdId: 'hh_001',
+        name: 'Adam',
+        gradeLabel: 'Grade 5',
+        username: 'adam',
+        password: 'pw',
+        isActive: true,
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+    ],
+  })),
+}))
+
 jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: { getLessons: jest.fn().mockResolvedValue([]) },
 }))

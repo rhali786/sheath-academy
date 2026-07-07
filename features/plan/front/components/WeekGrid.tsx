@@ -9,6 +9,8 @@ import { plannerApi } from '../services/api'
 import type { LessonTask, LessonTaskStatus, LessonDuration } from '../../types'
 import { subjectEnrollsLearner } from '@/features/subjects/lib/enrollment'
 import { formatCompletionWindow, lessonSpansDate } from '../../utils/lessonCompletionWindow'
+import { shiftLessonWindow } from '../../server/validation'
+import { InlineSuccess } from '@/features/lib/front/components/InlineSuccess'
 
 const STATUS_BADGE: Record<LessonTaskStatus, string | null> = {
   not_started: null,
@@ -151,10 +153,19 @@ function DroppableCell({ id, dateStr, isWeekendDay, lesson, onEdit }: DroppableC
   )
 }
 
+interface RescheduleUndo {
+  lessonTitle: string
+  newDueDateLabel: string
+  prevDueDate: string
+  prevPlannedStartDate: string | null
+  lessonId: string
+}
+
 export function WeekGrid() {
   const { lessons, selectedWeek, weekStartDay, children, subjects, selectedChildIds, selectedSubjectIds, refreshLessons } = usePlanner()
   const router = useRouter()
   const [activeLesson, setActiveLesson] = useState<LessonTask | null>(null)
+  const [undoNotice, setUndoNotice] = useState<RescheduleUndo | null>(null)
 
   const todayStr = formatLocalDate(new Date())
 
@@ -206,15 +217,56 @@ export function WeekGrid() {
     const { active, over } = event
     if (!over) return
     const lessonId = active.id as string
-    const newDateStr = over.data.current?.dateStr as string | undefined
-    if (!newDateStr) return
+    const newDueDateStr = over.data.current?.dateStr as string | undefined
+    if (!newDueDateStr) return
     const lesson = lessons.find(l => l.id === lessonId)
-    if (!lesson || lesson.dueDate === newDateStr) return
-    await plannerApi.updateLesson(lessonId, { dueDate: newDateStr })
+    if (!lesson || lesson.dueDate === newDueDateStr) return
+
+    const prevDueDate = lesson.dueDate
+    const prevPlannedStartDate = lesson.plannedStartDate ?? null
+
+    const { plannedStartDate: newPlannedStart, dueDate: newDueDate } = shiftLessonWindow(
+      prevPlannedStartDate,
+      prevDueDate,
+      newDueDateStr,
+    )
+
+    const patch: Partial<LessonTask> = { dueDate: newDueDate }
+    if (newPlannedStart !== null) patch.plannedStartDate = newPlannedStart
+
+    await plannerApi.updateLesson(lessonId, patch)
     refreshLessons?.()
+
+    const dayLabel = new Date(`${newDueDate}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' })
+    setUndoNotice({
+      lessonTitle: lesson.title,
+      newDueDateLabel: dayLabel,
+      prevDueDate,
+      prevPlannedStartDate,
+      lessonId,
+    })
+  }
+
+  async function handleUndo() {
+    if (!undoNotice) return
+    const undoPatch: Partial<LessonTask> = { dueDate: undoNotice.prevDueDate }
+    if (undoNotice.prevPlannedStartDate !== null) undoPatch.plannedStartDate = undoNotice.prevPlannedStartDate
+    await plannerApi.updateLesson(undoNotice.lessonId, undoPatch)
+    refreshLessons?.()
+    setUndoNotice(null)
   }
 
   return (
+    <>
+    {undoNotice && (
+      <div className="mb-3">
+        <InlineSuccess
+          message={`Moved "${undoNotice.lessonTitle}" to ${undoNotice.newDueDateLabel}`}
+          action={{ label: 'Undo', onAction: handleUndo }}
+          onDismiss={() => setUndoNotice(null)}
+        />
+      </div>
+    )}
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm">
         <table className="w-full border-collapse">
@@ -305,5 +357,6 @@ export function WeekGrid() {
         )}
       </DragOverlay>
     </DndContext>
+    </>
   )
 }
