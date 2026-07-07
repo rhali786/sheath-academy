@@ -71,6 +71,14 @@ export interface GenerateLessonsInput {
   schoolDays: number
   /** ISO date of the first school day (for calculating dueDates) */
   startDate?: string
+  /**
+   * 1-based unit number (chapter/page/lesson/etc., depending on `strategy`) to begin
+   * generation at. When omitted or 1, generation starts from the first unit (existing
+   * behavior). When > 1, the returned lessons cover units `startAt..count` only —
+   * fewer lessons are generated, and their titles/order reflect the absolute unit
+   * number (e.g. startAt=5 with chapters=30 produces 26 lessons, "Chapter 5".."Chapter 30").
+   */
+  startAt?: number
   /** Pacing cadence for due dates. Defaults to 'schoolDay' (Mon–Fri stepping). */
   cadence?: LessonCadence
   /** Required when cadence === 'everyNDays' — number of calendar days between lessons */

@@ -31,6 +31,7 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
   const [strategy, setStrategy] = useState<LessonGenerationStrategy>('byChapter')
   const [chapters, setChapters] = useState(String(resource.totalChapters ?? ''))
   const [schoolDays, setSchoolDays] = useState('36')
+  const [startAt, setStartAt] = useState('')
   const [cadence, setCadence] = useState<LessonCadence>('schoolDay')
   const [cadenceDays, setCadenceDays] = useState('1')
   const [generating, setGenerating] = useState(false)
@@ -72,6 +73,7 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
         cadence,
         ...(cadence === 'everyNDays' ? { cadenceDays: parseInt(cadenceDays, 10) || 1 } : {}),
         schoolDaysOfWeek: householdProfile?.schoolDays,
+        startAt: startAt ? parseInt(startAt, 10) : undefined,
       })
       setGenerated(res.data)
       onGenerate?.(res.data)
@@ -144,6 +146,21 @@ export function LessonGenerationPanel({ resource, startDate, onGenerate }: Lesso
             />
           </div>
         )}
+        <div>
+          <label htmlFor="generation-start-at-input" className="block text-xs text-slate-600 mb-1">
+            Start at
+          </label>
+          <input
+            id="generation-start-at-input"
+            type="number"
+            min="1"
+            value={startAt}
+            onChange={e => setStartAt(e.target.value)}
+            placeholder="1"
+            className="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+            data-testid="generation-start-at-input"
+          />
+        </div>
         <div>
           <label className="block text-xs text-slate-600 mb-1">School days</label>
           <input

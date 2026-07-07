@@ -191,6 +191,50 @@ describe('generateLessons', () => {
   })
 })
 
+describe('generateLessons — startAt (begin generation at a chosen chapter/page)', () => {
+  it('startAt=5 produces 26 lessons for a 30-chapter resource, first title/order at unit 5', () => {
+    const lessons = generateLessons({
+      resource: BASE_RESOURCE,
+      strategy: 'byChapter',
+      chapters: 30,
+      schoolDays: 36,
+      startDate: '2026-09-01',
+      startAt: 5,
+    })
+    expect(lessons).toHaveLength(26)
+    expect(lessons[0].title).toContain('Chapter 5')
+    expect(lessons[0].order).toBe(5)
+    expect(lessons[lessons.length - 1].title).toContain('Chapter 30')
+    expect(lessons[lessons.length - 1].order).toBe(30)
+  })
+
+  it('omitting startAt (or passing 1) reproduces existing from-the-beginning behavior', () => {
+    const lessons = generateLessons({
+      resource: BASE_RESOURCE,
+      strategy: 'byChapter',
+      chapters: 5,
+      schoolDays: 10,
+      startDate: '2026-09-01',
+      startAt: 1,
+    })
+    expect(lessons).toHaveLength(5)
+    expect(lessons[0].title).toContain('Chapter 1')
+    expect(lessons[0].order).toBe(1)
+  })
+
+  it('startAt beyond the total unit count returns no lessons', () => {
+    const lessons = generateLessons({
+      resource: BASE_RESOURCE,
+      strategy: 'byChapter',
+      chapters: 5,
+      schoolDays: 10,
+      startDate: '2026-09-01',
+      startAt: 10,
+    })
+    expect(lessons).toHaveLength(0)
+  })
+})
+
 describe('generateLessons — schoolDaysOfWeek (household school-day awareness)', () => {
   it('schoolDay cadence: schoolDaysOfWeek=[Mon..Fri], start=Saturday → first due date is the following Monday; no weekend dates', () => {
     // 2026-09-05 is a Saturday

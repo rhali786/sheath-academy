@@ -275,3 +275,34 @@ describe('LessonGenerationPanel — pacing control', () => {
     )
   })
 })
+
+describe('LessonGenerationPanel — start-at control', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    useHousehold.mockReturnValue(loadedHousehold)
+    resourcesApi.generateLessons.mockResolvedValue({ status: 'success', data: generated, message: '', timestamp: '' })
+  })
+
+  it('renders a Start-at input, and passes startAt through to generateLessons', async () => {
+    render(<LessonGenerationPanel resource={resource} />)
+
+    const startAtInput = screen.getByTestId('generation-start-at-input') as HTMLInputElement
+    expect(startAtInput).toBeInTheDocument()
+
+    await userEvent.clear(startAtInput)
+    await userEvent.type(startAtInput, '5')
+
+    await userEvent.click(screen.getByTestId('generate-lessons-button'))
+    expect(resourcesApi.generateLessons).toHaveBeenLastCalledWith(
+      expect.objectContaining({ startAt: 5 })
+    )
+  })
+
+  it('omits startAt when left blank', async () => {
+    render(<LessonGenerationPanel resource={resource} />)
+
+    await userEvent.click(screen.getByTestId('generate-lessons-button'))
+    const call = resourcesApi.generateLessons.mock.calls[0][0]
+    expect(call.startAt).toBeUndefined()
+  })
+})

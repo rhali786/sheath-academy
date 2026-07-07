@@ -53,7 +53,7 @@ export function calculatePace(input: PaceInput): PaceResult {
  * Each lesson gets a `dueDate` by advancing through school days (Mon–Fri).
  */
 export function generateLessons(input: GenerateLessonsInput): GeneratedLesson[] {
-  const { resource, strategy, chapters, schoolDays, startDate, cadence, cadenceDays, schoolDaysOfWeek } = input
+  const { resource, strategy, chapters, schoolDays, startDate, cadence, cadenceDays, schoolDaysOfWeek, startAt } = input
 
   let count = 0
   switch (strategy) {
@@ -72,18 +72,25 @@ export function generateLessons(input: GenerateLessonsInput): GeneratedLesson[] 
 
   if (count === 0) return []
 
+  // 1-based unit number to begin generation at; defaults to the first unit.
+  const effectiveStartAt = startAt && startAt > 1 ? startAt : 1
+  const effectiveCount = Math.max(0, count - (effectiveStartAt - 1))
+
+  if (effectiveCount === 0) return []
+
   const start = startDate ? parseLocalDate(startDate) : new Date()
   const lessons: GeneratedLesson[] = []
-  const dueDates = computeDueDates(count, schoolDays, start, cadence, cadenceDays, schoolDaysOfWeek)
+  const dueDates = computeDueDates(effectiveCount, schoolDays, start, cadence, cadenceDays, schoolDaysOfWeek)
 
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < effectiveCount; i++) {
     const dueDate = dueDates[i]
+    const unitNumber = effectiveStartAt + i
 
     lessons.push({
-      title: `${resource.title} — ${strategyLabel(strategy)} ${i + 1}`,
+      title: `${resource.title} — ${strategyLabel(strategy)} ${unitNumber}`,
       dueDate,
-      order: i + 1,
-      description: `${resource.title} ${strategyLabel(strategy)} ${i + 1}`,
+      order: unitNumber,
+      description: `${resource.title} ${strategyLabel(strategy)} ${unitNumber}`,
     })
   }
 
