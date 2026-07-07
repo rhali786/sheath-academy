@@ -3,8 +3,12 @@ import {
   computeGpa,
   masteryStatus,
   decayStatus,
+  gradeFromBands,
+  aggregateScore,
+  computeGpaFromPoints,
+  DEFAULT_GRADING_BANDS,
 } from '@/features/gradebook/server/aggregation'
-import type { Score, SubjectGradingConfig } from '@/features/gradebook/types'
+import type { Score, SubjectGradingConfig, GradingScaleBand } from '@/features/gradebook/types'
 
 function score(numericValue: number | null, state: Score['state'] = 'graded', occurredAt = '2026-01-01'): Score {
   return {
@@ -169,5 +173,68 @@ describe('computeGpa', () => {
     // Only 1 subject has a grade → GPA based on sub1 only
     expect(result.unweighted).toBeCloseTo(4.0, 5)
     expect(result.totalCreditHours).toBe(1)
+  })
+})
+
+describe('gradeFromBands (Phase 6)', () => {
+  it('uses the default 4.0 bands when none supplied', () => {
+    expect(gradeFromBands(95)).toEqual({ letter: 'A', gpaPoints: 4 })
+    expect(gradeFromBands(60)).toEqual({ letter: 'D', gpaPoints: 1 })
+    expect(gradeFromBands(40)).toEqual({ letter: 'F', gpaPoints: 0 })
+  })
+
+  it('honours a custom band set (e.g. mastery-style)', () => {
+    const bands: GradingScaleBand[] = [
+      { minPercent: 85, letter: 'Mastered', gpaPoints: 4 },
+      { minPercent: 70, letter: 'Proficient', gpaPoints: 3 },
+      { minPercent: 0, letter: 'Developing', gpaPoints: 2 },
+    ]
+    expect(gradeFromBands(90, bands)).toEqual({ letter: 'Mastered', gpaPoints: 4 })
+    expect(gradeFromBands(75, bands)).toEqual({ letter: 'Proficient', gpaPoints: 3 })
+    expect(gradeFromBands(50, bands)).toEqual({ letter: 'Developing', gpaPoints: 2 })
+  })
+
+  it('DEFAULT_GRADING_BANDS covers A–F', () => {
+    expect(DEFAULT_GRADING_BANDS.map(b => b.letter)).toEqual(['A', 'B', 'C', 'D', 'F'])
+  })
+})
+
+describe('aggregateScore (Phase 6)', () => {
+  const mk = (v: number | null, occurredAt = '2026-01-01', state: Score['state'] = 'graded'): Score => ({
+    id: `s_${Math.random()}`, subjectId: 'sub1', learnerId: 'l1', householdId: 'hh1',
+    state, numericValue: v, source: 'parent', occurredAt,
+  })
+
+  it('average is the mean of graded scores', () => {
+    expect(aggregateScore([mk(80), mk(100)], 'average')).toBeCloseTo(90, 5)
+  })
+
+  it('most_recent returns the latest graded score', () => {
+    expect(aggregateScore([mk(60, '2026-01-01'), mk(95, '2026-03-01'), mk(70, '2026-02-01')], 'most_recent')).toBe(95)
+  })
+
+  it('highest returns the max graded score', () => {
+    expect(aggregateScore([mk(60), mk(95), mk(70)], 'highest')).toBe(95)
+  })
+
+  it('ignores non-graded states and returns null when no graded scores', () => {
+    expect(aggregateScore([mk(null, '2026-01-01', 'missing')], 'average')).toBeNull()
+    expect(aggregateScore([], 'highest')).toBeNull()
+  })
+})
+
+describe('computeGpaFromPoints (Phase 6)', () => {
+  it('credit-weights points', () => {
+    // (4*4 + 1*1) / 5 = 3.4
+    const result = computeGpaFromPoints([{ creditHours: 4, points: 4 }, { creditHours: 1, points: 1 }])
+    expect(result.totalCreditHours).toBe(5)
+    expect(result.weighted).toBeCloseTo(3.4, 5)
+    expect(result.unweighted).toBeCloseTo(3.4, 5)
+  })
+
+  it('returns nulls when there are no entries', () => {
+    const result = computeGpaFromPoints([])
+    expect(result.weighted).toBeNull()
+    expect(result.totalCreditHours).toBe(0)
   })
 })

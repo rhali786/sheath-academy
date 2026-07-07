@@ -23,6 +23,8 @@ export const SCHEMA_TABLES: SchemaTableRef[] = [
   { key: 'schoolYears', table: schema.schoolYears, name: getTableName(schema.schoolYears) },
   { key: 'subjects', table: schema.subjects, name: getTableName(schema.subjects) },
   { key: 'subjectLearners', table: schema.subjectLearners, name: getTableName(schema.subjectLearners) },
+  { key: 'subjectResources', table: schema.subjectResources, name: getTableName(schema.subjectResources) },
+  { key: 'learningTimeSessions', table: schema.learningTimeSessions, name: getTableName(schema.learningTimeSessions) },
   { key: 'personalTodos', table: schema.personalTodos, name: getTableName(schema.personalTodos) },
   { key: 'lessonTasks', table: schema.lessonTasks, name: getTableName(schema.lessonTasks) },
   { key: 'attendanceEvents', table: schema.attendanceEvents, name: getTableName(schema.attendanceEvents) },

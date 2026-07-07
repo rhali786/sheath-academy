@@ -1,11 +1,41 @@
 import { eq, and } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
-import { learners, subjects, scores } from '@/db/schema'
-import { computeSubjectGrade, computeGpa } from './aggregation'
-import type { GradebookSummary, Score, SubjectGradingConfig, ScoreState, ScoreSource } from '@/features/gradebook/types'
+import { learners, subjects, scores, gradingScales, aggregationRules } from '@/db/schema'
+import { aggregateScore, gradeFromBands, computeGpaFromPoints, decayStatus } from './aggregation'
+import type {
+  GradebookSummary,
+  Score,
+  ScoreState,
+  ScoreSource,
+  SubjectGradeResult,
+  GradingScale,
+  GradingScaleBand,
+  AggregationRule,
+  AggregationStrategy,
+} from '@/features/gradebook/types'
 import type { GradeBand } from '@/features/gradebook/types'
 
 export type ScoreRow = typeof scores.$inferSelect
+export type GradingScaleRow = typeof gradingScales.$inferSelect
+export type AggregationRuleRow = typeof aggregationRules.$inferSelect
+
+function rowToGradingScale(row: GradingScaleRow): GradingScale {
+  return {
+    id: row.id,
+    householdId: row.householdId,
+    name: row.name,
+    bands: (row.bands as GradingScaleBand[]) ?? [],
+  }
+}
+
+function rowToAggregationRule(row: AggregationRuleRow): AggregationRule {
+  return {
+    id: row.id,
+    householdId: row.householdId,
+    name: row.name,
+    strategy: row.strategy as AggregationStrategy,
+  }
+}
 
 export interface CreateScoreInput {
   learnerId: string
@@ -32,7 +62,7 @@ function normalizeGradeBand(gradeLevel: string | null): GradeBand {
 }
 
 /** Map a ScoreRow (from Drizzle) to the Score domain interface. */
-function rowToScore(row: ScoreRow): Score {
+export function rowToScore(row: ScoreRow): Score {
   return {
     id: row.id,
     subjectId: row.subjectId ?? '',
@@ -77,6 +107,53 @@ export async function createScore(householdId: string, input: CreateScoreInput):
   return row
 }
 
+export interface UpdateScoreInput {
+  state?: ScoreState
+  numericValue?: number | null
+  occurredAt?: string
+  comment?: string | null
+}
+
+/**
+ * Patch an existing score, scoped to the owning household.
+ * Returns the updated row, or undefined when no row matched (wrong id/household).
+ */
+export async function updateScore(
+  id: string,
+  householdId: string,
+  patch: UpdateScoreInput,
+): Promise<ScoreRow | undefined> {
+  const db = getDb()
+  const updates: Partial<typeof scores.$inferInsert> = { updatedAt: new Date() }
+  if (patch.state !== undefined) updates.state = patch.state
+  if (patch.numericValue !== undefined) {
+    updates.numericValue = patch.numericValue !== null ? String(patch.numericValue) : null
+  }
+  if (patch.occurredAt !== undefined) updates.occurredAt = new Date(patch.occurredAt)
+  if (patch.comment !== undefined) updates.comment = patch.comment
+
+  const [row] = await db
+    .update(scores)
+    .set(updates)
+    .where(and(eq(scores.id, id), eq(scores.householdId, householdId)))
+    .returning()
+
+  return row
+}
+
+/**
+ * Hard-delete a score, scoped to the owning household.
+ * Returns true when a row was removed, false otherwise.
+ */
+export async function deleteScore(id: string, householdId: string): Promise<boolean> {
+  const db = getDb()
+  const removed = await db
+    .delete(scores)
+    .where(and(eq(scores.id, id), eq(scores.householdId, householdId)))
+    .returning({ id: scores.id })
+  return removed.length > 0
+}
+
 /**
  * Returns scores for a specific learner + subject.
  */
@@ -106,11 +183,19 @@ export async function listScores(
 export async function listGradebookSummaries(householdId: string): Promise<GradebookSummary[]> {
   const db = getDb()
 
-  const [learnerRows, subjectRows, allScoreRows] = await Promise.all([
+  const [learnerRows, subjectRows, allScoreRows, scaleRows, ruleRows] = await Promise.all([
     db.select().from(learners).where(eq(learners.householdId, householdId)),
     db.select().from(subjects).where(eq(subjects.householdId, householdId)),
     db.select().from(scores).where(eq(scores.householdId, householdId)),
+    db.select().from(gradingScales).where(eq(gradingScales.householdId, householdId)),
+    db.select().from(aggregationRules).where(eq(aggregationRules.householdId, householdId)),
   ])
+
+  // Reference maps for the per-subject grading scale + aggregation rule.
+  const scaleBands = new Map<string, GradingScaleBand[]>()
+  for (const row of scaleRows) scaleBands.set(row.id, (row.bands as GradingScaleBand[]) ?? [])
+  const ruleStrategy = new Map<string, AggregationStrategy>()
+  for (const row of ruleRows) ruleStrategy.set(row.id, row.strategy as AggregationStrategy)
 
   // Build a Map<learnerId, Map<subjectId, Score[]>> for efficient lookup
   const scoreMap = new Map<string, Map<string, Score[]>>()
@@ -125,28 +210,65 @@ export async function listGradebookSummaries(householdId: string): Promise<Grade
     subMap.get(key)!.push(score)
   }
 
+  // creditHours is a numeric column — Drizzle returns it as a string (or null
+  // when unset). Fall back to 1 credit so subjects without a configured value
+  // still weight evenly.
+  const creditHoursFor = (raw: string | null): number => {
+    if (raw === null) return 1
+    const parsed = parseFloat(raw)
+    return Number.isFinite(parsed) ? parsed : 1
+  }
+
   return learnerRows.map(learner => {
     const learnerSubjects = subjectRows.filter(
       s => s.learnerId === learner.id || s.learnerId === null,
     )
 
-    const subjectResults = learnerSubjects.map(sub => {
+    const gpaEntries: { creditHours: number; points: number }[] = []
+
+    const subjectResults: SubjectGradeResult[] = learnerSubjects.map(sub => {
       const subScores = scoreMap.get(learner.id)?.get(sub.id) ?? []
-      return computeSubjectGrade(sub.id, sub.name, subScores)
+      const creditHours = creditHoursFor(sub.creditHours)
+      const strategy = (sub.aggregationRuleId && ruleStrategy.get(sub.aggregationRuleId)) || 'average'
+      const bands = (sub.gradingScaleId && scaleBands.get(sub.gradingScaleId)) || undefined
+
+      const courseConfig = {
+        isFormalCourse: sub.isFormalCourse,
+        termModel: sub.termModel ?? null,
+        gradingScaleId: sub.gradingScaleId ?? null,
+        aggregationRuleId: sub.aggregationRuleId ?? null,
+      }
+
+      const rep = aggregateScore(subScores, strategy)
+      if (rep === null) {
+        return {
+          subjectId: sub.id,
+          label: sub.name,
+          pointsAverage: null,
+          masteryAverage: null,
+          gradeLetter: null,
+          creditHours,
+          needsReview: false,
+          ...courseConfig,
+        }
+      }
+
+      const { letter, gpaPoints } = gradeFromBands(rep, bands)
+      gpaEntries.push({ creditHours, points: gpaPoints })
+
+      return {
+        subjectId: sub.id,
+        label: sub.name,
+        pointsAverage: rep,
+        masteryAverage: rep,
+        gradeLetter: letter,
+        creditHours,
+        needsReview: strategy === 'average' ? false : decayStatus(subScores),
+        ...courseConfig,
+      }
     })
 
-    const config: SubjectGradingConfig[] = learnerSubjects.map(sub => ({
-      subjectId: sub.id,
-      label: sub.name,
-      creditHours: 1,
-    }))
-
-    const gradeMap = new Map<string, number>()
-    subjectResults.forEach(r => {
-      if (r.pointsAverage !== null) gradeMap.set(r.subjectId, r.pointsAverage)
-    })
-
-    const gpa = computeGpa(config, gradeMap)
+    const gpa = computeGpaFromPoints(gpaEntries)
 
     const needsAttentionSubjects = subjectResults
       .filter(r => r.needsReview || r.pointsAverage === null)
@@ -161,4 +283,100 @@ export async function listGradebookSummaries(householdId: string): Promise<Grade
       needsAttentionSubjects,
     }
   })
+}
+
+// ─── Grading scales (Phase 6) ───────────────────────────────────────────────────
+
+export async function listGradingScales(householdId: string): Promise<GradingScale[]> {
+  const db = getDb()
+  const rows = await db.select().from(gradingScales).where(eq(gradingScales.householdId, householdId))
+  return rows.map(rowToGradingScale)
+}
+
+export async function createGradingScale(
+  householdId: string,
+  input: { name: string; bands: GradingScaleBand[] },
+): Promise<GradingScale> {
+  const db = getDb()
+  const now = new Date()
+  const id = `gradescale_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+  const [row] = await db
+    .insert(gradingScales)
+    .values({ id, householdId, name: input.name, bands: input.bands, createdAt: now, updatedAt: now })
+    .returning()
+  return rowToGradingScale(row)
+}
+
+export async function updateGradingScale(
+  id: string,
+  householdId: string,
+  patch: { name?: string; bands?: GradingScaleBand[] },
+): Promise<GradingScale | null> {
+  const db = getDb()
+  const updates: Record<string, unknown> = { updatedAt: new Date() }
+  if (patch.name !== undefined) updates.name = patch.name
+  if (patch.bands !== undefined) updates.bands = patch.bands
+  const [row] = await db
+    .update(gradingScales)
+    .set(updates)
+    .where(and(eq(gradingScales.id, id), eq(gradingScales.householdId, householdId)))
+    .returning()
+  return row ? rowToGradingScale(row) : null
+}
+
+export async function deleteGradingScale(id: string, householdId: string): Promise<boolean> {
+  const db = getDb()
+  const removed = await db
+    .delete(gradingScales)
+    .where(and(eq(gradingScales.id, id), eq(gradingScales.householdId, householdId)))
+    .returning({ id: gradingScales.id })
+  return removed.length > 0
+}
+
+// ─── Aggregation rules (Phase 6) ─────────────────────────────────────────────────
+
+export async function listAggregationRules(householdId: string): Promise<AggregationRule[]> {
+  const db = getDb()
+  const rows = await db.select().from(aggregationRules).where(eq(aggregationRules.householdId, householdId))
+  return rows.map(rowToAggregationRule)
+}
+
+export async function createAggregationRule(
+  householdId: string,
+  input: { name: string; strategy: AggregationStrategy },
+): Promise<AggregationRule> {
+  const db = getDb()
+  const now = new Date()
+  const id = `aggrule_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+  const [row] = await db
+    .insert(aggregationRules)
+    .values({ id, householdId, name: input.name, strategy: input.strategy, createdAt: now, updatedAt: now })
+    .returning()
+  return rowToAggregationRule(row)
+}
+
+export async function updateAggregationRule(
+  id: string,
+  householdId: string,
+  patch: { name?: string; strategy?: AggregationStrategy },
+): Promise<AggregationRule | null> {
+  const db = getDb()
+  const updates: Record<string, unknown> = { updatedAt: new Date() }
+  if (patch.name !== undefined) updates.name = patch.name
+  if (patch.strategy !== undefined) updates.strategy = patch.strategy
+  const [row] = await db
+    .update(aggregationRules)
+    .set(updates)
+    .where(and(eq(aggregationRules.id, id), eq(aggregationRules.householdId, householdId)))
+    .returning()
+  return row ? rowToAggregationRule(row) : null
+}
+
+export async function deleteAggregationRule(id: string, householdId: string): Promise<boolean> {
+  const db = getDb()
+  const removed = await db
+    .delete(aggregationRules)
+    .where(and(eq(aggregationRules.id, id), eq(aggregationRules.householdId, householdId)))
+    .returning({ id: aggregationRules.id })
+  return removed.length > 0
 }

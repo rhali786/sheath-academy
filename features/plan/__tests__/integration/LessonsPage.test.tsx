@@ -166,7 +166,7 @@ describe('LessonsPage', () => {
     expect(screen.queryByRole('heading', { name: /edit lesson/i })).not.toBeInTheDocument()
   })
 
-  it('sets child filter from ?childId query param after children load', async () => {
+  it('sets child filter from the header learner selection after children load', async () => {
     const child002 = { id: 'child_002', householdId: 'hh_001', name: 'Khadijah', gradeLabel: '3rd', isActive: true, username: 'k', password: 'pw', createdAt: '2026-01-01T00:00:00Z' }
     mockUseHousehold.mockImplementation(() => ({
       householdProfile: { id: 'hh_001' },
@@ -181,7 +181,7 @@ describe('LessonsPage', () => {
     const laythLesson  = makeLesson({ id: 'l1', title: 'Layth lesson',  childId: 'child_001' })
     const khadijahLesson = makeLesson({ id: 'l2', title: 'Khadijah lesson', childId: 'child_002' })
     mockGetLessons.mockResolvedValue([laythLesson, khadijahLesson])
-    mockSearchParams = new URLSearchParams('childId=child_002')
+    mockUseLearner.mockImplementation(() => ({ selectedChildId: 'child_002', setSelectedChildId: jest.fn() }))
 
     render(<LessonsPage />)
 
@@ -207,7 +207,7 @@ describe('LessonsPage', () => {
     })
   })
 
-  it('updates child filter when URL childId changes while component stays mounted', async () => {
+  it('updates child filter when the header learner changes while component stays mounted', async () => {
     const child002 = { id: 'child_002', householdId: 'hh_001', name: 'Khadijah', gradeLabel: '3rd', isActive: true, username: 'k', password: 'pw', createdAt: '2026-01-01T00:00:00Z' }
     mockUseHousehold.mockImplementation(() => ({
       householdProfile: { id: 'hh_001' },
@@ -219,7 +219,7 @@ describe('LessonsPage', () => {
       error: null,
       refetch: jest.fn(),
     }))
-    mockSearchParams = new URLSearchParams()
+    mockUseLearner.mockImplementation(() => ({ selectedChildId: null, setSelectedChildId: jest.fn() }))
 
     const { rerender } = render(<LessonsPage />)
 
@@ -231,8 +231,8 @@ describe('LessonsPage', () => {
       expect(sel).toHaveValue('')
     })
 
-    // Simulate URL change while component stays mounted
-    act(() => { mockSearchParams = new URLSearchParams('childId=child_002') })
+    // Simulate the header learner switching while the component stays mounted
+    act(() => { mockUseLearner.mockImplementation(() => ({ selectedChildId: 'child_002', setSelectedChildId: jest.fn() })) })
     rerender(<LessonsPage />)
 
     await waitFor(() => {
@@ -276,14 +276,8 @@ describe('LessonsPage', () => {
     await openAddLessonForm()
 
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'New Lesson' } })
-    fireEvent.change(screen.getAllByRole('combobox').find(s =>
-      Array.from((s as HTMLSelectElement).options).some(o => o.text === 'Select child')
-    )!, { target: { value: 'child_001' } })
-
-    const subjectSel = screen.getAllByRole('combobox').find(s =>
-      Array.from((s as HTMLSelectElement).options).some(o => o.text === 'Select subject')
-    )
-    if (subjectSel) fireEvent.change(subjectSel, { target: { value: 'subj_001' } })
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
+    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_001' } })
 
     fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
 

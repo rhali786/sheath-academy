@@ -24,6 +24,11 @@ import {
   getBadgeSettings,
   createAward,
   addEvidenceToAward,
+  deleteAward,
+  removeEvidenceFromAward,
+  createBadgeDefinition,
+  updateBadgeDefinition,
+  deleteBadgeDefinition,
 } from '@/features/badges/server/repository'
 
 const hasDb = !!process.env.DATABASE_URL
@@ -356,6 +361,121 @@ describeDb('badges repository (real DB)', () => {
       const awardsB = await listBadgeAwards(idsB.hid, idsB.lid)
       expect(awardsB.every(a => a.householdId === idsB.hid)).toBe(true)
       expect(awardsB.find(a => a.id === award.id)).toBeUndefined()
+    }, DB_TIMEOUT_MS)
+  })
+
+  // ─── removeEvidenceFromAward + deleteAward (Phase 3) ──────────────────────────
+
+  describe('removeEvidenceFromAward + deleteAward', () => {
+    const ids = testIds('del')
+    const defId = 'badge_dbtest_badges_del_def'
+
+    beforeAll(async () => {
+      await insertBaseFixtures(ids)
+      const db = getDb()
+      const now = new Date()
+      await db.insert(badgeDefinitions).values({
+        id: defId,
+        householdId: null,
+        title: 'DB Test Delete Badge',
+        description: 'A badge for testing delete/unlink',
+        criteria: 'Test criteria',
+        emblemKey: 'test_delete',
+        gradeBands: [],
+        verificationRequirement: 'none',
+        isStarter: true,
+        enabled: true,
+        visibility: 'platform',
+        createdAt: now,
+        updatedAt: now,
+      }).onConflictDoNothing()
+      await db.insert(portfolioEvidence).values({
+        id: 'ev_dbtest_badges_del_1',
+        householdId: ids.hid,
+        learnerId: ids.lid,
+        title: 'Test Evidence',
+        evidenceType: 'document',
+        evidenceDate: '2026-01-01',
+        createdAt: now,
+        updatedAt: now,
+      }).onConflictDoNothing()
+    })
+    afterAll(async () => {
+      await cleanupBaseFixtures(ids)
+      const db = getDb()
+      await db.delete(badgeDefinitions).where(eq(badgeDefinitions.id, defId))
+    })
+
+    it('removeEvidenceFromAward unlinks by link id', async () => {
+      const award = await createAward(ids.hid, { learnerId: ids.lid, badgeId: defId, status: 'draft' })
+      const link = await addEvidenceToAward(ids.hid, { badgeAwardId: award.id, evidenceId: 'ev_dbtest_badges_del_1' })
+
+      let awards = await listBadgeAwards(ids.hid, ids.lid)
+      expect(awards.find(a => a.id === award.id)!.evidenceIds).toContain('ev_dbtest_badges_del_1')
+
+      expect(await removeEvidenceFromAward(link.id, ids.hid)).toBe(true)
+      awards = await listBadgeAwards(ids.hid, ids.lid)
+      expect(awards.find(a => a.id === award.id)!.evidenceIds).not.toContain('ev_dbtest_badges_del_1')
+
+      expect(await removeEvidenceFromAward(link.id, ids.hid)).toBe(false)
+    }, DB_TIMEOUT_MS)
+
+    it('deleteAward removes the award (and its evidence) and returns true; false when gone', async () => {
+      const award = await createAward(ids.hid, { learnerId: ids.lid, badgeId: defId, status: 'draft' })
+      await addEvidenceToAward(ids.hid, { badgeAwardId: award.id, evidenceId: 'ev_dbtest_badges_del_1' })
+
+      expect(await deleteAward(award.id, ids.hid)).toBe(true)
+      const awards = await listBadgeAwards(ids.hid, ids.lid)
+      expect(awards.find(a => a.id === award.id)).toBeUndefined()
+
+      expect(await deleteAward(award.id, ids.hid)).toBe(false)
+    }, DB_TIMEOUT_MS)
+  })
+
+  // ─── custom badge definition CRUD (Phase 5) ───────────────────────────────────
+
+  describe('createBadgeDefinition + update + delete', () => {
+    const ids = testIds('def')
+
+    beforeAll(async () => { await insertBaseFixtures(ids) })
+    afterAll(async () => {
+      const db = getDb()
+      await db.delete(badgeDefinitions).where(eq(badgeDefinitions.householdId, ids.hid))
+      await cleanupBaseFixtures(ids)
+    })
+
+    it('creates a household-owned (non-starter) definition', async () => {
+      const def = await createBadgeDefinition(ids.hid, {
+        title: 'Custom One', description: 'desc', criteria: 'do the thing', emblemKey: 'custom-1',
+        gradeBands: ['g5_8'], verificationRequirement: 'parent', visibility: 'household',
+      })
+      expect(def.householdId).toBe(ids.hid)
+      expect(def.isStarter).toBe(false)
+
+      const list = await listBadgeDefinitions(ids.hid)
+      expect(list.find(d => d.id === def.id)).toBeDefined()
+    }, DB_TIMEOUT_MS)
+
+    it('updates an owned definition; returns null for a foreign household', async () => {
+      const def = await createBadgeDefinition(ids.hid, {
+        title: 'Editable', description: 'd', criteria: 'c', emblemKey: 'e',
+      })
+      const updated = await updateBadgeDefinition(def.id, ids.hid, { title: 'Renamed', enabled: false })
+      expect(updated).not.toBeNull()
+      expect(updated!.title).toBe('Renamed')
+      expect(updated!.enabled).toBe(false)
+
+      const foreign = await updateBadgeDefinition(def.id, 'hh_nope', { title: 'Hacked' })
+      expect(foreign).toBeNull()
+    }, DB_TIMEOUT_MS)
+
+    it('deletes an owned definition; false for a foreign household', async () => {
+      const def = await createBadgeDefinition(ids.hid, {
+        title: 'Deletable', description: 'd', criteria: 'c', emblemKey: 'e',
+      })
+      expect(await deleteBadgeDefinition(def.id, 'hh_nope')).toBe(false)
+      expect(await deleteBadgeDefinition(def.id, ids.hid)).toBe(true)
+      expect((await listBadgeDefinitions(ids.hid)).find(d => d.id === def.id)).toBeUndefined()
     }, DB_TIMEOUT_MS)
   })
 })

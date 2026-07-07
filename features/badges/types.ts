@@ -19,6 +19,13 @@ export interface BadgeDefinition {
   visibility: BadgeVisibility
 }
 
+export interface BadgeAwardEvidenceLink {
+  /** badge_award_evidence row id — used to unlink */
+  id: string
+  /** portfolio evidence id this link points at */
+  evidenceId: string
+}
+
 export interface BadgeAward {
   id: string
   householdId: string
@@ -28,8 +35,10 @@ export interface BadgeAward {
   submittedAt: string | null
   verifiedAt: string | null
   approvedAt: string | null
-  /** Evidence items supporting this award */
+  /** Evidence items supporting this award (portfolio evidence ids) */
   evidenceIds: string[]
+  /** Evidence links (link-row id + evidence id) — populated by the repository for unlinking */
+  evidence?: BadgeAwardEvidenceLink[]
 }
 
 export interface BadgeAwardEvidence {

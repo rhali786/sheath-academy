@@ -71,7 +71,7 @@ describe('SubjectsAllTable', () => {
     await waitFor(() => expect(screen.getByTestId('subjects-all-table')).toBeInTheDocument())
     const editButtons = screen.getAllByRole('button', { name: 'Edit' })
     await userEvent.click(editButtons[0])
-    expect(screen.getByRole('dialog', { name: /edit subject/i })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: /edit course/i })).toBeInTheDocument()
     expect(screen.getByTestId('subject-edit-form')).toBeInTheDocument()
   })
 })

@@ -24,6 +24,10 @@ import {
   createDeadline,
   markDeadlineComplete,
   createSubmission,
+  updateDeadline,
+  deleteDeadline,
+  deleteSubmission,
+  listRulesets,
 } from '@/features/compliance/server/repository'
 
 const hasDb = !!process.env.DATABASE_URL
@@ -273,6 +277,98 @@ describeDb('compliance repository (real DB)', () => {
       const updated = list.find(d => d.id === deadline.id)
       expect(updated).toBeDefined()
       expect(updated!.isCompleted).toBe(true)
+    }, DB_TIMEOUT_MS)
+  })
+
+  // ─── updateDeadline / deleteDeadline / deleteSubmission / listRulesets (Phase 2) ─
+
+  describe('updateDeadline + deleteDeadline', () => {
+    const ids = testIds('upd')
+
+    beforeAll(async () => { await insertBaseFixtures(ids) })
+    afterAll(async () => { await cleanupBaseFixtures(ids) })
+
+    it('updateDeadline edits label/dueDate and toggles completion', async () => {
+      const created = await createDeadline(ids.hid, {
+        schoolYearId: ids.syid, label: 'Old label', dueDate: '2026-09-01', requirementType: 'filing',
+      })
+
+      const updated = await updateDeadline(created.id, ids.hid, {
+        label: 'New label', dueDate: '2026-10-15', isCompleted: true,
+      })
+      expect(updated).not.toBeNull()
+      expect(updated!.label).toBe('New label')
+      expect(updated!.dueDate).toBe('2026-10-15')
+      expect(updated!.isCompleted).toBe(true)
+
+      // reopen
+      const reopened = await updateDeadline(created.id, ids.hid, { isCompleted: false })
+      expect(reopened!.isCompleted).toBe(false)
+    }, DB_TIMEOUT_MS)
+
+    it('updateDeadline returns null for a foreign household', async () => {
+      const created = await createDeadline(ids.hid, {
+        schoolYearId: ids.syid, label: 'X', dueDate: '2026-09-01', requirementType: 'filing',
+      })
+      const result = await updateDeadline(created.id, 'hh_nope', { label: 'Y' })
+      expect(result).toBeNull()
+    }, DB_TIMEOUT_MS)
+
+    it('deleteDeadline removes the row and returns true; false when gone', async () => {
+      const created = await createDeadline(ids.hid, {
+        schoolYearId: ids.syid, label: 'To delete', dueDate: '2026-09-01', requirementType: 'filing',
+      })
+      expect(await deleteDeadline(created.id, ids.hid)).toBe(true)
+      expect((await listDeadlines(ids.hid, ids.syid)).find(d => d.id === created.id)).toBeUndefined()
+      expect(await deleteDeadline(created.id, ids.hid)).toBe(false)
+    }, DB_TIMEOUT_MS)
+  })
+
+  describe('deleteSubmission', () => {
+    const ids = testIds('dsub')
+
+    beforeAll(async () => { await insertBaseFixtures(ids) })
+    afterAll(async () => { await cleanupBaseFixtures(ids) })
+
+    it('deleteSubmission removes the row and returns true; false when gone', async () => {
+      const created = await createSubmission(ids.hid, { schoolYearId: ids.syid })
+      expect(await deleteSubmission(created.id, ids.hid)).toBe(true)
+      expect((await listSubmissions(ids.hid, ids.syid)).find(s => s.id === created.id)).toBeUndefined()
+      expect(await deleteSubmission(created.id, ids.hid)).toBe(false)
+    }, DB_TIMEOUT_MS)
+  })
+
+  describe('listRulesets', () => {
+    const ids = testIds('rs')
+    const rulesetId = 'ruleset_dbtest_comp_rs1'
+
+    beforeAll(async () => {
+      await insertBaseFixtures(ids)
+      const db = getDb()
+      const now = new Date()
+      await db.insert(complianceRulesets).values({
+        id: rulesetId,
+        state: 'TX',
+        pathwayKey: 'private-school-exemption',
+        requirementType: 'days',
+        value: '180',
+        unit: 'days',
+        sourceUrl: null,
+        lastVerifiedAt: null,
+        isVerified: true,
+        createdAt: now,
+        updatedAt: now,
+      }).onConflictDoNothing()
+    })
+    afterAll(async () => {
+      await cleanupBaseFixtures(ids)
+      const db = getDb()
+      await db.delete(complianceRulesets).where(eq(complianceRulesets.id, rulesetId))
+    })
+
+    it('listRulesets includes the inserted ruleset', async () => {
+      const rulesets = await listRulesets()
+      expect(rulesets.find(r => r.id === rulesetId)).toBeDefined()
     }, DB_TIMEOUT_MS)
   })
 })

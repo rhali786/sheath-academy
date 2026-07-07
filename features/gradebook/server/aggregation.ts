@@ -1,4 +1,60 @@
-import type { Score, SubjectGradingConfig, SubjectGradeResult, GpaResult, MasteryStatus, MasteryStrategyType } from '@/features/gradebook/types'
+import type { Score, SubjectGradingConfig, SubjectGradeResult, GpaResult, MasteryStatus, MasteryStrategyType, GradingScaleBand, AggregationStrategy } from '@/features/gradebook/types'
+
+/** The built-in 4.0 scale used when a subject references no custom grading scale. */
+export const DEFAULT_GRADING_BANDS: GradingScaleBand[] = [
+  { minPercent: 90, letter: 'A', gpaPoints: 4 },
+  { minPercent: 80, letter: 'B', gpaPoints: 3 },
+  { minPercent: 70, letter: 'C', gpaPoints: 2 },
+  { minPercent: 60, letter: 'D', gpaPoints: 1 },
+  { minPercent: 0, letter: 'F', gpaPoints: 0 },
+]
+
+/** Maps a numeric average to a letter + GPA points using the given bands (highest match wins). */
+export function gradeFromBands(
+  avg: number,
+  bands: GradingScaleBand[] = DEFAULT_GRADING_BANDS,
+): { letter: string; gpaPoints: number } {
+  const sorted = [...bands].sort((a, b) => b.minPercent - a.minPercent)
+  for (const band of sorted) {
+    if (avg >= band.minPercent) return { letter: band.letter, gpaPoints: band.gpaPoints }
+  }
+  const lowest = sorted[sorted.length - 1]
+  return { letter: lowest?.letter ?? 'F', gpaPoints: lowest?.gpaPoints ?? 0 }
+}
+
+/**
+ * Collapses a subject's scores into a single representative numeric value using the
+ * aggregation strategy. Non-graded states never count (US9). Returns null when there
+ * are no graded scores.
+ */
+export function aggregateScore(scores: Score[], strategy: AggregationStrategy): number | null {
+  const graded = gradedOnly(scores)
+  if (graded.length === 0) return null
+  if (strategy === 'most_recent') {
+    const sorted = [...graded].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))
+    return sorted[sorted.length - 1].numericValue!
+  }
+  if (strategy === 'highest') {
+    return Math.max(...graded.map(s => s.numericValue!))
+  }
+  return graded.reduce((sum, s) => sum + s.numericValue!, 0) / graded.length
+}
+
+/**
+ * Credit-weighted GPA from precomputed per-subject GPA points (already mapped through
+ * each subject's grading scale). `unweighted` averages the points evenly; `weighted`
+ * weights by credit hours.
+ */
+export function computeGpaFromPoints(
+  entries: { creditHours: number; points: number }[],
+): GpaResult {
+  if (entries.length === 0) return { weighted: null, unweighted: null, totalCreditHours: 0 }
+  const totalCredits = entries.reduce((sum, e) => sum + (e.creditHours || 0), 0)
+  const weightedPoints = entries.reduce((sum, e) => sum + e.points * (e.creditHours || 0), 0)
+  const weighted = totalCredits > 0 ? weightedPoints / totalCredits : null
+  const unweighted = entries.reduce((sum, e) => sum + e.points, 0) / entries.length
+  return { weighted, unweighted: weighted ?? unweighted, totalCreditHours: totalCredits }
+}
 
 /** Grade letter thresholds */
 function letterGrade(avg: number): string {

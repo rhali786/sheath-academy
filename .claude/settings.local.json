@@ -4,7 +4,8 @@
       "Bash(powershell *)",
       "PowerShell(Get-Process *)",
       "Read(//c/Users/rashe/AppData/Local/Temp/claude/**)",
-      "Read(//c/Projects/**)"
+      "Read(//c/Projects/**)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/api/health)"
     ]
   }
 }

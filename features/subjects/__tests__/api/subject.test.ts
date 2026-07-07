@@ -80,4 +80,34 @@ describe('PUT /api/subjects/:id', () => {
       expect.objectContaining({ resourceIds: undefined })
     )
   })
+
+  it('passes gradebook course-config (Phase 6) through to updateSubjectRow', async () => {
+    mockUpdate.mockResolvedValue(baseRow)
+    const req = new Request('http://localhost/api/subjects/subject_1', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        creditHours: 4, isFormalCourse: true, termModel: 'semester',
+        gradingScaleId: 'gs1', aggregationRuleId: 'ar1',
+      }),
+    })
+    await PUT('subject_1', req)
+    expect(mockUpdate).toHaveBeenCalledWith('subject_1', 'hh_test', expect.objectContaining({
+      creditHours: 4, isFormalCourse: true, termModel: 'semester',
+      gradingScaleId: 'gs1', aggregationRuleId: 'ar1',
+    }))
+  })
+
+  it('clears course-config ids when empty strings are sent', async () => {
+    mockUpdate.mockResolvedValue(baseRow)
+    const req = new Request('http://localhost/api/subjects/subject_1', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gradingScaleId: '', aggregationRuleId: '', creditHours: null }),
+    })
+    await PUT('subject_1', req)
+    expect(mockUpdate).toHaveBeenCalledWith('subject_1', 'hh_test', expect.objectContaining({
+      gradingScaleId: null, aggregationRuleId: null, creditHours: null,
+    }))
+  })
 })

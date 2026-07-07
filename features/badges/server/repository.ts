@@ -10,6 +10,7 @@ import type {
   BadgeDefinition,
   BadgeAward,
   BadgeAwardEvidence,
+  BadgeAwardEvidenceLink,
   BadgeCollectionItem,
   BadgeSettings,
   BadgeStatus,
@@ -41,7 +42,7 @@ function rowToDefinition(row: BadgeDefinitionRow): BadgeDefinition {
   }
 }
 
-function rowToAward(row: BadgeAwardRow, evidenceIds: string[]): BadgeAward {
+function rowToAward(row: BadgeAwardRow, evidence: BadgeAwardEvidenceLink[]): BadgeAward {
   return {
     id: row.id,
     householdId: row.householdId,
@@ -51,7 +52,8 @@ function rowToAward(row: BadgeAwardRow, evidenceIds: string[]): BadgeAward {
     submittedAt: row.submittedAt instanceof Date ? row.submittedAt.toISOString() : (row.submittedAt ?? null),
     verifiedAt: row.verifiedAt instanceof Date ? row.verifiedAt.toISOString() : (row.verifiedAt ?? null),
     approvedAt: row.approvedAt instanceof Date ? row.approvedAt.toISOString() : (row.approvedAt ?? null),
-    evidenceIds,
+    evidenceIds: evidence.map(e => e.evidenceId),
+    evidence,
   }
 }
 
@@ -125,15 +127,14 @@ export async function listBadgeAwards(
       ),
     )
 
-  // For each award, fetch evidence IDs
+  // For each award, fetch evidence links
   const results: BadgeAward[] = []
   for (const row of rows) {
     const evidenceRows = await db
       .select()
       .from(badgeAwardEvidence)
       .where(eq(badgeAwardEvidence.badgeAwardId, row.id))
-    const evidenceIds = evidenceRows.map(e => e.evidenceId)
-    results.push(rowToAward(row, evidenceIds))
+    results.push(rowToAward(row, evidenceRows.map(e => ({ id: e.id, evidenceId: e.evidenceId }))))
   }
   return results
 }
@@ -160,6 +161,100 @@ export async function getBadgeSettings(
 }
 
 // ─── Mutations ────────────────────────────────────────────────────────────────
+
+export interface BadgeDefinitionInput {
+  title: string
+  description: string
+  criteria: string
+  emblemKey: string
+  gradeBands?: GradeBand[]
+  verificationRequirement?: VerificationRequirement
+  visibility?: BadgeVisibility
+  enabled?: boolean
+}
+
+/** Fetch a single badge definition by id, regardless of ownership (for guard checks). */
+export async function getBadgeDefinitionById(id: string): Promise<BadgeDefinition | null> {
+  const db = getDb()
+  const rows = await db.select().from(badgeDefinitions).where(eq(badgeDefinitions.id, id)).limit(1)
+  return rows.length > 0 ? rowToDefinition(rows[0]) : null
+}
+
+/**
+ * Creates a household-owned custom badge definition (never a platform starter).
+ */
+export async function createBadgeDefinition(
+  householdId: string,
+  input: BadgeDefinitionInput,
+): Promise<BadgeDefinition> {
+  const db = getDb()
+  const now = new Date()
+  const id = `badgedef_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+
+  const [row] = await db
+    .insert(badgeDefinitions)
+    .values({
+      id,
+      householdId,
+      title: input.title,
+      description: input.description,
+      criteria: input.criteria,
+      emblemKey: input.emblemKey,
+      gradeBands: input.gradeBands ?? [],
+      verificationRequirement: input.verificationRequirement ?? 'none',
+      isStarter: false,
+      enabled: input.enabled ?? true,
+      visibility: input.visibility ?? 'household',
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning()
+
+  return rowToDefinition(row)
+}
+
+/**
+ * Updates a household-owned badge definition. Scoped to householdId so platform
+ * starters (householdId null) and other households' badges cannot be edited.
+ * Returns the updated definition, or null when no owned row matched.
+ */
+export async function updateBadgeDefinition(
+  id: string,
+  householdId: string,
+  patch: Partial<BadgeDefinitionInput>,
+): Promise<BadgeDefinition | null> {
+  const db = getDb()
+  const updates: Record<string, unknown> = { updatedAt: new Date() }
+  if (patch.title !== undefined) updates.title = patch.title
+  if (patch.description !== undefined) updates.description = patch.description
+  if (patch.criteria !== undefined) updates.criteria = patch.criteria
+  if (patch.emblemKey !== undefined) updates.emblemKey = patch.emblemKey
+  if (patch.gradeBands !== undefined) updates.gradeBands = patch.gradeBands
+  if (patch.verificationRequirement !== undefined) updates.verificationRequirement = patch.verificationRequirement
+  if (patch.visibility !== undefined) updates.visibility = patch.visibility
+  if (patch.enabled !== undefined) updates.enabled = patch.enabled
+
+  const [row] = await db
+    .update(badgeDefinitions)
+    .set(updates)
+    .where(and(eq(badgeDefinitions.id, id), eq(badgeDefinitions.householdId, householdId)))
+    .returning()
+
+  return row ? rowToDefinition(row) : null
+}
+
+/**
+ * Deletes a household-owned badge definition (starters/other households excluded
+ * by the householdId scope). Returns true when a row was removed.
+ */
+export async function deleteBadgeDefinition(id: string, householdId: string): Promise<boolean> {
+  const db = getDb()
+  const removed = await db
+    .delete(badgeDefinitions)
+    .where(and(eq(badgeDefinitions.id, id), eq(badgeDefinitions.householdId, householdId)))
+    .returning({ id: badgeDefinitions.id })
+  return removed.length > 0
+}
 
 /**
  * Creates a new badge award in 'draft' status (or the provided status).
@@ -232,7 +327,7 @@ export async function updateAwardStatus(
     .from(badgeAwardEvidence)
     .where(eq(badgeAwardEvidence.badgeAwardId, id))
 
-  return rowToAward(rows[0], evidenceRows.map(e => e.evidenceId))
+  return rowToAward(rows[0], evidenceRows.map(e => ({ id: e.id, evidenceId: e.evidenceId })))
 }
 
 /**
@@ -264,6 +359,39 @@ export async function addEvidenceToAward(
     evidenceId: row.evidenceId,
     addedAt: row.addedAt instanceof Date ? row.addedAt.toISOString() : String(row.addedAt),
   }
+}
+
+/**
+ * Revokes (hard-deletes) a badge award scoped to the household, removing any
+ * linked evidence first (composite FK badge_award_evidence → badge_awards).
+ * Returns true when the award was removed.
+ */
+export async function deleteAward(id: string, householdId: string): Promise<boolean> {
+  const db = getDb()
+  await db
+    .delete(badgeAwardEvidence)
+    .where(and(eq(badgeAwardEvidence.badgeAwardId, id), eq(badgeAwardEvidence.householdId, householdId)))
+  const removed = await db
+    .delete(badgeAwards)
+    .where(and(eq(badgeAwards.id, id), eq(badgeAwards.householdId, householdId)))
+    .returning({ id: badgeAwards.id })
+  return removed.length > 0
+}
+
+/**
+ * Unlinks a single evidence item from an award, scoped to the household.
+ * Returns true when a link row was removed.
+ */
+export async function removeEvidenceFromAward(
+  badgeAwardEvidenceId: string,
+  householdId: string,
+): Promise<boolean> {
+  const db = getDb()
+  const removed = await db
+    .delete(badgeAwardEvidence)
+    .where(and(eq(badgeAwardEvidence.id, badgeAwardEvidenceId), eq(badgeAwardEvidence.householdId, householdId)))
+    .returning({ id: badgeAwardEvidence.id })
+  return removed.length > 0
 }
 
 /**
