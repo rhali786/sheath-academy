@@ -62,6 +62,13 @@ export function ResourceForm({ workspaceId, courses = [], onSubmit, onCancel }: 
     )
   }
 
+  function handleCourseSelect(e: React.ChangeEvent<HTMLSelectElement>) {
+    const courseId = e.target.value
+    if (!courseId) return
+    setSelectedCourseIds(prev => (prev.includes(courseId) ? prev : [...prev, courseId]))
+    e.target.value = ''
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim()) return
@@ -222,22 +229,47 @@ export function ResourceForm({ workspaceId, courses = [], onSubmit, onCancel }: 
       {courses.length > 0 && (
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
-            Link to enrolled course(s)
+            Link to an enrolled course
           </label>
-          <div className="flex flex-col gap-2" data-testid="resource-course-options">
-            {courses.map(course => (
-              <label key={course.id} className="flex items-center gap-2 cursor-pointer min-h-[32px]">
-                <input
-                  type="checkbox"
-                  checked={selectedCourseIds.includes(course.id)}
-                  onChange={() => toggleCourse(course.id)}
-                  className="rounded"
-                  data-testid={`resource-course-checkbox-${course.id}`}
-                />
-                <span className="text-sm text-slate-700">{course.name}</span>
-              </label>
-            ))}
-          </div>
+          <select
+            value=""
+            onChange={handleCourseSelect}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900"
+            data-testid="resource-course-select"
+          >
+            <option value="">Select a course…</option>
+            {courses
+              .filter(course => !selectedCourseIds.includes(course.id))
+              .map(course => (
+                <option key={course.id} value={course.id}>{course.name}</option>
+              ))}
+          </select>
+          {selectedCourseIds.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2" data-testid="resource-course-tags">
+              {selectedCourseIds.map(courseId => {
+                const course = courses.find(c => c.id === courseId)
+                if (!course) return null
+                return (
+                  <span
+                    key={course.id}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-forest-50 text-forest-900 text-xs font-medium px-2.5 py-1"
+                    data-testid={`resource-course-tag-${course.id}`}
+                  >
+                    {course.name}
+                    <button
+                      type="button"
+                      onClick={() => toggleCourse(course.id)}
+                      aria-label={`Remove ${course.name}`}
+                      className="text-forest-700 hover:text-forest-900"
+                      data-testid={`resource-course-tag-remove-${course.id}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 

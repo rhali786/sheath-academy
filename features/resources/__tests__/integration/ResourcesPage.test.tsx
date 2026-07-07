@@ -94,12 +94,12 @@ describe('ResourceForm', () => {
     expect(onCancel).toHaveBeenCalled()
   })
 
-  it('does not render the course-linking section when no courses are provided', () => {
+  it('does not render the course dropdown when no courses are provided', () => {
     render(<ResourceForm workspaceId="ws_001" onSubmit={onSubmit} />)
-    expect(screen.queryByTestId('resource-course-options')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('resource-course-select')).not.toBeInTheDocument()
   })
 
-  it('renders a checkbox for each enrolled course when courses are provided', () => {
+  it('lists each enrolled course as an option in the course dropdown', () => {
     render(
       <ResourceForm
         workspaceId="ws_001"
@@ -107,13 +107,28 @@ describe('ResourceForm', () => {
         courses={[{ id: 'subject_1', name: 'Algebra' }, { id: 'subject_2', name: 'Biology' }]}
       />
     )
-    expect(screen.getByTestId('resource-course-checkbox-subject_1')).toBeInTheDocument()
-    expect(screen.getByTestId('resource-course-checkbox-subject_2')).toBeInTheDocument()
-    expect(screen.getByText('Algebra')).toBeInTheDocument()
-    expect(screen.getByText('Biology')).toBeInTheDocument()
+    const select = screen.getByTestId('resource-course-select')
+    expect(select).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Algebra' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Biology' })).toBeInTheDocument()
   })
 
-  it('calls onSubmit with courseIds for each selected course (multiselect)', async () => {
+  it('selecting a course from the dropdown shows it as a linked-course tag and removes it from the dropdown options', async () => {
+    render(
+      <ResourceForm
+        workspaceId="ws_001"
+        onSubmit={onSubmit}
+        courses={[{ id: 'subject_1', name: 'Algebra' }, { id: 'subject_2', name: 'Biology' }]}
+      />
+    )
+    await userEvent.selectOptions(screen.getByTestId('resource-course-select'), 'subject_1')
+
+    expect(screen.getByTestId('resource-course-tag-subject_1')).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Algebra' })).not.toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Biology' })).toBeInTheDocument()
+  })
+
+  it('calls onSubmit with courseIds for each course selected via the dropdown', async () => {
     render(
       <ResourceForm
         workspaceId="ws_001"
@@ -122,11 +137,28 @@ describe('ResourceForm', () => {
       />
     )
     await userEvent.type(screen.getByTestId('resource-title-input'), 'Saxon Math 7/6')
-    await userEvent.click(screen.getByTestId('resource-course-checkbox-subject_1'))
-    await userEvent.click(screen.getByTestId('resource-course-checkbox-subject_2'))
+    await userEvent.selectOptions(screen.getByTestId('resource-course-select'), 'subject_1')
+    await userEvent.selectOptions(screen.getByTestId('resource-course-select'), 'subject_2')
     fireEvent.submit(screen.getByTestId('resource-form'))
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ courseIds: ['subject_1', 'subject_2'] })
+    ))
+  })
+
+  it('removing a linked-course tag drops it from courseIds on submit', async () => {
+    render(
+      <ResourceForm
+        workspaceId="ws_001"
+        onSubmit={onSubmit}
+        courses={[{ id: 'subject_1', name: 'Algebra' }]}
+      />
+    )
+    await userEvent.type(screen.getByTestId('resource-title-input'), 'Saxon Math 7/6')
+    await userEvent.selectOptions(screen.getByTestId('resource-course-select'), 'subject_1')
+    await userEvent.click(screen.getByTestId('resource-course-tag-remove-subject_1'))
+    fireEvent.submit(screen.getByTestId('resource-form'))
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ courseIds: [] })
     ))
   })
 
@@ -311,7 +343,7 @@ describe('ResourcesPage', () => {
 
     await userEvent.click(screen.getByTestId('add-resource-button'))
     await userEvent.type(screen.getByTestId('resource-title-input'), 'Algebra Workbook')
-    await userEvent.click(screen.getByTestId('resource-course-checkbox-subject_1'))
+    await userEvent.selectOptions(screen.getByTestId('resource-course-select'), 'subject_1')
     fireEvent.submit(screen.getByTestId('resource-form'))
 
     await waitFor(() => expect(mockSubjectsApi.updateSubject).toHaveBeenCalledWith(
