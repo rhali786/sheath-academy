@@ -1,7 +1,7 @@
 {
   "plan": "docs/bug_enhancement/20260707-dashboard-three-zone-redesign-plan.json",
   "createdAt": "2026-07-07T00:00:00.000Z",
-  "updatedAt": "2026-07-07T01:40:00.000Z",
+  "updatedAt": "2026-07-07T02:30:00.000Z",
   "branch": "feat/dashboard-three-zone-redesign",
   "phases": [
     {
@@ -62,11 +62,24 @@
       "id": "P3",
       "title": "Gradebook overallMastery (composer-safe current grade)",
       "gated": false,
-      "status": "in_progress",
+      "status": "complete",
       "model": "standard",
       "startedAt": "2026-07-07T02:00:00.000Z",
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "completedAt": "2026-07-07T02:30:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/gradebook/types.ts",
+          "features/gradebook/server/repository.ts",
+          "features/gradebook/__tests__/server/overallMastery.test.ts"
+        ],
+        "testsRun": [
+          "npx jest features/gradebook/__tests__/server/overallMastery.test.ts (3 passed)",
+          "npm run build (passed)",
+          "npm test (238 suites passed, 24 skipped)",
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" (238 suites passed, 24 skipped)"
+        ],
+        "notes": "overallMastery = average of non-null subject masteryAverage values, rounded to 1 decimal place: Math.round((sum/count) * 10) / 10. Confirmed null (never 0) when a learner has no scored subjects — computed by filtering subjectResults to masteryAverage !== null before averaging; when that filtered list is empty overallMastery is set to null rather than defaulting to 0. Added as GradebookSummary.overallMastery?: number | null (optional) in features/gradebook/types.ts rather than required, specifically so out-of-scope fixture/test files (features/gradebook/__tests__/fixtures/mockGradebook.ts, features/alerts/__tests__/unit/alertRules.test.ts) that construct GradebookSummary object literals without the new field did not need to be touched — they remain valid under the optional field and were left untouched, staying strictly inside P3's fileScope. Computed in listGradebookSummaries in features/gradebook/server/repository.ts, reusing the already-computed per-subject masteryAverage (no extra DB query). Test file features/gradebook/__tests__/server/overallMastery.test.ts is a repository-level unit test that mocks getDb() directly (precedent: features/auth/__tests__/unit/passwordResetTokens.test.ts) rather than mocking at the repository boundary, since this test targets the repository function itself; it queues the 5 sequential Promise.all select() result sets (learners, subjects, scores, gradingScales, aggregationRules) and asserts overallMastery for: (1) two scored subjects averaging to 80, (2) a learner with zero scored subjects → null, (3) a learner with one scored (80) and one unscored (null) subject → 80, confirming the null subject is excluded rather than pulling the average down."
+      },
       "failureReason": null
     },
     {
