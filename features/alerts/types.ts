@@ -7,6 +7,8 @@ export type AlertSourceFeature =
   | 'quran'
   | 'records'
   | 'dashboard'
+  | 'gradebook'
+  | 'compliance'
 
 export interface Alert {
   id: string

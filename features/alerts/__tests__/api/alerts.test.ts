@@ -12,6 +12,9 @@ jest.mock('@/features/alerts/server/service', () => ({
 jest.mock('@/features/children/server/repository', () => ({ listAllLearners: jest.fn() }))
 jest.mock('@/features/plan/server/repository', () => ({ listLessonTaskRows: jest.fn() }))
 jest.mock('@/features/attendance/server/repository', () => ({ listAttendanceEvents: jest.fn() }))
+jest.mock('@/features/gradebook/server/repository', () => ({ listGradebookSummaries: jest.fn().mockResolvedValue([]) }))
+jest.mock('@/features/school-year/server/service', () => ({ getActiveSchoolYear: jest.fn().mockResolvedValue(null) }))
+jest.mock('@/features/compliance/server/repository', () => ({ listDeadlines: jest.fn().mockResolvedValue([]) }))
 
 import { GET } from '@/features/alerts/api/routes/alerts'
 import { getAlerts } from '@/features/alerts/server/service'

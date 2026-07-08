@@ -1,27 +1,45 @@
 {
   "plan": "docs/bug_enhancement/20260707-dashboard-three-zone-redesign-plan.json",
   "createdAt": "2026-07-07T00:00:00.000Z",
-  "updatedAt": "2026-07-07T00:00:00.000Z",
+  "updatedAt": "2026-07-07T00:30:00.000Z",
   "branch": "feat/dashboard-three-zone-redesign",
   "phases": [
     {
       "id": "P1",
       "title": "Household logo preset: schema + profile plumbing",
       "gated": false,
-      "status": "in_progress",
+      "status": "complete",
       "model": "strong",
       "startedAt": "2026-07-07T00:00:00.000Z",
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "completedAt": "2026-07-07T00:30:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "db/schema.ts",
+          "db/migrations/0032_amusing_snowbird.sql",
+          "db/migrations/meta/0032_snapshot.json",
+          "db/migrations/meta/_journal.json",
+          "features/lib/types.ts",
+          "features/household/server/repository.ts",
+          "features/household/api/routes/household-profile.ts",
+          "features/household/__tests__/api/household-profile.test.ts"
+        ],
+        "testsRun": [
+          "npx jest features/household/__tests__/api/household-profile.test.ts (6 passed)",
+          "npm run build (passed)",
+          "npm test (237 suites passed, 24 skipped)",
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" (237 suites passed, 24 skipped)"
+        ],
+        "notes": "Migration: db/migrations/0032_amusing_snowbird.sql — single pure column add `ALTER TABLE households ADD COLUMN logo_preset text;` (nullable, no FK/UNIQUE). Applied to dev DB 'sacad' on virginia-postgres (verified NON-prod). Invariant: db:generate reports 'No schema changes, nothing to migrate' after migrate. The 5 allowed logo preset keys are exported as LOGO_PRESET_KEYS in features/lib/types.ts: 'crescent', 'star', 'book', 'lantern', 'compass' (with LogoPresetKey type). P6 should import LOGO_PRESET_KEYS from '@/features/lib/types'. HouseholdProfile.logoPreset?: string added; GET maps row.logoPreset ?? undefined via profileFromRowAndSettings; PUT whitelist-validates logoPreset against LOGO_PRESET_KEYS (unknown key → HTTP 400) then persists via new repository.updateHouseholdLogoPreset(householdId, preset). Confirmed by tests: logoPreset round-trips through PUT→GET (returns 'crescent'), unknown keys rejected with 400 (repository not called), and GET returns logoPreset undefined when never set."
+      },
       "failureReason": null
     },
     {
       "id": "P2",
       "title": "Attention Hub: alerts type + getAlerts() cross-feature emitters",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
+      "status": "in_progress",
+      "model": "strong",
+      "startedAt": "2026-07-07T01:00:00.000Z",
       "completedAt": null,
       "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
       "failureReason": null

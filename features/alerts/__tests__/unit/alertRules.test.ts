@@ -12,13 +12,31 @@ jest.mock('@/features/attendance/server/repository', () => ({
   listAttendanceEvents: jest.fn(),
 }))
 
+jest.mock('@/features/gradebook/server/repository', () => ({
+  listGradebookSummaries: jest.fn(),
+}))
+
+jest.mock('@/features/school-year/server/service', () => ({
+  getActiveSchoolYear: jest.fn(),
+}))
+
+jest.mock('@/features/compliance/server/repository', () => ({
+  listDeadlines: jest.fn(),
+}))
+
 import { listAllLearners } from '@/features/children/server/repository'
 import { listLessonTaskRows } from '@/features/plan/server/repository'
 import { listAttendanceEvents } from '@/features/attendance/server/repository'
+import { listGradebookSummaries } from '@/features/gradebook/server/repository'
+import { getActiveSchoolYear } from '@/features/school-year/server/service'
+import { listDeadlines } from '@/features/compliance/server/repository'
 
 const mockListAllLearners = listAllLearners as jest.Mock
 const mockListLessonTaskRows = listLessonTaskRows as jest.Mock
 const mockListAttendanceEvents = listAttendanceEvents as jest.Mock
+const mockListGradebookSummaries = listGradebookSummaries as jest.Mock
+const mockGetActiveSchoolYear = getActiveSchoolYear as jest.Mock
+const mockListDeadlines = listDeadlines as jest.Mock
 
 const HOUSEHOLD_ID = 'hh_01'
 
@@ -106,10 +124,48 @@ function makeAttendance(learnerId: string) {
   }
 }
 
+function makeGradebookSummary(learnerId: string, learnerName: string, overrides = {}) {
+  return {
+    learnerId,
+    learnerName,
+    gradeBand: 'g5_8',
+    subjects: [
+      {
+        subjectId: 'subject_math',
+        label: 'Math',
+        pointsAverage: null,
+        masteryAverage: null,
+        gradeLetter: null,
+        creditHours: 1,
+        needsReview: false,
+      },
+    ],
+    gpa: { weighted: null, unweighted: null, totalCreditHours: 0 },
+    needsAttentionSubjects: [] as string[],
+    ...overrides,
+  }
+}
+
+function makeDeadline(overrides = {}) {
+  return {
+    id: 'deadline_01',
+    householdId: HOUSEHOLD_ID,
+    schoolYearId: 'sy_01',
+    label: 'File letter of intent',
+    dueDate: localDateStr(3),
+    isCompleted: false,
+    requirementType: 'notice',
+    ...overrides,
+  }
+}
+
 beforeEach(() => {
   mockListAllLearners.mockResolvedValue([activeAdam, activeKhadijah, archivedZayd])
   mockListLessonTaskRows.mockResolvedValue([])
   mockListAttendanceEvents.mockResolvedValue([])
+  mockListGradebookSummaries.mockResolvedValue([])
+  mockGetActiveSchoolYear.mockResolvedValue(null)
+  mockListDeadlines.mockResolvedValue([])
 })
 
 afterEach(() => {
@@ -294,5 +350,135 @@ describe('getAlerts - unit tests', () => {
     expect(attendanceAlert).toBeDefined()
     expect(attendanceAlert?.href).toBe(`/attendance?childId=${activeKhadijah.id}`)
     expect(attendanceAlert?.childId).toBe(activeKhadijah.id)
+  })
+})
+
+describe('getAlerts - gradebook emitters', () => {
+  beforeEach(() => {
+    // Silence attendance/lesson noise so gradebook alerts are isolated.
+    mockListAttendanceEvents.mockResolvedValue([
+      makeAttendance(activeAdam.id),
+      makeAttendance(activeKhadijah.id),
+    ])
+  })
+
+  test('emits a gradebook alert (sourceFeature "gradebook") for a learner with a needsAttention subject', async () => {
+    mockListGradebookSummaries.mockResolvedValue([
+      makeGradebookSummary(activeAdam.id, 'Adam', { needsAttentionSubjects: ['subject_math'] }),
+    ])
+
+    const alerts = await getAlerts(HOUSEHOLD_ID)
+    const gradebookAlert = alerts.find(a => a.sourceFeature === 'gradebook')
+    expect(gradebookAlert).toBeDefined()
+    expect(gradebookAlert?.childId).toBe(activeAdam.id)
+    expect(gradebookAlert?.href).toBe(`/growth/gradebook?childId=${activeAdam.id}`)
+    expect(gradebookAlert?.severity).toBe('medium')
+  })
+
+  test('emits no gradebook alert when there are no needsAttention flags', async () => {
+    mockListGradebookSummaries.mockResolvedValue([
+      makeGradebookSummary(activeAdam.id, 'Adam', { needsAttentionSubjects: [] }),
+    ])
+
+    const alerts = await getAlerts(HOUSEHOLD_ID)
+    expect(alerts.filter(a => a.sourceFeature === 'gradebook')).toHaveLength(0)
+  })
+
+  test('gradebook alerts respect the childId filter', async () => {
+    mockListGradebookSummaries.mockResolvedValue([
+      makeGradebookSummary(activeAdam.id, 'Adam', { needsAttentionSubjects: ['subject_math'] }),
+      makeGradebookSummary(activeKhadijah.id, 'Khadijah', { needsAttentionSubjects: ['subject_math'] }),
+    ])
+
+    const alerts = await getAlerts(HOUSEHOLD_ID, activeAdam.id)
+    const gradebookAlerts = alerts.filter(a => a.sourceFeature === 'gradebook')
+    expect(gradebookAlerts).toHaveLength(1)
+    expect(gradebookAlerts[0].childId).toBe(activeAdam.id)
+  })
+})
+
+describe('getAlerts - compliance emitters', () => {
+  beforeEach(() => {
+    mockListAttendanceEvents.mockResolvedValue([
+      makeAttendance(activeAdam.id),
+      makeAttendance(activeKhadijah.id),
+    ])
+  })
+
+  test('emits a compliance alert (sourceFeature "compliance") for a not-completed deadline within the due-soon window', async () => {
+    mockGetActiveSchoolYear.mockResolvedValue({ id: 'sy_01' })
+    mockListDeadlines.mockResolvedValue([makeDeadline({ dueDate: localDateStr(3), isCompleted: false })])
+
+    const alerts = await getAlerts(HOUSEHOLD_ID)
+    const complianceAlert = alerts.find(a => a.sourceFeature === 'compliance')
+    expect(complianceAlert).toBeDefined()
+    expect(complianceAlert?.href).toBe('/compliance')
+    expect(complianceAlert?.childId).toBeNull()
+    expect(mockListDeadlines).toHaveBeenCalledWith(HOUSEHOLD_ID, 'sy_01')
+  })
+
+  test('emits no compliance alert when the deadline is completed', async () => {
+    mockGetActiveSchoolYear.mockResolvedValue({ id: 'sy_01' })
+    mockListDeadlines.mockResolvedValue([makeDeadline({ dueDate: localDateStr(3), isCompleted: true })])
+
+    const alerts = await getAlerts(HOUSEHOLD_ID)
+    expect(alerts.filter(a => a.sourceFeature === 'compliance')).toHaveLength(0)
+  })
+
+  test('emits no compliance alert when the deadline is far out of the due-soon window', async () => {
+    mockGetActiveSchoolYear.mockResolvedValue({ id: 'sy_01' })
+    mockListDeadlines.mockResolvedValue([makeDeadline({ dueDate: localDateStr(60), isCompleted: false })])
+
+    const alerts = await getAlerts(HOUSEHOLD_ID)
+    expect(alerts.filter(a => a.sourceFeature === 'compliance')).toHaveLength(0)
+  })
+
+  test('emits no compliance alert when there is no active school year', async () => {
+    mockGetActiveSchoolYear.mockResolvedValue(null)
+    mockListDeadlines.mockResolvedValue([makeDeadline({ dueDate: localDateStr(3), isCompleted: false })])
+
+    const alerts = await getAlerts(HOUSEHOLD_ID)
+    expect(alerts.filter(a => a.sourceFeature === 'compliance')).toHaveLength(0)
+    expect(mockListDeadlines).not.toHaveBeenCalled()
+  })
+})
+
+describe('getAlerts - schedule imbalance', () => {
+  beforeEach(() => {
+    mockListAttendanceEvents.mockResolvedValue([
+      makeAttendance(activeAdam.id),
+      makeAttendance(activeKhadijah.id),
+    ])
+  })
+
+  test('emits a schedule-imbalance alert when a subject is scheduled >=2x on today for a learner', async () => {
+    mockListLessonTaskRows.mockImplementation(async (_householdId: string, filters: { learnerId?: string }) =>
+      filters.learnerId === activeAdam.id
+        ? [
+            makeLesson(activeAdam.id, { id: 'l1', subjectId: 'subject_math', dueDate: TODAY, status: 'completed' }),
+            makeLesson(activeAdam.id, { id: 'l2', subjectId: 'subject_math', dueDate: TODAY, status: 'completed' }),
+          ]
+        : []
+    )
+
+    const alerts = await getAlerts(HOUSEHOLD_ID)
+    const imbalance = alerts.find(a => a.type === 'schedule_imbalance')
+    expect(imbalance).toBeDefined()
+    expect(imbalance?.childId).toBe(activeAdam.id)
+    expect(imbalance?.sourceFeature).toBe('planner')
+  })
+
+  test('emits no schedule-imbalance alert when no subject is doubled today', async () => {
+    mockListLessonTaskRows.mockImplementation(async (_householdId: string, filters: { learnerId?: string }) =>
+      filters.learnerId === activeAdam.id
+        ? [
+            makeLesson(activeAdam.id, { id: 'l1', subjectId: 'subject_math', dueDate: TODAY, status: 'completed' }),
+            makeLesson(activeAdam.id, { id: 'l2', subjectId: 'subject_reading', dueDate: TODAY, status: 'completed' }),
+          ]
+        : []
+    )
+
+    const alerts = await getAlerts(HOUSEHOLD_ID)
+    expect(alerts.filter(a => a.type === 'schedule_imbalance')).toHaveLength(0)
   })
 })

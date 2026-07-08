@@ -2,8 +2,27 @@ import type { Alert } from '@/features/alerts/types'
 import { listAttendanceEvents } from '@/features/attendance/server/repository'
 import { listAllLearners } from '@/features/children/server/repository'
 import { listLessonTaskRows } from '@/features/plan/server/repository'
+import { listGradebookSummaries } from '@/features/gradebook/server/repository'
+import { getActiveSchoolYear } from '@/features/school-year/server/service'
+import { listDeadlines } from '@/features/compliance/server/repository'
 import { tryGetRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { getHouseholdLocalDate } from '@/features/lib/server/date'
+
+/**
+ * How many days ahead a not-completed compliance deadline is considered
+ * "due soon" and surfaced as an Attention Hub alert. Anything further out is
+ * omitted; anything not-completed on or before this horizon (including overdue)
+ * is surfaced.
+ */
+const COMPLIANCE_DUE_SOON_DAYS = 14
+
+/** Adds `days` to a yyyy-mm-dd string in UTC (tz-agnostic calendar math). */
+function addDaysIso(iso: string, days: number): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  dt.setUTCDate(dt.getUTCDate() + days)
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`
+}
 
 /**
  * "Today" for alert purposes, computed in the HOUSEHOLD timezone — not the
@@ -33,17 +52,21 @@ export async function getAlerts(householdId: string, childId?: string): Promise<
   const targetChildren = childId ? activeChildren.filter(c => c.id === childId) : activeChildren
   const now = new Date().toISOString()
 
-  // Fetch attendance and all per-child lesson batches in parallel
-  const [todayAttendance, lessonsByChild] = await Promise.all([
+  // Fetch attendance, all per-child lesson batches, gradebook summaries, and the
+  // active school year in parallel.
+  const [todayAttendance, lessonsByChild, gradebookSummaries, activeSchoolYear] = await Promise.all([
     listAttendanceEvents(householdId, { date: today }),
     Promise.all(
       targetChildren.map(child =>
         listLessonTaskRows(householdId, { learnerId: child.id, endDate: today })
       )
     ),
+    listGradebookSummaries(householdId),
+    getActiveSchoolYear(householdId),
   ])
 
   const alerts: Alert[] = []
+  const targetChildIds = new Set(targetChildren.map(c => c.id))
 
   targetChildren.forEach((child, i) => {
     const lessons = lessonsByChild[i]
@@ -71,7 +94,82 @@ export async function getAlerts(householdId: string, childId?: string): Promise<
         createdAt: now,
       })
     }
+
+    // Schedule imbalance: a subject scheduled >=2x on today for one learner.
+    const todaysCountBySubject = new Map<string, number>()
+    for (const lesson of lessons) {
+      if (lesson.dueDate === today && lesson.subjectId) {
+        todaysCountBySubject.set(lesson.subjectId, (todaysCountBySubject.get(lesson.subjectId) ?? 0) + 1)
+      }
+    }
+    for (const [subjectId, count] of todaysCountBySubject) {
+      if (count >= 2) {
+        alerts.push({
+          id: `schedule_imbalance_${child.id}_${subjectId}`,
+          childId: child.id,
+          childName: child.name,
+          href: `/lessons?childId=${child.id}`,
+          date: today,
+          type: 'schedule_imbalance',
+          status: 'open',
+          severity: 'low',
+          title: 'Course scheduled multiple times today',
+          message: `${count} lessons for one course are scheduled today`,
+          sourceFeature: 'planner',
+          sourceId: subjectId,
+          createdAt: now,
+        })
+      }
+    }
   })
+
+  // Gradebook: one alert per subject flagged as needing attention for a target learner.
+  for (const summary of gradebookSummaries) {
+    if (!targetChildIds.has(summary.learnerId)) continue
+    for (const subjectId of summary.needsAttentionSubjects) {
+      const label = summary.subjects.find(s => s.subjectId === subjectId)?.label ?? 'A course'
+      alerts.push({
+        id: `gradebook_attention_${summary.learnerId}_${subjectId}`,
+        childId: summary.learnerId,
+        childName: summary.learnerName,
+        href: `/growth/gradebook?childId=${summary.learnerId}`,
+        date: today,
+        type: 'gradebook_needs_attention',
+        status: 'open',
+        severity: 'medium',
+        title: `${label} needs attention`,
+        message: `${label} needs review or has no recent scores`,
+        sourceFeature: 'gradebook',
+        sourceId: subjectId,
+        createdAt: now,
+      })
+    }
+  }
+
+  // Compliance: household-scoped deadlines due within the due-soon window. Only
+  // surfaced on the unfiltered (household) view, mirroring the attendance alert.
+  if (!childId && activeSchoolYear) {
+    const dueSoonHorizon = addDaysIso(today, COMPLIANCE_DUE_SOON_DAYS)
+    const deadlines = await listDeadlines(householdId, activeSchoolYear.id)
+    for (const deadline of deadlines) {
+      if (deadline.isCompleted) continue
+      if (deadline.dueDate > dueSoonHorizon) continue
+      alerts.push({
+        id: `compliance_deadline_${deadline.id}`,
+        childId: null,
+        href: '/compliance',
+        date: deadline.dueDate,
+        type: 'compliance_deadline',
+        status: 'open',
+        severity: 'medium',
+        title: 'Compliance deadline approaching',
+        message: `${deadline.label} is due ${deadline.dueDate}`,
+        sourceFeature: 'compliance',
+        sourceId: deadline.id,
+        createdAt: now,
+      })
+    }
+  }
 
   const childIdsWithAttendance = new Set(todayAttendance.map(r => r.learnerId))
 
