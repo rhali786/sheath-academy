@@ -1,7 +1,7 @@
 {
   "plan": "docs/bug_enhancement/20260707-dashboard-three-zone-redesign-plan.json",
   "createdAt": "2026-07-07T00:00:00.000Z",
-  "updatedAt": "2026-07-08T02:26:30.332Z",
+  "updatedAt": "2026-07-08T03:40:00.000Z",
   "branch": "feat/dashboard-three-zone-redesign",
   "phases": [
     {
@@ -109,14 +109,23 @@
       "id": "P5",
       "title": "Zone B per-learner command center",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-08T03:00:00.000Z",
+      "completedAt": "2026-07-08T03:40:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/dashboard/front/components/LearnerCommandRow.tsx",
+          "features/dashboard/front/components/LearnerCommandCenter.tsx",
+          "features/dashboard/__tests__/integration/LearnerCommandCenter.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/dashboard/__tests__/integration/LearnerCommandCenter.test.tsx (6 passed)",
+          "npm run build (passed)",
+          "npm test (240 suites passed, 24 skipped, 2094 tests passed)",
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" (240 suites passed, 24 skipped, 2094 tests passed)"
+        ],
+        "notes": "LearnerCommandCenter is a self-fetching container (pattern: ComplianceStatusCard) using useHousehold().studentProfiles (already active-only via childrenApi.getAllChildren(false)) filtered defensively by isActive, and useLearner().setSelectedChildId for the row-click filter -- it does NOT use DashboardContext, so it can be mounted independently of DashboardProvider's heavier alerts/quran/records fetch. Row click calls setSelectedChildId(childId) directly (LearnerContext, sessionStorage-backed) -- no new page, no DashboardContext dependency. ATTENDANCE %: derived per learner from attendanceApi.getSummary(childId, weekStart, weekEnd) (current Mon-Sun week, same range helper as WeekAttendanceCard) as Math.round(byStatus.present / totalRecorded * 100); renders '—' when totalRecorded === 0 (never divides by zero / shows a fake 0%). TODAY'S LESSONS X/Y: plannerApi.getLessons(undefined, [childId], undefined, today, today) -> lessonsCompleted = count where status==='completed', lessonsTotal = lessons.length; renders '—' (not '0/0') when lessonsTotal === 0, since zero lessons due today is 'no data' for this metric, not a real 0-of-0 count. CURRENT GRADE: single shared gradebookApi.getSummaries('') call (NOT per child) matched to each learner by learnerId, reads GradebookSummary.overallMastery (added in P3; optional/nullable) directly -- renders '—' when null, never averages client-side. FETCH COUNT: 1 shared gradebookApi.getSummaries call total, plus attendanceApi.getSummary + plannerApi.getLessons PER active learner (2 fetches x N learners) -- so total fetches = 1 + 2N, all issued together in one Promise.all per load. Loading/empty/error states: loading shows data-testid='learner-command-center-loading' (skeleton, mirrors householdLoading OR the internal per-learner fetch); empty (zero active learners) shows data-testid='learner-command-center-empty'; any rejected fetch in the Promise.all shows data-testid='learner-command-center-error'; populated root is data-testid='learner-command-center' with per-row data-testid='learner-command-row-<childId>' (click target) and '-attendance'/'-lessons'/'-grade' sub-testids. Test file resets sessionStorage in beforeEach per the CLAUDE.md LearnerContext leakage gotcha. P7 (dashboard re-shell) should mount <LearnerCommandCenter /> with no props directly in Zone B."
       },
       "failureReason": null
     },
@@ -124,9 +133,9 @@
       "id": "P6",
       "title": "Household logo presets: UI (picker + render)",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
+      "status": "in_progress",
+      "model": "standard",
+      "startedAt": "2026-07-08T04:00:00.000Z",
       "completedAt": null,
       "outputs": {
         "filesChanged": [],

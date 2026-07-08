@@ -9,6 +9,7 @@ import { SetupCard_Subjects } from './SetupCard_Subjects'
 import { SetupCard_Lessons } from './SetupCard_Lessons'
 import { SheathLogo } from '@/features/layout/front/components/SheathLogo'
 import { SetupCard_Portfolio } from './SetupCard_Portfolio'
+import { HouseholdLogoPicker } from './HouseholdLogoPicker'
 
 interface SetupStatus {
   hasSchoolYear: boolean
@@ -126,6 +127,12 @@ export function HouseholdSetup({ onComplete }: HouseholdSetupProps = {}) {
             <p className="text-sm text-slate-500 mt-1">
               A few more steps to get your dashboard ready.
             </p>
+            <div className="mt-4">
+              <HouseholdLogoPicker
+                value={householdProfile?.logoPreset}
+                onSaved={() => refetch()}
+              />
+            </div>
           </div>
 
           {checkingStatus && !setupStatus ? (

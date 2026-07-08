@@ -1,11 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useContext, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { householdApi } from '../services/api'
+import { HouseholdContext } from '../context'
+import { LogoMark } from './logoPresets'
 
 export function HouseholdSwitcher() {
   const { data: session, update } = useSession()
+  // Read the context directly (rather than the throwing useHousehold() hook) so this
+  // component degrades gracefully — showing the default mark — if ever rendered outside
+  // a HouseholdProvider, instead of crashing the whole header.
+  const householdCtx = useContext(HouseholdContext)
+  const logoPreset = householdCtx?.householdProfile?.logoPreset
   const [open, setOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
 
@@ -40,6 +47,15 @@ export function HouseholdSwitcher() {
         disabled={switching}
         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
       >
+        <span
+          data-testid="household-switcher-logo-mark-wrap"
+          className="w-5 h-5 rounded-full border border-slate-200 bg-white flex items-center justify-center shrink-0"
+        >
+          <LogoMark
+            preset={logoPreset}
+            className="w-3.5 h-3.5 text-forest-700"
+          />
+        </span>
         <span className="max-w-[120px] truncate">{displayName}</span>
         <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />

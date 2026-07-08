@@ -5,6 +5,7 @@ import type { HouseholdProfile, DayOfWeek, DayLoadPreference, DateDisplayPrefere
 import { householdApi } from '../services/api'
 import { useHousehold } from '../context'
 import { IslamicRemindersSection } from '@/features/settings/front/components/IslamicRemindersSection'
+import { HouseholdLogoPicker } from './HouseholdLogoPicker'
 
 const DAYS_OF_WEEK: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const DAY_LOADS: DayLoadPreference[] = ['Off', 'Light', 'Normal', 'Heavy']
@@ -129,6 +130,17 @@ export function HouseholdSettings() {
             className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900"
             maxLength={120}
           />
+        </div>
+      </section>
+
+      {/* Household mark */}
+      <section>
+        <h3 className="text-sm font-semibold text-slate-900 mb-1">Household mark</h3>
+        <p className="text-xs text-slate-500 mb-3">
+          The icon shown for your household when switching between households.
+        </p>
+        <div className="bg-white rounded-xl border border-slate-200 p-4 max-w-md">
+          <HouseholdLogoPicker value={householdProfile?.logoPreset} />
         </div>
       </section>
 
