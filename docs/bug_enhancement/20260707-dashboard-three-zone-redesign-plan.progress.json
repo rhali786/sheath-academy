@@ -1,7 +1,7 @@
 {
   "plan": "docs/bug_enhancement/20260707-dashboard-three-zone-redesign-plan.json",
   "createdAt": "2026-07-07T00:00:00.000Z",
-  "updatedAt": "2026-07-07T02:30:00.000Z",
+  "updatedAt": "2026-07-08T02:26:30.332Z",
   "branch": "feat/dashboard-three-zone-redesign",
   "phases": [
     {
@@ -86,11 +86,23 @@
       "id": "P4",
       "title": "Compliance status card (Zone C)",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-08T02:21:09.932Z",
+      "completedAt": "2026-07-08T02:26:30.331Z",
+      "outputs": {
+        "filesChanged": [
+          "features/dashboard/front/components/ComplianceStatusCard.tsx",
+          "features/dashboard/__tests__/integration/ComplianceStatusCard.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/dashboard/__tests__/integration/ComplianceStatusCard.test.tsx (7 passed)",
+          "npm run build (passed)",
+          "npm test (239 suites passed, 24 skipped, 2088 tests passed)",
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" (239 suites passed, 24 skipped, 2088 tests passed)"
+        ],
+        "notes": "ComplianceStatusCard is a self-fetching card (pattern: SchoolYearProgressCard) with no props and no context dependency, mounted directly in Zone C by a later phase. On mount it calls complianceApi.getActiveSchoolYearId(); when it resolves null (no active school year) the card renders the EMPTY STATE with heading text exactly \"Set up compliance\" plus one line of body copy (\"Configure a school year to track your homeschool compliance status.\") and does NOT call getStatus/getDeadlines. When an id resolves, it calls complianceApi.getStatus('', schoolYearId) and complianceApi.getDeadlines('', schoolYearId) in parallel (householdId arg is unused by the API client, matching complianceApi's existing _householdId-ignored signature) and renders: status icon/label (green=\"On track\", yellow=\"Needs attention\", red=\"Action required\", same color/label convention as CompliancePage.tsx StatusHero) plus all of StatusEngineResult.reasons, and a \"Next deadline\" section. NEXT DEADLINE SELECTION: filter deadlines to isCompleted === false, then sort by dueDate ascending (string compare on ISO yyyy-mm-dd) and take the first -- i.e. the earliest not-completed deadline; completed deadlines are always excluded even if their dueDate is earlier. When no pending deadlines exist the section reads \"No upcoming deadlines\". Loading state renders a data-testid=\"compliance-status-card-loading\" skeleton (animate-pulse bars, same shape as PersonalTodoList/SchoolYearProgressCard skeletons); fetch error (any rejected promise in the getActiveSchoolYearId chain) renders data-testid=\"compliance-status-card-error\" with copy \"Couldn't load compliance status.\" and a Retry button that re-invokes the same load() function. Populated state root has data-testid=\"compliance-status-card\". P7 (dashboard re-shell) should import { ComplianceStatusCard } from \"@/features/dashboard/front/components/ComplianceStatusCard\" and mount it directly in Zone C with no props."
+      },
       "failureReason": null
     },
     {
@@ -101,7 +113,11 @@
       "model": null,
       "startedAt": null,
       "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
       "failureReason": null
     },
     {
@@ -112,7 +128,11 @@
       "model": null,
       "startedAt": null,
       "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
       "failureReason": null
     },
     {
@@ -123,7 +143,11 @@
       "model": null,
       "startedAt": null,
       "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
       "failureReason": null
     },
     {
@@ -134,7 +158,11 @@
       "model": null,
       "startedAt": null,
       "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
       "failureReason": null
     }
   ]
