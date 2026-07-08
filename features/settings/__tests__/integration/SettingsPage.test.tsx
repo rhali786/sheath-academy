@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import React from 'react'
 import { SettingsPage, parseSettingsTab } from '@/features/settings/front/pages/SettingsPage'
@@ -220,8 +220,9 @@ describe('SettingsPage', () => {
     await waitFor(() => {
       expect(screen.getByTestId('settings-panel-school-year')).toBeInTheDocument()
     })
-    expect(await screen.findByText(/Active school year/i)).toBeInTheDocument()
-    expect(screen.getByText(/2025–2026/)).toBeInTheDocument()
+    const activeYearHeading = await screen.findByText(/Active school year/i)
+    expect(activeYearHeading).toBeInTheDocument()
+    expect(within(activeYearHeading.closest('div')!).getByText(/2025–2026/)).toBeInTheDocument()
   })
 
   it('school year tab renders rollover entry point when active year and a target year exist', async () => {
