@@ -274,6 +274,17 @@ export async function listGradebookSummaries(householdId: string): Promise<Grade
       .filter(r => r.needsReview || r.pointsAverage === null)
       .map(r => r.subjectId)
 
+    // Composer-safe "current grade": average of non-null subject masteryAverage
+    // values only — never averages in a 0 for unscored subjects. Null (not 0)
+    // when the learner has no scored subjects at all.
+    const masteryValues = subjectResults
+      .map(r => r.masteryAverage)
+      .filter((v): v is number => v !== null)
+    const overallMastery =
+      masteryValues.length > 0
+        ? Math.round((masteryValues.reduce((sum, v) => sum + v, 0) / masteryValues.length) * 10) / 10
+        : null
+
     return {
       learnerId: learner.id,
       learnerName: learner.name,
@@ -281,6 +292,7 @@ export async function listGradebookSummaries(householdId: string): Promise<Grade
       subjects: subjectResults,
       gpa,
       needsAttentionSubjects,
+      overallMastery,
     }
   })
 }

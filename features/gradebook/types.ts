@@ -62,6 +62,13 @@ export interface GradebookSummary {
   subjects: SubjectGradeResult[]
   gpa: GpaResult
   needsAttentionSubjects: string[]
+  /**
+   * Composer-safe "current grade": average of non-null subject `masteryAverage`
+   * values, rounded to 1 decimal place. Null when the learner has no scored
+   * subjects — never coerced to 0. Optional so existing literal fixtures that
+   * predate this field remain valid.
+   */
+  overallMastery?: number | null
 }
 
 export interface NeedsAttentionItem {

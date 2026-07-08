@@ -1,7 +1,7 @@
 {
   "plan": "docs/bug_enhancement/20260707-dashboard-three-zone-redesign-plan.json",
   "createdAt": "2026-07-07T00:00:00.000Z",
-  "updatedAt": "2026-07-07T00:30:00.000Z",
+  "updatedAt": "2026-07-07T01:40:00.000Z",
   "branch": "feat/dashboard-three-zone-redesign",
   "phases": [
     {
@@ -37,20 +37,34 @@
       "id": "P2",
       "title": "Attention Hub: alerts type + getAlerts() cross-feature emitters",
       "gated": false,
-      "status": "in_progress",
+      "status": "complete",
       "model": "strong",
       "startedAt": "2026-07-07T01:00:00.000Z",
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "completedAt": "2026-07-07T01:40:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/alerts/types.ts",
+          "features/alerts/server/service.ts",
+          "features/alerts/__tests__/unit/alertRules.test.ts",
+          "features/alerts/__tests__/api/alerts.test.ts"
+        ],
+        "testsRun": [
+          "npx jest features/alerts/__tests__ (2 suites, 31 passed)",
+          "npm run build (passed)",
+          "npm test (237 suites passed, 24 skipped, 2078 tests passed)",
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" (237 suites passed, 24 skipped, 2078 tests passed)"
+        ],
+        "notes": "AlertSourceFeature extended in features/alerts/types.ts with two new values: 'gradebook' and 'compliance' (Alert shape unchanged). getAlerts() in features/alerts/server/service.ts now emits three new alert kinds in addition to the UNCHANGED existing planner (pending_lessons) and attendance (attendance_missing) alerts — both of those were left exactly as-is and their tests still pass. New emitters: (1) GRADEBOOK — reads listGradebookSummaries(householdId) [from @/features/gradebook/server/repository], added to the top-level Promise.all; emits one alert per subjectId in a target learner's summary.needsAttentionSubjects (type 'gradebook_needs_attention', severity 'medium', sourceFeature 'gradebook', childId=learnerId, href '/growth/gradebook?childId=<learnerId>'); respects the childId filter via targetChildIds set. (2) COMPLIANCE — getActiveSchoolYear(householdId) [from @/features/school-year/server/service] fetched in the Promise.all; when present AND when no childId filter is active (household-scoped, mirrors the attendance household alert), awaits listDeadlines(householdId, schoolYear.id) [from @/features/compliance/server/repository] and emits one alert per not-completed deadline whose dueDate <= today+DUE_SOON window (type 'compliance_deadline', severity 'medium', sourceFeature 'compliance', childId=null, href '/compliance'). DUE-SOON WINDOW VALUE = 14 days (const COMPLIANCE_DUE_SOON_DAYS = 14 in service.ts); condition is `deadline.dueDate <= addDaysIso(today, 14)` so overdue not-completed deadlines are also surfaced, far-out ones are excluded. addDaysIso() does UTC yyyy-mm-dd calendar math. (3) SCHEDULE IMBALANCE — computed inside the existing per-child loop from the already-fetched lessons: counts lessons with dueDate===today grouped by subjectId, emits when any subject count >=2 (type 'schedule_imbalance', severity 'low', sourceFeature 'planner', childId=child.id, href '/lessons?childId=<id>'). IMPORTANT for future phases: getAlerts now depends on gradebook repo, school-year service, and compliance repo — any test that exercises the REAL service (jest.requireActual) must mock @/features/gradebook/server/repository (listGradebookSummaries), @/features/school-year/server/service (getActiveSchoolYear), and @/features/compliance/server/repository (listDeadlines), or it will hit getDb() and throw. Both alerts test files were updated with those mocks (defaults: [] / null / [])."
+      },
       "failureReason": null
     },
     {
       "id": "P3",
       "title": "Gradebook overallMastery (composer-safe current grade)",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
+      "status": "in_progress",
+      "model": "standard",
+      "startedAt": "2026-07-07T02:00:00.000Z",
       "completedAt": null,
       "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
       "failureReason": null
