@@ -117,10 +117,15 @@ export type DayOfWeek = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Frida
 export type DayLoadPreference = 'Off' | 'Light' | 'Normal' | 'Heavy'
 export type DateDisplayPreference = 'gregorian' | 'gregorian-hijri-en' | 'bilingual'
 
+/** Allowed household logo preset keys. New households cycle through these. */
+export const LOGO_PRESET_KEYS = ['crescent', 'star', 'book', 'lantern', 'compass'] as const
+export type LogoPresetKey = (typeof LOGO_PRESET_KEYS)[number]
+
 export interface HouseholdProfile {
   id: string
   workspaceId: string
   familyName: string
+  logoPreset?: string
   weekStartDay?: DayOfWeek
   schoolDays?: DayOfWeek[]
   dayLoad?: Partial<Record<DayOfWeek, DayLoadPreference>>

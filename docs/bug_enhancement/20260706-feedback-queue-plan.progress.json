@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "plan": "docs/bug_enhancement/20260706-feedback-queue-plan.json",
+  "branch": "feat/feedback-queue-jul06",
+  "updatedAt": "2026-07-07T03:45:34Z",
+  "status": "complete",
+  "reconciledFromGit": true,
+  "note": "Timestamps reconciled from real git committer times on 2026-07-07T03:45:34Z. Prior tracker values were partly fabricated (1.1.startedAt=22:45:00 predated the base commit; task-3 had mixed Z/-04:00 offsets and a null startedAt). Each completedAt equals the commit time; each startedAt is derived from the prior commit's completedAt; 1.1 is bounded by base commit f14899e (2026-07-06T23:04:51-04:00).",
+  "phases": [
+    {
+      "id": "task-1-bugs",
+      "status": "complete",
+      "startedAt": "2026-07-06T23:04:51-04:00",
+      "completedAt": "2026-07-06T23:20:13-04:00",
+      "commits": [
+        { "id": "1.1", "status": "complete", "commitSha": "8428116423e9ca38cbd7853eb4a80c243dc57ddc", "startedAt": "2026-07-06T23:04:51-04:00", "completedAt": "2026-07-06T23:16:13-04:00" },
+        { "id": "1.2", "status": "complete", "commitSha": "76bda5adb6849b43311afabc8133f95292848441", "startedAt": "2026-07-06T23:16:13-04:00", "completedAt": "2026-07-06T23:20:13-04:00" }
+      ]
+    },
+    {
+      "id": "task-2-ux",
+      "status": "complete",
+      "startedAt": "2026-07-06T23:20:13-04:00",
+      "completedAt": "2026-07-06T23:31:38-04:00",
+      "commits": [
+        { "id": "2.1", "status": "complete", "commitSha": "ffc7d87fcd02b33545b17eb19d27732155e6ac19", "startedAt": "2026-07-06T23:20:13-04:00", "completedAt": "2026-07-06T23:28:17-04:00" },
+        { "id": "2.2", "status": "complete", "commitSha": "295f610d83597747033789b6c6420f076d44fba5", "startedAt": "2026-07-06T23:28:17-04:00", "completedAt": "2026-07-06T23:29:57-04:00" },
+        { "id": "2.3", "status": "complete", "commitSha": "28c2266bdadddb308b7ab5f3ffda12b090a38bb6", "startedAt": "2026-07-06T23:29:57-04:00", "completedAt": "2026-07-06T23:31:38-04:00" }
+      ]
+    },
+    {
+      "id": "task-3-resources",
+      "status": "complete",
+      "startedAt": "2026-07-06T23:31:38-04:00",
+      "completedAt": "2026-07-06T23:40:19-04:00",
+      "commitOrderNote": "Committed out of plan-id order; real chronological order was 3.1 -> 3.3 -> 3.2 -> 3.4.",
+      "commits": [
+        { "id": "3.1", "status": "complete", "commitSha": "457ccadfd815a9ccbe28cfe1f01395c01b9e5c68", "startedAt": "2026-07-06T23:31:38-04:00", "completedAt": "2026-07-06T23:36:03-04:00" },
+        { "id": "3.2", "status": "complete", "commitSha": "4407772eff5f9eb8fee4bed15008b7943e8a026d", "startedAt": "2026-07-06T23:37:46-04:00", "completedAt": "2026-07-06T23:38:56-04:00" },
+        { "id": "3.3", "status": "complete", "commitSha": "51291ef4f95b7d8dea2961980f8680d315fde33a", "startedAt": "2026-07-06T23:36:03-04:00", "completedAt": "2026-07-06T23:37:46-04:00" },
+        { "id": "3.4", "status": "complete", "commitSha": "ee04ff6641af657e0665abfd34d3ada7ac548d7b", "startedAt": "2026-07-06T23:38:56-04:00", "completedAt": "2026-07-06T23:40:19-04:00" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "plan": "docs/bug_enhancement/20260707-feedback-bigger-features-plan.json",
+  "branch": "feat/feedback-bigger-features",
+  "updatedAt": "2026-07-07T03:45:34Z",
+  "status": "not_started",
+  "suggestedOrder": ["feature-b-breaks", "feature-b2-auto-reschedule", "feature-a-reminders", "feature-a2-gmail-sync"],
+  "phases": [
+    {
+      "id": "feature-b-breaks",
+      "status": "pending",
+      "startedAt": null,
+      "completedAt": null,
+      "commits": [
+        { "id": "B1", "status": "pending", "commitSha": null, "startedAt": null, "completedAt": null },
+        { "id": "B2", "status": "pending", "commitSha": null, "startedAt": null, "completedAt": null }
+      ]
+    },
+    {
+      "id": "feature-b2-auto-reschedule",
+      "status": "pending",
+      "blockedByHumanPrereq": "confirm conflict policy default",
+      "startedAt": null,
+      "completedAt": null,
+      "commits": [
+        { "id": "D1", "status": "pending", "commitSha": null, "startedAt": null, "completedAt": null },
+        { "id": "D2", "status": "pending", "commitSha": null, "startedAt": null, "completedAt": null },
+        { "id": "D3", "status": "pending", "commitSha": null, "startedAt": null, "completedAt": null },
+        { "id": "D4", "status": "pending", "commitSha": null, "startedAt": null, "completedAt": null }
+      ]
+    },
+    {
+      "id": "feature-a-reminders",
+      "status": "pending",
+      "startedAt": null,
+      "completedAt": null,
+      "commits": [
+        { "id": "A1", "status": "pending", "commitSha": null, "startedAt": null, "completedAt": null },
+        { "id": "A2", "status": "pending", "commitSha": null, "startedAt": null, "completedAt": null },
+        { "id": "A3", "status": "pending", "commitSha": null, "startedAt": null, "completedAt": null },
+        { "id": "A4", "status": "pending", "commitSha": null, "startedAt": null, "completedAt": null },
+        { "id": "A5", "status": "pending", "commitSha": null, "startedAt": null, "completedAt": null }
+      ]
+    },
+    {
+      "id": "feature-a2-gmail-sync",
+      "status": "pending",
+      "blockedByHumanPrereq": "Google Cloud project + OAuth client + Calendar API + GOOGLE_CLIENT_ID/SECRET + sync direction",
+      "startedAt": null,
+      "completedAt": null,
+      "commits": [
+        { "id": "C1", "status": "pending", "commitSha": null, "startedAt": null, "completedAt": null },
+        { "id": "C2", "status": "pending", "commitSha": null, "startedAt": null, "completedAt": null },
+        { "id": "C3", "status": "pending", "commitSha": null, "startedAt": null, "completedAt": null },
+        { "id": "C4", "status": "pending", "commitSha": null, "startedAt": null, "completedAt": null }
+      ]
+    }
+  ]
+}

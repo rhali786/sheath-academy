@@ -134,6 +134,20 @@ export async function updateHouseholdTimezone(
   return result[0] ?? null
 }
 
+/** Sets the household's logo preset key. Pass null to clear it. */
+export async function updateHouseholdLogoPreset(
+  householdId: string,
+  logoPreset: string | null,
+): Promise<HouseholdRow | null> {
+  const db = getDb()
+  const result = await db
+    .update(households)
+    .set({ logoPreset, updatedAt: new Date() })
+    .where(eq(households.id, householdId))
+    .returning()
+  return result[0] ?? null
+}
+
 // ─── Membership functions ─────────────────────────────────────────────────────
 
 /** Adds a user to a household with the given role. Idempotent — no-op if already a member. */

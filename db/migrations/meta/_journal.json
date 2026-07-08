@@ -225,6 +225,13 @@
       "when": 1782796454524,
       "tag": "0031_closed_wolverine",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1783474968333,
+      "tag": "0032_amusing_snowbird",
+      "breakpoints": true
     }
   ]
 }

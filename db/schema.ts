@@ -85,6 +85,8 @@ export const households = pgTable('households', {
   userId: text('user_id').notNull().references(() => users.id),
   name: text('name').notNull(),
   timezone: text('timezone').notNull().default('America/New_York'),
+  // Nullable preset key for the household's brand mark (see LOGO_PRESET_KEYS).
+  logoPreset: text('logo_preset'),
   setupCompletedAt: timestamp('setup_completed_at'),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),

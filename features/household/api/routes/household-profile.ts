@@ -1,7 +1,8 @@
 import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse, HouseholdProfile, DayOfWeek, DayLoadPreference, DateDisplayPreference } from '@/features/lib/types'
-import { updateHouseholdName, updateHouseholdTimezone } from '@/features/household/server/repository'
+import { LOGO_PRESET_KEYS } from '@/features/lib/types'
+import { updateHouseholdName, updateHouseholdTimezone, updateHouseholdLogoPreset } from '@/features/household/server/repository'
 import {
   getAllHouseholdSettings,
   setHouseholdSetting,
@@ -21,6 +22,7 @@ function profileFromRowAndSettings(row: HouseholdRow, settings: Record<string, u
     id: row.id,
     workspaceId: row.id,
     familyName: row.name,
+    logoPreset: row.logoPreset ?? undefined,
     timezone: row.timezone ?? undefined,
     weekStartDay: (settings['weekStartDay'] as DayOfWeek) ?? undefined,
     schoolDays: (settings['schoolDays'] as DayOfWeek[]) ?? undefined,
@@ -129,6 +131,13 @@ export async function PUT(request: Request): Promise<NextResponse> {
   if (body?.jumuahLeaveWindow !== undefined) patch.jumuahLeaveWindow = String(body.jumuahLeaveWindow).trim() || undefined
   if (body?.jumuahReturnWindow !== undefined) patch.jumuahReturnWindow = String(body.jumuahReturnWindow).trim() || undefined
 
+  if (body?.logoPreset !== undefined) {
+    if (!LOGO_PRESET_KEYS.includes(body.logoPreset)) {
+      return NextResponse.json({ status: 'error', data: null, message: `logoPreset must be one of: ${LOGO_PRESET_KEYS.join(', ')}`, timestamp: new Date().toISOString() }, { status: 400 })
+    }
+    patch.logoPreset = body.logoPreset
+  }
+
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ status: 'error', data: null, message: 'No valid fields provided for update', timestamp: new Date().toISOString() }, { status: 400 })
   }
@@ -137,6 +146,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
     const { householdId } = getRequestAuthCtx()
     if (patch.familyName) await updateHouseholdName(householdId, patch.familyName)
     if (patch.timezone) await updateHouseholdTimezone(householdId, patch.timezone)
+    if (patch.logoPreset !== undefined) await updateHouseholdLogoPreset(householdId, patch.logoPreset)
     const settingsKeys = ['weekStartDay', 'schoolDays', 'dayLoad', 'reportingName', 'dateDisplay', 'jumuahLeaveWindow', 'jumuahReturnWindow'] as const
     for (const key of settingsKeys) {
       if (patch[key] !== undefined) {

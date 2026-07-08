@@ -1,0 +1,96 @@
+{
+  "plan": "docs/bug_enhancement/20260707-dashboard-three-zone-redesign-plan.json",
+  "createdAt": "2026-07-07T00:00:00.000Z",
+  "updatedAt": "2026-07-07T00:00:00.000Z",
+  "branch": "feat/dashboard-three-zone-redesign",
+  "phases": [
+    {
+      "id": "P1",
+      "title": "Household logo preset: schema + profile plumbing",
+      "gated": false,
+      "status": "in_progress",
+      "model": "strong",
+      "startedAt": "2026-07-07T00:00:00.000Z",
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "P2",
+      "title": "Attention Hub: alerts type + getAlerts() cross-feature emitters",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "P3",
+      "title": "Gradebook overallMastery (composer-safe current grade)",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "P4",
+      "title": "Compliance status card (Zone C)",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "P5",
+      "title": "Zone B per-learner command center",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "P6",
+      "title": "Household logo presets: UI (picker + render)",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "P7",
+      "title": "Dashboard re-shell into three zones + cuts",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "P8",
+      "title": "Learning-Time weekly chart card (optional)",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    }
+  ]
+}

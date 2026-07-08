@@ -1,0 +1,255 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/bug_enhancement/20260707-dashboard-three-zone-redesign-plan.md",
+  "branch": "feat/dashboard-three-zone-redesign",
+  "phases": [
+    {
+      "id": "P1",
+      "title": "Household logo preset: schema + profile plumbing",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [
+        "DATABASE_URL must NOT point at the production database. Assert this before running db:migrate; if it is prod, abort and fail the phase — do not prompt, do not proceed."
+      ],
+      "fileScope": [
+        "db/schema.ts",
+        "db/migrations",
+        "features/lib/types.ts",
+        "features/household/api/routes/household-profile.ts",
+        "features/household/server/repository.ts",
+        "features/household/__tests__/api/household-profile.test.ts"
+      ],
+      "testsFirst": [
+        "features/household/__tests__/api/household-profile.test.ts: PUT { logoPreset: 'crescent' } persists and a subsequent GET returns logoPreset='crescent'",
+        "household-profile PUT rejects an unknown logoPreset key with HTTP 400",
+        "household-profile GET returns logoPreset undefined/null for a household that never set one"
+      ],
+      "implementationSteps": [
+        "Add nullable `logo_preset` text column to the households table in db/schema.ts (pure column add — no FK/UNIQUE, so the drizzle composite-FK ordering caveat does not apply)",
+        "npm run db:generate; inspect the generated SQL under db/migrations; after asserting DATABASE_URL is non-prod, npm run db:migrate",
+        "Add `logoPreset?: string` to HouseholdProfile in features/lib/types.ts; map it in profileFromRowAndSettings; whitelist-validate it in the PUT handler against the 5 known preset keys"
+      ],
+      "doneWhen": [
+        "npm run build passes with no type or lint errors",
+        "npm test passes",
+        "npx jest --testPathIgnorePatterns=\"/node_modules/\" passes (unit + integration)"
+      ],
+      "writeBack": "Record the generated migration filename, the exact list of 5 allowed logo preset keys, and confirmation that logoPreset round-trips through GET/PUT and invalid keys are rejected."
+    },
+    {
+      "id": "P2",
+      "title": "Attention Hub: alerts type + getAlerts() cross-feature emitters",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [],
+      "fileScope": [
+        "features/alerts/types.ts",
+        "features/alerts/server/service.ts",
+        "features/alerts/__tests__/unit/alertRules.test.ts",
+        "features/alerts/__tests__/api/alerts.test.ts"
+      ],
+      "testsFirst": [
+        "getAlerts emits a gradebook alert (sourceFeature 'gradebook') for a learner with a needsAttention subject, and none when there are no flags",
+        "getAlerts emits a compliance alert (sourceFeature 'compliance') for a not-completed deadline whose dueDate is within the due-soon window, and none when the deadline is completed or far out",
+        "getAlerts emits a schedule-imbalance alert when a subject is scheduled >=2x on today for a learner, and none otherwise",
+        "existing alerts API test (features/alerts/__tests__/api/alerts.test.ts) still returns the aggregated array unchanged for planner + attendance"
+      ],
+      "implementationSteps": [
+        "Extend AlertSourceFeature in features/alerts/types.ts with 'gradebook' | 'compliance' (no change to the Alert shape)",
+        "In alerts/server/service.ts getAlerts(): read listGradebookSummaries(householdId) and emit one alert per needsAttention subject (severity medium, href /growth/gradebook?childId=)",
+        "Read getActiveSchoolYear(householdId) then listDeadlines(householdId, schoolYearId); emit a compliance alert for each not-completed deadline within the due-soon window (href /compliance)",
+        "Emit the salvaged 'schedule imbalance' rule from the lessons already fetched (a subject scheduled >=2x on today for one learner)"
+      ],
+      "doneWhen": [
+        "npm run build passes with no type or lint errors",
+        "npm test passes",
+        "npx jest --testPathIgnorePatterns=\"/node_modules/\" passes (unit + integration)"
+      ],
+      "writeBack": "Record the due-soon window value used for compliance deadlines, the new sourceFeature values, and confirmation the existing planner/attendance alerts are unchanged."
+    },
+    {
+      "id": "P3",
+      "title": "Gradebook overallMastery (composer-safe current grade)",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [],
+      "fileScope": [
+        "features/gradebook/types.ts",
+        "features/gradebook/server/repository.ts",
+        "features/gradebook/__tests__/server/overallMastery.test.ts"
+      ],
+      "testsFirst": [
+        "listGradebookSummaries returns overallMastery = average of non-null subject masteryAverage values",
+        "overallMastery is null when a learner has no scored subjects",
+        "overallMastery ignores subjects whose masteryAverage is null"
+      ],
+      "implementationSteps": [
+        "Add `overallMastery: number | null` to GradebookSummary in features/gradebook/types.ts",
+        "Compute it in listGradebookSummaries (average of non-null subject masteryAverage; null when none) so the dashboard never averages"
+      ],
+      "doneWhen": [
+        "npm run build passes with no type or lint errors",
+        "npm test passes",
+        "npx jest --testPathIgnorePatterns=\"/node_modules/\" passes (unit + integration)"
+      ],
+      "writeBack": "Record the rounding/precision used for overallMastery and confirm it is null (not 0) when a learner has no scores."
+    },
+    {
+      "id": "P4",
+      "title": "Compliance status card (Zone C)",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [],
+      "fileScope": [
+        "features/dashboard/front/components/ComplianceStatusCard.tsx",
+        "features/dashboard/__tests__/integration/ComplianceStatusCard.test.tsx"
+      ],
+      "testsFirst": [
+        "ComplianceStatusCard shows a spinner/skeleton while loading",
+        "shows an empty state ('Set up compliance') when there is no active school year",
+        "shows a retry affordance on fetch error",
+        "renders green/amber/red status, reasons, and the next deadline when populated"
+      ],
+      "implementationSteps": [
+        "Create a self-fetching ComplianceStatusCard (pattern: SchoolYearProgressCard): resolve active school-year id via getActiveSchoolYearId, then complianceApi.getStatus + getDeadlines",
+        "Render StatusEngineResult status color + reasons + next deadline; handle loading / empty / error states per ui-style-guide card pattern"
+      ],
+      "doneWhen": [
+        "npm run build passes with no type or lint errors",
+        "npm test passes",
+        "npx jest --testPathIgnorePatterns=\"/node_modules/\" passes (unit + integration)"
+      ],
+      "writeBack": "Record the empty-state copy and how the next deadline is selected (earliest not-completed dueDate)."
+    },
+    {
+      "id": "P5",
+      "title": "Zone B per-learner command center",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [],
+      "fileScope": [
+        "features/dashboard/front/components/LearnerCommandRow.tsx",
+        "features/dashboard/front/components/LearnerCommandCenter.tsx",
+        "features/dashboard/__tests__/integration/LearnerCommandCenter.test.tsx"
+      ],
+      "testsFirst": [
+        "renders one row per active learner with attendance %, today's lessons X/Y, and a current grade value",
+        "a metric with no data renders '—' rather than crashing or showing a fake number",
+        "clicking a learner row calls setSelectedChildId and the dashboard scopes to that learner (assert context/URL)",
+        "renders loading, empty (no learners), and error states",
+        "reset sessionStorage between tests to avoid LearnerContext selectedChildId leakage"
+      ],
+      "implementationSteps": [
+        "Build LearnerCommandRow + LearnerCommandCenter container reading attendanceApi.getSummary (per child), plannerApi.getLessons (today), gradebookApi.getSummaries (overallMastery)",
+        "Row click sets the global learner filter via LearnerContext setSelectedChildId; no new page",
+        "No trend arrow, no per-learner compliance indicator (explicitly out)"
+      ],
+      "doneWhen": [
+        "npm run build passes with no type or lint errors",
+        "npm test passes",
+        "npx jest --testPathIgnorePatterns=\"/node_modules/\" passes (unit + integration)"
+      ],
+      "writeBack": "Record how attendance % is derived from AttendanceSummary.byStatus and the N-per-child fetch count for reviewers."
+    },
+    {
+      "id": "P6",
+      "title": "Household logo presets: UI (picker + render)",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [],
+      "fileScope": [
+        "features/household/front/components/logoPresets.tsx",
+        "features/household/front/components/HouseholdLogoPicker.tsx",
+        "features/household/front/components/HouseholdSetup.tsx",
+        "features/household/front/components/HouseholdSettings.tsx",
+        "features/household/front/components/HouseholdSwitcher.tsx",
+        "features/household/__tests__/integration/HouseholdLogoPicker.test.tsx"
+      ],
+      "testsFirst": [
+        "the picker cycles through the 5 preset marks and persists the selection (household PUT called with logoPreset)",
+        "HouseholdSwitcher renders the household's selected preset mark",
+        "a household with no chosen preset renders the default mark (no broken image, no crash)"
+      ],
+      "implementationSteps": [
+        "Create a logoPresets registry of 5 inline SVG marks keyed by the allowed preset keys from P1",
+        "Add a cycling HouseholdLogoPicker; wire it into HouseholdSetup and HouseholdSettings; persist via householdApi PUT logoPreset",
+        "Render the chosen preset (or default) in HouseholdSwitcher via useHousehold().householdProfile.logoPreset"
+      ],
+      "doneWhen": [
+        "npm run build passes with no type or lint errors",
+        "npm test passes",
+        "npx jest --testPathIgnorePatterns=\"/node_modules/\" passes (unit + integration)"
+      ],
+      "writeBack": "Record the 5 preset keys/names and where the mark renders (switcher + any dashboard brand slot)."
+    },
+    {
+      "id": "P7",
+      "title": "Dashboard re-shell into three zones + cuts",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [],
+      "fileScope": [
+        "features/dashboard/front/pages/Dashboard.tsx",
+        "features/dashboard/front/components/TodaySchedulePanel.tsx",
+        "features/dashboard/front/components/NeedsAttention.tsx",
+        "features/dashboard/front/components/PersonalAssistantPanel.tsx",
+        "features/dashboard/front/lib/assistantRules.ts",
+        "features/dashboard/front/components/LearningTimeEntry.tsx",
+        "features/dashboard/front/components/RecordsProof.tsx",
+        "features/dashboard/front/components/DashboardHeader.tsx",
+        "features/dashboard/__tests__/integration/Dashboard.test.tsx",
+        "features/dashboard/__tests__/integration/components/PersonalAssistantPanel.test.tsx",
+        "features/dashboard/__tests__/integration/components/LearningTimeEntry.test.tsx",
+        "features/dashboard/__tests__/integration/components/DashboardComponents.test.tsx",
+        "features/dashboard/__tests__/integration/components/LinkedFiltering.test.tsx",
+        "features/dashboard/__tests__/integration/RecordsSection.test.tsx",
+        "features/dashboard/__tests__/unit/assistantRules.test.ts"
+      ],
+      "testsFirst": [
+        "the dashboard renders three labeled zones in order: Today, Per-learner, Proof & Progress",
+        "the Attention Hub renders aggregated alerts with a learner chip on every item (household-scoped reads 'Household')",
+        "the per-learner command center rows render in Zone B",
+        "PersonalAssistantPanel and RecordsProof no longer render on Home",
+        "the Personal To-dos list renders all items with no inner scroll container; the header date is plain text, not a button",
+        "Start learning time appears in the schedule panel footer and the standalone LearningTimeEntry card is gone"
+      ],
+      "implementationSteps": [
+        "Restructure Dashboard.tsx into Zone A/B/C; place the Attention Hub in Zone A; mount ComplianceStatusCard + LearnerCommandCenter",
+        "Merge Start learning time into the TodaySchedulePanel footer; remove the LearningTimeEntry card usage",
+        "Delete PersonalAssistantPanel + assistantRules usage; remove RecordsProof from Home (it stays on /records)",
+        "Slim Zone C (Compliance, School Year, Qur'an rings, Islamic, full non-scrolling To-dos); fix the compounding padding; render the header date as a plain label"
+      ],
+      "doneWhen": [
+        "npm run build passes with no type or lint errors",
+        "npm test passes",
+        "npx jest --testPathIgnorePatterns=\"/node_modules/\" passes (unit + integration)"
+      ],
+      "writeBack": "List the components removed from Home, the final Zone C order, and any dashboard tests updated for the new structure."
+    },
+    {
+      "id": "P8",
+      "title": "Learning-Time weekly chart card (optional)",
+      "gated": false,
+      "modelTier": "cheap",
+      "preconditions": [],
+      "fileScope": [
+        "features/dashboard/front/components/LearningTimeWeekCard.tsx",
+        "features/dashboard/__tests__/integration/LearningTimeWeekCard.test.tsx"
+      ],
+      "testsFirst": [
+        "the card buckets learningTimeApi.list({from,to}) sessions into weekday bars",
+        "the card renders an empty-week state when there are no sessions"
+      ],
+      "implementationSteps": [
+        "Build a weekly bar-chart card from learningTimeApi.list({from,to}) with client-side daily bucketing (precedent: QuranStreak.calcStreak / SchoolYearProgressCard.computeProgress)",
+        "If zero client aggregation is preferred, skip this phase and open a follow-up for a learning-time weekly-summary endpoint"
+      ],
+      "doneWhen": [
+        "npm run build passes with no type or lint errors",
+        "npm test passes",
+        "npx jest --testPathIgnorePatterns=\"/node_modules/\" passes (unit + integration)"
+      ],
+      "writeBack": "Record whether the chart was built or deferred, and the bucketing window used."
+    }
+  ]
+}

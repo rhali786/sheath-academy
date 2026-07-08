@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "title": "Feedback — Bigger Features (Reminders + Gmail sync, Break ranges + Auto-reschedule)",
+  "createdAt": "2026-07-07",
+  "branch": "feat/feedback-bigger-features",
+  "createNewBranch": true,
+  "gatesEnabled": false,
+  "planDoc": "docs/bug_enhancement/20260707-feedback-bigger-features-plan.md",
+  "scopeNote": "Full scope: both feature cores AND both hard parts (Gmail/Calendar sync, lesson auto-reschedule). Sync phase is blocked on human Google-Cloud setup steps (see plan). Suggested build order: B1 -> B2 -> A1 -> A2.",
+  "sourceOfTruth": {
+    "reminders": "new reminders feature (net-new entity)",
+    "googleCalendar": "external mirror; reminders remain authoritative for app-created items, keyed by googleEventId",
+    "breaks": "school-year (SchoolYear.breaks already exists)",
+    "lessonGeneration": "resources/server/service.ts computeDueDates",
+    "rescheduleEngine": "planner (new service; reuses updateLessonTaskRow + validateLessonWindow)"
+  },
+  "phases": [
+    {
+      "id": "feature-a-reminders",
+      "feedbackId": "f96c36b3",
+      "title": "Calendar reminders (core)",
+      "mode": 4,
+      "gated": false,
+      "dependsOn": [],
+      "commits": [
+        { "id": "A1", "message": "feat(reminders): reminders table + migration", "files": ["db/schema.ts", "db/migrations/*"], "note": "additive table; inspect generated SQL for composite-FK ordering; migrate against non-prod DB" },
+        { "id": "A2", "message": "feat(reminders): types + repository CRUD + db tests", "files": ["features/reminders/types.ts", "features/reminders/server/repository.ts", "features/reminders/__tests__/*"] },
+        { "id": "A3", "message": "feat(reminders): API routes + router wiring + tests", "files": ["features/reminders/api/*", "app/api/[...slug]/route.ts"] },
+        { "id": "A4", "message": "feat(reminders): add-form + editable list UI + integration tests", "files": ["features/reminders/front/*"] },
+        { "id": "A5", "message": "feat(reminders): surface on dashboard module + calendar markers", "files": ["features/dashboard/front/*", "features/schedule/front/components/MonthCalendarView.tsx", "features/schedule/front/components/WeekCalendarView.tsx"] }
+      ]
+    },
+    {
+      "id": "feature-a2-gmail-sync",
+      "feedbackId": "f96c36b3",
+      "title": "Google Calendar / Gmail sync",
+      "mode": 4,
+      "gated": false,
+      "risk": "high — external integration; verification blocked on human Google setup",
+      "dependsOn": ["feature-a-reminders"],
+      "humanPrereqs": [
+        "Create/choose a Google Cloud project",
+        "Enable the Google Calendar API",
+        "Configure OAuth consent screen + scope calendar.events (add testers; prod needs verification)",
+        "Create OAuth 2.0 Web client + authorized redirect URIs (local + Render)",
+        "Provide GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET in env (never commit)",
+        "Decide sync direction: import / export / two-way"
+      ],
+      "commits": [
+        { "id": "C1", "message": "feat(auth): add Google provider with offline calendar scope + refresh-token persistence", "files": ["features/auth/auth.config.ts", "features/auth/lib/drizzleAdapter.ts"], "note": "depends on human prereqs 1-5" },
+        { "id": "C2", "message": "feat(reminders): googleapis client + refresh-token flow (server)", "files": ["features/reminders/server/google/*", "package.json"] },
+        { "id": "C3", "message": "feat(reminders): sync service (incremental syncToken, googleEventId dedupe, conflict rules)", "files": ["features/reminders/server/sync.ts", "features/reminders/__tests__/*"], "note": "mock googleapis at the client boundary" },
+        { "id": "C4", "message": "feat(reminders): Connect Google Calendar settings UI + source badge + Sync now", "files": ["features/settings/front/*", "features/reminders/front/*"] }
+      ],
+      "verification": "Jest mocks googleapis; live end-to-end is MANUAL with a real Google account after human prereqs."
+    },
+    {
+      "id": "feature-b-breaks",
+      "feedbackId": "b01b66f0",
+      "title": "Break ranges (core)",
+      "mode": 3,
+      "gated": false,
+      "dependsOn": [],
+      "commits": [
+        { "id": "B1", "message": "feat(school-year): break-range editor in SchoolYearForm", "files": ["features/school-year/front/components/SchoolYearForm.tsx", "features/school-year/__tests__/*"], "note": "writes existing SchoolYear.breaks; validate startDate<=endDate" },
+        { "id": "B2", "message": "feat(resources): generation skips break-range dates", "files": ["features/resources/server/service.ts", "features/resources/__tests__/*"], "note": "extends queue bug 1.2 schoolDaysOfWeek work" }
+      ]
+    },
+    {
+      "id": "feature-b2-auto-reschedule",
+      "feedbackId": "b01b66f0",
+      "title": "Auto-reschedule lessons around breaks",
+      "mode": 3,
+      "gated": false,
+      "risk": "medium-high — bulk mutation of planner data; highest rework probability",
+      "dependsOn": ["feature-b-breaks"],
+      "humanPrereqs": [
+        "Confirm default conflict policy (recommended: cascade-forward with preview-before-apply)"
+      ],
+      "commits": [
+        { "id": "D1", "message": "feat(plan): previewBreakReschedule service (read-only; moved/skipped/conflicts)", "files": ["features/plan/server/reschedule.ts", "features/plan/__tests__/*"], "note": "reuses B2 break-aware roll-forward + updateLessonTaskRow" },
+        { "id": "D2", "message": "feat(plan): applyBreakReschedule (transaction) + reversible operation log", "files": ["features/plan/server/reschedule.ts", "db/schema.ts", "features/plan/__tests__/*"] },
+        { "id": "D3", "message": "feat(plan): undoReschedule from operation log", "files": ["features/plan/server/reschedule.ts", "features/plan/__tests__/*"] },
+        { "id": "D4", "message": "feat(school-year): prompt to preview/apply/undo reschedule when a break overlaps lessons", "files": ["features/school-year/front/*", "features/plan/front/*"], "note": "non-destructive default; styled confirmation, no window.confirm" }
+      ]
+    }
+  ],
+  "suggestedOrder": ["feature-b-breaks", "feature-b2-auto-reschedule", "feature-a-reminders", "feature-a2-gmail-sync"],
+  "combinedOutOfScope": [
+    "Lesson Planner v2 grid/reschedule (separate shipped-brief follow-up)",
+    "Google API production verification (external Google review; cannot be coded)"
+  ],
+  "estimate": {
+    "method": "commits x ~2.5-4 min/commit for CRUD/UI; hard parts carry explicit tails and are not governed by the rate",
+    "A1_reminders_core": "~20-25 min (5-6 commits)",
+    "B1_breaks_core": "~10-15 min (2-3 commits)",
+    "bothCores": "~30-40 min execution-only",
+    "C_gmail_sync": "~30-45 min code, BLOCKED on human Google setup + possible Google verification lead time",
+    "D_auto_reschedule": "~30-60 min + real rework tail (treat as p50)",
+    "fullPlan": "~1.5-2.5 hr code across ~16-22 commits, plus human Google setup and a likely reschedule rework pass",
+    "note": "Execution time != elapsed time for the sync phase (external dependency). Collaboration time (~10x) is extra if a human checkpoint enters the loop."
+  }
+}

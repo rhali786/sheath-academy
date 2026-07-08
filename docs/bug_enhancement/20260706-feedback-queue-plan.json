@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "title": "Feedback Queue — Bugs / UX / Resources",
+  "createdAt": "2026-07-06",
+  "branch": "feat/feedback-queue-jul06",
+  "createNewBranch": false,
+  "gatesEnabled": false,
+  "planDoc": "docs/bug_enhancement/20260706-feedback-queue-plan.md",
+  "sourceOfTruth": {
+    "enrollment": "subjects (subjectLearners join)",
+    "courseResourceLink": "subjects (subjectResources join)",
+    "lessonGeneration": "resources/server/service.ts",
+    "schoolDays": "household HouseholdProfile.schoolDays",
+    "lessons": "planner plannerApi.createLesson",
+    "weeklyRecords": "dashboard (presentation only)",
+    "evidence": "portfolio"
+  },
+  "phases": [
+    {
+      "id": "task-1-bugs",
+      "taskRef": 1,
+      "title": "Fix the 2 feedback bugs",
+      "mode": 3,
+      "gated": false,
+      "dependsOn": [],
+      "commits": [
+        {
+          "id": "1.1",
+          "feedbackId": "cb15ba12",
+          "message": "fix(portfolio): show courses for secondary-enrolled learners in evidence subject dropdown",
+          "files": [
+            "features/subjects/server/repository.ts",
+            "features/portfolio/front/components/EvidenceForm.tsx",
+            "features/portfolio/front/pages/PortfolioPage.tsx"
+          ],
+          "tests": [
+            "features/subjects/__tests__/api|server: listSubjectRows returns secondary-enrollee course",
+            "features/subjects/__tests__/api/subjects.test.ts: GET ?childId=secondary includes course",
+            "features/portfolio/__tests__/integration/EvidenceForm: subject options for secondary-enrolled child"
+          ],
+          "acceptance": "Selecting a child enrolled primary OR secondary shows the course in the Subject dropdown and evidence can be saved.",
+          "verifyFirst": "Read-only: confirm whether missing courses for household_1781012946471 are secondary-enrollment or different-school-year before finalizing."
+        },
+        {
+          "id": "1.2",
+          "feedbackId": "713d0753",
+          "message": "fix(resources): honor household school days when distributing generated lessons",
+          "files": [
+            "features/resources/types.ts",
+            "features/resources/server/service.ts",
+            "features/resources/front/components/LessonGenerationPanel.tsx"
+          ],
+          "tests": [
+            "features/resources/__tests__: computeDueDates skips non-school weekdays for all cadences",
+            "features/resources/__tests__: back-compat when schoolDaysOfWeek omitted (Mon-Fri)"
+          ],
+          "acceptance": "No generated dueDate falls on a weekday outside household.schoolDays for any pacing option."
+        }
+      ]
+    },
+    {
+      "id": "task-2-ux",
+      "taskRef": 2,
+      "title": "Ship the UX clarity changes",
+      "mode": 1,
+      "gated": false,
+      "dependsOn": [],
+      "commits": [
+        {
+          "id": "2.1",
+          "feedbackId": "c75d361b",
+          "message": "fix(resources): keep Save-to-plan visible with a hint before lessons are generated",
+          "files": ["features/resources/front/components/LessonGenerationPanel.tsx"],
+          "tests": ["features/resources/__tests__/integration/LessonGenerationPanel: Save visible-disabled pre-generate, enabled after"],
+          "acceptance": "Save-to-plan is visible before generation (disabled with hint)."
+        },
+        {
+          "id": "2.2",
+          "feedbackId": "36f30694",
+          "message": "fix(learning-time): clarify scheduled Start/End time applies to this session only",
+          "files": ["features/learning-time/front/components/NowCard.tsx"],
+          "tests": ["features/learning-time/__tests__/integration/LearningTimePage: helper text on scheduled channel"],
+          "acceptance": "Scheduled Start/End inputs state they apply to this one session, not a recurring schedule."
+        },
+        {
+          "id": "2.3",
+          "feedbackId": "ba88751d",
+          "message": "fix(dashboard): label Records Readiness tiles as current-week scope",
+          "files": ["features/dashboard/front/components/RecordsProof.tsx"],
+          "tests": ["features/dashboard/__tests__/integration: Records Readiness subtitle references current week"],
+          "acceptance": "Records Readiness states its tiles cover the current week. No new seed/store data."
+        }
+      ]
+    },
+    {
+      "id": "task-3-resources",
+      "taskRef": 3,
+      "title": "/resources scheduling + course-linking",
+      "mode": 3,
+      "gated": false,
+      "dependsOn": ["task-1-bugs"],
+      "commits": [
+        {
+          "id": "3.1",
+          "feedbackId": "2bc4d916",
+          "message": "feat(resources): let generation start from a chosen chapter/page",
+          "files": ["features/resources/types.ts", "features/resources/server/service.ts", "features/resources/front/components/LessonGenerationPanel.tsx"],
+          "tests": ["service unit: startAt=5 -> first title unit 5, correct count", "integration: Start-at input flows through"],
+          "acceptance": "Choosing start = N generates lessons beginning at unit N."
+        },
+        {
+          "id": "3.2",
+          "feedbackId": "adfe3188",
+          "dependsOnCommit": "1.2",
+          "message": "feat(resources): choose which weekdays a generated course is taught",
+          "files": ["features/resources/front/components/LessonGenerationPanel.tsx"],
+          "tests": ["integration: deselecting Wednesday yields no Wednesday due dates"],
+          "acceptance": "Selecting M/W/F schedules lessons only on those weekdays."
+        },
+        {
+          "id": "3.3",
+          "feedbackId": "bb573f78",
+          "message": "feat(resources): link a resource to enrolled courses from the resource form",
+          "files": ["features/resources/front/components/ResourceForm.tsx", "features/subjects/api/routes/subject.ts", "features/resources/front/pages/ResourcesPage.tsx"],
+          "tests": ["API: linking resource->course creates subjectResources row; course.resourceIds includes it", "integration: ResourceForm course multiselect saves link"],
+          "acceptance": "Adding/editing a resource can attach it to enrolled course(s); link shows on both sides.",
+          "architectureNote": "subjectResources ownership stays with subjects; resources UI calls subjects API/service, never the subjects repo directly."
+        },
+        {
+          "id": "3.4",
+          "feedbackId": "3a73264e",
+          "dependsOnCommit": "3.3",
+          "message": "feat(resources): add enrolled-course dropdown to the resource form",
+          "files": ["features/resources/front/components/ResourceForm.tsx"],
+          "tests": ["integration: dropdown lists enrolled courses; selecting one links the resource"],
+          "acceptance": "User can pick an enrolled class from a dropdown to link the resource, instead of only free-text category."
+        }
+      ]
+    }
+  ],
+  "outOfScope": [
+    "f96c36b3 calendar/reminders + Gmail sync",
+    "b01b66f0 break ranges + auto-reschedule",
+    "Lesson Planner v2 grid/reschedule",
+    "any DB migration (GenerateLessonsInput additions are type-only)"
+  ]
+}
