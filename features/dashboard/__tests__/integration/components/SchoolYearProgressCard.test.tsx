@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { SchoolYearProgressCard } from '@/features/dashboard/front/components/SchoolYearProgressCard'
+import { ActiveSchoolYearProvider } from '@/features/school-year/front/context/ActiveSchoolYearContext'
 
 const mockSchoolYear = {
   id: 'sy_001',
@@ -11,6 +12,14 @@ const mockSchoolYear = {
   createdAt: '2026-01-01T00:00:00.000Z',
 }
 
+function renderCard() {
+  return render(
+    <ActiveSchoolYearProvider>
+      <SchoolYearProgressCard />
+    </ActiveSchoolYearProvider>
+  )
+}
+
 describe('SchoolYearProgressCard', () => {
   beforeEach(() => {
     global.fetch = jest.fn().mockResolvedValue({
@@ -20,7 +29,7 @@ describe('SchoolYearProgressCard', () => {
   })
 
   it('renders school year progress after fetch', async () => {
-    render(<SchoolYearProgressCard />)
+    renderCard()
     await waitFor(() => {
       expect(screen.getByTestId('school-year-progress-card')).toBeInTheDocument()
     })
@@ -30,7 +39,7 @@ describe('SchoolYearProgressCard', () => {
   })
 
   it('renders a pacing indicator', async () => {
-    render(<SchoolYearProgressCard />)
+    renderCard()
     await waitFor(() => {
       expect(screen.getByTestId('school-year-progress-card')).toBeInTheDocument()
     })
@@ -44,7 +53,7 @@ describe('SchoolYearProgressCard', () => {
       ok: true,
       json: async () => ({ status: 'success', data: null }),
     })
-    const { container } = render(<SchoolYearProgressCard />)
+    const { container } = renderCard()
     await waitFor(() => {
       expect(container.firstChild).toBeNull()
     })

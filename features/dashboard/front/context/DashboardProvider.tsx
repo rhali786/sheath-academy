@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useState, useEffect, useMemo, ReactNode } from 'react'
+import React, { createContext, useState, useEffect, useMemo, useRef, ReactNode } from 'react'
 import type { Alert, QuranSession, DashboardRecord, DashboardMetrics, NivoLineSeries } from '@/features/lib/types'
 import { dashboardApi } from '@/features/dashboard/front/services/api'
 import { alertsApi } from '@/features/alerts/front/services/api'
@@ -48,6 +48,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [initialLoadDone, setInitialLoadDone] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { selectedChildId, setSelectedChildId } = useLearner()
+  const lastFetchedChildIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (householdLoading) return
@@ -67,6 +68,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         setRecords(recordsRes.data)
         setMetrics(summaryRes.data)
         setLoading(false)
+        lastFetchedChildIdRef.current = selectedChildId
         setInitialLoadDone(true)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load dashboard')
@@ -79,9 +81,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [householdProfile?.id, householdLoading])
 
-  // Re-fetch per-child data whenever selected child changes (after initial load)
+  // Re-fetch per-child data whenever selected child actually changes (after initial load).
+  // initialLoadDone flips false->true right after the effect above runs, which would
+  // otherwise re-trigger this effect with an unchanged selectedChildId and double-fetch.
   useEffect(() => {
     if (!initialLoadDone) return
+    if (selectedChildId === lastFetchedChildIdRef.current) return
+    lastFetchedChildIdRef.current = selectedChildId
 
     const cid = selectedChildId ?? undefined
     const refetch = async () => {

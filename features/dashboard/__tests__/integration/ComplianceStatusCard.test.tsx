@@ -1,19 +1,26 @@
 import React from 'react'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { ComplianceStatusCard } from '@/features/dashboard/front/components/ComplianceStatusCard'
+import { ActiveSchoolYearProvider } from '@/features/school-year/front/context/ActiveSchoolYearContext'
 
 jest.mock('@/features/compliance/front/services/api', () => ({
   complianceApi: {
-    getActiveSchoolYearId: jest.fn(),
     getStatus: jest.fn(),
     getDeadlines: jest.fn(),
   },
 }))
 
+jest.mock('@/features/school-year/front/services/api', () => ({
+  schoolYearApi: {
+    getActiveSchoolYear: jest.fn(),
+  },
+}))
+
 import { complianceApi } from '@/features/compliance/front/services/api'
+import { schoolYearApi } from '@/features/school-year/front/services/api'
 import { mockStatusResult, mockDeadlines } from '@/features/compliance/__tests__/fixtures/mockCompliance'
 
-const mockGetActiveSchoolYearId = complianceApi.getActiveSchoolYearId as jest.Mock
+const mockGetActiveSchoolYear = schoolYearApi.getActiveSchoolYear as jest.Mock
 const mockGetStatus = complianceApi.getStatus as jest.Mock
 const mockGetDeadlines = complianceApi.getDeadlines as jest.Mock
 
@@ -21,25 +28,33 @@ function neverResolves() {
   return new Promise(() => {})
 }
 
+function renderCard() {
+  return render(
+    <ActiveSchoolYearProvider>
+      <ComplianceStatusCard />
+    </ActiveSchoolYearProvider>
+  )
+}
+
 beforeEach(() => {
-  mockGetActiveSchoolYearId.mockReset()
+  mockGetActiveSchoolYear.mockReset()
   mockGetStatus.mockReset()
   mockGetDeadlines.mockReset()
 })
 
 describe('ComplianceStatusCard', () => {
   it('shows a loading skeleton while fetching', async () => {
-    mockGetActiveSchoolYearId.mockReturnValue(neverResolves())
+    mockGetActiveSchoolYear.mockReturnValue(neverResolves())
 
-    render(<ComplianceStatusCard />)
+    renderCard()
 
     expect(screen.getByTestId('compliance-status-card-loading')).toBeInTheDocument()
   })
 
   it('shows an empty state when there is no active school year', async () => {
-    mockGetActiveSchoolYearId.mockResolvedValue(null)
+    mockGetActiveSchoolYear.mockResolvedValue({ data: null })
 
-    render(<ComplianceStatusCard />)
+    renderCard()
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /compliance/i })).toBeInTheDocument()
@@ -52,9 +67,11 @@ describe('ComplianceStatusCard', () => {
   })
 
   it('shows a retry affordance on fetch error', async () => {
-    mockGetActiveSchoolYearId.mockRejectedValue(new Error('network error'))
+    mockGetActiveSchoolYear.mockResolvedValue({ data: { id: 'sy_001' } })
+    mockGetStatus.mockRejectedValue(new Error('network error'))
+    mockGetDeadlines.mockRejectedValue(new Error('network error'))
 
-    render(<ComplianceStatusCard />)
+    renderCard()
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
@@ -62,12 +79,13 @@ describe('ComplianceStatusCard', () => {
   })
 
   it('retry re-fetches after a fetch error', async () => {
-    mockGetActiveSchoolYearId.mockRejectedValueOnce(new Error('network error'))
-    mockGetActiveSchoolYearId.mockResolvedValue('sy_001')
+    mockGetActiveSchoolYear.mockResolvedValue({ data: { id: 'sy_001' } })
+    mockGetStatus.mockRejectedValueOnce(new Error('network error'))
+    mockGetDeadlines.mockRejectedValueOnce(new Error('network error'))
     mockGetStatus.mockResolvedValue({ status: 'success', data: mockStatusResult, message: '', timestamp: '' })
     mockGetDeadlines.mockResolvedValue({ status: 'success', data: mockDeadlines, message: '', timestamp: '' })
 
-    render(<ComplianceStatusCard />)
+    renderCard()
 
     const retryButton = await screen.findByRole('button', { name: /retry/i })
     fireEvent.click(retryButton)
@@ -78,11 +96,11 @@ describe('ComplianceStatusCard', () => {
   })
 
   it('renders status, reasons, and the next deadline when populated', async () => {
-    mockGetActiveSchoolYearId.mockResolvedValue('sy_001')
+    mockGetActiveSchoolYear.mockResolvedValue({ data: { id: 'sy_001' } })
     mockGetStatus.mockResolvedValue({ status: 'success', data: mockStatusResult, message: '', timestamp: '' })
     mockGetDeadlines.mockResolvedValue({ status: 'success', data: mockDeadlines, message: '', timestamp: '' })
 
-    render(<ComplianceStatusCard />)
+    renderCard()
 
     await waitFor(() => {
       expect(screen.getByTestId('compliance-status-card')).toBeInTheDocument()
@@ -112,7 +130,7 @@ describe('ComplianceStatusCard', () => {
   })
 
   it('renders the checklist as check marks whether one item or many', async () => {
-    mockGetActiveSchoolYearId.mockResolvedValue('sy_001')
+    mockGetActiveSchoolYear.mockResolvedValue({ data: { id: 'sy_001' } })
     mockGetStatus.mockResolvedValue({
       status: 'success',
       data: { ...mockStatusResult, checks: [{ label: 'Portfolio evidence on file', met: true }] },
@@ -121,7 +139,7 @@ describe('ComplianceStatusCard', () => {
     })
     mockGetDeadlines.mockResolvedValue({ status: 'success', data: [], message: '', timestamp: '' })
 
-    render(<ComplianceStatusCard />)
+    renderCard()
 
     await waitFor(() => {
       expect(screen.getByTestId('compliance-checklist')).toBeInTheDocument()
@@ -132,7 +150,7 @@ describe('ComplianceStatusCard', () => {
   })
 
   it('renders green status label for a green result', async () => {
-    mockGetActiveSchoolYearId.mockResolvedValue('sy_001')
+    mockGetActiveSchoolYear.mockResolvedValue({ data: { id: 'sy_001' } })
     mockGetStatus.mockResolvedValue({
       status: 'success',
       data: { ...mockStatusResult, status: 'green', reasons: ['All requirements met'] },
@@ -141,7 +159,7 @@ describe('ComplianceStatusCard', () => {
     })
     mockGetDeadlines.mockResolvedValue({ status: 'success', data: [], message: '', timestamp: '' })
 
-    render(<ComplianceStatusCard />)
+    renderCard()
 
     await waitFor(() => {
       expect(screen.getByText('On track')).toBeInTheDocument()
@@ -152,7 +170,7 @@ describe('ComplianceStatusCard', () => {
   })
 
   it('renders red status label for a red result', async () => {
-    mockGetActiveSchoolYearId.mockResolvedValue('sy_001')
+    mockGetActiveSchoolYear.mockResolvedValue({ data: { id: 'sy_001' } })
     mockGetStatus.mockResolvedValue({
       status: 'success',
       data: { ...mockStatusResult, status: 'red', reasons: ['Far behind requirement'] },
@@ -161,7 +179,7 @@ describe('ComplianceStatusCard', () => {
     })
     mockGetDeadlines.mockResolvedValue({ status: 'success', data: [], message: '', timestamp: '' })
 
-    render(<ComplianceStatusCard />)
+    renderCard()
 
     await waitFor(() => {
       expect(screen.getByText('Action required')).toBeInTheDocument()

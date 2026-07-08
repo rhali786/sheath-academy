@@ -2,6 +2,7 @@ import React from 'react'
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { HouseholdProvider } from '@/features/household/front/context'
 import { LearnerProvider, useLearner } from '@/features/layout/front/context/LearnerContext'
+import { ActiveSchoolYearProvider } from '@/features/school-year/front/context/ActiveSchoolYearContext'
 import { LearnerCommandCenter } from '@/features/dashboard/front/components/LearnerCommandCenter'
 
 jest.mock('@/features/household/front/services/api', () => ({
@@ -70,8 +71,10 @@ function renderCenter() {
   return render(
     <LearnerProvider>
       <HouseholdProvider>
-        <LearnerCommandCenter />
-        <SelectedChildProbe />
+        <ActiveSchoolYearProvider>
+          <LearnerCommandCenter />
+          <SelectedChildProbe />
+        </ActiveSchoolYearProvider>
       </HouseholdProvider>
     </LearnerProvider>
   )

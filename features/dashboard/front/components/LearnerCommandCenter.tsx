@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useHousehold } from '@/features/household/front/context'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
+import { useActiveSchoolYear } from '@/features/school-year/front/context/ActiveSchoolYearContext'
 import { attendanceApi } from '@/features/attendance/front/services/api'
 import { plannerApi } from '@/features/plan/front/services/api'
 import { gradebookApi } from '@/features/gradebook/front/services/api'
@@ -11,16 +12,6 @@ import { LearnerCommandRow, LEARNER_ROW_GRID, type LearnerCommandRowMetrics } fr
 function todayIso(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-async function fetchActiveSchoolYearStart(): Promise<string | undefined> {
-  try {
-    const res = await fetch('/api/school-years/active')
-    const body = await res.json()
-    return body.status === 'success' ? body.data?.startDate : undefined
-  } catch {
-    return undefined
-  }
 }
 
 const EMPTY_METRICS: LearnerCommandRowMetrics = {
@@ -33,6 +24,7 @@ const EMPTY_METRICS: LearnerCommandRowMetrics = {
 export function LearnerCommandCenter() {
   const { studentProfiles, loading: householdLoading, error: householdError } = useHousehold()
   const { setSelectedChildId } = useLearner()
+  const { activeSchoolYear, loading: activeSchoolYearLoading } = useActiveSchoolYear()
   const [metricsByChild, setMetricsByChild] = useState<Record<string, LearnerCommandRowMetrics>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -41,7 +33,7 @@ export function LearnerCommandCenter() {
   const activeLearnerIds = activeLearners.map(l => l.id).join(',')
 
   useEffect(() => {
-    if (householdLoading) return
+    if (householdLoading || activeSchoolYearLoading) return
 
     if (activeLearnerIds === '') {
       setMetricsByChild({})
@@ -58,7 +50,7 @@ export function LearnerCommandCenter() {
 
     const load = async () => {
       try {
-        const activeYearStart = await fetchActiveSchoolYearStart()
+        const activeYearStart = activeSchoolYear?.startDate
         // The "active" school year can be next year's, already set up mid-summer before
         // today falls inside its range — a startDate after today would make a start..today
         // window inverted (always empty), so fall back to no lower bound in that case.
@@ -108,7 +100,7 @@ export function LearnerCommandCenter() {
 
     void load()
     return () => { active = false }
-  }, [householdLoading, activeLearnerIds])
+  }, [householdLoading, activeLearnerIds, activeSchoolYearLoading, activeSchoolYear?.startDate])
 
   if (householdLoading || loading) {
     return (
