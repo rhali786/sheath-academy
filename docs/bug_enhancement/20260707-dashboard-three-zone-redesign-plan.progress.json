@@ -1,7 +1,7 @@
 {
   "plan": "docs/bug_enhancement/20260707-dashboard-three-zone-redesign-plan.json",
   "createdAt": "2026-07-07T00:00:00.000Z",
-  "updatedAt": "2026-07-08T03:40:00.000Z",
+  "updatedAt": "2026-07-08T04:45:00.000Z",
   "branch": "feat/dashboard-three-zone-redesign",
   "phases": [
     {
@@ -133,14 +133,27 @@
       "id": "P6",
       "title": "Household logo presets: UI (picker + render)",
       "gated": false,
-      "status": "in_progress",
+      "status": "complete",
       "model": "standard",
       "startedAt": "2026-07-08T04:00:00.000Z",
-      "completedAt": null,
+      "completedAt": "2026-07-08T04:45:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/household/front/components/logoPresets.tsx",
+          "features/household/front/components/HouseholdLogoPicker.tsx",
+          "features/household/front/components/HouseholdSetup.tsx",
+          "features/household/front/components/HouseholdSettings.tsx",
+          "features/household/front/components/HouseholdSwitcher.tsx",
+          "features/household/__tests__/integration/HouseholdLogoPicker.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/household/__tests__/integration/HouseholdLogoPicker.test.tsx features/household/__tests__/integration/HouseholdSwitcher.test.tsx (13 passed)",
+          "npx jest features/household (15 suites passed, 2 skipped, 118 passed, 21 skipped)",
+          "npm run build (passed)",
+          "npm test (241 suites passed, 24 skipped, 2100 tests passed)",
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" (241 suites passed, 24 skipped, 2100 tests passed)"
+        ],
+        "notes": "logoPresets.tsx is a new registry exporting LogoMark (renders one of 5 inline SVG marks by data-testid='household-logo-mark' + data-preset=<key>), LOGO_PRESET_NAMES, DEFAULT_LOGO_PRESET ('crescent', i.e. LOGO_PRESET_KEYS[0]), and isLogoPresetKey — all keyed strictly off the LOGO_PRESET_KEYS/LogoPresetKey export from '@/features/lib/types' added in P1 ('crescent' | 'star' | 'book' | 'lantern' | 'compass'); LogoMark falls back to the default mark for undefined/null/unrecognized preset values, so it never crashes or shows a broken image. HouseholdLogoPicker.tsx is a self-contained cycling picker (props: value?: string | null, onSaved?: (preset: LogoPresetKey) => void) — clicking 'Change mark' (data-testid='household-logo-picker-cycle') advances to the next preset in LOGO_PRESET_KEYS order (wrapping from 'compass' back to 'crescent') and persists it via a direct fetch PUT to /api/household/profile with body { logoPreset }; it does NOT go through householdApi.updateProfile in features/household/front/services/api.ts because that file's typed patch signature (and api.ts generally) is outside P6's fileScope — adding a logoPreset field there would have required editing an out-of-scope file, so the picker does its own fetch call instead (same endpoint/contract the typed client would hit). WHERE THE MARK RENDERS: (1) HouseholdSetup.tsx — HouseholdLogoPicker mounted in the cards-phase header (onSaved calls refetch() to sync householdProfile); (2) HouseholdSettings.tsx — new 'Household mark' section with its own picker instance; (3) HouseholdSwitcher.tsx — a small read-only LogoMark badge rendered inside the existing switcher trigger button, sourced from the household's logoPreset. IMPORTANT IMPLEMENTATION DETAIL for future phases: HouseholdSwitcher.tsx previously had NO dependency on HouseholdContext at all, and its existing (out-of-scope, untouched) test file features/household/__tests__/integration/HouseholdSwitcher.test.tsx renders <HouseholdSwitcher /> with NO HouseholdProvider wrapper. To add the logoPreset read without breaking that test or widening scope to fix it, HouseholdSwitcher now reads the context directly via `useContext(HouseholdContext)` (imported from '../context', which already re-exports HouseholdContext) instead of the throwing `useHousehold()` hook — `useContext` returns undefined gracefully when no Provider is present, so the component degrades to the default mark instead of crashing. HouseholdSwitcher still returns null (renders nothing) when the user has fewer than 2 household memberships — that pre-existing early-return behavior and its test were left unchanged; the logo mark only becomes visible as part of the multi-household switcher button. Test file HouseholdLogoPicker.test.tsx covers: picker renders current/default mark, cycles-and-persists via PUT (asserts fetch called with method PUT and JSON body {logoPreset}), wrap-around from the last preset to the first, and the switcher rendering both a chosen preset and the default fallback (using a real HouseholdContext.Provider wrapper with a fabricated HouseholdContextType value, not a jest.mock of the context module)."
       },
       "failureReason": null
     },
