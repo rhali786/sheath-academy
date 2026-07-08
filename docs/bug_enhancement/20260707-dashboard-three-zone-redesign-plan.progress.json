@@ -1,7 +1,7 @@
 {
   "plan": "docs/bug_enhancement/20260707-dashboard-three-zone-redesign-plan.json",
   "createdAt": "2026-07-07T00:00:00.000Z",
-  "updatedAt": "2026-07-08T06:20:00.000Z",
+  "updatedAt": "2026-07-08T07:05:00.000Z",
   "branch": "feat/dashboard-three-zone-redesign",
   "phases": [
     {
@@ -194,14 +194,14 @@
       "id": "P8",
       "title": "Learning-Time weekly chart card (optional)",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "cheap",
+      "startedAt": "2026-07-08T07:00:00.000Z",
+      "completedAt": "2026-07-08T07:05:00.000Z",
       "outputs": {
         "filesChanged": [],
         "testsRun": [],
-        "notes": ""
+        "notes": "DEFERRED per the plan's own explicit hedge ('If zero client aggregation is preferred, skip this phase and open a follow-up for a learning-time weekly-summary endpoint'). No LearningTimeWeekCard.tsx or its test were created — nothing built inside fileScope. Rationale: (1) learningTimeApi.list(filters) (features/learning-time/front/services/api.ts) only accepts a single optional learnerId plus from/to — there is no household-wide session list. A household-scoped weekly card would need one fetch per active learner (mirroring the N-per-child fan-out LearnerCommandCenter already does in P5: 1 + 2N fetches) just to bucket sessions into weekday bars client-side, which is materially more than the 'cheap' tier this phase was routed at. (2) Zone C is already dense after P7 (ComplianceStatusCard, SchoolYearProgressCard, QuranStreak rings, IslamicCalendarCard countdowns, full-width PersonalTodoList) — adding another self-fetching card competes for the same real estate P7 just slimmed down, and doing it well (per-learner or household-aggregated bars) is a genuine design decision, not a mechanical one. FOLLOW-UP: open a ticket for a GET /api/learning-time/summary?householdId=&from=&to= (or similar) endpoint that returns server-aggregated weekday totals across all active learners in one call, then build LearningTimeWeekCard.tsx as a thin renderer over that endpoint (no client bucketing) — this avoids the N-per-child fetch fan-out and matches the 'cheap' tier this phase was originally routed at. No files changed; progress.json is the only change for this phase."
       },
       "failureReason": null
     }
