@@ -5,10 +5,10 @@ import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { SchoolYearProgressCard } from '../components/SchoolYearProgressCard'
 import { NeedsAttention } from '../components/NeedsAttention'
-import { PersonalAssistantPanel } from '../components/PersonalAssistantPanel'
+import { ComplianceStatusCard } from '../components/ComplianceStatusCard'
+import { LearnerCommandCenter } from '../components/LearnerCommandCenter'
 import { QuranStreak } from '../components/QuranStreak'
 import { PersonalTodoList } from '@/features/todos/front/components/PersonalTodoList'
-import { RecordsProof } from '../components/RecordsProof'
 import { IslamicCalendarCard } from '@/features/islamic-calendar/front/components/IslamicCalendarCard'
 import { getIslamicCalendarCountdowns } from '@/features/islamic-calendar/front/lib/countdowns'
 import { useIslamicReminderSettings } from '@/features/islamic-calendar/front/lib/useIslamicReminderSettings'
@@ -20,10 +20,8 @@ import { NextSetupStrip } from '@/features/setup/front/components/NextSetupStrip
 import { plannerApi } from '@/features/plan/front/services/api'
 import { DashboardHeader } from '../components/DashboardHeader'
 import { dashboardDateToStr } from '../components/DashboardDatePicker'
-import { getAssistantInsight } from '../lib/assistantRules'
 import { TodayTaskSummaryCards } from '../components/TodayTaskSummaryCards'
 import { TodaySchedulePanel } from '../components/TodaySchedulePanel'
-import { LearningTimeEntry } from '../components/LearningTimeEntry'
 import type { LessonTask } from '@/features/plan/types'
 import type { DaySchedule } from '@/features/schedule/types'
 
@@ -39,9 +37,17 @@ function isValidDateParam(dateStr: string | null): dateStr is string {
   return dashboardDateToStr(parsed) === dateStr
 }
 
+function ZoneLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">
+      {children}
+    </h2>
+  )
+}
+
 export default function Dashboard() {
   const {
-    children: studentProfiles, alerts, quranSessions, records, metrics,
+    children: studentProfiles, alerts, quranSessions, metrics,
     loading, error, addQuranSession, selectedChildId,
   } = useContext_Dashboard()
 
@@ -64,22 +70,6 @@ export default function Dashboard() {
     [allLessons, selectedDate],
   )
 
-  const selectedChild = useMemo(
-    () => studentProfiles.find(c => c.id === selectedChildId) ?? null,
-    [studentProfiles, selectedChildId],
-  )
-
-  const assistantInsight = useMemo(
-    () => getAssistantInsight({
-      selectedDate,
-      selectedChildId,
-      lessons: dayLessons,
-      alerts,
-      subjects: allSubjects,
-    }),
-    [alerts, allSubjects, dayLessons, selectedChildId, selectedDate],
-  )
-
   const daySchedule = useMemo((): DaySchedule => {
     return { ...buildDailySchedule(dayLessons, {
       startTime: '08:30',
@@ -87,8 +77,7 @@ export default function Dashboard() {
       defaultDurationMinutes: 30,
       includeSyntheticBreaks: true,
     }), date: selectedDate }
-  }, [allLessons, selectedDate])
-
+  }, [dayLessons, selectedDate])
 
   useEffect(() => {
     plannerApi.getLessons(
@@ -107,12 +96,6 @@ export default function Dashboard() {
       router.replace(`${pathname}?date=${today}`)
     }
   }, [dateParam, pathname, router, today])
-
-  function handleDateChange(nextDate: string) {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('date', nextDate)
-    router.push(`${pathname}?${params.toString()}`)
-  }
 
   if (loading || householdLoading) {
     return (
@@ -149,53 +132,67 @@ export default function Dashboard() {
   return (
     <div className="bg-slate-50 min-h-screen">
       <NextSetupStrip />
-      <DashboardHeader
-        selectedDate={selectedDate}
-        onDateChange={handleDateChange}
-        alerts={alerts}
-      />
-      <TodayTaskSummaryCards metrics={metrics} />
+      <DashboardHeader selectedDate={selectedDate} alerts={alerts} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3" data-testid="dashboard-hero-grid">
-          <div className="lg:col-span-2">
-            <TodaySchedulePanel
-              schedule={daySchedule}
-              currentTime={getCurrentTime()}
-              subjects={allSubjects}
-            />
-          </div>
-          <aside className="space-y-6" data-testid="dashboard-alerts-rail">
-            <PersonalAssistantPanel insight={assistantInsight} />
-            <LearningTimeEntry learnerId={selectedChildId} learnerName={selectedChild?.name} />
-            <PersonalTodoList />
-            <NeedsAttention alerts={alerts} />
-          </aside>
+      {/* Zone A — Today */}
+      <section data-testid="dashboard-zone-today" aria-label="Today">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          <ZoneLabel>Today</ZoneLabel>
         </div>
-      </div>
-
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6" data-testid="dashboard-more-insights">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <RecordsProof records={records} selectedChildId={selectedChildId} />
-          </div>
-          <div className="space-y-6">
-            <SchoolYearProgressCard />
-            <QuranStreak
-              quranSessions={quranSessions}
-              children={studentProfiles}
-              selectedChildId={selectedChildId}
-              onAddSession={addQuranSession}
-            />
-            {topCountdowns.filter(c => reminderEnabled[c.name]).map(c => (
-              <IslamicCalendarCard
-                key={c.id}
-                event={c.name}
-                daysUntil={c.daysUntil}
-                description={c.description}
+        <TodayTaskSummaryCards metrics={metrics} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3" data-testid="dashboard-hero-grid">
+            <div className="lg:col-span-2">
+              <TodaySchedulePanel
+                schedule={daySchedule}
+                currentTime={getCurrentTime()}
+                subjects={allSubjects}
               />
-            ))}
+            </div>
+            <aside data-testid="dashboard-attention-hub">
+              <NeedsAttention alerts={alerts} />
+            </aside>
           </div>
+        </div>
+      </section>
+
+      {/* Zone B — Per-learner command center */}
+      <section
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8"
+        data-testid="dashboard-zone-learners"
+        aria-label="Per-learner"
+      >
+        <ZoneLabel>Per-learner</ZoneLabel>
+        <LearnerCommandCenter />
+      </section>
+
+      {/* Zone C — Proof & Progress */}
+      <section
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10"
+        data-testid="dashboard-zone-proof"
+        aria-label="Proof & Progress"
+      >
+        <ZoneLabel>Proof &amp; Progress</ZoneLabel>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <ComplianceStatusCard />
+          <SchoolYearProgressCard />
+          <QuranStreak
+            quranSessions={quranSessions}
+            children={studentProfiles}
+            selectedChildId={selectedChildId}
+            onAddSession={addQuranSession}
+          />
+          {topCountdowns.filter(c => reminderEnabled[c.name]).map(c => (
+            <IslamicCalendarCard
+              key={c.id}
+              event={c.name}
+              daysUntil={c.daysUntil}
+              description={c.description}
+            />
+          ))}
+        </div>
+        <div className="mt-6">
+          <PersonalTodoList />
         </div>
       </section>
 

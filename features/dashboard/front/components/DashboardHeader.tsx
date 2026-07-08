@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Sun, Plus, ListChecks } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { Calendar } from 'lucide-react'
 import { useHousehold } from '@/features/household/front/context'
 import { ChildSelector } from './ChildSelector'
-import { DashboardDatePicker } from './DashboardDatePicker'
 
 function greetingName(sessionName: string | null | undefined, familyName: string): string {
   if (sessionName?.trim()) {
@@ -16,13 +16,24 @@ function greetingName(sessionName: string | null | undefined, familyName: string
   return 'there'
 }
 
+function formatDisplayDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(y, m - 1, d))
+}
+
 interface DashboardHeaderProps {
   selectedDate: string
-  onDateChange: (dateStr: string) => void
+  /** Deprecated: the header date is now a plain label; day-navigation was removed. Accepted for back-compat. */
+  onDateChange?: (dateStr: string) => void
   alerts?: unknown[]
 }
 
-export function DashboardHeader({ selectedDate, onDateChange, alerts: _alerts }: DashboardHeaderProps) {
+export function DashboardHeader({ selectedDate, alerts: _alerts }: DashboardHeaderProps) {
   const { data: session } = useSession()
   const { familyName } = useHousehold()
   const [quickAddOpen, setQuickAddOpen] = useState(false)
@@ -55,7 +66,12 @@ export function DashboardHeader({ selectedDate, onDateChange, alerts: _alerts }:
             </p>
           </div>
 
-          <DashboardDatePicker selectedDate={selectedDate} onDateChange={onDateChange} />
+          <div className="flex items-center gap-1.5 px-2" data-testid="dashboard-date-picker">
+            <Calendar className="h-4 w-4 text-slate-400 shrink-0" aria-hidden="true" />
+            <span className="text-sm font-medium text-slate-700" data-testid="dashboard-selected-date">
+              {formatDisplayDate(selectedDate)}
+            </span>
+          </div>
 
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
             <div className="relative" ref={quickAddRef}>

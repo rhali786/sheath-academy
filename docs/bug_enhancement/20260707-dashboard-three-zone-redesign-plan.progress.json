@@ -161,9 +161,9 @@
       "id": "P7",
       "title": "Dashboard re-shell into three zones + cuts",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
+      "status": "in_progress",
+      "model": "strong",
+      "startedAt": "2026-07-08T05:30:00.000Z",
       "completedAt": null,
       "outputs": {
         "filesChanged": [],

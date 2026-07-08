@@ -22,6 +22,13 @@ export function NeedsAttention({ alerts }: NeedsAttentionProps) {
     return 0
   })
 
+  // Every item carries a learner chip; household-scoped items (no childId) read "Household".
+  const withChip = sorted.map((alert) =>
+    alert.childId === null && !alert.childName
+      ? { ...alert, childName: 'Household' }
+      : alert,
+  )
+
   return (
     <section>
       <div className="flex items-center justify-between mb-5">
@@ -39,7 +46,7 @@ export function NeedsAttention({ alerts }: NeedsAttentionProps) {
         </select>
       </div>
       <div className="space-y-2">
-        {sorted.map((alert) => (
+        {withChip.map((alert) => (
           <AlertItem key={alert.id} alert={alert} />
         ))}
       </div>

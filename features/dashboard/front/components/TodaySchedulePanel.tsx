@@ -39,13 +39,22 @@ export function TodaySchedulePanel({ schedule, currentTime, subjects }: TodaySch
         onScheduleChange={setLiveSchedule}
       />
 
-      <p className="text-xs text-slate-400 mt-4" data-testid="schedule-footer-counts">
-        {scheduledCount} of {plannedCount} items scheduled
-        {' · '}
-        <Link href="/plan" className="text-forest-900 hover:underline">
-          View Day&apos;s Plan
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-slate-400" data-testid="schedule-footer-counts">
+          {scheduledCount} of {plannedCount} items scheduled
+          {' · '}
+          <Link href="/plan" className="text-forest-900 hover:underline">
+            View Day&apos;s Plan
+          </Link>
+        </p>
+        <Link
+          href="/learning-time"
+          data-testid="start-learning-time"
+          className="inline-flex items-center px-3 py-1.5 bg-forest-900 text-white text-xs font-medium rounded-lg hover:bg-forest-800 transition-colors"
+        >
+          Start learning time
         </Link>
-      </p>
+      </div>
     </section>
   )
 }
