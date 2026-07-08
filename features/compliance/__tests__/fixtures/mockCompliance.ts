@@ -47,6 +47,11 @@ export const mockStatusResult: StatusEngineResult = {
     'Record 38 more school days to reach your requirement',
   ],
   missingData: [],
+  checks: [
+    { label: '142 / 180 days logged', met: false },
+    { label: 'All required subjects covered', met: true },
+    { label: 'Portfolio evidence on file', met: true },
+  ],
   isSelfReported: false,
   belowLegalFloorWarning: null,
   provenance: 'TX – independent pathway (verified 2026-01-15)',

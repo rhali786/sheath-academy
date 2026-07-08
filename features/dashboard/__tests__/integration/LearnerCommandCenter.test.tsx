@@ -51,6 +51,16 @@ jest.mock('@/features/gradebook/front/services/api', () => ({
   },
 }))
 
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({
+      status: 'success',
+      data: { id: 'sy_1', name: '2025-2026', startDate: '2025-08-01', endDate: '2026-06-01' },
+    }),
+  })
+) as jest.Mock
+
 function SelectedChildProbe() {
   const { selectedChildId } = useLearner()
   return <div data-testid="selected-child-probe">{selectedChildId ?? 'none'}</div>
@@ -218,13 +228,77 @@ describe('LearnerCommandCenter', () => {
     expect(screen.getByText('Amina')).toBeInTheDocument()
     expect(screen.getByText('Bilal')).toBeInTheDocument()
 
-    // Amina: 3/4 present -> 75%, 1/2 lessons completed today, overallMastery 88.5
+    // Amina: 3/4 present -> 75%, 1/2 lessons completed today, overallMastery 88.5 -> "B · 89%"
     expect(screen.getByTestId('learner-command-row-c1-attendance')).toHaveTextContent('75%')
-    expect(screen.getByTestId('learner-command-row-c1-lessons')).toHaveTextContent('1/2')
-    expect(screen.getByTestId('learner-command-row-c1-grade')).toHaveTextContent('88.5')
+    expect(screen.getByTestId('learner-command-row-c1-lessons')).toHaveTextContent('1 / 2')
+    expect(screen.getByTestId('learner-command-row-c1-grade')).toHaveTextContent('B')
+    expect(screen.getByTestId('learner-command-row-c1-grade')).toHaveTextContent('89%')
+    // Subtitle is gradeLabel only, never "Umbrella"
+    expect(screen.getByTestId('learner-command-row-c1')).toHaveTextContent('4')
+    expect(screen.getByTestId('learner-command-row-c1')).not.toHaveTextContent('Umbrella')
   })
 
-  it("renders '—' for metrics with no data rather than crashing or showing a fake number", async () => {
+  it('renders a shared column-header row above the learner rows', async () => {
+    mockGetAllChildren.mockResolvedValue({ data: [learner1] })
+    mockGetSummaries.mockResolvedValue({ data: [] })
+    mockGetSummary.mockResolvedValue(emptyAttendanceSummary('c1'))
+    mockGetLessons.mockResolvedValue([])
+
+    renderCenter()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('learner-command-center')).toBeInTheDocument()
+    })
+
+    const header = screen.getByTestId('learner-command-header')
+    expect(header).toHaveTextContent('Learner')
+    expect(header).toHaveTextContent('Attendance')
+    expect(header).toHaveTextContent('Lessons Due Today')
+    expect(header).toHaveTextContent('Current grade')
+  })
+
+  it('fetches attendance for a school-year-to-date window, not the current week', async () => {
+    mockGetAllChildren.mockResolvedValue({ data: [learner1] })
+    mockGetSummaries.mockResolvedValue({ data: [] })
+    mockGetSummary.mockResolvedValue(emptyAttendanceSummary('c1'))
+    mockGetLessons.mockResolvedValue([])
+
+    renderCenter()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('learner-command-center')).toBeInTheDocument()
+    })
+
+    await waitFor(() => {
+      expect(mockGetSummary).toHaveBeenCalledWith('c1', '2025-08-01', expect.any(String))
+    })
+  })
+
+  it('ignores the active school year start when it is in the future (e.g. next year already set up mid-summer) rather than sending an inverted, always-empty date range', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        status: 'success',
+        data: { id: 'sy_future', name: '2099-2100', startDate: '2099-08-01', endDate: '2100-06-01' },
+      }),
+    })
+    mockGetAllChildren.mockResolvedValue({ data: [learner1] })
+    mockGetSummaries.mockResolvedValue({ data: [] })
+    mockGetSummary.mockResolvedValue(emptyAttendanceSummary('c1'))
+    mockGetLessons.mockResolvedValue([])
+
+    renderCenter()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('learner-command-center')).toBeInTheDocument()
+    })
+
+    await waitFor(() => {
+      expect(mockGetSummary).toHaveBeenCalledWith('c1', undefined, expect.any(String))
+    })
+  })
+
+  it('renders 0% / 0 of 0 for attendance and lessons with no data (never a blank dash) so color and sizing are always visible; grade stays a dash since there is no such thing as a zero mastery score', async () => {
     mockGetAllChildren.mockResolvedValue({ data: [learner2] })
     mockGetSummaries.mockResolvedValue({ data: [] })
     mockGetSummary.mockResolvedValue(emptyAttendanceSummary('c2'))
@@ -236,8 +310,8 @@ describe('LearnerCommandCenter', () => {
       expect(screen.getByTestId('learner-command-center')).toBeInTheDocument()
     })
 
-    expect(screen.getByTestId('learner-command-row-c2-attendance')).toHaveTextContent('—')
-    expect(screen.getByTestId('learner-command-row-c2-lessons')).toHaveTextContent('—')
+    expect(screen.getByTestId('learner-command-row-c2-attendance')).toHaveTextContent('0%')
+    expect(screen.getByTestId('learner-command-row-c2-lessons')).toHaveTextContent('0 / 0')
     expect(screen.getByTestId('learner-command-row-c2-grade')).toHaveTextContent('—')
   })
 

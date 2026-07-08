@@ -7,6 +7,7 @@ import {
   createSessionRow,
   getActiveSessionRow,
   getSessionRow,
+  listFinalizedSessionRows,
   updateSessionRow,
 } from '../../server/repository'
 import { createTestHousehold } from '@/features/lib/__tests__/fixtures/testDb'
@@ -88,5 +89,23 @@ describe('learning-time repository', () => {
 
     const row = await createSessionRow(householdId, { learnerId, timeChannelType: 'stopwatch' })
     expect(row.id).not.toBe(sessionId)
+  })
+
+  itDb('listFinalizedSessionRows includes a session that ended later the same day as `to`', async () => {
+    // Regression: `to` is a date-only string; the query must treat it as end-of-day, not
+    // midnight UTC, or same-day sessions ending after midnight UTC get excluded.
+    const draft = await createSessionRow(householdId, { learnerId, timeChannelType: 'stopwatch' })
+    const lateInDay = new Date()
+    lateInDay.setUTCHours(23, 30, 0, 0)
+    await updateSessionRow(draft.id, householdId, {
+      status: 'finalized',
+      endedAt: lateInDay,
+      endedBy: 'manual',
+      outcome: 'complete',
+    })
+
+    const todayStr = `${lateInDay.getUTCFullYear()}-${String(lateInDay.getUTCMonth() + 1).padStart(2, '0')}-${String(lateInDay.getUTCDate()).padStart(2, '0')}`
+    const rows = await listFinalizedSessionRows(householdId, { from: todayStr, to: todayStr })
+    expect(rows.some(r => r.id === draft.id)).toBe(true)
   })
 })

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AlertTriangle } from 'lucide-react'
 import { AlertItem } from './shared/AlertItem'
 import type { Alert } from '@/features/alerts/types'
 
@@ -30,9 +31,15 @@ export function NeedsAttention({ alerts }: NeedsAttentionProps) {
   )
 
   return (
-    <section>
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="text-xl font-bold text-slate-900">Needs Attention</h2>
+    <section className="bg-white rounded-xl border border-slate-200 shadow-sm" data-testid="attention-hub-card">
+      <div className="flex items-center justify-between px-5 pt-4 pb-3">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-[18px] h-[18px] text-forest-700" aria-hidden="true" />
+          <h2 className="text-base font-bold text-slate-900">Attention Hub</h2>
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-forest-50 text-forest-700 border border-forest-100 uppercase tracking-wide">
+            {alerts.length} open
+          </span>
+        </div>
         <select
           id="sortBy"
           name="sortBy"
@@ -45,7 +52,10 @@ export function NeedsAttention({ alerts }: NeedsAttentionProps) {
           <option value="date">By Date</option>
         </select>
       </div>
-      <div className="space-y-2">
+      <div
+        className="space-y-2 px-5 pb-5 max-h-[420px] overflow-y-auto"
+        data-testid="attention-hub-list"
+      >
         {withChip.map((alert) => (
           <AlertItem key={alert.id} alert={alert} />
         ))}

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { Bell } from 'lucide-react'
 import type { Alert } from '@/features/alerts/types'
 import type { ConversationSummary } from '@/features/messaging/types'
 import { useUnreadMessages } from '@/features/messaging/front/hooks/useUnreadMessages'
@@ -102,13 +101,13 @@ export function NotificationBellDropdown({ alerts, onOpen }: NotificationBellDro
             return next
           })
         }}
-        className="relative p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors"
+        className="relative border border-slate-200 bg-white rounded-lg p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors"
         aria-label="Notifications"
         aria-expanded={open}
         aria-haspopup="menu"
         data-testid="dashboard-notification-bell"
       >
-        <Bell className="h-5 w-5" aria-hidden="true" />
+        <span className="text-base leading-none" aria-hidden="true">🔔</span>
         {hasNotifications && (
           <span
             className="absolute top-1 right-1 min-w-[1rem] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center"

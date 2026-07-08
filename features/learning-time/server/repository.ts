@@ -1,4 +1,4 @@
-import { and, eq, gte, lte, ne } from 'drizzle-orm'
+import { and, eq, gte, lt, ne } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
 import { learningTimeSessions } from '@/db/schema'
 import type { SessionListFilters } from '../types'
@@ -119,6 +119,13 @@ export async function listFinalizedSessionRows(
   ]
   if (filters.learnerId) conditions.push(eq(learningTimeSessions.learnerId, filters.learnerId))
   if (filters.from) conditions.push(gte(learningTimeSessions.endedAt, new Date(filters.from)))
-  if (filters.to) conditions.push(lte(learningTimeSessions.endedAt, new Date(filters.to)))
+  if (filters.to) {
+    // `to` is a date-only string (e.g. "2026-07-08"); `new Date(...)` parses it as midnight
+    // UTC, which would exclude same-day sessions that ended later that day. Use the start of
+    // the *next* day as an exclusive upper bound instead, so `to` covers the whole day.
+    const exclusiveUpperBound = new Date(filters.to)
+    exclusiveUpperBound.setUTCDate(exclusiveUpperBound.getUTCDate() + 1)
+    conditions.push(lt(learningTimeSessions.endedAt, exclusiveUpperBound))
+  }
   return db.select().from(learningTimeSessions).where(and(...conditions))
 }

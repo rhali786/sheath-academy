@@ -19,10 +19,6 @@ jest.mock('@/features/household/front/context', () => ({
   })),
 }))
 
-jest.mock('@/features/dashboard/front/components/ChildSelector', () => ({
-  ChildSelector: () => <div data-testid="child-selector-stub" />,
-}))
-
 const defaultProps = {
   selectedDate: '2026-05-24',
   onDateChange: jest.fn(),

@@ -1,0 +1,631 @@
+<!doctype html><html><head><!-- frame-runtime --><script>window.__FRAME_PREAMBLE={"capabilities":{"mcp":"mcp.BQqQVVN_.js"},"transforms":"_transforms.DYk1Ltlh.js"}</script><script>(function(){"use strict";const X="modulepreload",Y=function(e){return"/"+e},Z={},U=function(t,n,u){let o=Promise.resolve();function i(f){const a=new Event("vite:preloadError",{cancelable:!0});if(a.payload=f,window.dispatchEvent(a),!a.defaultPrevented)throw f}return o.then(f=>{for(const a of f||[])a.status==="rejected"&&i(a.reason);return t().catch(i)})},D=["light","dark","system"];function $(e){if(e==null||typeof e!="object")return!1;const t=e.__frame_init;return t!=null&&typeof t=="object"}function q(e){if(e==null||typeof e!="object")return!1;const t=e.__frame_theme;if(t==null||typeof t!="object")return!1;const n=t.theme;return typeof n=="string"&&D.includes(n)}function M(e){if(window===top||e.type==="auxclick"&&e.button!==1)return;const t=e.composedPath?e.composedPath():[e.target];let n=null;for(let f=0;f<t.length;f++){const a=t[f];if(a&&a.matches&&a.matches("a[href],area[href]")){n=a;break}}if(!n&&e.target&&e.target.closest&&(n=e.target.closest("a[href],area[href]")),!n)return;const u=n.getAttribute("href");if(!u)return;let o,i;try{o=new URL(u,document.baseURI),i=new URL(document.baseURI).origin}catch{return}(o.protocol==="http:"||o.protocol==="https:")&&o.origin!==i&&(e.preventDefault(),parent.postMessage({__frame_nav:!0,url:o.href},"*"))}const L={};function y(e){if(window===top)return;const t=Date.now();t-(L[e]||0)<500||(L[e]=t,parent.postMessage({__frame_engaged:!0,kind:e},"*"))}const F=2e3,T=["wheel","touchstart","touchmove","keydown","pointerdown"];let k=0;function B(e){e.isTrusted&&(k=Date.now())}function z(){addEventListener("click",M,!0),addEventListener("auxclick",M,!0)}function W(){for(let e=0;e<T.length;e++)addEventListener(T[e],B,{capture:!0,passive:!0});addEventListener("scroll",e=>{e.isTrusted&&Date.now()-k<F&&y("scroll")},{capture:!0,passive:!0}),addEventListener("pointermove",e=>{e.isTrusted&&y("pointer")},{capture:!0,passive:!0}),addEventListener("click",e=>{e.isTrusted&&y("click")},{capture:!0,passive:!0})}function x(e,t,n){const u=[...t.values()].filter(o=>o.targets.some(i=>i.startsWith(e+".")));return{wrap(o,i){const f=`${e}.${o}`,a=u.filter(s=>s.targets.includes(f));return a.length===0?(...s)=>{try{return i(...s)}catch(d){return Promise.reject(d)}}:(...s)=>{let d=s;for(const c of a){const l=c.module.parameters;if(l)try{d=l(d)}catch{return Promise.reject({code:"transform_error",id:c.id,scope:e,message:"parameters transform failed"})}}let m;try{m=i(...d)}catch(c){m=Promise.reject(c)}return m.then(c=>{for(let l=a.length-1;l>=0;l--){const h=a[l],p=h.module.returns;if(p)try{c=p(c)}catch{return n({id:h.id,scope:e,leg:"returns"}),c}}return c},c=>{for(let l=a.length-1;l>=0;l--){const h=a[l],p=h.module.throws;if(p)try{c=p(c)}catch{return n({id:h.id,scope:e,leg:"throws"}),Promise.reject(c)}}return Promise.reject(c)})}}}}function H(e,t,n,u=()=>{}){const o=new Set(e.changes??[]),i=new Map;for(const f of o){const a=t[f];a&&i.set(f,a)}return{contract:e.contract,changes:o,flags:new Set(e.flags??[]),capabilities:e.capabilities??{},transforms:i,shellOrigin:n.shellOrigin,mount:n.mount,pipe:f=>x(f,i,u)}}(function(){const e=Object.defineProperty,t=globalThis,n=["RTCPeerConnection","webkitRTCPeerConnection","RTCDataChannel","RTCIceCandidate","RTCSessionDescription","RTCRtpSender","RTCRtpReceiver"];let u=0;for(let o=0;o<n.length;o++){const i=n[o];try{e(t,i,{value:void 0,writable:!1,configurable:!1})}catch{try{delete t[i]}catch{}try{e(t,i,{value:void 0,writable:!1,configurable:!0})}catch{}}typeof t[i]=="function"&&u++}if(u&&window!==top)try{parent.postMessage({__frame_rtc_lockdown_failed:u},"*")}catch{}})();const K=1e4,G=Object.freeze([...window.__FRAME_PREAMBLE?.origins??["https://claude.ai","https://preview.claude.ai"]]);function J(e){for(const t of G)if(t.endsWith(":*"))try{const n=new URL(e);if(`${n.protocol}//${n.hostname}:*`===t)return!0}catch{}else if(e===t)return!0;return!1}const w=Object.freeze({...window.__FRAME_PREAMBLE?.capabilities??{}}),E=window.__FRAME_PREAMBLE?.transforms,C=/^[\w.-]+\.js$/,V=/^[a-z][a-z0-9_-]{0,63}$/;let A=null,g=null;function P(e,t,n){try{Object.defineProperty(e,t,{value:n,writable:!1,configurable:!1,enumerable:!0})}catch{try{Object.defineProperty(e,t,{value:n,writable:!1,configurable:!0,enumerable:!0})}catch{}}}let R=!1;function N(e){const t=document.documentElement;e==="light"||e==="dark"?(t.dataset.theme=e,t.style.colorScheme=e,R=!0):R&&(delete t.dataset.theme,t.style.colorScheme="",R=!1)}const _=new Map;function Q(e,t){const n=_.get(e);if(!n)return;Object.assign(n.impl,t),n.impl.__settled=()=>Promise.reject({code:"capability_removed",message:`${e}: method not in this runtime`});const u=n.queue;n.queue=[];for(const o of u){const i=t[o.method];i?i(...o.args).then(o.resolve,o.reject):o.reject({code:"capability_removed",message:`${e}.${o.method} is not in this runtime`})}}function O(e,t){const n=_.get(e);if(!n)return;n.impl.__settled=()=>Promise.reject(t);const u=n.queue;n.queue=[];for(const o of u)o.reject(t)}const j=Object.getOwnPropertyDescriptor(window,"claude");if(window!==top&&!(j&&j.writable===!1)){z(),W();const e=j?.value??{};P(window,"claude",e);const t=s=>{const d={impl:Object.create(null),queue:[]};_.set(s,d);const m=new Proxy(d.impl,{get:(c,l)=>{if(typeof l=="string"&&!(l==="then"||l==="toJSON"||l==="valueOf"))return l==="toString"?Object.prototype.toString:(...h)=>{const p=c[l]??c.__settled;return p?p(...h):new Promise((b,S)=>{d.queue.push({method:l,args:h,resolve:b,reject:S})})}},set:()=>!1});P(e,s,m)};for(const s of Object.keys(w)){if(e[s]!==void 0){P(e,s,e[s]);continue}t(s)}let n=null,u=null,o=0;const i=s=>{s.source!==parent||!J(s.origin)||$(s.data)&&(n=s.data.__frame_init,g=s.origin,removeEventListener("message",i),clearTimeout(o),u?.())};addEventListener("message",i),parent.postMessage({__frame_connect:!0},"*");const f=new Promise(s=>{u=s,o=setTimeout(()=>{removeEventListener("message",i),s()},K)}),a=document.readyState==="loading"?new Promise(s=>document.addEventListener("DOMContentLoaded",()=>s(),{once:!0})):Promise.resolve();f.then(async()=>{if(!n||!g){for(const r of _.keys())O(r,{code:"not_granted",message:"frame initialization did not arrive - capability unavailable"});return}N(n.theme);const s=g;addEventListener("message",r=>{r.source!==parent||r.origin!==s||q(r.data)&&N(r.data.__frame_theme.theme)});const d=r=>U(()=>import("/_runtime/"+r),void 0),m=Object.keys(n.capabilities??{});for(const r of m)Object.hasOwn(w,r)||V.test(r)&&e[r]===void 0&&(t(r),O(r,{code:"capability_disabled",message:"capability not in this runtime generation"}));const c=m.filter(r=>Object.hasOwn(w,r)).map(r=>[r,w[r]]).filter(r=>typeof r[1]=="string"&&C.test(r[1])),[l,...h]=await Promise.allSettled([E&&C.test(E)?d(E):Promise.resolve({}),...c.map(([,r])=>d(r))]),p=g;A=H(n,l.status==="fulfilled"&&l.value?.TRANSFORMS||{},{shellOrigin:p,mount:Q},r=>parent.postMessage({__frame_cap_telemetry:r},p));const b=r=>parent.postMessage({__frame_cap_telemetry:{kind:"cap-load-error",cap:r}},p),S=A;h.forEach((r,v)=>{const I=c[v][0];if(r.status!=="fulfilled"){b(I);return}try{r.value?.install?.(S)}catch{b(I)}});for(const[r,v]of _)v.queue.length===0&&Object.keys(v.impl).length>0||O(r,{code:m.includes(r)?"capability_disabled":"not_granted",message:"capability not available in this session"});await a,parent.postMessage({__frame_ready:!0},g)})}})();</script><!-- /frame-runtime --><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>Dashboard redesign — three-zone prototype v2</title>
+<style>
+  :root {
+    --forest-950:#0a2d1a; --forest-900:#1a5c3a; --forest-800:#1e6b45;
+    --forest-700:#237a4e; --forest-600:#2d9862; --forest-200:#a8d5bb;
+    --forest-100:#dcf0e5; --forest-50:#f0f9f4;
+
+    /* forest-role tokens (so dark mode stays legible) */
+    --accent:#1a5c3a; --accent-hover:#1e6b45; --accent-text:#237a4e;
+    --accent-soft:#f0f9f4; --accent-line:#cfe8da;
+
+    /* per-child series (features/dashboard/front/theme.ts) */
+    --child-1:#1a5c3a; --child-2:#0284c7; --child-3:#b45309;
+
+    --slate-900:#0f172a; --slate-700:#334155; --slate-600:#475569;
+    --slate-500:#64748b; --slate-400:#94a3b8; --slate-300:#cbd5e1;
+    --slate-200:#e2e8f0; --slate-100:#f1f5f9; --slate-50:#f8fafc;
+    --card:#ffffff; --page:#f1f5f9; --line:#e9eef2; --line-soft:#f1f5f9;
+
+    --good:#1e8a55; --good-bg:#e6f4ec; --warn:#b45309; --warn-bg:#fef3c7;
+    --crit:#c0392b; --crit-bg:#fbe7e4; --sky:#0284c7; --sky-bg:#e0f2fe;
+    --violet:#7c3aed; --violet-bg:#f3e8ff; --amber:#b45309; --amber-bg:#fef3c7;
+
+    --radius:14px;
+    --shadow:0 1px 2px rgba(15,23,42,.05);
+    --shadow-md:0 4px 14px rgba(15,23,42,.07);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --slate-900:#e8eef4; --slate-700:#c3cdd8; --slate-600:#a7b4c0;
+      --slate-500:#8b97a4; --slate-400:#6f7d8a; --slate-300:#556270;
+      --slate-200:#39434f; --slate-100:#28313b; --slate-50:#1c242c;
+      --card:#161d24; --page:#0d1319; --line:#28313b; --line-soft:#222a33;
+      --accent:#2d9862; --accent-hover:#34a86e; --accent-text:#5fc48a;
+      --accent-soft:#13251c; --accent-line:#2b4a39;
+      --good:#4cc487; --good-bg:#12301f; --warn:#e0a84a; --warn-bg:#2f2410;
+      --crit:#e8796b; --crit-bg:#311815; --sky:#4ea6e6; --sky-bg:#0f2536;
+      --violet:#a884f0; --violet-bg:#241634; --amber:#e0a84a; --amber-bg:#2f2410;
+      --shadow:0 1px 2px rgba(0,0,0,.4); --shadow-md:0 6px 22px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="light"]{
+    --slate-900:#0f172a;--slate-700:#334155;--slate-600:#475569;--slate-500:#64748b;
+    --slate-400:#94a3b8;--slate-300:#cbd5e1;--slate-200:#e2e8f0;--slate-100:#f1f5f9;--slate-50:#f8fafc;
+    --card:#fff;--page:#f1f5f9;--line:#e9eef2;--line-soft:#f1f5f9;
+    --accent:#1a5c3a;--accent-hover:#1e6b45;--accent-text:#237a4e;--accent-soft:#f0f9f4;--accent-line:#cfe8da;
+    --good:#1e8a55;--good-bg:#e6f4ec;--warn:#b45309;--warn-bg:#fef3c7;--crit:#c0392b;--crit-bg:#fbe7e4;
+    --sky:#0284c7;--sky-bg:#e0f2fe;--violet:#7c3aed;--violet-bg:#f3e8ff;--amber:#b45309;--amber-bg:#fef3c7;
+    --shadow:0 1px 2px rgba(15,23,42,.05);--shadow-md:0 4px 14px rgba(15,23,42,.07);
+  }
+  :root[data-theme="dark"]{
+    --slate-900:#e8eef4;--slate-700:#c3cdd8;--slate-600:#a7b4c0;--slate-500:#8b97a4;
+    --slate-400:#6f7d8a;--slate-300:#556270;--slate-200:#39434f;--slate-100:#28313b;--slate-50:#1c242c;
+    --card:#161d24;--page:#0d1319;--line:#28313b;--line-soft:#222a33;
+    --accent:#2d9862;--accent-hover:#34a86e;--accent-text:#5fc48a;--accent-soft:#13251c;--accent-line:#2b4a39;
+    --good:#4cc487;--good-bg:#12301f;--warn:#e0a84a;--warn-bg:#2f2410;--crit:#e8796b;--crit-bg:#311815;
+    --sky:#4ea6e6;--sky-bg:#0f2536;--violet:#a884f0;--violet-bg:#241634;--amber:#e0a84a;--amber-bg:#2f2410;
+    --shadow:0 1px 2px rgba(0,0,0,.4);--shadow-md:0 6px 22px rgba(0,0,0,.5);
+  }
+
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--page); color:var(--slate-900);
+    font-family:var(--font); line-height:1.45; -webkit-font-smoothing:antialiased; font-size:14px; }
+  .frame{ max-width:1200px; margin:0 auto; padding:0 24px; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  a.reset{ color:inherit; text-decoration:none; }
+  button{ font-family:inherit; }
+
+  /* prototype ribbon */
+  .protobar{ background:var(--forest-950); color:#dcf0e5; font-size:12.5px; }
+  .protobar .frame{ display:flex; align-items:center; gap:10px; padding:9px 24px; flex-wrap:wrap; }
+  .protobar strong{ color:#fff; font-weight:650; }
+  .protobar .spacer{ flex:1; }
+  .themeflip{ background:rgba(255,255,255,.1); color:#eaf7ef; border:1px solid rgba(255,255,255,.18);
+    padding:5px 12px; border-radius:999px; font-size:12px; cursor:pointer; }
+  .themeflip:hover{ background:rgba(255,255,255,.2); }
+  .themeflip:focus-visible{ outline:2px solid var(--forest-200); outline-offset:2px; }
+
+  /* ── global app-shell top bar (sticky) ── */
+  .appbar{ position:sticky; top:0; z-index:30; background:var(--card);
+    border-bottom:1px solid var(--line); box-shadow:var(--shadow); }
+  .appbar .frame{ display:flex; align-items:center; gap:14px; padding:11px 24px; }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand .word{ font-weight:700; font-size:16px; letter-spacing:-.015em; }
+  .brand .word .sub{ color:var(--accent-text); }
+  .appbar .spacer{ flex:1; }
+  .switch{ display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line);
+    background:var(--card); color:var(--slate-700); border-radius:9px; padding:6px 11px; font-size:13px; cursor:pointer; }
+  .switch:hover{ background:var(--slate-50); }
+  .switch .av{ width:20px; height:20px; border-radius:999px; display:grid; place-items:center;
+    color:#fff; font-size:11px; font-weight:700; }
+  .switch .cap{ font-size:11px; color:var(--slate-400); font-weight:600; }
+  .bell{ position:relative; border:1px solid var(--line); background:var(--card);
+    border-radius:9px; padding:7px 9px; cursor:pointer; font-size:15px; }
+  .bell .badge{ position:absolute; top:-6px; right:-6px; background:var(--crit); color:#fff;
+    font-size:10px; font-weight:700; min-width:17px; height:17px; border-radius:9px; display:grid; place-items:center; padding:0 3px; }
+  .greet-mini{ display:flex; flex-direction:column; align-items:flex-end; line-height:1.25; }
+  .greet-mini .g{ font-size:12px; font-weight:600; color:var(--slate-700); }
+  .greet-mini .e{ font-size:11px; color:var(--slate-400); }
+  .signout{ border:1px solid var(--line); background:var(--card); color:var(--slate-600);
+    border-radius:9px; padding:6px 11px; font-size:12px; cursor:pointer; }
+  @media (max-width:820px){ .greet-mini,.switch .cap{ display:none; } }
+
+  /* ── dashboard greeting header ── */
+  .dashhead{ background:var(--card); border-bottom:1px solid var(--line); }
+  .dashhead .frame{ padding:22px 24px; }
+  .dh-top{ display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap; }
+  .dh-greet h2{ margin:0; font-size:23px; font-weight:750; letter-spacing:-.02em; display:flex; align-items:center; gap:9px; }
+  .dh-greet .sun{ color:#f59e0b; }
+  .dh-greet p{ margin:5px 0 0; font-size:13.5px; color:var(--slate-500); }
+  .dh-actions{ margin-left:auto; display:flex; gap:9px; align-items:center; flex-wrap:wrap; }
+  .btn-out{ display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line);
+    background:var(--card); color:var(--slate-700); border-radius:9px; padding:8px 13px; font-size:13px; font-weight:600; cursor:pointer; }
+  .btn-out:hover{ background:var(--slate-50); }
+  .btn-out.forest{ border-color:var(--accent); color:var(--accent-text); }
+  .btn-out.forest:hover{ background:var(--accent-soft); }
+  .datepick{ display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:600; color:var(--slate-500); }
+  .dh-view{ margin-top:15px; padding-top:13px; border-top:1px solid var(--line-soft);
+    display:flex; justify-content:flex-end; align-items:center; gap:9px; }
+  .dh-view label{ font-size:12px; font-weight:600; color:var(--slate-600); }
+  .selbox{ border:1px solid var(--line); border-radius:9px; padding:6px 11px; font-size:13px;
+    color:var(--slate-800); background:var(--card); cursor:pointer; }
+
+  /* ── zones ── */
+  .zone{ padding:26px 0 4px; }
+  .zone-head{ display:flex; align-items:baseline; gap:12px; margin:0 0 15px; }
+  .zone-eyebrow{ font-size:11px; font-weight:750; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-text); }
+  .zone-q{ font-size:12.5px; color:var(--slate-500); font-style:italic; }
+  .zone-rule{ flex:1; height:1px; background:var(--line); align-self:center; }
+
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
+  .card-h{ display:flex; align-items:center; gap:9px; padding:15px 17px 12px; }
+  .card-h h3{ margin:0; font-size:14.5px; font-weight:700; letter-spacing:-.01em; }
+  .card-h .ico{ width:19px; height:19px; color:var(--accent-text); }
+  .push{ margin-left:auto; }
+  .pill{ font-size:10.5px; font-weight:750; letter-spacing:.03em; text-transform:uppercase; padding:3px 8px; border-radius:999px; }
+  .pill-new{ background:var(--accent); color:#fff; }
+  .pill-soft{ background:var(--accent-soft); color:var(--accent-text); border:1px solid var(--accent-line); }
+  .cap-click{ font-size:11.5px; color:var(--slate-400); padding:9px 2px 2px; }
+  .cap-click b{ color:var(--accent-text); font-weight:600; }
+
+  /* summary strip */
+  .summary{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:16px; }
+  .stat{ display:flex; align-items:flex-start; gap:12px; padding:16px 17px; }
+  .stat .num{ font-size:30px; font-weight:750; line-height:1; letter-spacing:-.02em; }
+  .stat .lbl{ font-size:13px; font-weight:650; color:var(--slate-700); margin-top:6px; }
+  .stat .hint{ font-size:12px; margin-top:2px; }
+  .stat .chip{ width:38px; height:38px; border-radius:999px; display:grid; place-items:center; color:#fff; margin-left:auto; flex-shrink:0; }
+  .chip-good{ background:var(--good);} .chip-info{ background:var(--sky);} .chip-warn{ background:var(--warn);}
+  .t-good{ color:var(--good);} .t-info{ color:var(--sky);} .t-warn{ color:var(--warn);}
+
+  .a-grid{ display:grid; grid-template-columns:1.85fr 1fr; gap:16px; align-items:start; }
+
+  /* schedule */
+  .sched-h{ display:flex; align-items:center; justify-content:space-between; padding:15px 17px 8px; }
+  .sched-h h3{ margin:0; font-size:16px; font-weight:750; }
+  .sched-h a{ font-size:13px; font-weight:600; color:var(--accent-text); }
+  .sched-list{ padding:4px 9px 8px; }
+  .slot{ display:grid; grid-template-columns:54px 1fr auto; gap:12px; align-items:center; padding:10px 11px; border-radius:10px; cursor:pointer; }
+  .slot+.slot{ margin-top:1px; }
+  .slot:hover{ background:var(--accent-soft); }
+  .slot .time{ font-size:12px; color:var(--slate-500); font-weight:650; }
+  .slot .t{ font-size:13.5px; font-weight:600; }
+  .slot .m{ font-size:12px; color:var(--slate-500); }
+  .who{ font-size:11px; font-weight:650; padding:2px 9px; border-radius:999px; color:#fff; }
+  .slot.now{ background:var(--accent-soft); box-shadow:inset 3px 0 0 var(--accent); }
+  .slot.done .t{ color:var(--slate-400); text-decoration:line-through; }
+  .slot.brk{ opacity:.65; cursor:default; } .slot.brk:hover{ background:transparent; }
+  .slot.brk .t{ font-weight:500; color:var(--slate-500); font-style:italic; }
+  .sched-foot{ padding:13px 17px; border-top:1px solid var(--line); display:flex; gap:12px; align-items:center; }
+  .btn-primary{ background:var(--accent); color:#fff; border:none; border-radius:10px; padding:10px 16px;
+    font-size:13.5px; font-weight:650; cursor:pointer; display:inline-flex; gap:7px; align-items:center; }
+  .btn-primary:hover{ background:var(--accent-hover); }
+  .foot-note{ font-size:12px; color:var(--slate-400); }
+
+  /* attention hub */
+  .hub-list{ padding:5px 12px 10px; display:flex; flex-direction:column; gap:7px; }
+  .att{ display:grid; grid-template-columns:30px 1fr; gap:11px; padding:11px 12px 11px 14px;
+    border:1px solid var(--line); border-radius:11px; position:relative; overflow:hidden; cursor:pointer; }
+  .att:hover{ border-color:var(--accent-line); background:var(--accent-soft); }
+  .att::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:3px; }
+  .att.sev-high::before{ background:var(--crit);} .att.sev-med::before{ background:var(--warn);} .att.sev-low::before{ background:var(--sky);}
+  .att .sico{ width:30px; height:30px; border-radius:8px; display:grid; place-items:center; margin-top:1px; font-size:15px; }
+  .att.sev-high .sico{ background:var(--crit-bg);} .att.sev-med .sico{ background:var(--warn-bg);} .att.sev-low .sico{ background:var(--sky-bg);}
+  .att .toprow{ display:flex; align-items:center; gap:8px; }
+  .att .t{ font-size:13px; font-weight:650; }
+  .lchip{ display:inline-flex; align-items:center; gap:5px; margin-left:auto; font-size:10.5px; font-weight:650; color:var(--slate-600);
+    background:var(--slate-100); border-radius:999px; padding:2px 8px 2px 3px; white-space:nowrap; }
+  .lchip .d{ width:15px; height:15px; border-radius:999px; display:grid; place-items:center; color:#fff; font-size:9px; font-weight:700; }
+  .att .m{ font-size:12px; color:var(--slate-600); margin-top:3px; }
+  .att .src{ margin-top:6px; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--slate-400); }
+  .att .src b{ color:var(--accent-text); }
+
+  /* ── ZONE B ── */
+  .learner-head, .learner{ display:grid; grid-template-columns:210px repeat(3,1fr) 34px; gap:14px; align-items:center; }
+  .learner-head{ padding:12px 18px; border-bottom:1px solid var(--line); }
+  .learner-head span{ font-size:10.5px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; color:var(--slate-400); }
+  .learner{ padding:15px 18px; cursor:pointer; }
+  .learner+.learner{ border-top:1px solid var(--line-soft); }
+  .learner:hover{ background:var(--accent-soft); }
+  .who-cell{ display:flex; align-items:center; gap:11px; }
+  .avatar{ width:40px; height:40px; border-radius:999px; display:grid; place-items:center; color:#fff; font-weight:700; font-size:15px; flex-shrink:0; }
+  .who-cell .n{ font-size:14.5px; font-weight:700; }
+  .who-cell .g{ font-size:11.5px; color:var(--slate-500); }
+  .metric .k{ font-size:10px; font-weight:750; letter-spacing:.07em; text-transform:uppercase; color:var(--slate-400); }
+  .metric .v{ font-size:19px; font-weight:750; letter-spacing:-.01em; margin-top:3px; }
+  .metric .v small{ font-size:12.5px; font-weight:600; color:var(--slate-400); }
+  .bar{ height:5px; border-radius:3px; background:var(--slate-100); margin-top:6px; overflow:hidden; max-width:130px; }
+  .bar>i{ display:block; height:100%; border-radius:3px; }
+  .grade-chip{ font-size:13.5px; font-weight:750; padding:5px 11px; border-radius:8px;
+    background:var(--accent-soft); color:var(--accent-text); border:1px solid var(--accent-line); }
+  .learner .go{ color:var(--slate-300); text-align:center; font-size:20px; }
+
+  /* ── ZONE C ── */
+  .c-row1{ display:grid; grid-template-columns:1.15fr 1fr 1fr; gap:16px; }
+  .cbody{ padding:4px 17px 17px; }
+
+  /* compliance */
+  .status-row{ display:flex; align-items:center; gap:11px; margin:4px 0 13px; }
+  .status-dot{ width:13px; height:13px; border-radius:50%; background:var(--good); box-shadow:0 0 0 4px var(--good-bg); flex-shrink:0; }
+  .status-row .lab{ font-size:15px; font-weight:750; color:var(--good); }
+  .status-row .sub{ font-size:11.5px; color:var(--slate-500); }
+  .reasons{ list-style:none; margin:0 0 13px; padding:0; display:flex; flex-direction:column; gap:7px; }
+  .reasons li{ font-size:12.5px; color:var(--slate-600); display:flex; gap:8px; }
+  .reasons li::before{ content:"✓"; color:var(--good); font-weight:750; }
+  .deadline{ border-top:1px solid var(--line-soft); padding-top:12px; }
+  .deadline .k{ font-size:10px; font-weight:750; letter-spacing:.06em; text-transform:uppercase; color:var(--slate-400); }
+  .deadline .d{ font-size:13px; font-weight:600; margin-top:4px; }
+  .deadline .due{ color:var(--warn); font-weight:700; }
+
+  /* school year ring */
+  .ringwrap{ position:relative; display:grid; place-items:center; margin:6px 0 2px; }
+  .ring{ --p:0; width:112px; height:112px; border-radius:50%;
+    background:conic-gradient(var(--accent) calc(var(--p)*1%), var(--slate-100) 0); display:grid; place-items:center; }
+  .ring::after{ content:""; width:84px; height:84px; border-radius:50%; background:var(--card); }
+  .ring .rv{ position:absolute; text-align:center; }
+  .ring .rv .big{ font-size:22px; font-weight:750; letter-spacing:-.02em; display:block; }
+  .ring .rv .sm{ font-size:10px; font-weight:650; text-transform:uppercase; letter-spacing:.05em; color:var(--slate-400); }
+  .pacing{ text-align:center; font-size:12.5px; font-weight:650; color:var(--good); margin-top:8px; }
+  .pacemeta{ text-align:center; font-size:11.5px; color:var(--slate-500); margin-top:2px; }
+
+  /* quran streak — per-child rings (accurate) */
+  .qh{ display:flex; align-items:center; justify-content:space-between; padding:15px 17px 6px; }
+  .qh .lab{ font-size:11px; font-weight:750; letter-spacing:.09em; text-transform:uppercase; color:var(--slate-400); }
+  .qh .logbtn{ font-size:11.5px; font-weight:650; background:var(--accent); color:#fff; border:none; border-radius:8px; padding:6px 11px; cursor:pointer; }
+  .qh .logbtn:hover{ background:var(--accent-hover); }
+  .qrings{ display:flex; flex-wrap:wrap; gap:18px; padding:12px 17px 18px; }
+  .qring{ display:flex; flex-direction:column; align-items:center; gap:7px; cursor:pointer; }
+  .qring .circle{ width:76px; height:76px; border-radius:50%; border:4px solid; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; box-shadow:var(--shadow); background:var(--card); }
+  .qring .circle .num{ font-size:23px; font-weight:750; color:var(--slate-900); line-height:1; }
+  .qring .circle .u{ font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--slate-400); margin-top:2px; }
+  .qring .name{ font-size:12px; font-weight:600; color:var(--slate-600); }
+
+  /* records readiness — full-width stat strip (accurate) */
+  .rr-h{ padding:16px 18px 4px; }
+  .rr-h h3{ margin:0; font-size:16px; font-weight:750; }
+  .rr-h p{ margin:4px 0 0; font-size:12px; color:var(--slate-400); }
+  .rr-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; padding:14px 18px 18px; }
+  .rr-card{ border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .rr-card .ic{ width:36px; height:36px; border-radius:9px; background:var(--slate-50); display:grid; place-items:center; margin-bottom:13px; font-size:17px; }
+  .rr-card .k{ font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--slate-500); }
+  .rr-card .num{ font-size:29px; font-weight:750; color:var(--accent-text); line-height:1.05; margin-top:3px; }
+  .rr-card .num small{ font-size:16px; font-weight:600; color:var(--slate-300); }
+  .rr-card a{ font-size:11.5px; font-weight:650; color:var(--sky); display:inline-block; margin-top:9px; }
+  .rr-foot{ border-top:1px solid var(--line-soft); padding:12px 18px; display:flex; align-items:center; gap:9px; }
+  .rr-foot .lab{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--slate-400); }
+  .rr-foot a{ margin-left:auto; font-size:12.5px; font-weight:650; color:var(--accent-text); }
+
+  /* zone C — mixed card row (learning-time chart + islamic) */
+  .c-mixed{ display:grid; grid-template-columns:1.3fr 1fr; gap:16px; align-items:start; }
+
+  /* weekly learning-time bar chart */
+  .chart{ display:flex; align-items:flex-end; gap:10px; height:118px; padding:10px 4px 0; }
+  .chart .col{ flex:1; display:flex; flex-direction:column; align-items:center; gap:7px; }
+  .chart .track{ width:100%; display:flex; align-items:flex-end; justify-content:center; height:88px;
+    border-bottom:1px solid var(--line); }
+  .chart .bar{ width:60%; max-width:26px; border-radius:5px 5px 0 0; background:var(--accent-line); }
+  .chart .col.hot .bar{ background:var(--accent); }
+  .chart .lbl{ font-size:10.5px; font-weight:650; color:var(--slate-400); text-transform:uppercase; letter-spacing:.03em; }
+  .chart .col.hot .lbl{ color:var(--accent-text); }
+  .chart-meta{ display:flex; align-items:baseline; gap:7px; padding:2px 4px 0; }
+  .chart-meta .big{ font-size:24px; font-weight:750; letter-spacing:-.02em; }
+  .chart-meta .sm{ font-size:12px; color:var(--slate-500); }
+
+  /* recent badges — images + checkmarks */
+  .badge-list{ display:flex; flex-direction:column; gap:9px; }
+  .badge-row{ display:flex; align-items:center; gap:11px; padding:9px 10px; border:1px solid var(--line); border-radius:11px; }
+  .badge-row .medal{ width:38px; height:38px; border-radius:10px; display:grid; place-items:center; font-size:20px; flex-shrink:0;
+    background:var(--amber-bg); }
+  .badge-row .bt{ font-size:13px; font-weight:650; }
+  .badge-row .bs{ font-size:11.5px; color:var(--slate-500); margin-top:1px; }
+  .badge-row .chk{ margin-left:auto; color:var(--good); font-size:16px; }
+
+  /* personal to-dos — full, no scroll, two columns */
+  .todo-h{ display:flex; align-items:center; gap:9px; padding:15px 17px 10px; }
+  .todo-h h3{ margin:0; font-size:14.5px; font-weight:700; }
+  .todo-h .count{ font-size:11px; font-weight:700; color:var(--accent-text); background:var(--accent-soft); border:1px solid var(--accent-line); border-radius:999px; padding:2px 9px; }
+  .todo-add{ margin-left:auto; font-size:12px; font-weight:650; color:var(--accent-text); background:none; border:none; cursor:pointer; }
+  .todo-cols{ columns:2; column-gap:8px; padding:2px 10px 12px; }
+  .todo{ display:flex; align-items:center; gap:11px; padding:9px 8px; border-radius:9px; font-size:13.5px; break-inside:avoid; }
+  .todo:hover{ background:var(--slate-50); }
+  .todo input{ width:16px; height:16px; accent-color:var(--accent); flex-shrink:0; }
+  .todo.done span{ color:var(--slate-400); text-decoration:line-through; }
+  .todo .tt{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .todo .tag{ margin-left:auto; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--slate-400);
+    border:1px solid var(--line); border-radius:5px; padding:1px 6px; flex-shrink:0; }
+  @media (max-width:640px){ .todo-cols{ columns:1; } }
+
+  .islamic .cbody{ display:flex; flex-direction:column; gap:2px; padding-top:8px; }
+  .ievent{ display:flex; align-items:center; justify-content:space-between; padding:10px 2px; font-size:13px; }
+  .ievent+.ievent{ border-top:1px solid var(--line-soft); }
+  .ievent .nm{ font-weight:600; }
+  .ievent .sub{ font-size:11px; color:var(--slate-400); margin-top:1px; }
+  .ievent .dd{ font-weight:750; color:var(--accent-text); font-size:12.5px; white-space:nowrap; }
+  .demoted-tag{ font-size:10px; color:var(--slate-400); font-weight:650; }
+
+  /* cut annotation + notes */
+  .cutstrip{ margin-top:22px; border:1px dashed var(--slate-300); border-radius:var(--radius); padding:14px 17px; display:flex; gap:14px; align-items:flex-start; }
+  .cutstrip .x{ width:26px; height:26px; border-radius:7px; background:var(--crit-bg); color:var(--crit); display:grid; place-items:center; font-weight:750; flex-shrink:0; }
+  .cutstrip h4{ margin:0 0 3px; font-size:13px; } .cutstrip p{ margin:0; font-size:12px; color:var(--slate-600); }
+
+  .notes{ margin:30px 0 54px; }
+  .notes h2{ font-size:11px; letter-spacing:.13em; text-transform:uppercase; color:var(--accent-text); margin:0 0 14px; }
+  .notes-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .note{ border:1px solid var(--line); border-radius:11px; padding:13px 15px; background:var(--card); }
+  .note .tag{ font-size:10px; font-weight:750; letter-spacing:.05em; text-transform:uppercase; padding:2px 7px; border-radius:5px; display:inline-block; margin-bottom:8px; }
+  .tag-new{ background:var(--accent); color:#fff;} .tag-cut{ background:var(--crit-bg); color:var(--crit);}
+  .tag-merge{ background:var(--sky-bg); color:var(--sky);} .tag-keep{ background:var(--good-bg); color:var(--good);}
+  .note p{ margin:0; font-size:12.5px; color:var(--slate-600);} .note b{ color:var(--slate-900); }
+
+  @media (max-width:900px){
+    .a-grid,.summary,.c-row1,.c-row2,.rr-grid,.notes-grid{ grid-template-columns:1fr; }
+    .learner-head,.learner{ grid-template-columns:150px repeat(3,1fr); }
+    .learner .go,.learner-head span:last-child{ display:none; }
+    .rr-grid{ grid-template-columns:1fr 1fr; }
+  }
+  @media (max-width:560px){ .learner-head,.learner{ grid-template-columns:1fr 1fr; } }
+  @media (prefers-reduced-motion:reduce){ *{ transition:none!important; } }
+</style>
+
+<div class="protobar">
+  <div class="frame">
+    <strong>Prototype v2</strong> — three-zone redesign, matched to real dashboard styles
+    <span class="spacer"></span>
+    <button class="themeflip" id="flip" type="button">Toggle theme</button>
+  </div>
+</div>
+
+<!-- global app-shell top bar (LearnerSwitcher lives here — other pages depend on it) -->
+<div class="appbar">
+  <div class="frame">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M16 2.75L7.25 6.75V14.25C7.25 20.5 11.15 26.1 16 28.25C20.85 26.1 24.75 20.5 24.75 14.25V6.75L16 2.75Z" fill="#1a5c3a"/>
+        <path d="M16 9.25C13.4 10.85 12.35 13.35 12.6 16.1C12.85 18.35 14.25 20.75 16 22.35C17.75 20.75 19.15 18.35 19.4 16.1C19.65 13.35 18.6 10.85 16 9.25Z" fill="#fff"/>
+        <path d="M16 10.5V21.5" stroke="rgba(255,255,255,.75)" stroke-width="1.1" stroke-linecap="round"/>
+      </svg>
+      <span class="word">Sheath <span class="sub">Academy</span></span>
+    </div>
+    <span class="spacer"></span>
+    <button class="switch" type="button"><span class="av" style="background:var(--accent)">ب</span>Barakah Academy <span class="cap">Household ▾</span></button>
+    <button class="switch" type="button" title="Learner switcher — global, drives all pages"><span class="av" style="background:var(--child-1)">A</span>Amina <span class="cap">Learner ▾</span></button>
+    <button class="bell" type="button">🔔<span class="badge tnum">4</span></button>
+    <div class="greet-mini"><span class="g">Good morning, Rasheed</span><span class="e">rasheed.ali.cs@gmail.com</span></div>
+    <button class="signout" type="button">Sign out</button>
+  </div>
+</div>
+
+<!-- dashboard greeting header (greeting + Quick Add + Today's Plan + date + Viewing) -->
+<div class="dashhead">
+  <div class="frame">
+    <div class="dh-top">
+      <div class="dh-greet">
+        <h2><span class="sun">☀️</span> Assalamu alaikum, Rasheed</h2>
+        <p>You&apos;re on track! Here&apos;s your snapshot for today.</p>
+      </div>
+      <div class="dh-actions">
+        <span class="datepick tnum">📅 Mon, 7 Jul 2026</span>
+        <button class="btn-out" type="button">＋ Quick Add ▾</button>
+        <button class="btn-out forest" type="button">☑ Today&apos;s Plan</button>
+      </div>
+    </div>
+    <div class="dh-view">
+      <label>Viewing</label>
+      <span class="selbox">All children ▾</span>
+    </div>
+  </div>
+</div>
+
+<main class="frame">
+
+  <!-- ══════════ ZONE A ══════════ -->
+  <section class="zone">
+    <div class="zone-head">
+      <span class="zone-eyebrow">Zone A · Today</span>
+      <span class="zone-q">“What’s happening today, and what needs me?”</span>
+      <span class="zone-rule"></span>
+    </div>
+
+    <div class="summary">
+      <div class="card stat"><div><div class="num tnum t-good">7</div><div class="lbl">Lessons done</div><div class="hint t-good">Across 3 learners</div></div><span class="chip chip-good">✓</span></div>
+      <div class="card stat"><div><div class="num tnum t-info">5</div><div class="lbl">In progress</div><div class="hint t-info">On today’s schedule</div></div><span class="chip chip-info">◷</span></div>
+      <div class="card stat"><div><div class="num tnum t-warn">3</div><div class="lbl">Overdue</div><div class="hint t-warn">Needs attention</div></div><span class="chip chip-warn">!</span></div>
+    </div>
+
+    <div class="a-grid">
+      <div class="card">
+        <div class="sched-h"><h3>Today’s Schedule</h3><a href="#">View Full Calendar →</a></div>
+        <div class="sched-list">
+          <div class="slot done"><span class="time tnum">08:30</span><div><div class="t">Qur’an — Juz’ 29 review</div><div class="m">Memorization · 30 min</div></div><span class="who" style="background:var(--child-1)">Amina</span></div>
+          <div class="slot done"><span class="time tnum">09:10</span><div><div class="t">Math — Fractions, set B</div><div class="m">Saxon 6/5 · 40 min</div></div><span class="who" style="background:var(--child-2)">Yusuf</span></div>
+          <div class="slot now"><span class="time tnum">10:00</span><div><div class="t">Science — Water cycle lab</div><div class="m">In progress now · 45 min</div></div><span class="who" style="background:var(--child-1)">Amina</span></div>
+          <div class="slot brk"><span class="time tnum">10:45</span><div><div class="t">Break</div><div class="m">15 min</div></div><span></span></div>
+          <div class="slot"><span class="time tnum">11:00</span><div><div class="t">Arabic — Handwriting unit 4</div><div class="m">30 min</div></div><span class="who" style="background:var(--child-3)">Layla</span></div>
+          <div class="slot"><span class="time tnum">11:40</span><div><div class="t">History — Ottoman trade routes</div><div class="m">Reading + narration · 40 min</div></div><span class="who" style="background:var(--child-2)">Yusuf</span></div>
+        </div>
+        <div class="sched-foot">
+          <button class="btn-primary" type="button">▶ Start learning time</button>
+          <span class="foot-note">4 of 6 items scheduled</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+          <h3>Attention Hub</h3>
+          <span class="pill pill-soft push">4 open</span>
+        </div>
+        <div class="hub-list">
+          <div class="att sev-high">
+            <span class="sico">📚</span>
+            <div>
+              <div class="toprow"><span class="t">2 overdue lessons</span><span class="lchip"><span class="d" style="background:var(--child-2)">Y</span>Yusuf</span></div>
+              <div class="m">Math set A, Spelling list 12 · due Fri</div>
+              <div class="src">from <b>Planbook</b></div>
+            </div>
+          </div>
+          <div class="att sev-med">
+            <span class="sico">📅</span>
+            <div>
+              <div class="toprow"><span class="t">Attendance not logged today</span><span class="lchip"><span class="d" style="background:var(--child-3)">L</span>Layla</span></div>
+              <div class="m">No record yet for today</div>
+              <div class="src">from <b>Attendance</b></div>
+            </div>
+          </div>
+          <div class="att sev-med">
+            <span class="sico">📊</span>
+            <div>
+              <div class="toprow"><span class="t">Math skill decaying</span><span class="lchip"><span class="d" style="background:var(--child-1)">A</span>Amina</span></div>
+              <div class="m">Mastery slipping · no score in 18 days</div>
+              <div class="src">from <b>Gradebook</b></div>
+            </div>
+          </div>
+          <div class="att sev-low">
+            <span class="sico">🛡️</span>
+            <div>
+              <div class="toprow"><span class="t">Compliance filing due soon</span><span class="lchip"><span class="d" style="background:var(--slate-400)">◆</span>Household</span></div>
+              <div class="m">Notarized declaration · due 15 Aug</div>
+              <div class="src">from <b>Compliance</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cap-click">Click an alert → jumps straight to its source (the lesson, the attendance sheet, the gradebook subject, or compliance). Every item carries a <b>learner chip</b> for consistency — household-scoped items read “Household.”</div>
+  </section>
+
+  <!-- ══════════ ZONE B ══════════ -->
+  <section class="zone">
+    <div class="zone-head">
+      <span class="zone-eyebrow">Zone B · Per-learner command center</span>
+      <span class="zone-q">“Where is each learner right now?”</span>
+      <span class="zone-rule"></span>
+    </div>
+    <div class="card">
+      <div class="learner-head"><span>Learner</span><span>Attendance</span><span>Today</span><span>Current grade</span><span></span></div>
+
+      <div class="learner">
+        <div class="who-cell"><span class="avatar" style="background:var(--child-1)">A</span><div><div class="n">Amina</div><div class="g">Grade 6 · Umbrella</div></div></div>
+        <div class="metric"><div class="k">This year</div><div class="v tnum t-good">96%</div><div class="bar"><i style="width:96%;background:var(--good)"></i></div></div>
+        <div class="metric"><div class="k">Lessons</div><div class="v tnum">3 <small>/ 4</small></div><div class="bar"><i style="width:75%;background:var(--accent)"></i></div></div>
+        <div class="metric"><div class="k">Mastery</div><div class="v"><span class="grade-chip tnum">B+ · 88%</span></div></div>
+        <div class="go">›</div>
+      </div>
+      <div class="learner">
+        <div class="who-cell"><span class="avatar" style="background:var(--child-2)">Y</span><div><div class="n">Yusuf</div><div class="g">Grade 4 · Umbrella</div></div></div>
+        <div class="metric"><div class="k">This year</div><div class="v tnum t-warn">88%</div><div class="bar"><i style="width:88%;background:var(--warn)"></i></div></div>
+        <div class="metric"><div class="k">Lessons</div><div class="v tnum">2 <small>/ 5</small></div><div class="bar"><i style="width:40%;background:var(--warn)"></i></div></div>
+        <div class="metric"><div class="k">Mastery</div><div class="v"><span class="grade-chip tnum">C · 74%</span></div></div>
+        <div class="go">›</div>
+      </div>
+      <div class="learner">
+        <div class="who-cell"><span class="avatar" style="background:var(--child-3)">L</span><div><div class="n">Layla</div><div class="g">Grade 2 · Umbrella</div></div></div>
+        <div class="metric"><div class="k">This year</div><div class="v tnum t-good">94%</div><div class="bar"><i style="width:94%;background:var(--good)"></i></div></div>
+        <div class="metric"><div class="k">Lessons</div><div class="v tnum">1 <small>/ 1</small></div><div class="bar"><i style="width:100%;background:var(--good)"></i></div></div>
+        <div class="metric"><div class="k">Mastery</div><div class="v"><span class="grade-chip tnum">A · 95%</span></div></div>
+        <div class="go">›</div>
+      </div>
+    </div>
+    <div class="cap-click">Click a learner row → <b>sets the global learner filter</b> (the header switcher) and scopes the whole dashboard to them — no new page needed. All three columns come from APIs that ship today: attendance <i>getSummary</i>, planner <i>getLessons</i>, gradebook <i>getSummaries</i>.</div>
+  </section>
+
+  <!-- ══════════ ZONE C ══════════ -->
+  <section class="zone">
+    <div class="zone-head">
+      <span class="zone-eyebrow">Zone C · Proof &amp; progress</span>
+      <span class="zone-q">“Are we okay?”</span>
+      <span class="zone-rule"></span>
+    </div>
+
+    <div class="c-row1">
+      <div class="card">
+        <div class="card-h">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <h3>Compliance</h3><span class="pill pill-new push">New</span>
+        </div>
+        <div class="cbody">
+          <div class="status-row"><span class="status-dot"></span><div><div class="lab">On track</div><div class="sub">Umbrella · self-reported</div></div></div>
+          <ul class="reasons"><li>128 / 180 days logged</li><li>All required subjects covered</li><li>Portfolio evidence on file</li></ul>
+          <div class="deadline"><div class="k">Next deadline</div><div class="d">Notarized declaration — <span class="due">due 15 Aug</span></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-5 4 3 5-7"/></svg>
+          <h3>School Year</h3>
+        </div>
+        <div class="cbody">
+          <div class="ringwrap"><div class="ring" style="--p:71"></div><div class="rv"><span class="big tnum">Day 128</span><span class="sm">of 180</span></div></div>
+          <div class="pacing">On pace</div>
+          <div class="pacemeta">Week 26 of 36 · 52 days left</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="qh"><span class="lab">Qur’an Streak</span><button class="logbtn" type="button">Log Session</button></div>
+        <div class="qrings">
+          <div class="qring"><div class="circle" style="border-color:var(--child-1)"><span class="num tnum">23</span><span class="u">days</span></div><span class="name">Amina</span></div>
+          <div class="qring"><div class="circle" style="border-color:var(--child-2)"><span class="num tnum">11</span><span class="u">days</span></div><span class="name">Yusuf</span></div>
+          <div class="qring"><div class="circle" style="border-color:var(--child-3)"><span class="num tnum">6</span><span class="u">days</span></div><span class="name">Layla</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- mixed variety row: learning-time chart + islamic -->
+    <div class="c-mixed" style="margin-top:16px">
+      <div class="card">
+        <div class="card-h">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7"/><rect x="12" y="7" width="3" height="11"/><rect x="17" y="13" width="3" height="5"/></svg>
+          <h3>Learning Time</h3><span class="demoted-tag push">This week</span>
+        </div>
+        <div class="cbody">
+          <div class="chart">
+            <div class="col"><div class="track"><div class="bar" style="height:52%"></div></div><span class="lbl">Mon</span></div>
+            <div class="col"><div class="track"><div class="bar" style="height:70%"></div></div><span class="lbl">Tue</span></div>
+            <div class="col"><div class="track"><div class="bar" style="height:38%"></div></div><span class="lbl">Wed</span></div>
+            <div class="col hot"><div class="track"><div class="bar" style="height:88%"></div></div><span class="lbl">Thu</span></div>
+            <div class="col"><div class="track"><div class="bar" style="height:60%"></div></div><span class="lbl">Fri</span></div>
+          </div>
+          <div class="chart-meta"><span class="big tnum">14h 20m</span><span class="sm">logged · +2h vs last week</span></div>
+        </div>
+      </div>
+
+      <div class="card islamic">
+        <div class="card-h">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 1 0 9 9c-4 2-9-1-9-5a5 5 0 0 1 0-4z"/></svg>
+          <h3>Islamic Calendar</h3><span class="demoted-tag push">Low-frequency</span>
+        </div>
+        <div class="cbody">
+          <div class="ievent"><div><div class="nm">Day of Arafah</div><div class="sub">Recommended fast</div></div><span class="dd tnum">in 4 days</span></div>
+          <div class="ievent"><div><div class="nm">Eid al-Adha</div><div class="sub">Festival</div></div><span class="dd tnum">in 5 days</span></div>
+          <div class="ievent"><div><div class="nm">Islamic New Year</div><div class="sub">1 Muharram</div></div><span class="dd tnum">in 24 days</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- personal to-dos: full, no scroll, two columns -->
+    <div class="card" style="margin-top:16px">
+      <div class="todo-h"><h3>Personal To-dos</h3><span class="count tnum">12</span><button class="todo-add" type="button">＋ Add</button></div>
+      <div class="todo-cols">
+        <div class="todo done"><input type="checkbox" checked><span class="tt">Order Arabic workbook (Layla)</span><span class="tag">Supplies</span></div>
+        <div class="todo done"><input type="checkbox" checked><span class="tt">Confirm co-op payment</span><span class="tag">Admin</span></div>
+        <div class="todo"><input type="checkbox"><span class="tt">Email co-op about field trip forms</span><span class="tag">Admin</span></div>
+        <div class="todo"><input type="checkbox"><span class="tt">Prep science lab materials for Thu</span><span class="tag">Prep</span></div>
+        <div class="todo"><input type="checkbox"><span class="tt">Grade Yusuf’s spelling list 11</span><span class="tag">Grading</span></div>
+        <div class="todo"><input type="checkbox"><span class="tt">Schedule dentist around lessons</span><span class="tag">Home</span></div>
+        <div class="todo"><input type="checkbox"><span class="tt">Print Surah Al-Mulk worksheet</span><span class="tag">Prep</span></div>
+        <div class="todo"><input type="checkbox"><span class="tt">Reserve library books — Ottoman unit</span><span class="tag">Prep</span></div>
+        <div class="todo"><input type="checkbox"><span class="tt">Update portfolio photos for Amina</span><span class="tag">Records</span></div>
+        <div class="todo"><input type="checkbox"><span class="tt">Buy graph paper &amp; compass set</span><span class="tag">Supplies</span></div>
+        <div class="todo"><input type="checkbox"><span class="tt">Plan next quarter’s Qur’an targets</span><span class="tag">Planning</span></div>
+        <div class="todo"><input type="checkbox"><span class="tt">Renew umbrella-school membership</span><span class="tag">Compliance</span></div>
+      </div>
+    </div>
+
+    <div class="cutstrip">
+      <span class="x">✕</span>
+      <div>
+        <h4>Cut — Personal Assistant panel</h4>
+        <p>~90% of its output restated alerts the Attention Hub now aggregates. Its one real signal — “Schedule imbalance” (a subject scheduled 2+ times in one day) — moves into the alert pipeline as its own item, so nothing of value is lost and Home sheds business logic.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h2>What changed &amp; why it’s backed</h2>
+    <div class="notes-grid">
+      <div class="note"><span class="tag tag-new">New</span><p><b>Compliance card.</b> Backed by <b>getStatus(schoolYearId)</b> → green/amber/red + reasons + next deadline. Self-fetching like SchoolYearProgressCard.</p></div>
+      <div class="note"><span class="tag tag-merge">Extend</span><p><b>Attention Hub.</b> <b>getAlerts()</b> already aggregates planner + attendance. Add gradebook + compliance-deadline emitters server-side — no Alert-type change, no Home logic.</p></div>
+      <div class="note"><span class="tag tag-keep">Kept, restyled</span><p><b>Qur’an rings</b> reuse the real component; <b>Learning Time</b> gets a weekly bar chart. Records &amp; its export launcher move entirely to /records.</p></div>
+      <div class="note"><span class="tag tag-cut">Cut / dropped</span><p><b>Personal Assistant</b> panel (folded into alerts), <b>Records Readiness</b> tiles, <b>Recent Wins</b> badges. Dropped as unbacked: reminders, per-learner compliance dot, grade-trend arrow.</p></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  (function(){
+    var root=document.documentElement;
+    document.getElementById('flip').addEventListener('click',function(){
+      var cur=root.getAttribute('data-theme');
+      if(!cur) cur=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+      root.setAttribute('data-theme',cur==='dark'?'light':'dark');
+    });
+  })();
+</script>
+
+</body></html>

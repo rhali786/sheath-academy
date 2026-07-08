@@ -11,10 +11,20 @@ function sortTodos(a: PersonalTodo, b: PersonalTodo): number {
   return a.sortOrder - b.sortOrder
 }
 
-function CardShell({ children }: { children: React.ReactNode }) {
+function CardShell({ count, children }: { count?: number; children: React.ReactNode }) {
   return (
     <div className="bg-white rounded-xl shadow-sm p-5" data-testid="personal-todo-list">
-      <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Personal To-Dos</p>
+      <div className="flex items-center gap-2 mb-4">
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Personal To-Dos</p>
+        {count !== undefined && (
+          <span
+            data-testid="personal-todo-count"
+            className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 tabular-nums"
+          >
+            {count}
+          </span>
+        )}
+      </div>
       {children}
     </div>
   )
@@ -98,11 +108,11 @@ export function PersonalTodoList() {
   }
 
   return (
-    <CardShell>
+    <CardShell count={todos.length}>
       {todos.length === 0 ? (
         <p className="text-sm text-slate-400 mb-4">No to-dos yet — add one for curriculum or supply planning</p>
       ) : (
-        <ul className="space-y-2 mb-4">
+        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 mb-4">
           {todos.map(todo => (
             <li key={todo.id}>
               {confirmDeleteId === todo.id ? (

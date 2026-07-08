@@ -25,7 +25,7 @@ describe('SchoolYearProgressCard', () => {
       expect(screen.getByTestId('school-year-progress-card')).toBeInTheDocument()
     })
     expect(screen.getByText(/days left/i)).toBeInTheDocument()
-    expect(screen.getByText(/weeks/i)).toBeInTheDocument()
+    expect(screen.getByText(/week \d+ of \d+/i)).toBeInTheDocument()
     expect(screen.getByText('2025–2026')).toBeInTheDocument()
   })
 

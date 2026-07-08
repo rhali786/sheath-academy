@@ -16,6 +16,16 @@ describe('TodayTaskSummaryCards', () => {
     expect(screen.getByTestId('task-summary-orange')).toHaveTextContent('2')
   })
 
+  test('renders prototype copy: labels and hints', () => {
+    render(<TodayTaskSummaryCards metrics={mockMetrics} totalLearners={3} />)
+    expect(screen.getByTestId('task-summary-green')).toHaveTextContent('Lessons done')
+    expect(screen.getByTestId('task-summary-green')).toHaveTextContent('Across 3 learners')
+    expect(screen.getByTestId('task-summary-blue')).toHaveTextContent('In progress')
+    expect(screen.getByTestId('task-summary-blue')).toHaveTextContent("On today's schedule")
+    expect(screen.getByTestId('task-summary-orange')).toHaveTextContent('Overdue')
+    expect(screen.getByTestId('task-summary-orange')).toHaveTextContent('Needs attention')
+  })
+
   test('shows zero states', () => {
     render(
       <TodayTaskSummaryCards

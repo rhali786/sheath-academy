@@ -2,6 +2,7 @@ import type {
   StatusEngineInput,
   StatusEngineResult,
   ComplianceStatus,
+  ComplianceCheck,
 } from '@/features/compliance/types'
 
 /**
@@ -14,7 +15,7 @@ import type {
  *  4. Warn when household target < legal floor (never auto-resolve).
  */
 export function runStatusEngine(input: StatusEngineInput): StatusEngineResult {
-  const { ruleset, overrides, schoolYearConfig, attendanceSummary } = input
+  const { ruleset, overrides, schoolYearConfig, attendanceSummary, subjectCoverage, artifactFlags } = input
 
   const reasons: string[] = []
   const nextActions: string[] = []
@@ -97,11 +98,45 @@ export function runStatusEngine(input: StatusEngineInput): StatusEngineResult {
     nextActions.push(belowLegalFloorWarning)
   }
 
+  // Requirement checklist (independent of the headline status). Each line reports
+  // its own met/unmet state so the card can render an honest ✓/✕ per item.
+  const checks: ComplianceCheck[] = []
+
+  // 1. Days logged vs requirement.
+  if (requiredDays !== null) {
+    const present = attendanceSummary.daysPresent
+    checks.push({
+      label: `${present} / ${requiredDays} days logged`,
+      met: present >= requiredDays,
+    })
+  } else {
+    checks.push({ label: 'Attendance requirement not set', met: false })
+  }
+
+  // 2. Subject coverage — a subject counts as "covered" once it has any completed lesson.
+  const totalSubjects = subjectCoverage.length
+  const coveredSubjects = subjectCoverage.filter(s => s.lessonsCompleted > 0).length
+  if (totalSubjects > 0) {
+    checks.push({
+      label: coveredSubjects === totalSubjects
+        ? 'All required subjects covered'
+        : `${coveredSubjects} of ${totalSubjects} subjects covered`,
+      met: coveredSubjects === totalSubjects,
+    })
+  }
+
+  // 3. Portfolio evidence on file.
+  checks.push({
+    label: artifactFlags.hasPortfolioEvidence ? 'Portfolio evidence on file' : 'No portfolio evidence yet',
+    met: artifactFlags.hasPortfolioEvidence,
+  })
+
   return {
     status,
     reasons,
     nextActions,
     missingData,
+    checks,
     isSelfReported,
     belowLegalFloorWarning,
     provenance,

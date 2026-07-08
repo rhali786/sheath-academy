@@ -54,7 +54,41 @@ beforeEach(() => {
 })
 
 describe('LearnerSwitcher', () => {
-  test('includes All children option and clears sessionStorage when selected', () => {
+  test('trigger shows "All children" and a "Learner" caption by default', () => {
+    renderWithLearner(<LearnerSwitcher />)
+    const trigger = screen.getByTestId('learner-switcher')
+    expect(trigger).toHaveTextContent('All children')
+    expect(trigger).toHaveTextContent('Learner')
+  })
+
+  test('opens a dropdown listing All children plus every active learner', () => {
+    renderWithLearner(<LearnerSwitcher />)
+    fireEvent.click(screen.getByTestId('learner-switcher'))
+    const options = screen.getAllByRole('option')
+    const names = options.map(o => o.textContent).join(' ')
+    expect(names).toContain('All children')
+    expect(names).toContain('Adam')
+    expect(names).toContain('Khadijah')
+  })
+
+  test('selecting a learner updates selection, persists to sessionStorage, and shows their name on the trigger', () => {
+    renderWithLearner(
+      <>
+        <LearnerSwitcher />
+        <SelectionStub />
+      </>,
+    )
+    expect(screen.getByTestId('selection-stub')).toHaveTextContent('none')
+
+    fireEvent.click(screen.getByTestId('learner-switcher'))
+    fireEvent.click(screen.getByRole('option', { name: /khadijah/i }))
+
+    expect(screen.getByTestId('selection-stub')).toHaveTextContent('child_b')
+    expect(sessionStorage.getItem('sheath.selectedChildId')).toBe('child_b')
+    expect(screen.getByTestId('learner-switcher')).toHaveTextContent('Khadijah')
+  })
+
+  test('selecting "All children" clears the selection', () => {
     sessionStorage.setItem('sheath.selectedChildId', 'child_a')
     renderWithLearner(
       <>
@@ -62,24 +96,12 @@ describe('LearnerSwitcher', () => {
         <SelectionStub />
       </>,
     )
-    fireEvent.change(screen.getByLabelText('Viewing learner'), { target: { value: 'child_b' } })
-    expect(sessionStorage.getItem('sheath.selectedChildId')).toBe('child_b')
-    fireEvent.change(screen.getByLabelText('Viewing learner'), { target: { value: '' } })
+
+    fireEvent.click(screen.getByTestId('learner-switcher'))
+    fireEvent.click(screen.getByRole('option', { name: /all children/i }))
+
     expect(screen.getByTestId('selection-stub')).toHaveTextContent('none')
     expect(sessionStorage.getItem('sheath.selectedChildId')).toBeNull()
-  })
-
-  test('changes selection and persists to sessionStorage', () => {
-    renderWithLearner(
-      <>
-        <LearnerSwitcher />
-        <SelectionStub />
-      </>,
-    )
-    expect(screen.getByTestId('selection-stub')).toHaveTextContent('none')
-    fireEvent.change(screen.getByLabelText('Viewing learner'), { target: { value: 'child_b' } })
-    expect(screen.getByTestId('selection-stub')).toHaveTextContent('child_b')
-    expect(sessionStorage.getItem('sheath.selectedChildId')).toBe('child_b')
   })
 
   test('hidden when fewer than two learners', () => {

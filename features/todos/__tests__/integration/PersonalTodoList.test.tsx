@@ -84,6 +84,16 @@ describe('PersonalTodoList', () => {
     expect(screen.getByText('Plan field trip')).toBeInTheDocument()
   })
 
+  it('shows a count pill reflecting the number of to-dos', async () => {
+    mockList.mockResolvedValue(envelope([
+      makeTodo({ id: 'todo_1', text: 'Buy curriculum books', sortOrder: 0 }),
+      makeTodo({ id: 'todo_2', text: 'Plan field trip', sortOrder: 1 }),
+    ]))
+    render(<PersonalTodoList />)
+    await screen.findByText('Buy curriculum books')
+    expect(screen.getByTestId('personal-todo-count')).toHaveTextContent('2')
+  })
+
   it('adds a to-do via the inline input', async () => {
     mockList.mockResolvedValue(envelope([]))
     mockCreate.mockResolvedValue(envelope(makeTodo({ id: 'todo_new', text: 'Plan field trip' })))

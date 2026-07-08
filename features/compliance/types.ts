@@ -62,11 +62,26 @@ export interface StatusEngineInput {
   artifactFlags: ArtifactFlags
 }
 
+/**
+ * One line of the dashboard compliance checklist. `met` drives the ✓ vs ✕ mark;
+ * `label` is the human-readable requirement line (e.g. "155 / 180 days logged").
+ */
+export interface ComplianceCheck {
+  label: string
+  met: boolean
+}
+
 export interface StatusEngineResult {
   status: ComplianceStatus
   reasons: string[]
   nextActions: string[]
   missingData: string[]
+  /**
+   * Requirement checklist shown on the dashboard card — always rendered as a
+   * check-mark list regardless of length. Independent of the headline `status`,
+   * which stays driven by the attendance-days ratio.
+   */
+  checks: ComplianceCheck[]
   /** When ruleset is unverified/null, verdict is self-reported */
   isSelfReported: boolean
   /** When household target < legal floor */

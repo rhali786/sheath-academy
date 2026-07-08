@@ -50,7 +50,7 @@ describe('Dashboard Components - Unit Tests', () => {
     test('renders without errors with valid props', () => {
       render(<NeedsAttention alerts={mockAlerts} />)
 
-      expect(screen.getByText(/Needs Attention/i)).toBeInTheDocument()
+      expect(screen.getByText(/Attention Hub/i)).toBeInTheDocument()
     })
 
     test('displays sort dropdown', () => {
@@ -62,7 +62,7 @@ describe('Dashboard Components - Unit Tests', () => {
     test('renders empty state when no alerts', () => {
       render(<NeedsAttention alerts={[]} />)
 
-      expect(screen.getByText(/Needs Attention/i)).toBeInTheDocument()
+      expect(screen.getByText(/Attention Hub/i)).toBeInTheDocument()
     })
   })
 

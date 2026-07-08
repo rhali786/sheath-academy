@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { X } from 'lucide-react'
+import { X, BookOpenText } from 'lucide-react'
 import { childColors } from '../theme'
 import { childScopedHref } from '@/features/lib/front/navigation'
 import { SURAHS } from '@/features/quran/front/constants/surahs'
@@ -77,9 +77,10 @@ export function QuranStreak({ quranSessions, children, selectedChildId, onAddSes
   return (
     <section className="bg-white rounded-xl shadow-sm p-6">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
-          Quran Streak
-        </p>
+        <div className="flex items-center gap-2">
+          <BookOpenText className="w-[19px] h-[19px] text-forest-700" strokeWidth={2} aria-hidden="true" />
+          <h3 className="text-[14.5px] font-bold text-slate-900">Quran Streak</h3>
+        </div>
         <button
           onClick={() => openModal()}
           className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-forest-900 text-white hover:bg-forest-800 transition-colors"

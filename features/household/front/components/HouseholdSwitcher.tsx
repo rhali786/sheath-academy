@@ -6,6 +6,23 @@ import { householdApi } from '../services/api'
 import { HouseholdContext } from '../context'
 import { LogoMark } from './logoPresets'
 
+/**
+ * The household's chosen preset mark (crescent/star/book/lantern/compass), on a badge
+ * sized generously enough (32px badge, 20px icon, bold stroke) to actually read as an
+ * icon rather than a smudge — the earlier 20px badge / 12-16px icon was too small to
+ * register as a shape at a glance.
+ */
+function LogoBadge({ preset }: { preset?: string | null }) {
+  return (
+    <span
+      data-testid="household-switcher-logo-mark-wrap"
+      className="w-8 h-8 rounded-full bg-gradient-to-br from-forest-600 to-forest-900 ring-1 ring-white shadow-sm flex items-center justify-center shrink-0"
+    >
+      <LogoMark preset={preset} className="w-5 h-5 text-white" strokeWidth={2.5} />
+    </span>
+  )
+}
+
 export function HouseholdSwitcher() {
   const { data: session, update } = useSession()
   // Read the context directly (rather than the throwing useHousehold() hook) so this
@@ -18,10 +35,19 @@ export function HouseholdSwitcher() {
 
   const memberships = session?.user?.memberships
   const currentId = session?.user?.householdId
+  const currentHousehold = memberships?.find(m => m.householdId === currentId)
 
-  if (!memberships || memberships.length < 2) return null
+  if (!memberships || memberships.length < 2) {
+    const soloName = currentHousehold?.householdName || memberships?.[0]?.householdName || householdCtx?.familyName
+    return (
+      <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-700">
+        <LogoBadge preset={logoPreset} />
+        {soloName && <span className="max-w-[120px] truncate">{soloName}</span>}
+        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Household</span>
+      </span>
+    )
+  }
 
-  const currentHousehold = memberships.find(m => m.householdId === currentId)
   const displayName = currentHousehold?.householdName ?? 'Switch household'
 
   async function handleSwitch(householdId: string) {
@@ -47,19 +73,14 @@ export function HouseholdSwitcher() {
         disabled={switching}
         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
       >
-        <span
-          data-testid="household-switcher-logo-mark-wrap"
-          className="w-5 h-5 rounded-full border border-slate-200 bg-white flex items-center justify-center shrink-0"
-        >
-          <LogoMark
-            preset={logoPreset}
-            className="w-3.5 h-3.5 text-forest-700"
-          />
-        </span>
+        <LogoBadge preset={logoPreset} />
         <span className="max-w-[120px] truncate">{displayName}</span>
-        <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
+        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-0.5">
+          Household
+          <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </span>
       </button>
 
       {open && (

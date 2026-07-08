@@ -39,7 +39,14 @@ export function TodaySchedulePanel({ schedule, currentTime, subjects }: TodaySch
         onScheduleChange={setLiveSchedule}
       />
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-3">
+        <Link
+          href="/learning-time"
+          data-testid="start-learning-time"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-forest-900 text-white text-sm font-semibold rounded-lg hover:bg-forest-800 transition-colors"
+        >
+          ▶ Start learning time
+        </Link>
         <p className="text-xs text-slate-400" data-testid="schedule-footer-counts">
           {scheduledCount} of {plannedCount} items scheduled
           {' · '}
@@ -47,13 +54,6 @@ export function TodaySchedulePanel({ schedule, currentTime, subjects }: TodaySch
             View Day&apos;s Plan
           </Link>
         </p>
-        <Link
-          href="/learning-time"
-          data-testid="start-learning-time"
-          className="inline-flex items-center px-3 py-1.5 bg-forest-900 text-white text-xs font-medium rounded-lg hover:bg-forest-800 transition-colors"
-        >
-          Start learning time
-        </Link>
       </div>
     </section>
   )

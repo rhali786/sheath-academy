@@ -50,7 +50,12 @@ describe('NeedsAttention', () => {
   describe('empty state', () => {
     it('renders the heading when no alerts', () => {
       render(<NeedsAttention alerts={[]} />)
-      expect(screen.getByText(/needs attention/i)).toBeInTheDocument()
+      expect(screen.getByText(/attention hub/i)).toBeInTheDocument()
+    })
+
+    it('renders a "0 open" pill when there are no alerts', () => {
+      render(<NeedsAttention alerts={[]} />)
+      expect(screen.getByText('0 open')).toBeInTheDocument()
     })
 
     it('renders nothing in the list area when alerts is empty', () => {
@@ -129,6 +134,38 @@ describe('NeedsAttention', () => {
     it('displays alert message text', () => {
       render(<NeedsAttention alerts={[highAlert]} />)
       expect(screen.getByText('2 overdue lessons')).toBeInTheDocument()
+    })
+
+    it('shows a "N open" pill counting the alerts', () => {
+      render(<NeedsAttention alerts={[highAlert, mediumAlert, lowAlert]} />)
+      expect(screen.getByText('3 open')).toBeInTheDocument()
+    })
+
+    it('shows a "from <Source>" label for each alert, source name bold', () => {
+      render(<NeedsAttention alerts={[highAlert, mediumAlert]} />)
+      expect(screen.getByText('Planbook')).toBeInTheDocument()
+      expect(screen.getByText('Attendance')).toBeInTheDocument()
+    })
+
+    it('shows "Household" as the learner chip for household-scoped alerts', () => {
+      render(<NeedsAttention alerts={[lowAlert]} />)
+      expect(screen.getByText('Household')).toBeInTheDocument()
+    })
+
+    it('is wrapped in a card matching the other Zone A card', () => {
+      render(<NeedsAttention alerts={[highAlert]} />)
+      expect(screen.getByTestId('attention-hub-card')).toHaveClass('bg-white', 'rounded-xl', 'border')
+    })
+
+    it('caps the visible list height and scrolls past 5 alerts instead of growing unbounded', () => {
+      const many: Alert[] = Array.from({ length: 8 }, (_, i) => ({
+        ...highAlert,
+        id: `alert_${i}`,
+        title: `Alert ${i}`,
+      }))
+      render(<NeedsAttention alerts={many} />)
+      expect(screen.getAllByTestId('alert-item')).toHaveLength(8)
+      expect(screen.getByTestId('attention-hub-list')).toHaveClass('overflow-y-auto')
     })
 
     it('applies red border for high severity', () => {

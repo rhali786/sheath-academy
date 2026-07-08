@@ -33,22 +33,26 @@ beforeEach(() => {
 })
 
 describe('HouseholdSwitcher', () => {
-  it('renders nothing when user has fewer than 2 memberships', () => {
+  it('renders a static logo mark with the household name (no dropdown trigger) when user has fewer than 2 memberships', () => {
     mockUseSession.mockReturnValue({
       data: { user: { householdId: 'hh_a', memberships: [MEMBERSHIPS[0]] } },
       update: mockUpdate,
     })
-    const { container } = render(<HouseholdSwitcher />)
-    expect(container.firstChild).toBeNull()
+    render(<HouseholdSwitcher />)
+    expect(screen.getByTestId('household-switcher-logo-mark-wrap')).toBeInTheDocument()
+    expect(screen.getByText('Barakah Academy')).toBeInTheDocument()
+    expect(screen.getByText('Household')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /switch household/i })).not.toBeInTheDocument()
   })
 
-  it('renders nothing when memberships are absent', () => {
+  it('renders a static logo mark when memberships are absent', () => {
     mockUseSession.mockReturnValue({
       data: { user: { householdId: 'hh_a' } },
       update: mockUpdate,
     })
-    const { container } = render(<HouseholdSwitcher />)
-    expect(container.firstChild).toBeNull()
+    render(<HouseholdSwitcher />)
+    expect(screen.getByTestId('household-switcher-logo-mark-wrap')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /switch household/i })).not.toBeInTheDocument()
   })
 
   it('renders a trigger button when user has 2 or more memberships', () => {
@@ -58,6 +62,17 @@ describe('HouseholdSwitcher', () => {
     })
     render(<HouseholdSwitcher />)
     expect(screen.getByRole('button', { name: /switch household|barakah academy/i })).toBeInTheDocument()
+  })
+
+  it('shows the household name and a "Household" caption on the trigger button', () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { householdId: 'hh_a', memberships: MEMBERSHIPS } },
+      update: mockUpdate,
+    })
+    render(<HouseholdSwitcher />)
+    const trigger = screen.getByRole('button', { name: /switch household/i })
+    expect(trigger).toHaveTextContent('Barakah Academy')
+    expect(trigger).toHaveTextContent('Household')
   })
 
   it('shows all household names in the dropdown when opened', () => {

@@ -4,6 +4,7 @@ import type { DashboardMetrics } from '../types'
 
 interface TodayTaskSummaryCardsProps {
   metrics: DashboardMetrics | null
+  totalLearners?: number
 }
 
 function SummaryCard({
@@ -51,23 +52,25 @@ function SummaryCard({
   )
 }
 
-export function TodayTaskSummaryCards({ metrics }: TodayTaskSummaryCardsProps) {
+export function TodayTaskSummaryCards({ metrics, totalLearners }: TodayTaskSummaryCardsProps) {
   if (!metrics) return null
+
+  const learnerCount = totalLearners ?? 0
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6" data-testid="today-task-summary-cards">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <SummaryCard
-          label="Tasks Completed"
+          label="Lessons done"
           value={metrics.tasksCompleted}
-          hint="Today"
+          hint={`Across ${learnerCount} learner${learnerCount === 1 ? '' : 's'}`}
           tone="green"
           Icon={CheckCircle2}
         />
         <SummaryCard
-          label="In Progress"
+          label="In progress"
           value={metrics.tasksInProgress}
-          hint="Keep going"
+          hint="On today's schedule"
           tone="blue"
           Icon={Clock}
         />

@@ -17,7 +17,13 @@ export function isLogoPresetKey(value: string | undefined | null): value is Logo
 }
 
 const MARK_PATHS: Record<LogoPresetKey, React.ReactNode> = {
-  crescent: <path d="M15.5 3.5a8.5 8.5 0 1 0 0 17 7 7 0 1 1 0-17z" fill="currentColor" stroke="none" />,
+  // Lucide "moon" crescent. The previous path (`a8.5 8.5 … a7 7 …`) was geometrically
+  // invalid — the inner arc asked for radius 7 across a 17-unit span (needs ≥8.5), so SVG
+  // silently rescaled it to the outer radius and the crescent collapsed to zero visible
+  // area (a blank badge). Since crescent is the DEFAULT preset, every household without a
+  // chosen mark rendered an empty circle. This path's endpoints are ~13.85 units apart, so
+  // both the r=9 and r=7 arcs are valid and it renders a solid crescent.
+  crescent: <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor" stroke="none" />,
   star: (
     <path
       d="M12 2.5l2.4 6.2 6.6.4-5.1 4.3 1.7 6.4L12 16.2l-5.6 3.6 1.7-6.4L3 8.1l6.6-.4L12 2.5z"
@@ -49,13 +55,14 @@ interface LogoMarkProps {
   /** The household's chosen preset key. Falls back to the default mark for undefined/null/unrecognized values. */
   preset?: string | null
   className?: string
+  strokeWidth?: number
 }
 
 /**
  * Renders the inline SVG mark for a household logo preset key. Never crashes and never
  * renders a broken image for an unset or unrecognized preset — falls back to the default mark.
  */
-export function LogoMark({ preset, className = 'w-6 h-6' }: LogoMarkProps) {
+export function LogoMark({ preset, className = 'w-6 h-6', strokeWidth = 1.75 }: LogoMarkProps) {
   const key: LogoPresetKey = isLogoPresetKey(preset) ? preset : DEFAULT_LOGO_PRESET
   return (
     <svg
@@ -65,7 +72,7 @@ export function LogoMark({ preset, className = 'w-6 h-6' }: LogoMarkProps) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.75}
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"

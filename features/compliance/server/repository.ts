@@ -1,8 +1,11 @@
-import { and, eq, gte, lte } from 'drizzle-orm'
+import { and, eq, gte, lte, sql } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
 import {
   attendanceEvents,
   schoolYears,
+  subjects,
+  lessonTasks,
+  portfolioEvidence,
   complianceRulesets,
   householdComplianceConfig,
   complianceOverrides,
@@ -18,7 +21,46 @@ import type {
   SubmissionStatus,
   AttendanceSummary,
   SchoolYearConfig,
+  SubjectCoverage,
 } from '@/features/compliance/types'
+
+/**
+ * One row per active subject with its completed/total lesson counts, so the
+ * status engine can report "All required subjects covered" (a subject is covered
+ * once it has any completed lesson).
+ */
+async function getSubjectCoverage(householdId: string): Promise<SubjectCoverage[]> {
+  const db = getDb()
+  const rows = await db
+    .select({
+      subjectId: subjects.id,
+      label: subjects.name,
+      lessonsPlanned: sql<number>`count(${lessonTasks.id})::int`,
+      lessonsCompleted: sql<number>`count(${lessonTasks.id}) filter (where ${lessonTasks.status} = 'completed')::int`,
+    })
+    .from(subjects)
+    .leftJoin(lessonTasks, eq(lessonTasks.subjectId, subjects.id))
+    .where(and(eq(subjects.householdId, householdId), eq(subjects.isActive, true)))
+    .groupBy(subjects.id, subjects.name)
+
+  return rows.map(r => ({
+    subjectId: r.subjectId,
+    label: r.label,
+    lessonsPlanned: Number(r.lessonsPlanned),
+    lessonsCompleted: Number(r.lessonsCompleted),
+  }))
+}
+
+/** True when the household has any portfolio evidence on file. */
+async function hasPortfolioEvidence(householdId: string): Promise<boolean> {
+  const db = getDb()
+  const rows = await db
+    .select({ id: portfolioEvidence.id })
+    .from(portfolioEvidence)
+    .where(eq(portfolioEvidence.householdId, householdId))
+    .limit(1)
+  return rows.length > 0
+}
 
 async function getSchoolYear(
   schoolYearId: string,
@@ -59,7 +101,10 @@ async function getAttendanceSummary(
     )
 
   const present = rows.filter(r => r.status === 'present' && !r.voidedAt)
-  const daysPresent = present.length
+  // Count distinct calendar days, not raw rows — a household with several learners
+  // records multiple "present" rows per school day, which would otherwise inflate the
+  // "days logged" figure well past the requirement.
+  const daysPresent = new Set(present.map(r => r.attendanceDate)).size
   const totalMinutes = present.reduce((sum, r) => sum + (r.minutes ?? 0), 0)
 
   return { daysPresent, totalMinutes, rangeStart: startDate, rangeEnd: endDate }
@@ -447,15 +492,20 @@ export async function getComplianceStatusInput(
     appliedAt: row.appliedAt.toISOString(),
   }))
 
+  const [subjectCoverage, portfolioOnFile] = await Promise.all([
+    getSubjectCoverage(householdId),
+    hasPortfolioEvidence(householdId),
+  ])
+
   return {
     ruleset,
     overrides,
     schoolYearConfig: config,
     attendanceSummary: attendance,
-    subjectCoverage: [],
+    subjectCoverage,
     artifactFlags: {
       hasAnnualAssessment: false,
-      hasPortfolioEvidence: false,
+      hasPortfolioEvidence: portfolioOnFile,
       hasNotarizedDeclaration: false,
     },
   }

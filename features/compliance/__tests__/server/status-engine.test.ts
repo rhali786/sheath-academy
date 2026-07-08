@@ -143,6 +143,48 @@ describe('runStatusEngine', () => {
     expect(result.provenance).toContain('TX')
   })
 
+  it('builds a days-logged check reflecting met/unmet without changing status', () => {
+    const met = runStatusEngine(baseInput({
+      attendanceSummary: { daysPresent: 180, totalMinutes: 0, rangeStart: '2025-09-01', rangeEnd: '2026-06-15' },
+    }))
+    expect(met.checks).toContainEqual({ label: '180 / 180 days logged', met: true })
+
+    const unmet = runStatusEngine(baseInput({
+      attendanceSummary: { daysPresent: 155, totalMinutes: 0, rangeStart: '2025-09-01', rangeEnd: '2026-06-15' },
+    }))
+    expect(unmet.checks).toContainEqual({ label: '155 / 180 days logged', met: false })
+    // headline stays driven purely by the ratio (155/180 = 86% → yellow)
+    expect(unmet.status).toBe('yellow')
+  })
+
+  it('reports subject coverage as met only when every subject has a completed lesson', () => {
+    const allCovered = runStatusEngine(baseInput({
+      subjectCoverage: [
+        { subjectId: 's1', label: 'Math', lessonsPlanned: 10, lessonsCompleted: 3 },
+        { subjectId: 's2', label: 'Quran', lessonsPlanned: 8, lessonsCompleted: 1 },
+      ],
+    }))
+    expect(allCovered.checks).toContainEqual({ label: 'All required subjects covered', met: true })
+
+    const partial = runStatusEngine(baseInput({
+      subjectCoverage: [
+        { subjectId: 's1', label: 'Math', lessonsPlanned: 10, lessonsCompleted: 3 },
+        { subjectId: 's2', label: 'Quran', lessonsPlanned: 8, lessonsCompleted: 0 },
+      ],
+    }))
+    expect(partial.checks).toContainEqual({ label: '1 of 2 subjects covered', met: false })
+  })
+
+  it('reports a portfolio-evidence check from artifactFlags', () => {
+    const withEvidence = runStatusEngine(baseInput({
+      artifactFlags: { hasAnnualAssessment: false, hasPortfolioEvidence: true, hasNotarizedDeclaration: false },
+    }))
+    expect(withEvidence.checks).toContainEqual({ label: 'Portfolio evidence on file', met: true })
+
+    const withoutEvidence = runStatusEngine(baseInput())
+    expect(withoutEvidence.checks).toContainEqual({ label: 'No portfolio evidence yet', met: false })
+  })
+
   it('populates missingData when attendance summary has no data', () => {
     const result = runStatusEngine(baseInput({
       attendanceSummary: { daysPresent: 0, totalMinutes: 0, rangeStart: '', rangeEnd: '' },

@@ -67,11 +67,11 @@ function computeProgress(year: SchoolYear, today: Date): SchoolYearProgress {
   return { currentDay, totalDays, currentWeek, totalWeeks, remainingDays, pacing }
 }
 
-const PACING_STYLES: Record<SchoolYearProgress['pacing'], { label: string; color: string }> = {
-  'on-pace': { label: 'On Pace', color: 'text-green-600 bg-green-50' },
-  'behind':  { label: 'Behind',  color: 'text-amber-700 bg-amber-50' },
-  'ahead':   { label: 'Ahead',   color: 'text-sky-700 bg-sky-50' },
-  'unknown': { label: '—',       color: 'text-slate-400 bg-slate-50' },
+const PACING_STYLES: Record<SchoolYearProgress['pacing'], { label: string; color: string; ring: string }> = {
+  'on-pace': { label: 'On Pace', color: 'text-green-600', ring: '#1e8a55' },
+  'behind':  { label: 'Behind',  color: 'text-amber-700', ring: '#b45309' },
+  'ahead':   { label: 'Ahead',   color: 'text-sky-700',   ring: '#0284c7' },
+  'unknown': { label: '—',       color: 'text-slate-400', ring: '#94a3b8' },
 }
 
 export function SchoolYearProgressCard() {
@@ -89,38 +89,33 @@ export function SchoolYearProgressCard() {
   const today = new Date()
   const { currentDay, totalDays, currentWeek, totalWeeks, remainingDays, pacing } = computeProgress(year, today)
   const pacingMeta = PACING_STYLES[pacing]
+  const pct = totalDays > 0 ? Math.min(100, Math.round((currentDay / totalDays) * 100)) : 0
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-5" data-testid="school-year-progress-card">
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">School Year Progress</p>
-        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${pacingMeta.color}`}>
-          {pacingMeta.label}
-        </span>
+      <div className="flex items-center gap-2 mb-3">
+        <svg className="w-[19px] h-[19px] text-forest-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M3 3v18h18" />
+          <path d="M7 15l4-5 4 3 5-7" />
+        </svg>
+        <h3 className="text-[14.5px] font-bold text-slate-900">School Year</h3>
       </div>
-      <div className="grid grid-cols-3 gap-3 text-center">
-        <div>
-          <p className="text-2xl font-bold text-slate-900 tabular-nums">{currentDay}</p>
-          <p className="text-xs text-slate-400 mt-0.5">of {totalDays} days</p>
-        </div>
-        <div>
-          <p className="text-2xl font-bold text-slate-900 tabular-nums">{currentWeek}</p>
-          <p className="text-xs text-slate-400 mt-0.5">of {totalWeeks} weeks</p>
-        </div>
-        <div>
-          <p className="text-2xl font-bold text-slate-900 tabular-nums">{remainingDays}</p>
-          <p className="text-xs text-slate-400 mt-0.5">days left</p>
+
+      <div
+        className="relative w-28 h-28 mx-auto rounded-full"
+        style={{ background: `conic-gradient(${pacingMeta.ring} calc(${pct}*1%), #f1f5f9 0)` }}
+      >
+        <div className="absolute inset-[14px] rounded-full bg-white flex flex-col items-center justify-center text-center">
+          <span className="text-xl font-bold tabular-nums leading-none">Day {currentDay}</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mt-1">of {totalDays}</span>
         </div>
       </div>
-      <div className="mt-3">
-        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-forest-600 rounded-full transition-all"
-            style={{ width: `${totalDays > 0 ? Math.min(100, Math.round((currentDay / totalDays) * 100)) : 0}%` }}
-          />
-        </div>
-        <p className="text-xs text-slate-400 mt-1 text-right">{year.name}</p>
-      </div>
+
+      <p className={`text-center text-sm font-semibold mt-3 ${pacingMeta.color}`}>{pacingMeta.label}</p>
+      <p className="text-center text-xs text-slate-500 mt-0.5">
+        Week {currentWeek} of {totalWeeks} · {remainingDays} days left
+      </p>
+      <p className="text-center text-xs text-slate-300 mt-1">{year.name}</p>
     </div>
   )
 }

@@ -6,7 +6,6 @@ import { Sun, Plus, ListChecks } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { Calendar } from 'lucide-react'
 import { useHousehold } from '@/features/household/front/context'
-import { ChildSelector } from './ChildSelector'
 
 function greetingName(sessionName: string | null | undefined, familyName: string): string {
   if (sessionName?.trim()) {
@@ -129,10 +128,6 @@ export function DashboardHeader({ selectedDate, alerts: _alerts }: DashboardHead
               Today&apos;s Plan
             </Link>
           </div>
-        </div>
-
-        <div className="mt-4 flex justify-end border-t border-slate-100 pt-3">
-          <ChildSelector />
         </div>
       </div>
     </section>

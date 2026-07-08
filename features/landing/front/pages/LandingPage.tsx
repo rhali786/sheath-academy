@@ -273,7 +273,7 @@ export default function LandingPage() {
               href="/signup"
               className="inline-flex items-center px-8 py-3.5 rounded-full bg-[#d4af37] text-[#0c1430] font-medium hover:bg-[#e6c25a] transition-colors no-underline"
             >
-              Create your household
+              Set up your household
             </Link>
             <a href="#what" className="text-sm text-[#c3cbde] hover:text-white no-underline">
               See how it works ↓
@@ -410,7 +410,7 @@ export default function LandingPage() {
               href="/signup"
               className="inline-flex items-center px-8 py-3.5 rounded-full bg-white text-[#1b3a2f] font-medium hover:bg-[#f4efe3] transition-colors no-underline"
             >
-              Create your household
+              Set up your household
             </Link>
             <Link href="/login" className="text-sm text-[#f4efe3]/80 hover:text-white no-underline">
               Already have an account? Sign in

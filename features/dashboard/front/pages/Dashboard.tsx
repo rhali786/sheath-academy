@@ -8,6 +8,7 @@ import { NeedsAttention } from '../components/NeedsAttention'
 import { ComplianceStatusCard } from '../components/ComplianceStatusCard'
 import { LearnerCommandCenter } from '../components/LearnerCommandCenter'
 import { QuranStreak } from '../components/QuranStreak'
+import { LearningTimeWeekCard } from '../components/LearningTimeWeekCard'
 import { PersonalTodoList } from '@/features/todos/front/components/PersonalTodoList'
 import { IslamicCalendarCard } from '@/features/islamic-calendar/front/components/IslamicCalendarCard'
 import { getIslamicCalendarCountdowns } from '@/features/islamic-calendar/front/lib/countdowns'
@@ -35,14 +36,6 @@ function isValidDateParam(dateStr: string | null): dateStr is string {
   const [year, month, day] = dateStr.split('-').map(Number)
   const parsed = new Date(year, month - 1, day)
   return dashboardDateToStr(parsed) === dateStr
-}
-
-function ZoneLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">
-      {children}
-    </h2>
-  )
 }
 
 export default function Dashboard() {
@@ -136,10 +129,7 @@ export default function Dashboard() {
 
       {/* Zone A — Today */}
       <section data-testid="dashboard-zone-today" aria-label="Today">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-          <ZoneLabel>Today</ZoneLabel>
-        </div>
-        <TodayTaskSummaryCards metrics={metrics} />
+        <TodayTaskSummaryCards metrics={metrics} totalLearners={studentProfiles.length} />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3" data-testid="dashboard-hero-grid">
             <div className="lg:col-span-2">
@@ -158,21 +148,19 @@ export default function Dashboard() {
 
       {/* Zone B — Per-learner command center */}
       <section
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8"
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 pt-2"
         data-testid="dashboard-zone-learners"
         aria-label="Per-learner"
       >
-        <ZoneLabel>Per-learner</ZoneLabel>
         <LearnerCommandCenter />
       </section>
 
       {/* Zone C — Proof & Progress */}
       <section
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10"
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 pt-2"
         data-testid="dashboard-zone-proof"
         aria-label="Proof & Progress"
       >
-        <ZoneLabel>Proof &amp; Progress</ZoneLabel>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <ComplianceStatusCard />
           <SchoolYearProgressCard />
@@ -182,14 +170,14 @@ export default function Dashboard() {
             selectedChildId={selectedChildId}
             onAddSession={addQuranSession}
           />
-          {topCountdowns.filter(c => reminderEnabled[c.name]).map(c => (
-            <IslamicCalendarCard
-              key={c.id}
-              event={c.name}
-              daysUntil={c.daysUntil}
-              description={c.description}
-            />
-          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.3fr_1fr] mt-6">
+          <LearningTimeWeekCard />
+          <IslamicCalendarCard
+            events={topCountdowns
+              .filter(c => reminderEnabled[c.name])
+              .map(c => ({ id: c.id, event: c.name, daysUntil: c.daysUntil, description: c.description }))}
+          />
         </div>
         <div className="mt-6">
           <PersonalTodoList />

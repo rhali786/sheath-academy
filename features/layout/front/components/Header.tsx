@@ -56,12 +56,15 @@ export function Header({ onMenuOpen }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          <NotificationBellDropdown alerts={alerts} onOpen={loadAlerts} />
-
-          {session ? (
+          {session && (
             <div className="flex items-center gap-2">
               <HouseholdSwitcher />
               <LearnerSwitcher />
+            </div>
+          )}
+          <NotificationBellDropdown alerts={alerts} onOpen={loadAlerts} />
+          {session ? (
+            <div className="flex items-center gap-2">
               <div className="hidden sm:flex flex-col items-end" data-testid="user-greeting-line">
                 <span className="text-xs font-medium text-slate-700">
                   {greeting} {displayName ?? 'there'}

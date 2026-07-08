@@ -3,35 +3,59 @@ import { render, screen } from '@testing-library/react'
 import { IslamicCalendarCard } from '@/features/islamic-calendar/front/components/IslamicCalendarCard'
 
 describe('IslamicCalendarCard', () => {
-  it('shows "begins in X days" for upcoming event', () => {
-    render(<IslamicCalendarCard event="Ramadan" daysUntil={23} />)
-    expect(screen.getByText(/Ramadan begins in 23 days/i)).toBeInTheDocument()
-  })
-
-  it('shows "today" language when daysUntil is 0', () => {
-    render(<IslamicCalendarCard event="Ramadan" daysUntil={0} />)
-    expect(screen.getByText(/today/i)).toBeInTheDocument()
-  })
-
-  it('shows "tomorrow" when daysUntil is 1', () => {
-    render(<IslamicCalendarCard event="White Days" daysUntil={1} />)
-    expect(screen.getByText(/tomorrow/i)).toBeInTheDocument()
-  })
-
-  it('renders nothing when enabled is false', () => {
-    const { container } = render(<IslamicCalendarCard event="Ramadan" daysUntil={23} enabled={false} />)
+  it('renders nothing when there are no events', () => {
+    const { container } = render(<IslamicCalendarCard events={[]} />)
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders correctly when enabled is true (default)', () => {
-    render(<IslamicCalendarCard event="Eid al-Fitr" daysUntil={10} enabled={true} />)
-    expect(screen.getByText(/Eid al-Fitr/i)).toBeInTheDocument()
+  it('renders a single card with the Islamic Calendar title, once, regardless of event count', () => {
+    render(
+      <IslamicCalendarCard
+        events={[
+          { id: 'a', event: 'Day of Arafah', daysUntil: 4 },
+          { id: 'b', event: 'Eid al-Adha', daysUntil: 5 },
+          { id: 'c', event: 'Islamic New Year', daysUntil: 24, description: '1 Muharram' },
+        ]}
+      />,
+    )
+    expect(screen.getAllByTestId('islamic-calendar-card')).toHaveLength(1)
+    expect(screen.getAllByText('Islamic Calendar')).toHaveLength(1)
   })
 
-  it('shows sacred month message when event is Sacred Month and daysUntil is 0', () => {
-    render(<IslamicCalendarCard event="Sacred Month" daysUntil={0} description="We are in Rajab, one of the sacred months" />)
-    // Both the heading and description may mention "sacred month" — verify at least one is present
-    const matches = screen.getAllByText(/sacred month/i)
-    expect(matches.length).toBeGreaterThan(0)
+  it('lists every event as its own row inside the one card', () => {
+    render(
+      <IslamicCalendarCard
+        events={[
+          { id: 'a', event: 'Day of Arafah', daysUntil: 4 },
+          { id: 'b', event: 'Eid al-Adha', daysUntil: 5 },
+        ]}
+      />,
+    )
+    expect(screen.getByText('Day of Arafah')).toBeInTheDocument()
+    expect(screen.getByText('Eid al-Adha')).toBeInTheDocument()
+  })
+
+  it('shows "today" / "tomorrow" / "in N days" per row', () => {
+    render(
+      <IslamicCalendarCard
+        events={[
+          { id: 'a', event: 'Sacred Month', daysUntil: 0 },
+          { id: 'b', event: 'White Days', daysUntil: 1 },
+          { id: 'c', event: 'Ramadan', daysUntil: 23 },
+        ]}
+      />,
+    )
+    expect(screen.getByText('today')).toBeInTheDocument()
+    expect(screen.getByText('tomorrow')).toBeInTheDocument()
+    expect(screen.getByText('in 23 days')).toBeInTheDocument()
+  })
+
+  it('shows the description as a subtitle when provided', () => {
+    render(
+      <IslamicCalendarCard
+        events={[{ id: 'a', event: 'Islamic New Year', daysUntil: 24, description: '1 Muharram' }]}
+      />,
+    )
+    expect(screen.getByText('1 Muharram')).toBeInTheDocument()
   })
 })

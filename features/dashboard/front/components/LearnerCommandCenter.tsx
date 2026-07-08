@@ -6,22 +6,21 @@ import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { attendanceApi } from '@/features/attendance/front/services/api'
 import { plannerApi } from '@/features/plan/front/services/api'
 import { gradebookApi } from '@/features/gradebook/front/services/api'
-import { LearnerCommandRow, type LearnerCommandRowMetrics } from './LearnerCommandRow'
+import { LearnerCommandRow, LEARNER_ROW_GRID, type LearnerCommandRowMetrics } from './LearnerCommandRow'
 
 function todayIso(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function getCurrentWeekRange(): { start: string; end: string } {
-  const today = new Date()
-  const dow = today.getDay()
-  const daysFromMonday = dow === 0 ? 6 : dow - 1
-  const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysFromMonday)
-  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6)
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  return { start: fmt(monday), end: fmt(sunday) }
+async function fetchActiveSchoolYearStart(): Promise<string | undefined> {
+  try {
+    const res = await fetch('/api/school-years/active')
+    const body = await res.json()
+    return body.status === 'success' ? body.data?.startDate : undefined
+  } catch {
+    return undefined
+  }
 }
 
 const EMPTY_METRICS: LearnerCommandRowMetrics = {
@@ -56,14 +55,18 @@ export function LearnerCommandCenter() {
     setError(false)
     const learners = activeLearnerIds.split(',')
     const today = todayIso()
-    const { start, end } = getCurrentWeekRange()
 
     const load = async () => {
       try {
+        const activeYearStart = await fetchActiveSchoolYearStart()
+        // The "active" school year can be next year's, already set up mid-summer before
+        // today falls inside its range — a startDate after today would make a start..today
+        // window inverted (always empty), so fall back to no lower bound in that case.
+        const yearStart = activeYearStart && activeYearStart <= today ? activeYearStart : undefined
         const [gradebookRes, ...perChild] = await Promise.all([
           gradebookApi.getSummaries(''),
           ...learners.flatMap(childId => [
-            attendanceApi.getSummary(childId, start, end),
+            attendanceApi.getSummary(childId, yearStart, today),
             plannerApi.getLessons(undefined, [childId], undefined, today, today),
           ]),
         ])
@@ -137,12 +140,23 @@ export function LearnerCommandCenter() {
 
   return (
     <section className="rounded-xl border bg-white divide-y" data-testid="learner-command-center">
-      {activeLearners.map(learner => (
+      <div
+        className={`${LEARNER_ROW_GRID} px-4 py-3 text-[10.5px] font-bold uppercase tracking-wide text-slate-400`}
+        data-testid="learner-command-header"
+      >
+        <span>Learner</span>
+        <span>Attendance</span>
+        <span>Lessons Due Today</span>
+        <span>Current grade</span>
+        <span></span>
+      </div>
+      {activeLearners.map((learner, i) => (
         <LearnerCommandRow
           key={learner.id}
           learner={learner}
           metrics={metricsByChild[learner.id] ?? EMPTY_METRICS}
           onSelect={setSelectedChildId}
+          colorIndex={i}
         />
       ))}
     </section>
