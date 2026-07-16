@@ -372,14 +372,16 @@ function EmptyBadgeState({ starterDefs }: { starterDefs: BadgeDefinition[] }) {
           </p>
         </div>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-        {starterDefs.map(def => (
-          <BadgeCard
-            key={def.id}
-            item={{ definition: def, award: null, isEarned: false }}
-          />
-        ))}
-      </div>
+      {starterDefs.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          {starterDefs.map(def => (
+            <BadgeCard
+              key={def.id}
+              item={{ definition: def, award: null, isEarned: false }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -513,17 +515,7 @@ export function BadgesPage() {
     )
   }
 
-  if (collection.length === 0) {
-    return (
-      <div className="page-shell space-y-6">
-        <div className="flex items-center gap-3">
-          <Trophy className="w-6 h-6 text-forest-700" />
-          <h1 className="page-title">Badges</h1>
-        </div>
-        <EmptyBadgeState starterDefs={[]} />
-      </div>
-    )
-  }
+  const isEmpty = collection.length === 0
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
@@ -550,17 +542,21 @@ export function BadgesPage() {
           </label>
           <button
             type="button"
+            data-testid="add-badge-toggle"
             onClick={() => setShowCreateForm(v => !v)}
             className="px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800"
           >
-            {showCreateForm ? 'Cancel' : 'Create badge'}
+            {showCreateForm ? 'Cancel' : 'Add badge'}
           </button>
         </div>
       </div>
 
       {showCreateForm && (
         <div data-testid="create-badge-form">
-          <h2 className="form-section-heading">Create badge</h2>
+          <h2 className="form-section-heading">Add badge</h2>
+          <p className="text-xs text-slate-500 mb-2">
+            Badges you create here are custom to your household — design your own goals for your kids to work toward.
+          </p>
           <div className="add-form-card">
             <BadgeDefinitionForm submitLabel="Create badge" onSubmit={handleCreateDefinition} onCancel={() => setShowCreateForm(false)} />
           </div>
@@ -571,14 +567,18 @@ export function BadgesPage() {
         <InlineSuccess message={success} onDismiss={() => setSuccess(null)} />
       )}
 
-      <div
-        data-testid="badges-trophy-case"
-        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
-      >
-        {collection.map(item => (
-          <BadgeCard key={item.definition.id} item={item} actions={actions} definitionActions={definitionActions} />
-        ))}
-      </div>
+      {isEmpty ? (
+        <EmptyBadgeState starterDefs={[]} />
+      ) : (
+        <div
+          data-testid="badges-trophy-case"
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
+        >
+          {collection.map(item => (
+            <BadgeCard key={item.definition.id} item={item} actions={actions} definitionActions={definitionActions} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

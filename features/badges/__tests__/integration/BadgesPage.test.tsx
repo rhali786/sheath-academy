@@ -273,11 +273,33 @@ describe('BadgesPage', () => {
     await waitFor(() => expect(mockSetSettings).toHaveBeenCalledWith(false))
   })
 
+  // ─── G5: 'Add badge' discoverability ───────────────────────────────────────
+  it('shows a clearly labeled "Add badge" control in the list header that reveals the create form', async () => {
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByTestId('badges-trophy-case')).toBeInTheDocument())
+    const addButton = screen.getByRole('button', { name: 'Add badge' })
+    expect(addButton).toBeInTheDocument()
+    expect(screen.queryByTestId('create-badge-form')).not.toBeInTheDocument()
+    fireEvent.click(addButton)
+    await waitFor(() => expect(screen.getByTestId('create-badge-form')).toBeInTheDocument())
+    expect(screen.getByText(/custom to your household/i)).toBeInTheDocument()
+    expect(addButton).toHaveTextContent('Cancel')
+  })
+
+  it('shows the "Add badge" control even when the badge collection is empty', async () => {
+    mockGetCollection.mockImplementation(() => ok([]))
+    render(<BadgesPage />)
+    await waitFor(() => {
+      expect(screen.getByTestId('badges-empty')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Add badge' })).toBeInTheDocument()
+    })
+  })
+
   // ─── Phase 5: custom badge authoring ──────────────────────────────────────
   it('authors a custom badge via the create form', async () => {
     render(<BadgesPage />)
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Create badge' })).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: 'Create badge' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Add badge' })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Add badge' }))
     await waitFor(() => expect(screen.getByTestId('create-badge-form')).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText('Badge title'), { target: { value: 'Tajweed Star' } })
     fireEvent.change(screen.getByLabelText('Badge description'), { target: { value: 'Master tajweed' } })

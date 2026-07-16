@@ -76,9 +76,9 @@
       "id": "phase-g5-badges-discoverability",
       "title": "G5 — Make 'Add badge' clearly discoverable",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
+      "status": "in_progress",
+      "model": "cheap",
+      "startedAt": "2026-07-17T00:30:00.000Z",
       "completedAt": null,
       "outputs": {
         "filesChanged": [],
