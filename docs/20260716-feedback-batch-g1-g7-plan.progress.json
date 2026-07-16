@@ -55,14 +55,20 @@
       "id": "phase-g4-compliance-empty-state",
       "title": "G4 — Compliance empty-state copy + info tooltips for ruleset/pathway",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-16T23:59:30.000Z",
+      "completedAt": "2026-07-17T00:20:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/compliance/front/pages/CompliancePage.tsx",
+          "features/compliance/__tests__/integration/CompliancePage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/compliance (61 passed, 10 skipped/db-gated)",
+          "npm test (242 suites / 2121 tests passed)"
+        ],
+        "notes": "No existing dedicated tooltip component was found in the codebase (grepped for Tooltip/title= across features/**/front/**/*.tsx); used the plan's documented fallback — a plain <span title=\"...\"> wrapper around the lucide-react Info icon (lucide-react's Info component does not accept a `title` prop directly in its LucideProps type, so the title attribute must live on a wrapping element) plus small visible helper-text paragraphs below the ruleset select and pathway input, per ui-style-guide's 'don't invent a new global tooltip component for this alone' guidance. RulesetCard's editing view now branches on rulesets.length === 0: empty case renders a muted explanatory message ('No rulesets available yet for your state...') in place of the <select>; non-empty case keeps the <select> plus a data-testid='ruleset-select-info' info icon and helper text, and the Pathway field always gets a data-testid='pathway-info' info icon and helper text (pathway is free-text and usable even without a ruleset). 'Mark deadline complete' was left untouched per the plan. Build note: `npm run build` reproduces the exact same known sandbox failure documented by phase-0 and phase-g1 (static generation of /(shell)/about times out on a DB handshake after 3x60s retries) — cross-checked via `git stash` (stashing this phase's 2 files + progress.json, running `npm run build` with a 120s bounded timeout, observing the identical `/(shell)/about ... took more than 60 seconds` failure) before `git stash pop` restored the work. `npx tsc` build step did initially catch a real type error introduced by this phase (Info icon does not accept `title` prop) which was fixed by wrapping in <span title=...> before the stash-comparison run — so the build's type-check portion was exercised and passed on this phase's code, only the static-generation phase (unrelated to this phase) fails."
       },
       "failureReason": null
     },

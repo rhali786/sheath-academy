@@ -162,22 +162,51 @@ function RulesetCard({
 
       {editing && (
         <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+          {rulesets.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              No rulesets available yet for your state. You can add one later once your state&apos;s
+              requirements are published, or track deadlines and submissions manually below in the
+              meantime.
+            </p>
+          ) : (
+            <>
+              <label className="flex flex-col text-xs text-slate-500">
+                <span className="flex items-center gap-1">
+                  Active ruleset
+                  <span
+                    data-testid="ruleset-select-info"
+                    title="A ruleset defines your state's homeschool requirements (days/hours, filings, testing). Pick the one matching your state and pathway."
+                  >
+                    <Info className="w-3 h-3 text-slate-400" />
+                  </span>
+                </span>
+                <select
+                  aria-label="Active ruleset"
+                  value={selectedId}
+                  onChange={e => setSelectedId(e.target.value)}
+                  className="mt-0.5 rounded border border-slate-300 px-2 py-1 text-sm text-slate-700"
+                >
+                  <option value="">— None —</option>
+                  {rulesets.map(r => (
+                    <option key={r.id} value={r.id}>{r.state} — {r.pathwayKey} ({r.value} {r.unit})</option>
+                  ))}
+                </select>
+              </label>
+              <p className="text-[11px] text-slate-400">
+                Choose the ruleset that matches your state&apos;s published homeschool requirements.
+              </p>
+            </>
+          )}
           <label className="flex flex-col text-xs text-slate-500">
-            Active ruleset
-            <select
-              aria-label="Active ruleset"
-              value={selectedId}
-              onChange={e => setSelectedId(e.target.value)}
-              className="mt-0.5 rounded border border-slate-300 px-2 py-1 text-sm text-slate-700"
-            >
-              <option value="">— None —</option>
-              {rulesets.map(r => (
-                <option key={r.id} value={r.id}>{r.state} — {r.pathwayKey} ({r.value} {r.unit})</option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col text-xs text-slate-500">
-            Pathway
+            <span className="flex items-center gap-1">
+              Pathway
+              <span
+                data-testid="pathway-info"
+                title="Pathway describes how you homeschool legally in your state (e.g. independent, umbrella school, church-exempt). It affects which requirements apply."
+              >
+                <Info className="w-3 h-3 text-slate-400" />
+              </span>
+            </span>
             <input
               aria-label="Pathway key"
               type="text"
@@ -187,6 +216,10 @@ function RulesetCard({
               className="mt-0.5 rounded border border-slate-300 px-2 py-1 text-sm text-slate-700"
             />
           </label>
+          <p className="text-[11px] text-slate-400">
+            New to homeschooling? Pathway is the legal option you filed under — for example
+            &quot;independent&quot; or &quot;umbrella school&quot;. Check your state&apos;s requirements if unsure.
+          </p>
           {error && <p className="text-xs text-red-600" role="alert">{error}</p>}
           <div className="flex justify-end">
             <button
