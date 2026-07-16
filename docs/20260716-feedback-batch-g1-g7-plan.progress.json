@@ -97,14 +97,16 @@
       "id": "phase-g6-verify-display-name",
       "title": "G6 — Verify parent display name works for magic-link users; fix only if a real gap is found",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T01:00:00.000Z",
+      "completedAt": "2026-07-17T01:15:00.000Z",
       "outputs": {
         "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/settings/__tests__/integration/SettingsPage.test.tsx features/layout/__tests__/Header.test.tsx features/household/__tests__/api/user-profile.test.ts (3 suites / 36 tests passed)"
+        ],
+        "notes": "NO GAP FOUND — verification only, no functional code change made (working tree left clean, no commit created since nothing changed). Confirming tests already existed pre-phase and were inspected/run, not newly written: SettingsPage.test.tsx's 'Display name — Your profile section' describe block (renders form, pre-fills from session.user.name, saves via householdApi.updateUserProfile + updateSession({name}), shows success/error), Header.test.tsx's 'Header — authenticated' block (greeting uses session.user.name when set, falls back to 'there' — never to email — when absent; email always shown separately in parens), and household/__tests__/api/user-profile.test.ts (PUT /api/household/user-profile persists via updateUserName to the users table). Traced full chain end-to-end: SettingsPage.handleSaveDisplayName -> householdApi.updateUserProfile -> PUT /api/household/user-profile -> updateUserName(userId, name) persists users.name -> updateSession({name}) -> NextAuth jwt callback (features/auth/auth.ts, trigger==='update') sets token.name -> session callback sets session.user.name -> Header.tsx reads session.user.name directly. Session strategy is 'jwt' globally (features/auth/auth.config.ts: session.strategy='jwt', applies to ALL providers) with no provider-specific branching on the name field anywhere in the jwt/session callbacks or resolveTenant — magic-link (Resend), credentials/password, dev-bypass, and OAuth sessions all flow through the identical code path. Conclusion: the display-name flow already works correctly for magic-link sessions exactly as documented in the plan's expected 'no-op verified' outcome — G6 is a no-op verification, not a fix."
       },
       "failureReason": null
     },
