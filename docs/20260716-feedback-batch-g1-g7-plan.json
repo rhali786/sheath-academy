@@ -1,0 +1,366 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/20260716-feedback-batch-g1-g7-plan.md",
+  "branch": "fix/feedback-batch-g1-g7",
+  "phases": [
+    {
+      "id": "phase-0-prod-seed-ops",
+      "title": "Commit the already-applied prod reference-seed fix + wrapper script",
+      "gated": false,
+      "modelTier": "cheap",
+      "preconditions": [],
+      "fileScope": [
+        "scripts/seed-reference-data.ts",
+        "scripts/seed-reference-prod.ts",
+        "package.json"
+      ],
+      "testsFirst": [],
+      "implementationSteps": [
+        "These files are already modified/created on the working tree from a prior manual ops action (running the reference seed against prod). Verify: scripts/seed-reference-data.ts jsonPath points at 'docs/archive/compliance-research/homeschool-requirements-2026-06-27.json' (fixed from the old, now-missing 'docs/compliance-research/...' path).",
+        "Verify scripts/seed-reference-prod.ts exists and mirrors scripts/migrate-prod.ts: loads DATABASE_URL_PROD, remaps to DATABASE_URL, execSync's scripts/seed-reference-data.ts via tsx.",
+        "Verify package.json has a 'db:seed:reference:prod' script entry using dotenv -e .env.local -- tsx scripts/seed-reference-prod.ts.",
+        "No new code should be needed — this phase only verifies and commits what is already on disk. If any of the three files are missing the described content, implement it to match."
+      ],
+      "doneWhen": [
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Record in notes that this was an ops-verification commit (reference seed already run and verified against prod: 66 compliance_rulesets across 7 states TX/FL/NY/PA/CA/MI/CT, 8 starter badge_definitions — verified read-only, no schema change here)."
+    },
+    {
+      "id": "phase-g1-settings-persistence",
+      "title": "G1 — Persist Planning Defaults & Records/Compliance settings tabs with an explicit Save button",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["phase-0-prod-seed-ops"],
+      "fileScope": [
+        "features/settings/api/router.ts",
+        "features/settings/api/routes/settings.ts",
+        "features/settings/front/services/api.ts",
+        "features/settings/front/components/PlanningDefaultsTab.tsx",
+        "features/settings/front/components/RecordsComplianceTab.tsx",
+        "app/api/[...slug]/route.ts",
+        "features/settings/__tests__/api/settings.test.ts",
+        "features/settings/__tests__/integration/PlanningDefaultsTab.test.tsx",
+        "features/settings/__tests__/integration/RecordsComplianceTab.test.tsx"
+      ],
+      "testsFirst": [
+        "features/settings/__tests__/api/settings.test.ts: GET /api/settings returns stored household settings (mock getAllHouseholdSettings at the repository boundary); PUT /api/settings upserts a key via setHouseholdSetting and returns the updated map",
+        "features/settings/__tests__/integration/PlanningDefaultsTab.test.tsx: renders with a mocked settings service returning { 'planning.maxLessonsPerDay': 3 } -> input shows 3; Save button is disabled until an edit is made; change to 5 and click Save -> updateSettings called with planning.maxLessonsPerDay: 5 and a saved confirmation renders",
+        "features/settings/__tests__/integration/RecordsComplianceTab.test.tsx: same shape for records.trackingMethod / records.exportFormat"
+      ],
+      "implementationSteps": [
+        "features/settings/server/repository.ts already exists (getAllHouseholdSettings, setHouseholdSetting against household_settings) — reuse it, do not duplicate.",
+        "Add features/settings/api/routes/settings.ts: GET calls getAllHouseholdSettings(householdId) from request auth ctx; PUT accepts a partial key/value body and calls setHouseholdSetting for each provided key, returns the updated full map. Follow the ApiResponse<T> shape from CLAUDE.md.",
+        "Add features/settings/api/router.ts (handleSettingsRoute) following the exact dispatch pattern of a neighboring feature router (e.g. features/badges/api/router.ts) for GET/PUT on the settings slug.",
+        "Wire a new 'if (slug[0] === \"settings\")' case into app/api/[...slug]/route.ts, importing handleSettingsRoute — follow the existing import/case pattern exactly (see handleBadgesRoute for the most recently added example).",
+        "Add features/settings/front/services/api.ts: getSettings() and updateSettings(patch).",
+        "Rewrite PlanningDefaultsTab.tsx and RecordsComplianceTab.tsx to: load settings on mount via getSettings(), track local edited state, disable Save until dirty, call updateSettings(patch) on Save click, show a brief saved confirmation on success. Keys: planning.maxLessonsPerDay, planning.carryForward, records.trackingMethod, records.exportFormat.",
+        "Do not auto-save on change — the plan decision is an explicit Save changes button."
+      ],
+      "doneWhen": [
+        "npm test -- features/settings",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Record which API route pattern was followed (name the sibling router copied), the exact setting keys used, and confirm the Save button is disabled-until-dirty (so phase G7/G8 workers relying on the settings API for view-preference persistence know the contract: getSettings()/updateSettings(patch))."
+    },
+    {
+      "id": "phase-g4-compliance-empty-state",
+      "title": "G4 — Compliance empty-state copy + info tooltips for ruleset/pathway",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["phase-0-prod-seed-ops"],
+      "fileScope": [
+        "features/compliance/front/pages/CompliancePage.tsx",
+        "features/compliance/__tests__/integration/CompliancePage.test.tsx"
+      ],
+      "testsFirst": [
+        "features/compliance/__tests__/integration/CompliancePage.test.tsx: render with rulesets: [] -> a helpful empty-state message renders instead of a bare empty <select> ('No rulesets available yet for your state...' or similar, not blank); render with rulesets present -> options are present AND an info icon/tooltip is present next to the ruleset selector and the pathway selector with explanatory text"
+      ],
+      "implementationSteps": [
+        "'Mark deadline complete' already exists (CompliancePage.tsx, the isCompleted toggle) — do not re-implement it, it needs no change.",
+        "In the RulesetCard section, when the rulesets prop is empty, render a muted explanatory message in place of an empty <select> instead of a bare/blank control.",
+        "Add an info icon (lucide-react Info, already imported) next to the ruleset selector and the pathway selector; wire it to a short tooltip/expandable explanation for new homeschoolers (reuse whatever tooltip pattern already exists elsewhere in the app per ui-style-guide; if none exists, a simple title attribute + visible helper text below the select is acceptable — do not invent a new global tooltip component for this alone)."
+      ],
+      "doneWhen": [
+        "npm test -- features/compliance",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Note whether an existing tooltip pattern was found and reused, or whether a helper-text fallback was used, so future compliance UI work is consistent."
+    },
+    {
+      "id": "phase-g5-badges-discoverability",
+      "title": "G5 — Make 'Add badge' clearly discoverable",
+      "gated": false,
+      "modelTier": "cheap",
+      "preconditions": ["phase-0-prod-seed-ops"],
+      "fileScope": [
+        "features/badges/front/pages/BadgesPage.tsx",
+        "features/badges/__tests__/integration/BadgesPage.test.tsx"
+      ],
+      "testsFirst": [
+        "features/badges/__tests__/integration/BadgesPage.test.tsx: a clearly visible 'Add badge' control is present in the badges list header; clicking it reveals the BadgeDefinitionForm"
+      ],
+      "implementationSteps": [
+        "BadgeDefinitionForm (create/edit) already exists in BadgesPage.tsx — do not rebuild it.",
+        "Ensure a clearly labeled 'Add badge' button is present in the list header (not just an icon) with one line of helper text explaining badges are household-defined, following the app's collapsible add-form button pattern (see ui-style-guide / other 'Add X' buttons in the codebase, e.g. planner's Add lesson toggle) rather than inventing a new interaction.",
+        "8 starter badge_definitions now exist in prod (seeded 2026-07-16) — verify they render in the available list; this phase does not need to seed anything further."
+      ],
+      "doneWhen": [
+        "npm test -- features/badges",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Confirm which existing 'Add X' button pattern was copied."
+    },
+    {
+      "id": "phase-g6-verify-display-name",
+      "title": "G6 — Verify parent display name works for magic-link users; fix only if a real gap is found",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["phase-0-prod-seed-ops"],
+      "fileScope": [
+        "features/settings/front/pages/SettingsPage.tsx",
+        "features/layout/front/components/Header.tsx",
+        "features/settings/__tests__/integration/SettingsPage.test.tsx"
+      ],
+      "testsFirst": [
+        "Before writing any fix, add/inspect a SettingsPage.tsx integration test that sets a display name via the existing displayNameValue/updateUserProfile flow (SettingsPage.tsx line ~149) and asserts the header consumes session.user.name. If this already passes with no code change, that is the expected, correct outcome for this phase — do not force an unnecessary change."
+      ],
+      "implementationSteps": [
+        "Display-name editing already exists (SettingsPage.tsx: displayNameValue state, householdApi.updateUserProfile, updateSession call) — this shipped in Wave 5, before the feedback that prompted this phase.",
+        "Reproduce/verify: confirm the display-name field is reachable in the Household tab and that Header.tsx reads session name (not email) once set, including for a session created via magic-link (no password).",
+        "Only change code if the verification step above finds a real gap (e.g. Header falls back to email even when name is set, or the field is not reachable for magic-link sessions). If everything already works, make no functional change — just add the confirming test and record the verification result."
+      ],
+      "doneWhen": [
+        "npm test -- features/settings",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "State explicitly whether a real gap was found and fixed, or whether verification showed the feature already works (this determines whether G6 is 'fixed' or 'no-op verified' in the final report)."
+    },
+    {
+      "id": "phase-g3-learner-profile-and-login",
+      "title": "G3 — Learner profile fields (dob/first/last) persist + real learner login via the existing add-member path",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": ["phase-g1-settings-persistence"],
+      "fileScope": [
+        "db/schema.ts",
+        "db/migrations/",
+        "features/children/server/repository.ts",
+        "features/children/types.ts",
+        "features/children/api/routes/child.ts",
+        "features/children/api/routes/children.ts",
+        "features/children/front/components/ChildForm.tsx",
+        "features/household/server/repository.ts",
+        "features/auth/server/repository.ts",
+        "features/auth/server/password.ts",
+        "features/children/__tests__/api/child.test.ts",
+        "features/children/__tests__/api/children.test.ts",
+        "features/children/__tests__/integration/ChildForm.test.tsx",
+        "features/children/__tests__/server/repository.test.ts"
+      ],
+      "testsFirst": [
+        "Repository/API test: creating/updating a learner with firstName/lastName/dob persists and is returned on GET (fails today — routes hardcode blanks and columns do not exist)",
+        "Repository/API test: enabling learner login creates a credential user (reusing the createCredentialUser insert shape: username, passwordHash via hashing + normalizeUsername) and calls addMember(existingHouseholdId, learnerUserId, 'learner') — assert NO new household row is created (unlike signup's upsertHouseholdForUser) and the learner IS a member of the existing household",
+        "Repository/API test: learners.user_id links the profile to the created user; re-fetching the learner after save shows login still enabled and username persisted (proves the 'changes weren't saved' bug is fixed)",
+        "features/children/__tests__/integration/ChildForm.test.tsx: edit mode pre-fills firstName/lastName/dob from stored values (not blank); clicking the eye icon toggles the password input from type=password to type=text and reveals the typed value"
+      ],
+      "implementationSteps": [
+        "Migration: add dob, first_name, last_name, user_id (nullable, references users.id) columns to the learners table in db/schema.ts. Keep the existing 'name' column as the derived display/report value (first+last). Run npm run db:generate and review the SQL before npm run db:migrate — check for the CLAUDE.md composite-FK-ordering caveat if it applies (it likely does not here, single nullable FK, but verify).",
+        "Membership role: household_members.role is free-text (no DB enum) — add a 'learner' value to the MembershipRole union in features/household/server/repository.ts and to VALID_ROLES in features/household/api/routes/invite.ts (existing precedent: 'teacher' already extends beyond owner/member). No DB migration needed for this part.",
+        "Template to mirror EXACTLY: features/household/api/routes/accept.ts — it does upsertUserByEmail(...) + addMember(householdId, user.id, role) and explicitly does NOT create a new household. The learner login path must do the credential-user-creation equivalent of createCredentialUser (features/auth/server/repository.ts) — username + passwordHash (reuse hashing/normalizeUsername from features/auth/server/password.ts) — but must SKIP upsertHouseholdForUser entirely, then call addMember(existingHouseholdId, newUserId, 'learner').",
+        "users.email is NOT NULL UNIQUE. Username-only learners have no real email — synthesize a stable, collision-safe placeholder (e.g. `learner.${learnerId}@no-email.local`) at creation time. Document this choice in code comments only if the reason is non-obvious (it is — note briefly why).",
+        "Update features/children/server/repository.ts (updateLearner/create) and features/children/types.ts to carry firstName/lastName/dob/userId. Stop hardcoding username/password blanks in features/children/api/routes/child.ts and children.ts — wire real creation/update of the credential user + membership when learnerLoginEnabled is true, and handle disabling login (remove/deactivate membership + credential — define minimal, safe behavior: deactivating is safer than deleting).",
+        "features/children/front/components/ChildForm.tsx: prefill firstName/lastName/dob in edit mode from the now-persisted values; add a show/hide password toggle (eye icon) on the password input.",
+        "Editing an existing learner's login later: changing username updates the user row; setting a new password re-hashes via updateUserPassword; keep this minimal and consistent with the existing adult-edit patterns."
+      ],
+      "doneWhen": [
+        "npm run db:generate",
+        "npm run db:migrate",
+        "npm test -- features/children",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [
+        "npm run db:generate produces no new migration after this phase's migration is applied (schema and migrations agree)",
+        "npm run db:migrate applies with no gap in the migration sequence — record the migration file name/number in notes"
+      ],
+      "writeBack": "Record the exact migration file created, the placeholder-email format used, the 'learner' role addition, and confirm via a repository-level assertion that no new household row was created when a learner is given login access. This is the highest-risk phase (touches auth + schema) — be precise in notes for anyone auditing it later."
+    },
+    {
+      "id": "phase-g2-course-rollover",
+      "title": "G2 — Single active-year course visibility across Settings/Gradebook/Learning-time; rollover hides-but-keeps prior-year copies",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": ["phase-g1-settings-persistence"],
+      "fileScope": [
+        "features/subjects/server/repository.ts",
+        "features/subjects/front/components/SubjectsAllTable.tsx",
+        "features/learning-time/front/pages/LearningTimePage.tsx",
+        "features/gradebook/front/pages/GradebookPage.tsx",
+        "features/subjects/__tests__/server/repository.test.ts",
+        "features/subjects/__tests__/integration/"
+      ],
+      "testsFirst": [
+        "Repository test: seed a course in school year A, roll it over to year B, query the active-year (B) course list -> exactly one row returned for that course name+learner (fails today: rollover leaves the source-year row visible via the `schoolYearId = year OR schoolYearId IS NULL` clause)",
+        "Consistency test/integration: Settings, Gradebook, and Learning-time, given the same household + active year, render the same course set (same count, same names) — add a shared test helper or repeat the assertion per surface"
+      ],
+      "implementationSteps": [
+        "FIRST: spike/confirm exactly which schoolYearId (if any) each of features/subjects/front/components/SubjectsAllTable.tsx, features/gradebook/front/pages/GradebookPage.tsx, and features/learning-time/front/pages/LearningTimePage.tsx currently pass to the subjects list call. Record findings in notes before changing anything — if this reveals the root cause is different from documented, stop and fail the phase with that finding rather than proceeding on the wrong fix.",
+        "Decision already made (do not re-litigate): previous-year course copies should be HIDDEN from active-year views but KEPT/recoverable — nothing is deleted.",
+        "Establish a single active-year-scoped course query (in features/subjects/server/repository.ts, likely tightening listSubjects to require schoolYearId = activeYear rather than `OR schoolYearId IS NULL`, after confirming/backfilling any legitimately-NULL legacy rows first if they exist) and make Settings, Gradebook, and Learning-time all call it the same way.",
+        "Rollover: ensure the source-year row is excluded from the active-year query once cloned (e.g. by not matching a stale schoolYearId), while the row itself remains in the table and is reachable via a non-active-year/history query if one exists — do not add new UI for 'view archived courses' unless it's trivial; the acceptance bar is 'not duplicated in the active view', not a new archive browser.",
+        "Once the source is consistent, remove the ad-hoc name-grouping de-dupe workaround in features/learning-time/front/pages/LearningTimePage.tsx (the courseGroups Map keyed by name) since it will no longer be needed — but only remove it after confirming the new query genuinely returns one row per course."
+      ],
+      "doneWhen": [
+        "npm test -- features/subjects",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Record exactly which schoolYearId each of the three surfaces passed BEFORE the fix (the spike finding), and what the unified query looks like after. If the spike contradicts the plan's hypothesis, say so plainly."
+    },
+    {
+      "id": "phase-g7-schedule-times",
+      "title": "G7a — Editable start/end time for scheduled classes",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["phase-g1-settings-persistence"],
+      "fileScope": [
+        "app/(shell)/plan/schedule/page.tsx",
+        "features/schedule/"
+      ],
+      "testsFirst": [
+        "Integration test: opening a scheduled class and changing start/end time and saving persists the new times and they are shown after reload (write the exact test file path once the schedule feature's component structure is confirmed by reading it first)"
+      ],
+      "implementationSteps": [
+        "Read features/schedule/ and app/(shell)/plan/schedule/page.tsx first to find the current data model and whether start/end time fields already exist but are read-only, or are entirely absent, before making changes.",
+        "Add editable start/end time inputs to the class edit UI and wire them to the existing schedule update API/service — do not invent a new schedule data store if one already exists."
+      ],
+      "doneWhen": [
+        "npm test -- features/schedule",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Note whether start/end time already existed as read-only fields or had to be added from scratch, and which API call persists them."
+    },
+    {
+      "id": "phase-g7-learning-time-quickstart",
+      "title": "G7b — Learning-time: list courses with duration + one-click start",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["phase-g1-settings-persistence"],
+      "fileScope": [
+        "features/learning-time/front/pages/LearningTimePage.tsx",
+        "features/learning-time/front/components/NowCard.tsx"
+      ],
+      "testsFirst": [
+        "Integration test: each course in the list shows its configured duration and a Start button; clicking Start begins the timer for that course in one click, without additional navigation or form-filling"
+      ],
+      "implementationSteps": [
+        "Read the existing LearningTimePage.tsx course-selection flow (already partially read: courseGroups/courseNames) and NowCard.tsx timer-start mechanism before changing anything.",
+        "Surface each course's duration (from subject/course data if present) next to its name in the list, with a Start button that immediately begins the timer for that course/child without requiring the existing multi-step selection flow."
+      ],
+      "doneWhen": [
+        "npm test -- features/learning-time",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Note where course duration data comes from (or if it doesn't exist yet and had to default to a fallback)."
+    },
+    {
+      "id": "phase-g7-dashboard-inline-edit",
+      "title": "G7c — Dashboard: edit today's schedule item via inline popup",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["phase-g1-settings-persistence"],
+      "fileScope": [
+        "features/dashboard/front/"
+      ],
+      "testsFirst": [
+        "Integration test: clicking edit on a Today schedule item opens a popup/modal (not a page navigation); editing and saving within it updates the item without leaving the Dashboard"
+      ],
+      "implementationSteps": [
+        "Read the current Dashboard Today-item edit affordance first (likely navigates to /lessons?editId=...) before changing it.",
+        "Reuse LessonTaskForm (features/plan/front/components/LessonTaskForm.tsx) inside a modal/popup triggered from the Dashboard's Today item edit action, following the app's existing modal pattern per ui-style-guide, instead of building a new form."
+      ],
+      "doneWhen": [
+        "npm test -- features/dashboard",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Note which modal pattern was reused and whether LessonTaskForm needed changes to work inside it."
+    },
+    {
+      "id": "phase-g7-gradebook-scheduled-assignments",
+      "title": "G7d — Gradebook: list scheduled assignments and assign grades directly",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["phase-g1-settings-persistence"],
+      "fileScope": [
+        "features/gradebook/front/pages/GradebookPage.tsx"
+      ],
+      "testsFirst": [
+        "Integration test: scheduled assignments (lessons with an assessment/graded intent) appear in a list; assigning a grade to one records a Score linked to that specific lesson/assignment"
+      ],
+      "implementationSteps": [
+        "Read GradebookPage.tsx's existing Score creation flow first — it already supports createScore(learnerId, subjectId, ...). Determine what currently identifies 'scheduled assignments' (likely LessonTask rows from the planner) and whether a lessonTaskId link already exists on Score.",
+        "Add a section listing scheduled/upcoming lessons that look like assignments, with an inline action to assign a grade that creates/updates the linked Score."
+      ],
+      "doneWhen": [
+        "npm test -- features/gradebook",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Note how 'scheduled assignment' was identified in the data model and whether Score already links to a lessonTaskId or one had to be added (if a schema change was needed, flag it — this phase's fileScope did not include db/schema.ts, so stop and fail if a migration turns out to be required, rather than silently widening scope)."
+    },
+    {
+      "id": "phase-g7-feedback-screenshot",
+      "title": "G7e — Feedback widget: attach a screenshot, stored as a blob on the feedback record",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": ["phase-g1-settings-persistence"],
+      "fileScope": [
+        "db/schema.ts",
+        "db/migrations/",
+        "features/feedback/"
+      ],
+      "testsFirst": [
+        "Repository test: saving feedback with an image round-trips the bytes (screenshot bytea + screenshot_mime) exactly",
+        "API test: the feedback submission route accepts an image (base64 or multipart) and persists it via the repository, rejecting payloads over a defined size cap (e.g. ~2MB)",
+        "Integration test: the feedback widget lets the user attach an image before submitting; submission includes it"
+      ],
+      "implementationSteps": [
+        "Migration: add screenshot (bytea, nullable) and screenshot_mime (text, nullable) columns to user_feedback in db/schema.ts. Run npm run db:generate and review the SQL before npm run db:migrate.",
+        "Add a size cap (~2MB) enforced at the API boundary — reject oversized payloads with a clear error rather than silently truncating.",
+        "Wire the feedback widget UI to allow selecting/attaching one image, encode it appropriately for the existing feedback submission call, and persist via the repository.",
+        "The steward's prod feedback pull (scripts/feedback-steward/feedback-requeue.ts) and any admin feedback view should be able to surface/download the blob — check if either needs a small extension to expose it, but do not build new admin UI beyond what's minimally needed to view an attached image if an admin view already exists; if none exists, note that as a follow-up rather than building one from scratch here."
+      ],
+      "doneWhen": [
+        "npm run db:generate",
+        "npm run db:migrate",
+        "npm test -- features/feedback",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [
+        "npm run db:generate produces no new migration after this phase's migration is applied",
+        "npm run db:migrate applies with no gap in the migration sequence — record the migration file name/number in notes"
+      ],
+      "writeBack": "Record the migration file name, the size cap chosen, and whether an admin/steward view was extended to show the image or left as a follow-up."
+    }
+  ]
+}

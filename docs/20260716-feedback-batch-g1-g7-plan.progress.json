@@ -1,0 +1,188 @@
+{
+  "plan": "docs/20260716-feedback-batch-g1-g7-plan.json",
+  "createdAt": "2026-07-16T22:49:50.530Z",
+  "updatedAt": "2026-07-16T22:49:50.530Z",
+  "branch": "fix/feedback-batch-g1-g7",
+  "phases": [
+    {
+      "id": "phase-0-prod-seed-ops",
+      "title": "Commit the already-applied prod reference-seed fix + wrapper script",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g1-settings-persistence",
+      "title": "G1 — Persist Planning Defaults & Records/Compliance settings tabs with an explicit Save button",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g4-compliance-empty-state",
+      "title": "G4 — Compliance empty-state copy + info tooltips for ruleset/pathway",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g5-badges-discoverability",
+      "title": "G5 — Make 'Add badge' clearly discoverable",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g6-verify-display-name",
+      "title": "G6 — Verify parent display name works for magic-link users; fix only if a real gap is found",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g3-learner-profile-and-login",
+      "title": "G3 — Learner profile fields (dob/first/last) persist + real learner login via the existing add-member path",
+      "gated": true,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g2-course-rollover",
+      "title": "G2 — Single active-year course visibility across Settings/Gradebook/Learning-time; rollover hides-but-keeps prior-year copies",
+      "gated": true,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g7-schedule-times",
+      "title": "G7a — Editable start/end time for scheduled classes",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g7-learning-time-quickstart",
+      "title": "G7b — Learning-time: list courses with duration + one-click start",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g7-dashboard-inline-edit",
+      "title": "G7c — Dashboard: edit today's schedule item via inline popup",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g7-gradebook-scheduled-assignments",
+      "title": "G7d — Gradebook: list scheduled assignments and assign grades directly",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g7-feedback-screenshot",
+      "title": "G7e — Feedback widget: attach a screenshot, stored as a blob on the feedback record",
+      "gated": true,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    }
+  ]
+}
