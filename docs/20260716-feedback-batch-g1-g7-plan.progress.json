@@ -1,21 +1,25 @@
 {
   "plan": "docs/20260716-feedback-batch-g1-g7-plan.json",
   "createdAt": "2026-07-16T22:49:50.530Z",
-  "updatedAt": "2026-07-16T22:49:50.530Z",
+  "updatedAt": "2026-07-16T23:20:00.000Z",
   "branch": "fix/feedback-batch-g1-g7",
   "phases": [
     {
       "id": "phase-0-prod-seed-ops",
       "title": "Commit the already-applied prod reference-seed fix + wrapper script",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "cheap",
+      "startedAt": "2026-07-16T23:00:00.000Z",
+      "completedAt": "2026-07-16T23:20:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "scripts/seed-reference-data.ts",
+          "scripts/seed-reference-prod.ts",
+          "package.json"
+        ],
+        "testsRun": ["npm test (239 suites / 2110 tests passed)"],
+        "notes": "Ops-verification commit only, no schema change. Verified all three files matched the plan's expected content exactly: scripts/seed-reference-data.ts jsonPath now points at docs/archive/compliance-research/homeschool-requirements-2026-06-27.json (fixed from the missing docs/compliance-research/... path); scripts/seed-reference-prod.ts mirrors scripts/migrate-prod.ts (loads DATABASE_URL_PROD, remaps to DATABASE_URL, execSync's seed-reference-data.ts via npx tsx); package.json's db:seed:reference:prod entry (dotenv -e .env.local -- tsx scripts/seed-reference-prod.ts) was already present in the committed baseline (package.json's only working-tree diff was the routine pre-commit version bump). Reference seed already run and verified against prod 2026-07-16: 66 compliance_rulesets across 7 states (TX/FL/NY/PA/CA/MI/CT), 8 starter badge_definitions — read-only verification, no schema change here. Committed as 4b48c33. IMPORTANT for next worker/orchestrator: `npm run build` fails in this sandbox at static generation of /(shell)/about/page — it calls listChangelogEntries() which needs a live DB connection; TCP connects to the Render Postgres host but the Postgres protocol handshake hangs indefinitely (confirmed via direct postgres.js and raw TCP probes), causing Next's 60s-per-attempt static-export timeout after 3 retries. Confirmed via `git stash` that this reproduces identically with this phase's 3 files stashed out — it is a pre-existing sandbox network/DB-connectivity limitation, NOT caused by this phase's changes, and outside this phase's file scope (features/lib/server/db.ts, app/(shell)/about/page.tsx). npm test passes fully (239 suites, 2110 tests) since tests mock the repository boundary. Later phases whose doneWhen includes `npm run build` should expect this same failure mode in this environment and should not attribute it to their own changes without first checking build fails identically on a clean stash."
       },
       "failureReason": null
     },
