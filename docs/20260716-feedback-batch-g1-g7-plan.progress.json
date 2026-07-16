@@ -1,7 +1,7 @@
 {
   "plan": "docs/20260716-feedback-batch-g1-g7-plan.json",
   "createdAt": "2026-07-16T22:49:50.530Z",
-  "updatedAt": "2026-07-16T23:20:00.000Z",
+  "updatedAt": "2026-07-16T23:59:00.000Z",
   "branch": "fix/feedback-batch-g1-g7",
   "phases": [
     {
@@ -27,14 +27,27 @@
       "id": "phase-g1-settings-persistence",
       "title": "G1 — Persist Planning Defaults & Records/Compliance settings tabs with an explicit Save button",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-16T23:30:00.000Z",
+      "completedAt": "2026-07-16T23:59:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/settings/api/router.ts",
+          "features/settings/api/routes/settings.ts",
+          "features/settings/front/services/api.ts",
+          "features/settings/front/components/PlanningDefaultsTab.tsx",
+          "features/settings/front/components/RecordsComplianceTab.tsx",
+          "app/api/[...slug]/route.ts",
+          "features/settings/__tests__/api/settings.test.ts",
+          "features/settings/__tests__/integration/PlanningDefaultsTab.test.tsx",
+          "features/settings/__tests__/integration/RecordsComplianceTab.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/settings (29 passed, 7 skipped/db-gated)",
+          "npm test (242 suites / 2119 tests passed)"
+        ],
+        "notes": "Route pattern followed: features/badges/api/router.ts + features/badges/api/routes/settings.ts (most recently added sibling router) — new top-level GET/PUT /api/settings route added to app/api/[...slug]/route.ts's handleRoute() dispatch (new 'settings' slug case, after 'badges'). Reused the existing features/settings/server/repository.ts (getAllHouseholdSettings/setHouseholdSetting against household_settings) unchanged — no duplication. Exact setting keys used: planning.maxLessonsPerDay (number), planning.carryForward ('none'|'next-day'|'next-week'), records.trackingMethod ('days'|'hours'), records.exportFormat ('pdf'|'csv'). Front contract for G7/G8: features/settings/front/services/api.ts exports settingsApi.getSettings() -> ApiResponse<Record<string,unknown>> and settingsApi.updateSettings(patch: Record<string,unknown>) -> ApiResponse<Record<string,unknown>|null> (PUT merges/upserts only the provided keys, returns the full updated map). Both PlanningDefaultsTab.tsx and RecordsComplianceTab.tsx load on mount, track dirty state against last-saved values, and disable the 'Save changes' button until dirty — confirmed via integration tests. No auto-save on change, per plan decision. Found and fixed a test race during TDD: an integration test's initial waitFor assertion (toHaveValue matching the default state, which happened to equal the mocked loaded value) passed before the component's load effect actually finished, so a subsequent userEvent.selectOptions fired on a still-disabled <select> and silently no-op'd. Fixed by asserting `.not.toBeDisabled()` in the waitFor instead of relying on the value coincidentally matching. `npm run build` fails identically to the phase-0 note (static generation of /(shell)/about times out on a DB handshake) — confirmed via `git stash`/`git stash pop` with this phase's files fully stashed out: same 3-retry 60s timeout on /(shell)/about, unrelated to any file in this phase's scope. `npx tsc --noEmit` shows only pre-existing unrelated errors (subjects/messaging/feedback-steward fixtures) — nothing in features/settings/**."
       },
       "failureReason": null
     },
