@@ -1,7 +1,7 @@
 {
   "plan": "docs/20260716-feedback-batch-g1-g7-plan.json",
   "createdAt": "2026-07-16T22:49:50.530Z",
-  "updatedAt": "2026-07-17T01:00:24.687Z",
+  "updatedAt": "2026-07-17T01:22:40.488Z",
   "branch": "fix/feedback-batch-g1-g7",
   "phases": [
     {
@@ -116,14 +116,33 @@
       "id": "phase-g3-learner-profile-and-login",
       "title": "G3 — Learner profile fields (dob/first/last) persist + real learner login via the existing add-member path",
       "gated": true,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "strong",
+      "startedAt": "2026-07-17T00:00:00.000Z",
+      "completedAt": "2026-07-17T00:40:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": "RESET 2026-07-17: prior failure was due to dev DB being unreachable. Policy changed — this phase now targets PRODUCTION for db:migrate (see plan JSON top-level dbMigrationPolicy). Prior implementation work is stashed at git stash \"wip: phase-g3-learner-profile-and-login (blocked on dev DB migrate)\" — the retrying worker should pop/inspect that stash first rather than reimplementing from scratch."
+        "filesChanged": [
+          "db/schema.ts",
+          "db/migrations/0033_sad_human_torch.sql",
+          "db/migrations/meta/0033_snapshot.json",
+          "db/migrations/meta/_journal.json",
+          "features/children/server/repository.ts",
+          "features/children/api/routes/child.ts",
+          "features/children/api/routes/children.ts",
+          "features/children/front/components/ChildForm.tsx",
+          "features/household/server/repository.ts",
+          "features/auth/server/repository.ts",
+          "features/children/__tests__/api/child.test.ts",
+          "features/children/__tests__/api/children.test.ts",
+          "features/children/__tests__/api/repository.test.ts",
+          "features/children/__tests__/integration/ChildrenComponents.test.tsx",
+          "features/household/__tests__/api/repository.test.ts"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/children features/household features/auth (32 of 36 suites, 288 passed / 46 skipped-db-gated)",
+          "npm test (244 of 268 suites, 2144 passed / 198 skipped-db-gated)"
+        ],
+        "notes": "RESTORED FROM STASH \"wip: phase-g3-learner-profile-and-login (blocked on dev DB migrate)\" per orchestrator instruction — this was a previously-complete implementation (208 mocked tests) that only failed because the dev DB was unreachable; not reimplemented from scratch. `git stash pop` had exactly one conflict (package.json version field, routine pre-commit-hook churn) — resolved by keeping the working-tree's higher version (2.98.2) and staging it; stash then dropped. Verified restored content matches this phase's fileScope and implementationSteps exactly (schema/migration/repository/routes/ChildForm/tests all present and correct) before proceeding — did not re-derive independently.\n\nDB TARGET CONFIRMED per top-level dbMigrationPolicy: resolved DATABASE_URL_PROD (via node + dotenv, before running any migrate command) to host dpg-d85140f7f7vs73fvdqhg-a.oregon-postgres.render.com — matches the required prod host exactly. Proceeded only after this printed confirmation.\n\nMIGRATION: 0033_sad_human_torch.sql (already generated pre-stash) — adds learners.first_name (text), learners.last_name (text), learners.dob (date), learners.user_id (text, FK -> users.id, nullable), and household_members.is_active (boolean, default true, not null). `npm run db:generate` run first and confirmed 'No schema changes, nothing to migrate' — schema.ts and the migrations dir already agreed, no new/duplicate migration produced (invariant satisfied, no drift). `npm run db:status:prod` before migrating showed repo journal at 34 migrations (0000..0033), prod at 33 applied, exactly 1 pending (0033) — confirms no gap existed before this phase's migration. Ran `npm run db:migrate:prod` (uses scripts/migrate-prod.ts / applyProdDatabaseUrl()) against the confirmed host — applied successfully (drizzle-kit reported '[OK] migrations applied successfully!', two idempotent NOTICEs for pre-existing drizzle schema/migrations-table, no errors). Re-ran `npm run db:status:prod` after: repo journal 34, prod applied 34, pending 0 — invariant confirmed, no gap, migration 0033 is now the latest applied migration on prod.\n\nPlaceholder email format for username-only learners: `learner.${learnerId}@no-email.local` (users.email is NOT NULL UNIQUE, learners created via the add-member path have no real email). 'learner' added to the MembershipRole union in features/household/server/repository.ts (existing precedent: 'teacher'). NOTE: the plan's implementationSteps also mentioned adding 'learner' to VALID_ROLES in features/household/api/routes/invite.ts, but that file is NOT in this phase's fileScope and was correctly left untouched by the restored implementation — invite.ts's VALID_ROLES governs household co-parent email invites, a separate flow from the ChildForm/addMember learner-login path this phase implements, so the omission does not affect this phase's functionality; flagging for awareness only, not fixed here (out of scope).\n\nConfirmed via repository-level test assertions (features/children/__tests__/api/repository.test.ts, features/children/__tests__/api/child.test.ts, features/children/__tests__/api/children.test.ts) that enabling learner login creates a credential user + membership on the EXISTING household without creating a new household row (mirrors features/household/api/routes/accept.ts's addMember-without-upsertHouseholdForUser pattern, per the plan's explicit template instruction). household_members.is_active supports deactivate-not-delete when login is later disabled (features/household/server/repository.ts).\n\nTests: features/children, features/household, features/auth suites all pass (32/36 suites; 4 skipped are pre-existing db-gated suites unrelated to this phase). Full `npm test`: 244/268 suites pass, 2144 tests pass, 198 skipped (pre-existing db-gated, same skip set as prior phases). `npx tsc`/type-check portion of `npm run build` (\"Linting and checking validity of types\") completed cleanly before the build failed later at static generation of /(shell)/about — reproduces the exact same known pre-existing sandbox failure documented by phase-0/g1/g4/g5/g7b (Postgres wire-protocol handshake to the DB never completes during Next's static-export step, 3x60s retries then exit). Confirmed this is unrelated to this phase and behaves IDENTICALLY to before — even though the dev-tooling scripts (db:status:prod, db:migrate:prod, drizzle-kit) can reach the DB fine via the `postgres` npm driver from a plain Node/tsx process, the Next.js build's static-generation worker still cannot complete the handshake; the two code paths evidently differ in a way this phase did not investigate further (out of scope per orchestrator's explicit instruction not to block phase completion on this). Committed as 3b9d4c9."
       },
       "failureReason": null
     },
