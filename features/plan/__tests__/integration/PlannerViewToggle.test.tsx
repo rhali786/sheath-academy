@@ -37,8 +37,9 @@ jest.mock('@/features/settings/front/services/api', () => ({
   },
 }))
 
+const mockRouterPush = jest.fn()
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: mockRouterPush }),
 }))
 
 import { useHousehold } from '@/features/household/front/context'
@@ -171,6 +172,26 @@ describe('PlannerViewToggle', () => {
     })
     // WeeklyList-specific content: day-of-week sections, not the matrix table.
     expect(screen.getByText('Monday')).toBeInTheDocument()
+  })
+
+  it('renders a Calendar option that navigates to the calendar view without changing the saved planner view', async () => {
+    renderWithPlanner()
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /weekly planner/i })).toBeInTheDocument()
+    })
+
+    const calendarTab = screen.getByRole('tab', { name: /calendar/i })
+    expect(calendarTab).toBeInTheDocument()
+
+    await userEvent.click(calendarTab)
+
+    // Calendar is a navigation to the existing /plan/schedule calendar, not an in-page view.
+    expect(mockRouterPush).toHaveBeenCalledWith('/plan/schedule')
+    // It must NOT persist 'calendar' as the planner's saved planner/matrix preference.
+    expect(mockUpdateSettings).not.toHaveBeenCalledWith(
+      expect.objectContaining({ 'planner.defaultView': 'calendar' }),
+    )
   })
 
   it('persists the selected view across a remount', async () => {

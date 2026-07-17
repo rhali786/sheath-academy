@@ -28,6 +28,10 @@ jest.mock('@/features/plan/front/services/api', () => ({
   },
 }))
 
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn() }),
+}))
+
 import { useHousehold } from '@/features/household/front/context'
 
 const mockUseHousehold = useHousehold as jest.Mock

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { usePlanner } from '../context/PlannerContext'
 import { useHousehold } from '@/features/household/front/context'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
@@ -22,6 +23,7 @@ export function WeeklyPlannerPage() {
   const { lessons, isInitializing, isLessonsLoading, error, refreshLessons } = usePlanner()
   const { loading: householdLoading, householdProfile, studentProfiles, allSubjects } = useHousehold()
   const { selectedChildId } = useLearner()
+  const router = useRouter()
   const [isMobile, setIsMobile] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
   const [plannerView, setPlannerView] = useState<PlannerView>(DEFAULT_PLANNER_VIEW)
@@ -115,7 +117,11 @@ export function WeeklyPlannerPage() {
       <ChildSubjectFilter />
 
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4 bg-white">
-        <PlannerViewToggle view={plannerView} onChange={handleViewChange} />
+        <PlannerViewToggle
+          view={plannerView}
+          onChange={handleViewChange}
+          onOpenCalendar={() => router.push('/plan/schedule')}
+        />
       </div>
 
       {isLessonsLoading ? (
