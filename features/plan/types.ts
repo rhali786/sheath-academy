@@ -28,6 +28,9 @@ export interface LessonTask {
   status: LessonTaskStatus
   order: number
   estimatedDuration?: LessonDuration
+  /** Explicit HH:MM (24-hour) override for the schedule timeline; both set together or neither. */
+  scheduledStartTime?: string
+  scheduledEndTime?: string
   lessonType?: string
   completedAt?: string
   /** Shared link when one lesson was assigned to multiple learners (fan-out rows). */

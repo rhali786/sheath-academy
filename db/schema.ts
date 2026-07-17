@@ -285,6 +285,8 @@ export const lessonTasks = pgTable(
     resourceLink: text('resource_link'),
     lessonType: text('lesson_type'),
     estimatedDuration: text('estimated_duration'),
+    scheduledStartTime: text('scheduled_start_time'),
+    scheduledEndTime: text('scheduled_end_time'),
     plannedStartDate: date('planned_start_date'),
     groupId: text('group_id'),
     dueDate: date('due_date'),

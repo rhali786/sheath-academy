@@ -102,4 +102,61 @@ describe('PUT /api/plan/lessons/:id', () => {
     expect(body.data.lessonType).toBe('Reading')
     expect(body.data.estimatedDuration).toBe('1hr')
   })
+
+  it('persists and returns scheduledStartTime/scheduledEndTime when both set', async () => {
+    mockUpdate.mockResolvedValue(makeRow({
+      scheduledStartTime: '11:00',
+      scheduledEndTime: '11:30',
+    }))
+
+    const req = new Request('http://localhost/api/plan/lessons/lt_1', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scheduledStartTime: '11:00', scheduledEndTime: '11:30' }),
+    })
+
+    const res = await PUT('lt_1', req)
+    const body = await res.json()
+
+    expect(mockUpdate).toHaveBeenCalledWith('lt_1', 'hh_test', expect.objectContaining({
+      scheduledStartTime: '11:00',
+      scheduledEndTime: '11:30',
+    }), { applyToGroup: false })
+    expect(body.data.scheduledStartTime).toBe('11:00')
+    expect(body.data.scheduledEndTime).toBe('11:30')
+  })
+
+  it('returns 400 and does not persist when scheduledEndTime <= scheduledStartTime', async () => {
+    const req = new Request('http://localhost/api/plan/lessons/lt_1', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scheduledStartTime: '11:30', scheduledEndTime: '11:00' }),
+    })
+
+    const res = await PUT('lt_1', req)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.status).toBe('error')
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it('clears scheduledStartTime/scheduledEndTime when both submitted as null', async () => {
+    mockUpdate.mockResolvedValue(makeRow({ scheduledStartTime: null, scheduledEndTime: null }))
+
+    const req = new Request('http://localhost/api/plan/lessons/lt_1', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scheduledStartTime: null, scheduledEndTime: null }),
+    })
+
+    const res = await PUT('lt_1', req)
+    const body = await res.json()
+
+    expect(mockUpdate).toHaveBeenCalledWith('lt_1', 'hh_test', expect.objectContaining({
+      scheduledStartTime: null,
+      scheduledEndTime: null,
+    }), { applyToGroup: false })
+    expect(body.data.scheduledStartTime).toBeUndefined()
+    expect(body.data.scheduledEndTime).toBeUndefined()
+  })
 })

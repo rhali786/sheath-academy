@@ -13,6 +13,8 @@ export interface CreateLessonTaskInput {
   resourceLink?: string
   lessonType?: string
   estimatedDuration?: string
+  scheduledStartTime?: string | null
+  scheduledEndTime?: string | null
   plannedStartDate?: string
   dueDate?: string
   status?: string
@@ -42,6 +44,8 @@ export interface UpdateLessonTaskInput {
   resourceLink?: string
   lessonType?: string
   estimatedDuration?: string
+  scheduledStartTime?: string | null
+  scheduledEndTime?: string | null
   plannedStartDate?: string | null
   dueDate?: string
   status?: string
@@ -106,6 +110,8 @@ export async function createLessonTaskRow(
       resourceLink: input.resourceLink ?? null,
       lessonType: input.lessonType ?? null,
       estimatedDuration: input.estimatedDuration ?? null,
+      scheduledStartTime: input.scheduledStartTime ?? null,
+      scheduledEndTime: input.scheduledEndTime ?? null,
       plannedStartDate: input.plannedStartDate ?? null,
       dueDate: input.dueDate ?? null,
       status: input.status ?? 'not_started',
@@ -138,6 +144,8 @@ function buildSharedInsertValues(
     resourceLink: base.resourceLink ?? null,
     lessonType: base.lessonType ?? null,
     estimatedDuration: base.estimatedDuration ?? null,
+    scheduledStartTime: base.scheduledStartTime ?? null,
+    scheduledEndTime: base.scheduledEndTime ?? null,
     plannedStartDate: base.plannedStartDate ?? null,
     dueDate: base.dueDate ?? null,
     status: base.status ?? 'not_started',
@@ -227,6 +235,8 @@ export async function updateLessonTaskRow(
   if (input.resourceLink !== undefined) patch.resourceLink = input.resourceLink
   if (input.lessonType !== undefined) patch.lessonType = input.lessonType
   if (input.estimatedDuration !== undefined) patch.estimatedDuration = input.estimatedDuration
+  if (input.scheduledStartTime !== undefined) patch.scheduledStartTime = input.scheduledStartTime
+  if (input.scheduledEndTime !== undefined) patch.scheduledEndTime = input.scheduledEndTime
   if (input.plannedStartDate !== undefined) patch.plannedStartDate = input.plannedStartDate
   if (input.dueDate !== undefined) patch.dueDate = input.dueDate
   if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder

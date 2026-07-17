@@ -82,6 +82,24 @@ export function buildDailySchedule(
   const blocks: ScheduleBlock[] = []
 
   for (const lesson of lessons) {
+    if (lesson.scheduledStartTime && lesson.scheduledEndTime) {
+      const overrideStart = toMinutes(lesson.scheduledStartTime)
+      const overrideEnd = toMinutes(lesson.scheduledEndTime)
+      const durationMinutes = overrideEnd - overrideStart
+
+      blocks.push({
+        id: `block_${lesson.id}`,
+        lesson,
+        startTime: lesson.scheduledStartTime,
+        endTime: lesson.scheduledEndTime,
+        durationMinutes,
+        flexibilityState: 'locked',
+      })
+
+      cursor = Math.max(cursor, overrideEnd + transitionMinutes)
+      continue
+    }
+
     const durationMinutes = parseDurationMinutes(lesson.estimatedDuration, defaultDurationMinutes)
     const blockStart = cursor
     const blockEnd = cursor + durationMinutes

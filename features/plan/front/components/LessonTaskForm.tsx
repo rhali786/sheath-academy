@@ -65,6 +65,8 @@ export interface LessonFormData {
   status: LessonTaskStatus
   order: number
   estimatedDuration?: LessonDuration
+  scheduledStartTime?: string
+  scheduledEndTime?: string
   lessonType?: string
 }
 
@@ -99,8 +101,11 @@ export function LessonTaskForm({
   const [dueDate, setDueDate] = useState(editingLesson?.dueDate ?? todayLocal())
   const [status, setStatus] = useState<LessonTaskStatus>(editingLesson?.status ?? 'not_started')
   const [estimatedDuration, setEstimatedDuration] = useState<LessonDuration | ''>(editingLesson?.estimatedDuration ?? '')
+  const [scheduledStartTime, setScheduledStartTime] = useState(editingLesson?.scheduledStartTime ?? '')
+  const [scheduledEndTime, setScheduledEndTime] = useState(editingLesson?.scheduledEndTime ?? '')
   const [lessonType, setLessonType] = useState(editingLesson?.lessonType ?? '')
   const [titleError, setTitleError] = useState('')
+  const [timeError, setTimeError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Reset subject when selected learners change (except on initial load in edit mode)
@@ -128,6 +133,7 @@ export function LessonTaskForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setTitleError('')
+    setTimeError('')
 
     const trimmedTitle = title.trim()
     if (!trimmedTitle) {
@@ -140,6 +146,17 @@ export function LessonTaskForm({
     }
     if (selectedChildIds.length === 0) {
       setTitleError('Select at least one learner')
+      return
+    }
+
+    const trimmedStartTime = scheduledStartTime.trim()
+    const trimmedEndTime = scheduledEndTime.trim()
+    if (Boolean(trimmedStartTime) !== Boolean(trimmedEndTime)) {
+      setTimeError('Enter both a start and end time, or leave both blank')
+      return
+    }
+    if (trimmedStartTime && trimmedEndTime && trimmedEndTime <= trimmedStartTime) {
+      setTimeError('End time must be after start time')
       return
     }
 
@@ -159,6 +176,8 @@ export function LessonTaskForm({
         status,
         order: editingLesson?.order ?? 0,
         estimatedDuration: estimatedDuration || undefined,
+        scheduledStartTime: trimmedStartTime || undefined,
+        scheduledEndTime: trimmedEndTime || undefined,
         lessonType: lessonType || undefined,
       })
     } finally {
@@ -312,6 +331,35 @@ export function LessonTaskForm({
             ))}
           </select>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="scheduledStartTime" className="block text-sm font-medium text-slate-700 mb-1">
+            Start time <span className="text-slate-400 font-normal">(optional)</span>
+          </label>
+          <input
+            id="scheduledStartTime"
+            type="time"
+            value={scheduledStartTime}
+            onChange={e => setScheduledStartTime(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="scheduledEndTime" className="block text-sm font-medium text-slate-700 mb-1">
+            End time <span className="text-slate-400 font-normal">(optional)</span>
+          </label>
+          <input
+            id="scheduledEndTime"
+            type="time"
+            value={scheduledEndTime}
+            onChange={e => setScheduledEndTime(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+          />
+        </div>
+        {timeError && <p className="text-xs text-red-600 -mt-2 sm:col-span-2">{timeError}</p>}
       </div>
 
       <div>

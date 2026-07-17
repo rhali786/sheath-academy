@@ -416,6 +416,80 @@ describe('LessonTaskForm — completion window (plannedStartDate)', () => {
   })
 })
 
+describe('LessonTaskForm — scheduled start/end time override', () => {
+  it('includes scheduledStartTime/scheduledEndTime in the update payload when both are set', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        editingLesson={editingLesson}
+        onSubmit={onSubmit}
+        onCancel={jest.fn()}
+      />
+    )
+    fireEvent.change(screen.getByLabelText(/start time/i), { target: { value: '11:00' } })
+    fireEvent.change(screen.getByLabelText(/end time/i), { target: { value: '11:30' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scheduledStartTime: '11:00',
+          scheduledEndTime: '11:30',
+        })
+      )
+    })
+  })
+
+  it('submits cleared (undefined) times when both previously-set values are cleared', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    const withTimes: LessonTask = { ...editingLesson, scheduledStartTime: '11:00', scheduledEndTime: '11:30' }
+    render(
+      <LessonTaskForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        editingLesson={withTimes}
+        onSubmit={onSubmit}
+        onCancel={jest.fn()}
+      />
+    )
+    fireEvent.change(screen.getByLabelText(/start time/i), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText(/end time/i), { target: { value: '' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalled()
+    })
+    expect(onSubmit.mock.calls[0][0].scheduledStartTime).toBeUndefined()
+    expect(onSubmit.mock.calls[0][0].scheduledEndTime).toBeUndefined()
+  })
+
+  it('shows an inline validation error and does not submit when end time is at or before start time', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        editingLesson={editingLesson}
+        onSubmit={onSubmit}
+        onCancel={jest.fn()}
+      />
+    )
+    fireEvent.change(screen.getByLabelText(/start time/i), { target: { value: '11:30' } })
+    fireEvent.change(screen.getByLabelText(/end time/i), { target: { value: '11:00' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/end time must be after start time/i)).toBeInTheDocument()
+    })
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+})
+
 describe('LessonTaskForm — multi-learner group assignment', () => {
   it('allows selecting multiple learners via checkboxes', () => {
     render(
