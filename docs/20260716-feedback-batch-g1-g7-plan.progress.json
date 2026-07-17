@@ -1,7 +1,7 @@
 {
   "plan": "docs/20260716-feedback-batch-g1-g7-plan.json",
   "createdAt": "2026-07-16T22:49:50.530Z",
-  "updatedAt": "2026-07-17T00:45:00.000Z",
+  "updatedAt": "2026-07-17T02:30:00.000Z",
   "branch": "fix/feedback-batch-g1-g7",
   "phases": [
     {
@@ -163,17 +163,18 @@
       "id": "phase-g7-schedule-times",
       "title": "G7a — Editable start/end time for scheduled classes",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "failed",
+      "model": "standard",
+      "startedAt": "2026-07-17T02:20:00.000Z",
+      "completedAt": "2026-07-17T02:30:00.000Z",
       "outputs": {
         "filesChanged": [],
         "testsRun": [],
-        "notes": ""
+        "notes": "No code changed; investigation only, per the plan's explicit instruction to read the schedule feature first since it was uncertain whether start/end time fields already exist read-only or are entirely absent. FINDING: they are entirely absent as persisted data — this phase requires a schema change and is therefore out of the declared fileScope. Details: features/schedule/types.ts's ScheduleBlock/LessonScheduleEntry.startTime/endTime are NOT stored anywhere; they are synthesized fresh on every render by buildDailySchedule() in features/schedule/server/service.ts, which walks the day's LessonTask list and assigns each one a start time by adding parseDurationMinutes(lesson.estimatedDuration, defaultDurationMinutes) to a running cursor that begins at a fixed ScheduleSettings.startTime ('08:30' hardcoded in features/schedule/front/pages/SchedulePage.tsx) with a transitionMinutes gap between blocks. lesson.estimatedDuration (features/plan/types.ts LessonDuration) is a bucket enum ('15min'|'30min'|'45min'|'1hr'|'custom'), not a clock time. The db/schema.ts lesson_tasks table (line 261-283) has no clock-time columns whatsoever — only estimatedDuration (text bucket), plannedStartDate/dueDate (dates, not times); there is no separate schedule-block/schedule-override table anywhere in db/schema.ts. The timeline's 'Edit lesson' pencil icon (features/schedule/front/components/ScheduleTimeline.tsx) navigates to /lessons?editId=... (the planner's LessonTaskForm) which also has no time fields to edit, consistent with there being nothing persisted to edit. CONCLUSION: making start/end time editable-and-persisted (per the testsFirst requirement: 'changing start/end time and saving persists the new times and they are shown after reload') requires adding time columns (e.g. to lesson_tasks, or a new table) plus a Drizzle migration. This phase's fileScope is only app/(shell)/plan/schedule/page.tsx and features/schedule/ — it explicitly does NOT include db/schema.ts or db/migrations/, and the orchestrator's spawn instructions explicitly said to stop and fail rather than attempt a migration if this were found. Stopping here per that instruction. FOR THE NEXT ATTEMPT: this phase needs to be re-scoped (fileScope must add db/schema.ts, db/migrations/, and likely features/plan/types.ts + features/plan/server/repository.ts for the LessonTask persistence layer) before it can be implemented; a migration will also need the live-DB invariant check that phase-g3 already found blocked in this sandbox (Postgres wire-protocol StartupMessage never gets a response from the dev DB host), so this migration should be planned as a 'strong'-tier, gated phase like G3.",
+        "notesForModelTier": "standard tier was sufficient to identify the scope gap; the actual fix belongs in a strong-tier gated phase per the reasoning above."
       },
-      "failureReason": null
-    },
+      "failureReason": "Editable, persisted start/end time for scheduled classes requires a schema change (lesson_tasks or a new table needs real clock-time columns — schedule.ts currently synthesizes all start/end times on every render from a fixed daily start time + lesson.estimatedDuration bucket enum, nothing is stored). This phase's fileScope (app/(shell)/plan/schedule/page.tsx, features/schedule/) excludes db/schema.ts and db/migrations/, and the spawn instructions explicitly directed failing the phase rather than widening scope into a migration. Needs re-planning as a schema-touching phase before implementation."
+      },
     {
       "id": "phase-g7-learning-time-quickstart",
       "title": "G7b — Learning-time: list courses with duration + one-click start",
