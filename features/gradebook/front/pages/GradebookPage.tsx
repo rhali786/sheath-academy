@@ -1,11 +1,17 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { GraduationCap, AlertCircle, CheckCircle2, TrendingDown, BookOpen, ChevronDown, ChevronRight, Plus, Pencil, Trash2, SlidersHorizontal } from 'lucide-react'
+import { GraduationCap, AlertCircle, CheckCircle2, TrendingDown, BookOpen, ChevronDown, ChevronRight, Plus, Pencil, Trash2, SlidersHorizontal, ClipboardList } from 'lucide-react'
 import { gradebookApi } from '@/features/gradebook/front/services/api'
+import { plannerApi } from '@/features/plan/front/services/api'
 import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import { InlineSuccess } from '@/features/lib/front/components/InlineSuccess'
 import type { GradebookSummary, NeedsAttentionItem, Score, ScoreState, SubjectGradeResult, GradingScale, AggregationRule, AggregationStrategy } from '@/features/gradebook/types'
+import type { LessonTask } from '@/features/plan/types'
+
+// Lesson "types" (features/plan/front/components/LessonTaskForm.tsx GENERAL_LESSON_TYPES) that
+// represent a scored/graded intent, as opposed to plain instruction/reading/practice lessons.
+const SCHEDULED_ASSIGNMENT_LESSON_TYPES = ['Assessment', 'Assignment']
 
 // A "Needs attention" click: expand + scroll to this subject row and auto-open its Add
 // score form. `token` is bumped on every click so re-selecting the same subject re-triggers
@@ -301,6 +307,91 @@ function ScoreHistory({
   )
 }
 
+/**
+ * Lists a learner's scheduled/upcoming lessons that carry an assessment/graded
+ * intent (LessonTask.lessonType in SCHEDULED_ASSIGNMENT_LESSON_TYPES, still
+ * status === 'not_started'), with an inline "Assign grade" action that records
+ * a Score linked to that specific lesson via Score.lessonTaskId.
+ */
+function ScheduledAssignments({
+  learnerId,
+  subjects,
+}: {
+  learnerId: string
+  subjects: SubjectGradeResult[]
+}) {
+  const [lessons, setLessons] = useState<LessonTask[] | null>(null)
+  const [gradingId, setGradingId] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+
+  const load = useCallback(() => {
+    plannerApi.getLessons(undefined, [learnerId], undefined)
+      .then(all => setLessons(
+        all.filter(lesson => lesson.status === 'not_started' && !!lesson.lessonType && SCHEDULED_ASSIGNMENT_LESSON_TYPES.includes(lesson.lessonType))
+      ))
+      .catch(() => setLessons([]))
+  }, [learnerId])
+
+  useEffect(() => { load() }, [load])
+
+  function subjectLabel(subjectId: string): string {
+    return subjects.find(s => s.subjectId === subjectId)?.label ?? subjectId
+  }
+
+  async function handleAssignGrade(lesson: LessonTask, values: ScoreFormValues) {
+    await gradebookApi.createScore({
+      learnerId,
+      subjectId: lesson.subjectId,
+      lessonTaskId: lesson.id,
+      ...values,
+      comment: values.comment || undefined,
+    })
+    setGradingId(null)
+    setSuccess('Grade assigned')
+    setLessons(prev => (prev ? prev.filter(l => l.id !== lesson.id) : prev))
+  }
+
+  if (!lessons || (lessons.length === 0 && !success)) return null
+
+  return (
+    <div data-testid={`scheduled-assignments-${learnerId}`} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <h3 className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+        <ClipboardList className="w-3.5 h-3.5" /> Scheduled assignments
+      </h3>
+      {success && <InlineSuccess message={success} onDismiss={() => setSuccess(null)} />}
+      <ul className="space-y-1">
+        {lessons.map(lesson => (
+          <li key={lesson.id} data-testid={`assignment-row-${lesson.id}`}>
+            <div className="flex items-center justify-between gap-2 py-1">
+              <div className="min-w-0">
+                <p className="text-sm text-slate-700 truncate">{lesson.title}</p>
+                <p className="text-xs text-slate-400 truncate">{subjectLabel(lesson.subjectId)} · {lesson.lessonType}</p>
+              </div>
+              <button
+                type="button"
+                data-testid={`assign-grade-toggle-${lesson.id}`}
+                onClick={() => setGradingId(prev => (prev === lesson.id ? null : lesson.id))}
+                className="flex-shrink-0 rounded-lg border border-slate-200 px-2 py-0.5 text-xs text-forest-700 hover:bg-forest-50"
+              >
+                {gradingId === lesson.id ? 'Cancel' : 'Assign grade'}
+              </button>
+            </div>
+            {gradingId === lesson.id && (
+              <div data-testid={`assign-grade-form-${lesson.id}`}>
+                <ScoreForm
+                  submitLabel="Save grade"
+                  onSubmit={values => handleAssignGrade(lesson, values)}
+                  onCancel={() => setGradingId(null)}
+                />
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function gradeLetter(letter: string | null) {
   if (!letter) return null
   const map: Record<string, string> = {
@@ -572,6 +663,8 @@ function LearnerCard({
           </div>
         )}
       </div>
+
+      <ScheduledAssignments learnerId={summary.learnerId} subjects={summary.subjects} />
 
       {!hasSubjects ? (
         <div

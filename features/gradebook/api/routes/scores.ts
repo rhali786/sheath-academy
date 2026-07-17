@@ -48,7 +48,7 @@ export async function POST(
   request: Request,
 ): Promise<NextResponse<ApiResponse<Score | null>>> {
   const body = await request.json()
-  const { learnerId, subjectId, state, numericValue, occurredAt, comment } = body
+  const { learnerId, subjectId, state, numericValue, occurredAt, comment, lessonTaskId } = body
 
   if (!learnerId) {
     return NextResponse.json({ status: 'error', data: null, message: 'learnerId is required', timestamp: new Date().toISOString() }, { status: 400 })
@@ -69,6 +69,7 @@ export async function POST(
     const row = await createScore(householdId, {
       learnerId,
       subjectId,
+      lessonTaskId: lessonTaskId ?? undefined,
       state,
       numericValue: state === 'graded' ? numericValue : null,
       source: 'parent',

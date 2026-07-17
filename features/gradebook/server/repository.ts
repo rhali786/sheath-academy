@@ -75,6 +75,7 @@ export function rowToScore(row: ScoreRow): Score {
     // Drizzle returns timestamp columns as Date objects
     occurredAt: row.occurredAt instanceof Date ? row.occurredAt.toISOString() : String(row.occurredAt),
     comment: row.comment ?? undefined,
+    lessonTaskId: row.lessonTaskId ?? undefined,
   }
 }
 

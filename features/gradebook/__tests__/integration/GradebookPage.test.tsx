@@ -24,9 +24,17 @@ jest.mock('@/features/layout/front/context/LearnerContext', () => ({
   useLearner: jest.fn(),
 }))
 
+jest.mock('@/features/plan/front/services/api', () => ({
+  plannerApi: {
+    getLessons: jest.fn(),
+  },
+}))
+
 import { gradebookApi } from '@/features/gradebook/front/services/api'
+import { plannerApi } from '@/features/plan/front/services/api'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { mockGradebookSummaries, mockScores } from '@/features/gradebook/__tests__/fixtures/mockGradebook'
+import type { LessonTask } from '@/features/plan/types'
 
 const mockGetSummaries = gradebookApi.getSummaries as jest.Mock
 const mockGetNeedsAttention = gradebookApi.getNeedsAttention as jest.Mock
@@ -42,6 +50,7 @@ const mockCreateRule = gradebookApi.createAggregationRule as jest.Mock
 const mockDeleteRule = gradebookApi.deleteAggregationRule as jest.Mock
 const mockUpdateSubjectConfig = gradebookApi.updateSubjectConfig as jest.Mock
 const mockUseLearner = useLearner as jest.Mock
+const mockGetLessons = plannerApi.getLessons as jest.Mock
 
 function ok<T>(data: T) {
   return Promise.resolve({ status: 'success', data, message: 'ok', timestamp: '' })
@@ -63,6 +72,7 @@ describe('GradebookPage', () => {
     mockCreateRule.mockImplementation(() => ok(null))
     mockDeleteRule.mockImplementation(() => ok(null))
     mockUpdateSubjectConfig.mockImplementation(() => ok(null))
+    mockGetLessons.mockImplementation(() => Promise.resolve([]))
   })
 
   afterEach(() => {
@@ -80,6 +90,7 @@ describe('GradebookPage', () => {
     mockCreateRule.mockReset()
     mockDeleteRule.mockReset()
     mockUpdateSubjectConfig.mockReset()
+    mockGetLessons.mockReset()
   })
 
   it('shows loading state initially', () => {
@@ -318,5 +329,74 @@ describe('GradebookPage', () => {
     await waitFor(() => expect(screen.getByText('Delete this grading scale?')).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
     await waitFor(() => expect(mockDeleteScale).toHaveBeenCalledWith('gs1'))
+  })
+
+  // ─── G7d: scheduled assignments + inline grade assignment ─────────────────
+  function assignmentLesson(overrides: Partial<LessonTask> = {}): LessonTask {
+    return {
+      id: 'lt_assign_1',
+      childId: laythId,
+      subjectId: laythMathSubjectId,
+      householdId: 'hh',
+      title: 'Chapter 4 Quiz',
+      dueDate: '2026-05-20',
+      status: 'not_started',
+      order: 0,
+      lessonType: 'Assessment',
+      createdAt: '2026-05-01T00:00:00.000Z',
+      updatedAt: '2026-05-01T00:00:00.000Z',
+      ...overrides,
+    }
+  }
+
+  /** Only return the given lessons for Layth's fetch (childIds: [laythId]) — other learner cards get []. */
+  function lessonsOnlyForLayth(lessons: LessonTask[]) {
+    return (_week: unknown, childIds?: string[]) =>
+      Promise.resolve(childIds && childIds[0] === laythId ? lessons : [])
+  }
+
+  it('lists scheduled assignments (assessment-type lessons) for a learner with an Assign grade action', async () => {
+    mockGetLessons.mockImplementation(lessonsOnlyForLayth([assignmentLesson()]))
+    render(<GradebookPage />)
+    await waitFor(() => {
+      expect(screen.getByTestId(`scheduled-assignments-${laythId}`)).toBeInTheDocument()
+    })
+    expect(screen.getByText('Chapter 4 Quiz')).toBeInTheDocument()
+    expect(screen.getByTestId('assign-grade-toggle-lt_assign_1')).toBeInTheDocument()
+  })
+
+  it('does not list plain (non-assessment) lessons or already-started lessons as scheduled assignments', async () => {
+    mockGetLessons.mockImplementation(lessonsOnlyForLayth([
+      assignmentLesson({ id: 'lt_reading', lessonType: 'Reading' }),
+      assignmentLesson({ id: 'lt_done', status: 'completed' }),
+    ]))
+    render(<GradebookPage />)
+    await waitFor(() => expect(screen.getByText('Layth')).toBeInTheDocument())
+    expect(screen.queryByTestId(`scheduled-assignments-${laythId}`)).not.toBeInTheDocument()
+  })
+
+  it('assigning a grade to a scheduled assignment records a Score linked to that lesson', async () => {
+    mockGetLessons.mockImplementation(lessonsOnlyForLayth([assignmentLesson()]))
+    render(<GradebookPage />)
+    await waitFor(() => expect(screen.getByTestId('assign-grade-toggle-lt_assign_1')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByTestId('assign-grade-toggle-lt_assign_1'))
+    await waitFor(() => expect(screen.getByTestId('assign-grade-form-lt_assign_1')).toBeInTheDocument())
+
+    fireEvent.change(screen.getByLabelText('Numeric score'), { target: { value: '87' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save grade' }))
+
+    await waitFor(() => expect(mockCreateScore).toHaveBeenCalledWith(
+      expect.objectContaining({
+        learnerId: laythId,
+        subjectId: laythMathSubjectId,
+        lessonTaskId: 'lt_assign_1',
+        state: 'graded',
+        numericValue: 87,
+      }),
+    ))
+    // Graded assignment drops out of the scheduled list and a confirmation shows.
+    await waitFor(() => expect(screen.getByText('Grade assigned')).toBeInTheDocument())
+    expect(screen.queryByTestId('assignment-row-lt_assign_1')).not.toBeInTheDocument()
   })
 })

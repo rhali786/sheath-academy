@@ -1,7 +1,7 @@
 {
   "plan": "docs/20260716-feedback-batch-g1-g7-plan.json",
   "createdAt": "2026-07-16T22:49:50.530Z",
-  "updatedAt": "2026-07-17T14:25:00.000Z",
+  "updatedAt": "2026-07-17T13:45:08.831Z",
   "branch": "fix/feedback-batch-g1-g7",
   "phases": [
     {
@@ -232,14 +232,25 @@
       "id": "phase-g7-gradebook-scheduled-assignments",
       "title": "G7d — Gradebook: list scheduled assignments and assign grades directly",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T13:35:51.383Z",
+      "completedAt": "2026-07-17T13:45:08.830Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/gradebook/front/pages/GradebookPage.tsx",
+          "features/gradebook/types.ts",
+          "features/gradebook/server/repository.ts",
+          "features/gradebook/api/routes/scores.ts",
+          "features/gradebook/front/services/api.ts",
+          "features/gradebook/__tests__/integration/GradebookPage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/gradebook (8 of 9 suites, 1 skipped/db-gated, 90 passed / 12 skipped)",
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" (245 of 269 suites passed, 24 skipped/db-gated, 2152 passed / 198 skipped)",
+          "npx tsc --noEmit (no new errors under features/gradebook or features/plan)"
+        ],
+        "notes": "FILE SCOPE NOTE: the plan JSON declared fileScope as only [features/gradebook/front/pages/GradebookPage.tsx], but implementing the feature end-to-end (per the plan's own testsFirst requirement that an assigned grade records a Score linked to the specific lesson) required also touching features/gradebook/types.ts, server/repository.ts, api/routes/scores.ts, and front/services/api.ts — all within the same gradebook feature folder, no db/schema.ts or migration involved. Documenting this widening explicitly per the worker contract rather than silently doing it; judged in-scope because (a) the orchestrator's spawn instructions only named db/schema.ts widening as a stop-and-fail condition, and (b) GradebookPage.tsx alone cannot create a Score with a lessonTaskId link without these files.\n\nDATA-MODEL FINDING (read first, before writing code, per instructions): Score ALREADY had a lessonTaskId column in db/schema.ts (scores.lesson_task_id, nullable, composite FK to lesson_tasks(id, householdId), plus scores_lesson_task_idx) — added by an earlier phase/wave, not by this one. No migration was needed. However the column was not wired through the app layer: features/gradebook/types.ts Score interface had no lessonTaskId field, features/gradebook/server/repository.ts rowToScore() did not map it, features/gradebook/api/routes/scores.ts POST handler did not read it from the request body, and features/gradebook/front/services/api.ts ScoreInput did not expose it. Added lessonTaskId?: string to Score and ScoreInput, mapped it in rowToScore, and read it from the POST body into CreateScoreInput.lessonTaskId (CreateScoreInput already accepted it — only the route was not passing it through).\n\n'Scheduled assignment' identification: features/plan/types.ts LessonTask has no dedicated isGraded/assessment boolean. Used the existing free-text lessonType field, scoped to the two GENERAL_LESSON_TYPES entries that denote graded intent ('Assessment', 'Assignment' — from features/plan/front/components/LessonTaskForm.tsx's GENERAL_LESSON_TYPES list), combined with status === 'not_started' (i.e. not yet completed/skipped). Implementation: new ScheduledAssignments component in GradebookPage.tsx, rendered per learner card, fetches via the existing plannerApi.getLessons(undefined, [learnerId], undefined) (cross-feature import of features/plan/front/services/api — established precedent already used by dashboard, learning-time, schedule, resources features), filters client-side, and its inline 'Assign grade' action reuses the existing ScoreForm component to call gradebookApi.createScore({learnerId, subjectId: lesson.subjectId, lessonTaskId: lesson.id, ...}). On success the assignment optimistically drops out of the scheduled list (no second lessons re-fetch) and a confirmation shows; ScoreHistory/GPA aggregation pick the new score up on the next summaries reload as normal — no changes to gradebook/server/repository.ts aggregation logic (out of scope, not needed since scoring an assignment is functionally identical to any other Score row from the aggregation layer's point of view).\n\nNo schema change, no migration — confirmed the lessonTaskId column and its composite FK already existed before this phase (grepped db/schema.ts before writing any code, per instructions). Full npm test: 245/269 suites, 2152/2350 tests pass, 198 skipped (same pre-existing db-gated skip set as every prior phase in this batch). npm run build (90s bounded foreground run): compiled, 'Linting and checking validity of types' completed cleanly (no new errors), then failed identically to every prior phase (phase-0/g1/g4/g5/g6/g3/g2/g7a/g7b/g7c) at static generation with 'Next.js build worker exited with code: 143' partway through page generation — the same known pre-existing sandbox DB-connectivity limitation at /(shell)/about, unrelated to this phase's scope."
       },
       "failureReason": null
     },
