@@ -1,7 +1,7 @@
 {
   "plan": "docs/20260717-g9-timer-schedule-planner-plan.json",
   "createdAt": "2026-07-17T19:14:15.111Z",
-  "updatedAt": "2026-07-17T00:30:00.000Z",
+  "updatedAt": "2026-07-17T02:10:00.000Z",
   "branch": "feat/g9-timer-schedule-planner",
   "phases": [
     {
@@ -70,14 +70,22 @@
       "id": "phase-g9-item1-learning-time-clock-mode",
       "title": "Item 1 — Learning-Time: pre-fill scheduled window from lesson, client-side clock-driven auto-start/end-reminder",
       "gated": false,
-      "status": "in_progress",
+      "status": "complete",
       "model": "standard",
       "startedAt": "2026-07-17T01:20:00.000Z",
-      "completedAt": null,
+      "completedAt": "2026-07-17T02:10:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/learning-time/front/components/NowCard.tsx",
+          "features/learning-time/__tests__/integration/NowCard.test.tsx (new)"
+        ],
+        "testsRun": [
+          "npx jest features/learning-time — 5 suites passed (1 pre-existing DB-gated suite skipped), 82 passed",
+          "npm test (full mocked suite, integration dir excluded per jest.config.js) — 251 suites passed, 2231 passed",
+          "npx tsc --noEmit -p tsconfig.json — 85 pre-existing errors, none in features/learning-time (grepped explicitly); identical pre-existing count to phase 2's write-back",
+          "npm run build (bounded foreground run, non-blocking per instructions) — 'Linting and checking validity of types' step completed with no errors; build then fails only at the known pre-existing /(shell)/about static-generation timeout (worker exited 143), consistent with prior phases"
+        ],
+        "notes": "Created a new features/learning-time/__tests__/integration/NowCard.test.tsx (LearningTimePage.test.tsx did not exist test coverage for NowCard's clock/pre-fill behavior and uses real timers throughout, which would conflict with the fake-timer tests this phase needs — NowCard requires no context providers, only props, so it renders standalone). Chose SCHEDULED_CLOCK_POLL_INTERVAL_MS = 30_000 (30s, matches the plan's acceptance criterion 'define interval, e.g. <=30s'). Bounded auto-start staleness window implemented as an explicit same-calendar-day check (isSameCalendarDay helper) rather than a raw millisecond threshold, per the plan's risk note wording ('e.g. same calendar day') — verified by a dedicated test ('does not auto-start a stale draft scheduled session whose scheduledStart was on a previous calendar day'). Double-fire guard uses hasAutoStartedSessionIdRef (a ref, not state) keyed by session.id, set synchronously BEFORE the async transition() call; verified across 2 polling ticks in a mocked-timer test ('does not fire the auto-start transition more than once across multiple polling ticks, even before the first call resolves') using a manually-controlled unresolved Promise so both ticks land while the first call is still pending. Pre-fill: NowCard's lesson-select onChange now calls handleLessonChoiceChange, which looks up the selected lesson in the existing openLessons state and, only if BOTH scheduledStartTime and scheduledEndTime are set, switches timeChannelType to 'scheduled' and sets scheduledStart/scheduledEnd from the lesson's HH:MM values (format already matches the <input type='time'> value format, confirmed via features/plan/types.ts's LessonTask comment). New idle-but-scheduled render branch (data-testid='now-card-scheduled-pending', 'Starts at HH:MM') inserted between the finalized and configuring/draft branches, gated on !configuring so a parent who explicitly reopens the config form can still hand-edit/override. New 'time to finish' reminder (data-testid='scheduled-end-reminder', role=status) added inside the existing running/paused render block, purely additive — Finish/outcome flow completely unchanged, no auto-finalize anywhere. Did not touch features/learning-time/server/service.ts, repository.ts, types.ts, or db/schema.ts — confirmed no service-layer or schema change was needed; transitionSession('start') was called exactly as-is, just from a timer instead of a click. Server-side/background auto-start (tab closed) remains explicitly out of scope per the plan; verified no cron/worker infrastructure was added or assumed."
       },
       "failureReason": null
     }
