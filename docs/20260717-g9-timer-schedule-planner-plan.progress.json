@@ -70,9 +70,9 @@
       "id": "phase-g9-item1-learning-time-clock-mode",
       "title": "Item 1 — Learning-Time: pre-fill scheduled window from lesson, client-side clock-driven auto-start/end-reminder",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
+      "status": "in_progress",
+      "model": "standard",
+      "startedAt": "2026-07-17T01:20:00.000Z",
       "completedAt": null,
       "outputs": {
         "filesChanged": [],

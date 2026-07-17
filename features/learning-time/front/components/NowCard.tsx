@@ -50,6 +50,26 @@ const inputClass = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm 
 const primaryButtonClass = 'px-4 py-2 bg-forest-900 text-white text-sm font-medium rounded-lg hover:bg-forest-800 disabled:opacity-60'
 const secondaryButtonClass = 'px-4 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50'
 
+// How often the client polls, while this page is open, to (a) auto-start a draft "Scheduled window"
+// session once wall-clock time reaches its scheduledStart and (b) keep the "time to finish" reminder
+// current for a running scheduled session. Best-effort only — see the "Starts automatically while this
+// page is open" caption; there is no server-side/background guarantee (no confirmed cron/worker
+// infrastructure in this repo — see G9 plan Item 1).
+const SCHEDULED_CLOCK_POLL_INTERVAL_MS = 30_000
+
+// Bounded auto-start window (G9 plan Item 1 risk note): only auto-start a draft scheduled session while
+// wall-clock 'now' is still the same calendar day as its scheduledStart. Without this bound, a tab left
+// open for hours/days past a stale scheduled time could surprise-start a session.
+function isSameCalendarDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
+function formatTimeLabel(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+}
+
 const DURATION_LABELS: Record<string, string> = {
   '15min': '15 min',
   '30min': '30 min',
@@ -91,6 +111,10 @@ export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
   // placeholder. Later learnerId changes (switching learners while this card stays mounted)
   // re-validate in the background instead of hiding whatever view is currently showing.
   const hasLoadedOnceRef = useRef(false)
+  // Guards the auto-start effect against firing transition() more than once for the same session —
+  // a ref (not state) so the check is synchronous across re-renders and rapid polling ticks, even
+  // before a prior transition() call has resolved.
+  const hasAutoStartedSessionIdRef = useRef<string | null>(null)
 
   function applySession(s: LearningTimeSession | null) {
     fetchedAtRef.current = Date.now()
@@ -193,9 +217,61 @@ export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
     return () => clearInterval(interval)
   }, [session?.status])
 
+  // Clock-driven auto-start (G9 plan Item 1, decided design #2): while a "Scheduled window" session
+  // sits in 'draft' status and this page is open, poll wall-clock time against scheduledStart and
+  // call transitionSession('start') automatically once reached — no manual click required. This is
+  // explicitly page-open-dependent/best-effort; there is no server-side auto-start in this plan.
+  useEffect(() => {
+    if (!session || session.status !== 'draft' || session.timeChannelType !== 'scheduled' || !session.scheduledStart) return
+    const sessionId = session.id
+    const scheduledStartIso = session.scheduledStart
+    const scheduledStartMs = new Date(scheduledStartIso).getTime()
+    if (Number.isNaN(scheduledStartMs)) return
+
+    function checkAutoStart() {
+      if (hasAutoStartedSessionIdRef.current === sessionId) return
+      const nowDate = new Date()
+      if (nowDate.getTime() < scheduledStartMs) return
+      if (!isSameCalendarDay(nowDate, new Date(scheduledStartMs))) return
+      hasAutoStartedSessionIdRef.current = sessionId
+      learningTimeApi.transition(sessionId, { action: 'start' })
+        .then(res => applySession(res.data))
+        .catch(() => {
+          // Allow a later poll to retry after a transient failure.
+          if (hasAutoStartedSessionIdRef.current === sessionId) hasAutoStartedSessionIdRef.current = null
+        })
+    }
+
+    checkAutoStart()
+    const interval = setInterval(checkAutoStart, SCHEDULED_CLOCK_POLL_INTERVAL_MS)
+    return () => clearInterval(interval)
+  }, [session?.id, session?.status, session?.timeChannelType, session?.scheduledStart])
+
   const elapsedSeconds = session
     ? session.elapsedSeconds + (session.status === 'running' ? Math.floor((now - fetchedAtRef.current) / 1000) : 0)
     : 0
+
+  // Idle-but-scheduled state (acceptance criterion 5): a draft scheduled session whose start time
+  // hasn't arrived yet. Excluded while the parent has the config panel explicitly open (`configuring`)
+  // so hand-editing/overriding the pre-filled times is never blocked by this read-only state.
+  const scheduledSessionNotYetDue = Boolean(
+    session
+    && !configuring
+    && session.status === 'draft'
+    && session.timeChannelType === 'scheduled'
+    && session.scheduledStart
+    && new Date(session.scheduledStart).getTime() > now,
+  )
+
+  // "Time to finish" reminder (acceptance criterion 6): visible prompt only — never a silent
+  // auto-finalize. The existing manual Finish -> outcome -> Save flow is unchanged.
+  const scheduledSessionPastEnd = Boolean(
+    session
+    && session.status === 'running'
+    && session.timeChannelType === 'scheduled'
+    && session.scheduledEnd
+    && now >= new Date(session.scheduledEnd).getTime(),
+  )
 
   async function handleConfigSubmit() {
     setSavingConfig(true)
@@ -227,6 +303,21 @@ export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
       setConfigError('Failed to start session. Please try again.')
     } finally {
       setSavingConfig(false)
+    }
+  }
+
+  // Pre-fill from lesson (G9 plan Item 1, decided design #1): picking a lesson that has both
+  // scheduledStartTime/scheduledEndTime (LessonTask, G7a) auto-selects the "Scheduled window" channel
+  // and fills the time inputs from the lesson — still hand-editable/overridable afterward. Ad-hoc, or a
+  // lesson without those fields set, leaves the channel/time fields exactly as they were (regression).
+  function handleLessonChoiceChange(id: string) {
+    setLessonChoice(id)
+    if (id === 'adhoc') return
+    const lesson = openLessons.find(l => l.id === id)
+    if (lesson?.scheduledStartTime && lesson?.scheduledEndTime) {
+      setTimeChannelType('scheduled')
+      setScheduledStart(lesson.scheduledStartTime)
+      setScheduledEnd(lesson.scheduledEndTime)
     }
   }
 
@@ -305,6 +396,27 @@ export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
     )
   }
 
+  if (scheduledSessionNotYetDue && session && session.scheduledStart) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-6" data-testid="now-card">
+        <div data-testid="now-card-scheduled-pending">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Now</p>
+          <p className="text-lg font-semibold text-slate-900 mb-1">Starts at {formatTimeLabel(session.scheduledStart)}</p>
+          <p className="text-sm text-slate-500 mb-1">{nextText || 'Nothing assigned now'}</p>
+          <p className="text-xs text-slate-400 mb-4">Starts automatically while this page is open.</p>
+          <button
+            type="button"
+            onClick={() => setConfiguring(true)}
+            data-testid="edit-scheduled-session-button"
+            className={secondaryButtonClass}
+          >
+            Edit or start now
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   if (configuring || session?.status === 'draft') {
     return (
       <div className="bg-white rounded-xl shadow-sm p-6" data-testid="now-card">
@@ -319,7 +431,7 @@ export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
               id="lt-lesson"
               data-testid="lesson-select"
               value={lessonChoice}
-              onChange={e => setLessonChoice(e.target.value)}
+              onChange={e => handleLessonChoiceChange(e.target.value)}
               className={inputClass}
             >
               <option value="adhoc">Ad-hoc</option>
@@ -396,7 +508,7 @@ export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
 
           {timeChannelType === 'scheduled' && (
             <p className="text-xs text-slate-400 -mt-2 mb-3">
-              Applies to this session only, today — not a recurring daily schedule.
+              Applies to this session only, today — not a recurring daily schedule. Starts automatically while this page stays open.
             </p>
           )}
 
@@ -471,6 +583,11 @@ export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
             {formatElapsed(elapsedSeconds)}
           </p>
           <p className="text-sm text-slate-400 mb-4">{nextText || 'Nothing assigned now'}</p>
+          {scheduledSessionPastEnd && (
+            <p className="text-sm text-amber-600 mb-3" role="status" data-testid="scheduled-end-reminder">
+              Time to finish — the scheduled window has ended. Click Finish when you&apos;re done.
+            </p>
+          )}
           <div className="flex gap-2">
             {session.timeChannelType !== 'scheduled' && (
               session.status === 'running' ? (
