@@ -1,0 +1,68 @@
+{
+  "plan": "docs/20260716-lesson-planner-ux-rework-g8-plan.json",
+  "createdAt": "2026-07-17T15:12:38.062Z",
+  "updatedAt": "2026-07-17T15:12:38.062Z",
+  "branch": "feat/lesson-planner-ux-rework-g8",
+  "phases": [
+    {
+      "id": "phase-g8-p1-view-toggle",
+      "title": "P1 — View toggle (Weekly Planner default / Planning Matrix), matrix preserved unchanged",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g8-p2-weekly-planner-component",
+      "title": "P2 — Learner-grouped, lesson-centric Weekly Planner component",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g8-p3-card-enrichment",
+      "title": "P3 — Card enrichment: teaching-context ordering (subject before title), resource indicator, status badge",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g8-p4-teaching-metadata",
+      "title": "P4 — Curriculum / chapter / homework / assessment fields (schema + form + card indicators)",
+      "gated": true,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/20260716-lesson-planner-ux-rework-g8-plan.md",
+  "branch": "feat/lesson-planner-ux-rework-g8",
+  "dbMigrationPolicy": "Branched from fix/feedback-batch-g1-g7, which already carries G1's settings API (features/settings/front/services/api.ts: getSettings()/updateSettings(patch) against household_settings) and G7a's LessonTask schema additions. Only P4 touches db/schema.ts. The dev Postgres instance is gone — P4's db:migrate must target PRODUCTION directly via DATABASE_URL_PROD remapped to DATABASE_URL (mirror scripts/migrate-prod.ts's applyProdDatabaseUrl(), or run `npm run db:migrate:prod`). Rollback point: backups/prod-2026-07-17T00-58-42/ (still valid; every migration since has been additive/nullable). P4 remains gated — do not run its migration without explicit per-phase user approval.",
+  "phases": [
+    {
+      "id": "phase-g8-p1-view-toggle",
+      "title": "P1 — View toggle (Weekly Planner default / Planning Matrix), matrix preserved unchanged",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [],
+      "fileScope": [
+        "features/plan/front/components/WeeklyPlannerPage.tsx",
+        "features/plan/front/components/PlannerViewToggle.tsx",
+        "features/plan/__tests__/integration/PlannerViewToggle.test.tsx"
+      ],
+      "testsFirst": [
+        "features/plan/__tests__/integration/PlannerViewToggle.test.tsx: the toggle renders with two options (Weekly Planner / Planning Matrix); selecting Matrix renders the existing WeekGrid (assert a matrix-only element, e.g. the 'Child / Subject' column header); selecting Weekly Planner renders the current lesson-centric view (WeeklyList content, for this phase — P2 replaces it); the default view on first load (no saved preference) is Weekly Planner, not Matrix; the selected view persists across a remount (mock the settings service — see implementationSteps for the exact contract to mock)."
+      ],
+      "implementationSteps": [
+        "Read docs/20260716-lesson-planner-ux-rework-g8-plan.md in full first, especially the 'Design direction' and 'P1' sections — it contains the approved layout/toggle concept and file list, do not re-derive it from scratch.",
+        "Persist the view preference via the settings API already shipped in this branch's G1 work: import from features/settings/front/services/api.ts (settingsApi.getSettings() / settingsApi.updateSettings(patch) — read that file first to confirm the exact exported names and ApiResponse<Record<string,unknown>> shape). Use a new key, e.g. 'planner.defaultView': 'planner' | 'matrix'. Default to 'planner' when the key is absent (per the plan's decided default).",
+        "Add features/plan/front/components/PlannerViewToggle.tsx: a segmented-control/tab toggle between 'Weekly Planner' and 'Planning Matrix', following the approved pattern named in the plan's UI pattern audit section.",
+        "Edit WeeklyPlannerPage.tsx to hold plannerView state, load the saved preference on mount, persist on change, and render WeekGrid for 'matrix' (completely unchanged — do not touch WeekGrid.tsx in this phase) and the existing WeeklyList for 'planner' (P2 will replace this with the new WeeklyPlanner component; for this phase, reusing WeeklyList unchanged is correct and intentional).",
+        "Do not touch WeekGrid.tsx, WeeklyList.tsx, or any file outside this phase's fileScope."
+      ],
+      "doneWhen": [
+        "npm test -- features/plan",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Record the exact settings key used ('planner.defaultView' or whatever was actually chosen) and confirm the default-to-'planner'-when-absent behavior, since P2/P3 build directly on top of this toggle and P4's card work assumes the same key."
+    },
+    {
+      "id": "phase-g8-p2-weekly-planner-component",
+      "title": "P2 — Learner-grouped, lesson-centric Weekly Planner component",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["phase-g8-p1-view-toggle"],
+      "fileScope": [
+        "features/plan/front/components/WeeklyPlanner.tsx",
+        "features/plan/front/components/WeeklyPlannerPage.tsx",
+        "features/plan/__tests__/integration/WeeklyPlanner.test.tsx"
+      ],
+      "testsFirst": [
+        "features/plan/__tests__/integration/WeeklyPlanner.test.tsx: with lessons for two learners, each learner's name/header appears exactly once (not repeated per lesson/subject); collapsing a learner's group hides their lessons and a subsequent click expands it again; a day with no lessons for a learner is visually muted/compressed rather than rendered as an empty block matching every other day; a lesson card shows at minimum subject and title and a status indicator; applying the existing selectedChildIds/selectedSubjectIds filters (from PlannerContext) narrows which learners/lessons appear, consistent with how WeekGrid already respects them."
+      ],
+      "implementationSteps": [
+        "Read the plan's 'Design direction' section (learner spine, layout wireframe) and P2 section before writing code — do not re-derive the layout independently.",
+        "Add features/plan/front/components/WeeklyPlanner.tsx: reads lessons/children/subjects/selectedChildIds/selectedSubjectIds from usePlanner() (PlannerContext, same as WeekGrid/WeeklyList already do — read PlannerContext.tsx first to confirm the exact hook/shape). Groups lessons by learner (filtered to selectedChildIds), each learner rendered once as a collapsible section (reuse WeeklyList's existing day-section collapsible pattern/styling as the closest precedent, per the plan's explicit instruction not to invent a new pattern). Within each learner's section, lessons are organized by day; days with zero lessons for that learner are compressed to a thin muted marker instead of a full-height empty block.",
+        "Each learner's collapsible section is anchored by a vertical color rail in that learner's displayColor (features/lib/types.ts StudentProfile.displayColor or wherever it's actually typed — confirm the exact field by reading the household/children types, do not assume the path) per the plan's 'learner spine' signature element — this phase can render the rail with a plain color swatch/border-left even if the exact card-anatomy polish is P3's job; the collapsible grouping and muted-empty-days behavior is this phase's core deliverable.",
+        "Edit WeeklyPlannerPage.tsx to render the new WeeklyPlanner component for the 'planner' view (added in P1) instead of WeeklyList. Keep WeeklyList as-is for the mobile breakpoint (isMobile) unless you're confident WeeklyPlanner is responsive enough to replace it outright — if uncertain, per the plan's own note ('keep WeeklyList for mobile... or reuse the new component responsively — decide in audit'), default to keeping WeeklyList for mobile in this phase; do not risk mobile regressions to over-deliver.",
+        "Do not touch WeekGrid.tsx (matrix view stays completely untouched, per the plan's explicit preservation requirement) or LessonTaskForm.tsx (P4's job)."
+      ],
+      "doneWhen": [
+        "npm test -- features/plan",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Record whether WeeklyList was kept for mobile or replaced, and confirm which existing type/field was used for learner displayColor (exact file:field), since P3's card-anatomy work and P4's indicator additions build on this same component."
+    },
+    {
+      "id": "phase-g8-p3-card-enrichment",
+      "title": "P3 — Card enrichment: teaching-context ordering (subject before title), resource indicator, status badge",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["phase-g8-p2-weekly-planner-component"],
+      "fileScope": [
+        "features/plan/front/components/WeeklyPlanner.tsx",
+        "features/plan/front/components/PlannerLessonCard.tsx",
+        "features/plan/__tests__/integration/WeeklyPlanner.test.tsx"
+      ],
+      "testsFirst": [
+        "Extend or add to features/plan/__tests__/integration/WeeklyPlanner.test.tsx: a lesson card renders its subject name visually before/above its title (teaching-context-first ordering, per the plan's explicit 'Reading / Chapter 91, not All About Reading Level 2 — Chapter 91' framing — note the actual chapter/curriculum fields don't exist until P4, so for this phase confirm subject-name-before-title using only fields that exist today: subject, title, status, resourceLink); a resource indicator (e.g. a paperclip icon) renders if and only if the lesson's resourceLink is set; the status badge/dot reflects the lesson's actual status (not_started/completed/skipped) using the same color convention WeekGrid already uses (green=completed, amber=skipped)."
+      ],
+      "implementationSteps": [
+        "Read the plan's 'Lesson card anatomy' section — this phase implements only the P2-P3 fields row: 'subject eyebrow, title, status dot, resourceLink -> indicator, duration' (curriculum/chapter/homework/assessment are explicitly P4, do not add them here).",
+        "No data-model change in this phase — everything needed (subject, title, status, resourceLink, estimatedDuration) already exists on LessonTask today.",
+        "Optionally extract a shared features/plan/front/components/PlannerLessonCard.tsx component if that keeps WeeklyPlanner.tsx from growing unwieldy (the plan explicitly allows this as optional); otherwise keep the card markup inline in WeeklyPlanner.tsx from P2.",
+        "Match the existing status color convention already used in WeekGrid.tsx (STATUS_BADGE/STATUS_LABEL maps — read that file to copy the exact color classes rather than inventing new ones, for visual consistency between the two views)."
+      ],
+      "doneWhen": [
+        "npm test -- features/plan",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Confirm whether PlannerLessonCard.tsx was extracted as a separate file or kept inline, and record it clearly — P4 needs to know exactly which file to add the new indicators to."
+    },
+    {
+      "id": "phase-g8-p4-teaching-metadata",
+      "title": "P4 — Curriculum / chapter / homework / assessment fields (schema + form + card indicators)",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": ["phase-g8-p3-card-enrichment"],
+      "fileScope": [
+        "db/schema.ts",
+        "db/migrations/",
+        "features/plan/types.ts",
+        "features/plan/server/repository.ts",
+        "features/plan/api/routes/",
+        "features/plan/front/components/LessonTaskForm.tsx",
+        "features/plan/front/components/WeeklyPlanner.tsx",
+        "features/plan/front/components/PlannerLessonCard.tsx",
+        "features/plan/__tests__/"
+      ],
+      "testsFirst": [
+        "Repository/API test: creating/updating a LessonTask with curriculum/chapter/hasHomework/hasAssessment fields persists and returns them.",
+        "features/plan/__tests__ integration test for LessonTaskForm: the new optional fields (curriculum text, chapter text, homework checkbox/flag, assessment checkbox/flag) submit correctly when filled and omit cleanly when left blank.",
+        "Extend WeeklyPlanner/PlannerLessonCard test: when chapter is set, it renders as the card's focal line and curriculum as a muted sub-line (per the plan's card anatomy); when hasHomework/hasAssessment are true, the corresponding indicator renders; when any of these fields are unset, no placeholder/empty indicator renders (presence-only, never fake data)."
+      ],
+      "implementationSteps": [
+        "Read the plan's P4 section and 'Lesson card anatomy' section before starting — the exact field names are suggested (curriculum?, chapter?, hasHomework?, hasAssessment?) but confirm they don't collide with anything already added to LessonTask by other work on this branch (e.g. G7a's scheduledStartTime/scheduledEndTime, already present on this branch) before finalizing names.",
+        "Migration: add curriculum (text, nullable), chapter (text, nullable), has_homework (boolean, nullable or default false), has_assessment (boolean, nullable or default false) to the lessonTasks table in db/schema.ts. Purely additive/optional, no backfill needed, no FK/composite-unique ordering concern expected (verify).",
+        "DB TARGET: per the plan's top-level dbMigrationPolicy, this phase's db:migrate must target PRODUCTION via DATABASE_URL_PROD (or `npm run db:migrate:prod`). Confirm and record the resolved host (dpg-d85140f7f7vs73fvdqhg-a.oregon-postgres.render.com) before migrating. Run the invariant checks: db:generate must produce exactly one new migration (check for drift against migrations already applied earlier this session — 0033/0034/0035 — your new one should be 0036 or later depending on what else has landed on prod by the time this runs); after migrating, confirm no gap via npm run db:status:prod (repo journal count vs prod applied count, before and after).",
+        "features/plan/types.ts: add the four new optional fields to LessonTask.",
+        "features/plan/server/repository.ts + the relevant API route(s) in features/plan/api/routes/: persist and return the new fields on create/update (mirror however scheduledStartTime/scheduledEndTime were wired through in the G7a work already on this branch, for consistency).",
+        "features/plan/front/components/LessonTaskForm.tsx: add optional inputs for curriculum, chapter, and two checkboxes/toggles for homework and assessment, following the form's existing field patterns.",
+        "features/plan/front/components/WeeklyPlanner.tsx / PlannerLessonCard.tsx (whichever P3 established as the card's home file — check P3's writeBack notes in progress.json): render chapter as the card's focal line (replacing/leading over title when set — decide exact precedence by re-reading the plan's card anatomy diagram) and curriculum as a muted sub-line; render homework/assessment indicators only when their respective flags are true. Never render a placeholder for an unset field."
+      ],
+      "doneWhen": [
+        "npm run db:generate",
+        "DATABASE_URL=$DATABASE_URL_PROD npx drizzle-kit migrate (or equivalent prod-targeted invocation per scripts/migrate-prod.ts / npm run db:migrate:prod)",
+        "npm test -- features/plan",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [
+        "npm run db:generate produces exactly one new migration for this phase (schema and migrations agree, no drift from any migration already applied to prod this session)",
+        "npm run db:migrate (against prod) applies with no gap in the migration sequence — record the migration file name/number and the before/after db:status:prod counts in notes"
+      ],
+      "writeBack": "Record the exact migration file name/number, the resolved prod host confirmation, the final field names chosen (in case they differ from the plan's suggested names), and confirm via test that indicators never render without backing data."
+    }
+  ]
+}
