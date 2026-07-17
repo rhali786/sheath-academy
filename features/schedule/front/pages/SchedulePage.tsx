@@ -8,6 +8,7 @@ import { ScheduleTimeline } from '@/features/schedule/front/components/ScheduleT
 import { useHousehold } from '@/features/household/front/context'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { getCalendarRange } from '@/features/schedule/front/lib/calendarRange'
+import { isOffDay } from '@/features/plan/utils/schoolDays'
 import { CalendarNav } from '@/features/schedule/front/components/CalendarNav'
 import { WeekCalendarView } from '@/features/schedule/front/components/WeekCalendarView'
 import { MonthCalendarView } from '@/features/schedule/front/components/MonthCalendarView'
@@ -67,6 +68,11 @@ export function SchedulePage() {
 
   const weekStartDay = householdProfile?.weekStartDay === 'Sunday' ? 'Sunday' : 'Monday'
 
+  const selectedDateIsOffDay = useMemo(
+    () => isOffDay(new Date(`${selectedDate}T00:00:00`).getDay(), householdProfile?.schoolDays),
+    [selectedDate, householdProfile?.schoolDays],
+  )
+
   const range = useMemo(
     () => getCalendarRange(selectedDate, viewMode, weekStartDay),
     [selectedDate, viewMode, weekStartDay],
@@ -101,6 +107,11 @@ export function SchedulePage() {
           Schedule
           <span className="text-sm font-normal text-slate-400 ml-2">{selectedDate}</span>
         </h1>
+        {viewMode === 'day' && selectedDateIsOffDay && (
+          <span className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">
+            Off day
+          </span>
+        )}
       </div>
 
       <div className="mt-4 mb-6">

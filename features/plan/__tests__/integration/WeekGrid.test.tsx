@@ -11,6 +11,22 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }))
 
+jest.mock('@/features/household/front/context', () => ({
+  useHousehold: jest.fn(() => ({
+    householdProfile: { id: 'hh_001', weekStartDay: 'Monday', familyName: 'Test' },
+    studentProfiles: [],
+    allSubjects: [],
+    loading: false,
+    familyName: 'Test',
+    needsSetup: false,
+    error: null,
+    refetch: jest.fn(),
+  })),
+}))
+
+import { useHousehold } from '@/features/household/front/context'
+const mockUseHousehold = useHousehold as jest.Mock
+
 let mockCapturedDragEnd: ((event: any) => Promise<void>) | null = null
 
 jest.mock('@dnd-kit/core', () => {
@@ -423,5 +439,109 @@ describe('WeekGrid — US1 drag shifts whole window + Undo', () => {
     // Window is valid: 2026-05-10 <= 2026-05-16
     const [, payload] = mockUpdateLesson.mock.calls[0] as [string, any]
     expect(payload.plannedStartDate <= payload.dueDate).toBe(true)
+  })
+})
+
+describe('WeekGrid — household schoolDays off-day awareness', () => {
+  beforeEach(() => {
+    mockUseHousehold.mockImplementation(() => ({
+      householdProfile: { id: 'hh_001', weekStartDay: 'Monday', familyName: 'Test' },
+      studentProfiles: [],
+      allSubjects: [],
+      loading: false,
+      familyName: 'Test',
+      needsSetup: false,
+      error: null,
+      refetch: jest.fn(),
+    }))
+  })
+
+  it('with default household (no schoolDays set), Saturday/Sunday columns render the off-day style', () => {
+    const { container } = renderGrid()
+
+    const weekendCells = container.querySelectorAll('.opacity-60')
+    expect(weekendCells.length).toBeGreaterThan(0)
+  })
+
+  it('with schoolDays = Mon–Fri, Saturday/Sunday columns render the off-day style', () => {
+    mockUseHousehold.mockImplementation(() => ({
+      householdProfile: {
+        id: 'hh_001',
+        weekStartDay: 'Monday',
+        familyName: 'Test',
+        schoolDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      },
+      studentProfiles: [],
+      allSubjects: [],
+      loading: false,
+      familyName: 'Test',
+      needsSetup: false,
+      error: null,
+      refetch: jest.fn(),
+    }))
+
+    const { container } = renderGrid()
+    const saturdayHeader = screen.getByText('Saturday').closest('th')
+    expect(saturdayHeader?.className).toContain('opacity-60')
+    expect(container.querySelectorAll('.opacity-60').length).toBeGreaterThan(0)
+  })
+
+  it('with schoolDays including Saturday, Saturday renders as a normal school day (not muted)', () => {
+    mockUseHousehold.mockImplementation(() => ({
+      householdProfile: {
+        id: 'hh_001',
+        weekStartDay: 'Monday',
+        familyName: 'Test',
+        schoolDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      },
+      studentProfiles: [],
+      allSubjects: [],
+      loading: false,
+      familyName: 'Test',
+      needsSetup: false,
+      error: null,
+      refetch: jest.fn(),
+    }))
+
+    renderGrid()
+    const saturdayHeader = screen.getByText('Saturday').closest('th')
+    expect(saturdayHeader?.className).not.toContain('opacity-60')
+    const sundayHeader = screen.getByText('Sunday').closest('th')
+    expect(sundayHeader?.className).toContain('opacity-60')
+  })
+
+  it('dropping a lesson onto an off-day column succeeds (not blocked) and the confirmation notes it is an off day', async () => {
+    // Week of 2026-05-12 (Tue); 2026-05-16 is Saturday, an off day under the default schedule
+    renderGrid(mockLessons)
+
+    expect(mockCapturedDragEnd).not.toBeNull()
+
+    await mockCapturedDragEnd!({
+      active: { id: 'lesson_001', data: { current: {} } },
+      over: {
+        id: 'child_001:subj_001:2026-05-16',
+        data: { current: { dateStr: '2026-05-16' } },
+      },
+    })
+
+    expect(mockUpdateLesson).toHaveBeenCalledWith('lesson_001', { dueDate: '2026-05-16' })
+    expect(await screen.findByText(/off day/i)).toBeInTheDocument()
+  })
+
+  it('dropping a lesson onto a school-day column succeeds without an off-day note', async () => {
+    // 2026-05-14 is a Thursday, a school day under the default schedule
+    renderGrid(mockLessons)
+
+    await mockCapturedDragEnd!({
+      active: { id: 'lesson_001', data: { current: {} } },
+      over: {
+        id: 'child_001:subj_001:2026-05-14',
+        data: { current: { dateStr: '2026-05-14' } },
+      },
+    })
+
+    expect(mockUpdateLesson).toHaveBeenCalledWith('lesson_001', { dueDate: '2026-05-14' })
+    await screen.findByText(/moved/i)
+    expect(screen.queryByText(/off day/i)).not.toBeInTheDocument()
   })
 })

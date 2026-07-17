@@ -247,4 +247,35 @@ describe('SchedulePage', () => {
     expect(screen.queryByTestId('schedule-timeline')).not.toBeInTheDocument()
     expect(screen.queryByTestId('week-calendar-view')).not.toBeInTheDocument()
   })
+
+  it('day view for an off-day date (default Mon–Fri schedule) shows an "Off day" header indicator', async () => {
+    mockUseSearchParams.mockReturnValue(new URLSearchParams('date=2026-06-06')) // Saturday
+    renderSchedulePage()
+    await waitFor(() => {
+      expect(screen.getByTestId('schedule-timeline')).toBeInTheDocument()
+    })
+    expect(screen.getByText(/off day/i)).toBeInTheDocument()
+  })
+
+  it('day view for a school-day date does not show the "Off day" indicator', async () => {
+    mockUseSearchParams.mockReturnValue(new URLSearchParams('date=2026-06-01')) // Monday
+    renderSchedulePage()
+    await waitFor(() => {
+      expect(screen.getByTestId('schedule-timeline')).toBeInTheDocument()
+    })
+    expect(screen.queryByText(/off day/i)).not.toBeInTheDocument()
+  })
+
+  it('honors a custom household schoolDays setting for the off-day indicator', async () => {
+    mockUseHousehold.mockImplementation(() => ({
+      allSubjects: [],
+      householdProfile: { schoolDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] },
+    }))
+    mockUseSearchParams.mockReturnValue(new URLSearchParams('date=2026-06-06')) // Saturday, but a school day here
+    renderSchedulePage()
+    await waitFor(() => {
+      expect(screen.getByTestId('schedule-timeline')).toBeInTheDocument()
+    })
+    expect(screen.queryByText(/off day/i)).not.toBeInTheDocument()
+  })
 })

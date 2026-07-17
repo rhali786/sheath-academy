@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { usePlanner } from '../context/PlannerContext'
 import type { LessonTaskStatus } from '@/features/plan/types'
 import { formatCompletionWindow, lessonSpansDate } from '@/features/plan/utils/lessonCompletionWindow'
+import { isOffDay } from '@/features/plan/utils/schoolDays'
+import { useHousehold } from '@/features/household/front/context'
 
 const STATUS_BADGE: Record<LessonTaskStatus, string> = {
   not_started: 'bg-slate-100 text-slate-600',
@@ -21,10 +23,6 @@ const STATUS_LABEL: Record<LessonTaskStatus, string> = {
 function getDayOfWeekLabel(dayIndex: number): string {
   const labels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
   return labels[dayIndex]
-}
-
-function isWeekend(dayIndex: number): boolean {
-  return dayIndex === 0 || dayIndex === 6
 }
 
 function formatLocalDate(d: Date): string {
@@ -48,6 +46,8 @@ interface DaySection {
 
 export function WeeklyList() {
   const { lessons, selectedWeek, weekStartDay, children, subjects } = usePlanner()
+  const { householdProfile } = useHousehold()
+  const schoolDays = householdProfile?.schoolDays
   const router = useRouter()
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set())
 
@@ -73,7 +73,7 @@ export function WeeklyList() {
       dateStr,
       date,
       dayLabel: getDayOfWeekLabel(dow),
-      isWeekend: isWeekend(dow),
+      isWeekend: isOffDay(dow, schoolDays),
     }
   })
 

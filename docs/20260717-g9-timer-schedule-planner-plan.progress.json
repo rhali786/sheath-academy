@@ -1,21 +1,41 @@
 {
   "plan": "docs/20260717-g9-timer-schedule-planner-plan.json",
   "createdAt": "2026-07-17T19:14:15.111Z",
-  "updatedAt": "2026-07-17T19:14:15.111Z",
+  "updatedAt": "2026-07-17T00:30:00.000Z",
   "branch": "feat/g9-timer-schedule-planner",
   "phases": [
     {
       "id": "phase-g9-item2-school-days-enforcement",
       "title": "Item 2 — Off-day (household schoolDays) awareness across plan/schedule views, non-blocking warnings",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T00:00:00.000Z",
+      "completedAt": "2026-07-17T00:30:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/plan/utils/schoolDays.ts (new)",
+          "features/plan/__tests__/unit/schoolDays.test.ts (new)",
+          "features/plan/front/components/WeekGrid.tsx",
+          "features/plan/front/components/WeeklyList.tsx",
+          "features/plan/front/components/LessonTaskForm.tsx",
+          "features/plan/front/pages/LessonsPage.tsx",
+          "features/plan/front/components/WeeklyPlannerPage.tsx",
+          "features/dashboard/front/components/EditLessonModal.tsx",
+          "features/schedule/front/pages/SchedulePage.tsx",
+          "features/plan/__tests__/integration/WeekGrid.test.tsx",
+          "features/plan/__tests__/integration/WeeklyList.test.tsx",
+          "features/plan/__tests__/integration/LessonTaskForm.test.tsx",
+          "features/schedule/__tests__/integration/SchedulePage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/plan/__tests__/unit/schoolDays.test.ts — 4 passed",
+          "npm test -- features/plan features/schedule (via npx jest features/plan features/schedule) — 38 suites passed (3 pre-existing DB-gated suites skipped), 395 passed",
+          "npm test (full mocked suite, integration dir excluded per jest.config.js) — 250 suites passed, 2215 passed",
+          "npx tsc --noEmit -p tsconfig.json — 148 pre-existing errors, identical count before and after this phase's changes (confirmed via git stash diff) — no new type errors introduced",
+          "npm run build — type-check/lint step passed; build fails only at the known pre-existing, unrelated /(shell)/about static-generation timeout (worker exited 143), consistent with prior phases this session"
+        ],
+        "notes": "Added features/plan/utils/schoolDays.ts exporting `isOffDay(dayIndex, schoolDays?: DayOfWeek[])` and `DEFAULT_SCHOOL_DAYS` (Mon–Fri) as named exports — this is the shared source the next LessonTaskForm-touching phase (item 3) should reuse/import, not redefine. WeekGrid.tsx and WeeklyList.tsx now derive off-day styling from `useHousehold().householdProfile.schoolDays` via isOffDay() instead of a hardcoded isWeekend(dayIndex===0||6); both components had to start calling useHousehold(), so their integration test files (WeekGrid.test.tsx, WeeklyList.test.tsx) now mock '@/features/household/front/context' (standard project pattern, matches WeeklyPlannerPage.test.tsx). LessonTaskForm.tsx gained an optional `schoolDays?: DayOfWeek[]` PROP (not an internal useHousehold() call, to avoid breaking ~30 existing tests that render it without a HouseholdProvider) — its three real callers (LessonsPage.tsx, WeeklyPlannerPage.tsx, EditLessonModal.tsx) already call useHousehold() and now pass householdProfile?.schoolDays through. The warning is a dismissible amber inline box (role=status) shown when dueDate or plannedStartDate falls on an off day; it resets its dismissed state when either date changes; submission is never blocked. WeekGrid's drag-and-drop InlineSuccess message now appends '(an off day)' when the drop target is an off day (undoNotice gained an `isOffDayTarget: boolean` field). SchedulePage.tsx shows a small amber 'Off day' pill next to the page heading, only in day view, when selectedDate's weekday is an off day per household.schoolDays. CONFIRMED CLEAN (no fix needed): grepped features/schedule/front/components/WeekCalendarView.tsx and MonthCalendarView.tsx for isWeekend/getDay()===0/6 concepts — neither has any hardcoded weekend/off-day logic at all (WeekCalendarView lists days as plain rows with no per-day styling variance; MonthCalendarView only distinguishes in-month vs lead/trail-month cells), so per the plan's own instruction ('if not found, note that in write-back and skip') these two files were left untouched. Did not touch db/schema.ts, LessonGenerationPanel.tsx, or resources/server/service.ts (out of scope per plan). GradebookPage.tsx references LessonTaskForm only in a code comment, not an actual usage — no wiring needed there."
       },
       "failureReason": null
     },

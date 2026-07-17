@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import type { LessonTask, LessonTaskStatus, LessonDuration } from '@/features/plan/types'
-import type { StudentProfile } from '@/features/lib/types'
+import type { StudentProfile, DayOfWeek } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import {
   filterSubjectsForLearners,
   subjectEnrollsLearner,
 } from '@/features/subjects/lib/enrollment'
+import { isOffDay } from '@/features/plan/utils/schoolDays'
 
 const GENERAL_LESSON_TYPES = ['Lesson', 'Assignment', 'Reading', 'Practice', 'Review', 'Project', 'Assessment', 'Other']
 const QURAN_LESSON_TYPES   = ['Memorisation', 'Revision', 'Recitation', 'Tajweed', 'Listening']
@@ -79,8 +80,14 @@ interface LessonTaskFormProps {
   subjects: SubjectCourse[]
   editingLesson?: LessonTask
   defaultSelectedChildIds?: string[]
+  /** Household's configured school days (from `useHousehold().householdProfile.schoolDays`); undefined = Mon–Fri default. */
+  schoolDays?: DayOfWeek[]
   onSubmit: (data: LessonFormData) => Promise<void>
   onCancel?: () => void
+}
+
+function dateStrDayOfWeek(dateStr: string): number {
+  return new Date(`${dateStr}T00:00:00`).getDay()
 }
 
 export function LessonTaskForm({
@@ -88,6 +95,7 @@ export function LessonTaskForm({
   subjects,
   editingLesson,
   defaultSelectedChildIds,
+  schoolDays,
   onSubmit,
   onCancel,
 }: LessonTaskFormProps) {
@@ -115,6 +123,7 @@ export function LessonTaskForm({
   const [titleError, setTitleError] = useState('')
   const [timeError, setTimeError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [offDayWarningDismissed, setOffDayWarningDismissed] = useState(false)
 
   // Reset subject when selected learners change (except on initial load in edit mode)
   const [prevChildKey, setPrevChildKey] = useState(selectedChildIds.join(','))
@@ -125,6 +134,14 @@ export function LessonTaskForm({
       setPrevChildKey(key)
     }
   }, [selectedChildIds, prevChildKey])
+
+  const dueDateIsOffDay = Boolean(dueDate) && isOffDay(dateStrDayOfWeek(dueDate), schoolDays)
+  const plannedStartIsOffDay = Boolean(plannedStartDate) && isOffDay(dateStrDayOfWeek(plannedStartDate), schoolDays)
+  const showOffDayWarning = !offDayWarningDismissed && (dueDateIsOffDay || plannedStartIsOffDay)
+
+  useEffect(() => {
+    setOffDayWarningDismissed(false)
+  }, [dueDate, plannedStartDate])
 
   function toggleChild(id: string) {
     setSelectedChildIds(prev =>
@@ -290,6 +307,21 @@ export function LessonTaskForm({
       <p className="text-xs text-slate-500 -mt-2">
         Lesson can be completed any day from &lsquo;Available from&rsquo; through &lsquo;Due date&rsquo;.
       </p>
+      {showOffDayWarning && (
+        <div role="status" className="flex items-start justify-between gap-2 -mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <span>
+            This date is marked as an off day in your household settings.
+          </span>
+          <button
+            type="button"
+            aria-label="Dismiss off-day warning"
+            onClick={() => setOffDayWarningDismissed(true)}
+            className="text-amber-600 hover:text-amber-800 shrink-0"
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>

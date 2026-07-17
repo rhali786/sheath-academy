@@ -105,6 +105,7 @@ export function WeeklyPlannerPage() {
               children={studentProfiles.filter(c => c.isActive !== false)}
               subjects={allSubjects}
               defaultSelectedChildIds={selectedChildId ? [selectedChildId] : undefined}
+              schoolDays={householdProfile?.schoolDays}
               onSubmit={handleAddLesson}
               onCancel={() => setShowAddForm(false)}
             />

@@ -9,8 +9,10 @@ import { plannerApi } from '../services/api'
 import type { LessonTask, LessonTaskStatus, LessonDuration } from '../../types'
 import { subjectEnrollsLearner } from '@/features/subjects/lib/enrollment'
 import { formatCompletionWindow, lessonSpansDate } from '../../utils/lessonCompletionWindow'
+import { isOffDay } from '../../utils/schoolDays'
 import { shiftLessonWindow } from '../../server/validation'
 import { InlineSuccess } from '@/features/lib/front/components/InlineSuccess'
+import { useHousehold } from '@/features/household/front/context'
 
 const STATUS_BADGE: Record<LessonTaskStatus, string | null> = {
   not_started: null,
@@ -26,10 +28,6 @@ const STATUS_LABEL: Record<LessonTaskStatus, string> = {
 function getDayOfWeekLabel(dayIndex: number): string {
   const labels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
   return labels[dayIndex]
-}
-
-function isWeekend(dayIndex: number): boolean {
-  return dayIndex === 0 || dayIndex === 6
 }
 
 const DURATION_MINUTES: Record<LessonDuration, number> = {
@@ -156,6 +154,7 @@ function DroppableCell({ id, dateStr, isWeekendDay, lesson, onEdit }: DroppableC
 interface RescheduleUndo {
   lessonTitle: string
   newDueDateLabel: string
+  isOffDayTarget: boolean
   prevDueDate: string
   prevPlannedStartDate: string | null
   lessonId: string
@@ -163,6 +162,8 @@ interface RescheduleUndo {
 
 export function WeekGrid() {
   const { lessons, selectedWeek, weekStartDay, children, subjects, selectedChildIds, selectedSubjectIds, refreshLessons } = usePlanner()
+  const { householdProfile } = useHousehold()
+  const schoolDays = householdProfile?.schoolDays
   const router = useRouter()
   const [activeLesson, setActiveLesson] = useState<LessonTask | null>(null)
   const [undoNotice, setUndoNotice] = useState<RescheduleUndo | null>(null)
@@ -237,10 +238,13 @@ export function WeekGrid() {
     await plannerApi.updateLesson(lessonId, patch)
     refreshLessons?.()
 
-    const dayLabel = new Date(`${newDueDate}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' })
+    const newDueDateObj = new Date(`${newDueDate}T00:00:00`)
+    const dayLabel = newDueDateObj.toLocaleDateString('en-US', { weekday: 'long' })
+    const targetIsOffDay = isOffDay(newDueDateObj.getDay(), schoolDays)
     setUndoNotice({
       lessonTitle: lesson.title,
       newDueDateLabel: dayLabel,
+      isOffDayTarget: targetIsOffDay,
       prevDueDate,
       prevPlannedStartDate,
       lessonId,
@@ -261,7 +265,7 @@ export function WeekGrid() {
     {undoNotice && (
       <div className="mb-3">
         <InlineSuccess
-          message={`Moved "${undoNotice.lessonTitle}" to ${undoNotice.newDueDateLabel}`}
+          message={`Moved "${undoNotice.lessonTitle}" to ${undoNotice.newDueDateLabel}${undoNotice.isOffDayTarget ? ' (an off day)' : ''}`}
           action={{ label: 'Undo', onAction: handleUndo }}
           onDismiss={() => setUndoNotice(null)}
         />
@@ -277,7 +281,7 @@ export function WeekGrid() {
               </th>
               {orderedDays.map((date) => {
                 const dow = date.getDay()
-                const isWeekendDay = isWeekend(dow)
+                const isWeekendDay = isOffDay(dow, schoolDays)
                 const dateStr = formatLocalDate(date)
                 const isToday = dateStr === todayStr
                 const displayStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -312,7 +316,7 @@ export function WeekGrid() {
                 {orderedDays.map(date => {
                   const dateStr = formatLocalDate(date)
                   const dow = date.getDay()
-                  const isWeekendDay = isWeekend(dow)
+                  const isWeekendDay = isOffDay(dow, schoolDays)
                   const lesson = getLessonForCell(dateStr, row.childId, row.subjectId)
                   const cellId = `${row.childId}:${row.subjectId}:${dateStr}`
 

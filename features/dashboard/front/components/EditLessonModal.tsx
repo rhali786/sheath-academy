@@ -19,7 +19,7 @@ export interface EditLessonModalProps {
  * (see SubjectEditDialog).
  */
 export function EditLessonModal({ lessonId, onClose, onSaved }: EditLessonModalProps) {
-  const { studentProfiles: children, allSubjects: subjects } = useHousehold()
+  const { studentProfiles: children, allSubjects: subjects, householdProfile } = useHousehold()
   const [lesson, setLesson] = useState<LessonTask | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -90,6 +90,7 @@ export function EditLessonModal({ lessonId, onClose, onSaved }: EditLessonModalP
               children={children}
               subjects={subjects}
               editingLesson={lesson}
+              schoolDays={householdProfile?.schoolDays}
               onSubmit={handleSubmit}
               onCancel={onClose}
             />

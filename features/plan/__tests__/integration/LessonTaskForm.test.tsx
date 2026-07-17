@@ -546,6 +546,74 @@ describe('LessonTaskForm — scheduled start/end time override', () => {
   })
 })
 
+describe('LessonTaskForm — off-day (household schoolDays) awareness', () => {
+  it('shows a non-blocking inline warning when due date falls on an off day (default Mon–Fri schedule)', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    // 2026-05-16 is a Saturday — an off day under the default Mon–Fri schedule
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-16' } })
+    expect(screen.getByText(/off day/i)).toBeInTheDocument()
+  })
+
+  it('shows no warning when due date falls on a school day', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    // 2026-05-14 is a Thursday — a school day under the default Mon–Fri schedule
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-14' } })
+    expect(screen.queryByText(/off day/i)).not.toBeInTheDocument()
+  })
+
+  it('honors a custom schoolDays prop (co-op Saturday is not a warning; Wednesday off is)', () => {
+    render(
+      <LessonTaskForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        schoolDays={['Monday', 'Tuesday', 'Thursday', 'Friday', 'Saturday']}
+        onSubmit={jest.fn()}
+      />
+    )
+    // 2026-05-16 is a Saturday — a school day for this household
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-16' } })
+    expect(screen.queryByText(/off day/i)).not.toBeInTheDocument()
+
+    // 2026-05-13 is a Wednesday — an off day for this household
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-13' } })
+    expect(screen.getByText(/off day/i)).toBeInTheDocument()
+  })
+
+  it('submission is not blocked when due date falls on an off day', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={onSubmit} />
+    )
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
+    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Off-day lesson' } })
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-16' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ dueDate: '2026-05-16' })
+      )
+    })
+  })
+
+  it('warning is dismissible', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-16' } })
+    expect(screen.getByText(/off day/i)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /dismiss off-day warning/i }))
+    expect(screen.queryByText(/off day/i)).not.toBeInTheDocument()
+  })
+})
+
 describe('LessonTaskForm — multi-learner group assignment', () => {
   it('allows selecting multiple learners via checkboxes', () => {
     render(
