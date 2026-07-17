@@ -57,6 +57,10 @@ export async function PUT(id: string, request: Request): Promise<NextResponse<Ap
       dueDate: body.dueDate,
       status: body.status,
       sortOrder: body.order,
+      curriculum: 'curriculum' in body ? (body.curriculum?.trim() || null) : undefined,
+      chapter: 'chapter' in body ? (body.chapter?.trim() || null) : undefined,
+      hasHomework: 'hasHomework' in body ? body.hasHomework === true : undefined,
+      hasAssessment: 'hasAssessment' in body ? body.hasAssessment === true : undefined,
     }, { applyToGroup: body.applyToGroup === true })
     if (!updated) return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 })
     return NextResponse.json({ status: 'success', data: rowToLesson(updated), message: 'Lesson updated', timestamp: new Date().toISOString() })

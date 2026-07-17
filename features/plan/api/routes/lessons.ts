@@ -106,6 +106,10 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<L
       dueDate,
       status: body.status ?? 'not_started',
       sortOrder: body.order || 0,
+      curriculum: body.curriculum?.trim() || undefined,
+      chapter: body.chapter?.trim() || undefined,
+      hasHomework: body.hasHomework === true,
+      hasAssessment: body.hasAssessment === true,
     }
 
     if (learnerIds.length >= 2) {

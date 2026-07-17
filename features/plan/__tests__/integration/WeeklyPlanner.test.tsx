@@ -58,6 +58,10 @@ const mockLessons: LessonTask[] = [
     status: 'completed' as const,
     order: 1,
     estimatedDuration: '30min' as const,
+    curriculum: 'All About Reading Level 2',
+    chapter: 'Ch. 91',
+    hasHomework: true,
+    hasAssessment: false,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
   },
@@ -137,33 +141,34 @@ describe('WeeklyPlanner', () => {
     expect(populatedDays.length).toBeGreaterThan(0)
   })
 
-  it('a lesson card shows subject, title, and a status indicator', () => {
+  it('a lesson card shows subject, focal line, and a status indicator', () => {
     renderPlanner()
 
     expect(screen.getAllByText('Reading').length).toBeGreaterThan(0)
-    expect(screen.getByText('Chapter 91')).toBeInTheDocument()
+    // lesson_003 has a chapter set, so the chapter text is the card's focal line
+    expect(screen.getByText('Ch. 91')).toBeInTheDocument()
     expect(screen.getByText('Completed')).toBeInTheDocument()
   })
 
-  it('renders the subject eyebrow visually before the title within a lesson card', () => {
+  it('renders the subject eyebrow visually before the focal line within a lesson card', () => {
     renderPlanner()
 
-    const titleEl = screen.getByText('Chapter 91')
-    const card = titleEl.closest('[data-lesson-card]') as HTMLElement
-    expect(card).toBeInTheDocument()
+    const card = screen.getByTestId('lesson-card-lesson_003')
+    const focalEl = screen.getByText('Ch. 91')
+    expect(card.contains(focalEl)).toBe(true)
 
     const subjectEl = screen.getAllByText('Reading').find(el => card.contains(el)) as HTMLElement
     expect(subjectEl).toBeInTheDocument()
 
-    // subject eyebrow must precede the title in DOM order (teaching-context-first)
-    const position = subjectEl.compareDocumentPosition(titleEl)
+    // subject eyebrow must precede the focal line in DOM order (teaching-context-first)
+    const position = subjectEl.compareDocumentPosition(focalEl)
     expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('renders a resource indicator only when the lesson has a resourceLink', () => {
     renderPlanner()
 
-    const withResource = screen.getByText('Chapter 91').closest('[data-lesson-card]') as HTMLElement
+    const withResource = screen.getByTestId('lesson-card-lesson_003')
     expect(withResource.querySelector('[data-testid="resource-indicator"]')).toBeInTheDocument()
 
     const withoutResource = screen.getByText('Word problems').closest('[data-lesson-card]') as HTMLElement
@@ -173,7 +178,7 @@ describe('WeeklyPlanner', () => {
   it('status badge uses the same color convention as WeekGrid: green for completed, amber for skipped', () => {
     renderPlanner()
 
-    const completedCard = screen.getByText('Chapter 91').closest('[data-lesson-card]') as HTMLElement
+    const completedCard = screen.getByTestId('lesson-card-lesson_003')
     const completedBadge = completedCard.querySelector('[data-testid="status-badge"]') as HTMLElement
     expect(completedBadge).toBeInTheDocument()
     expect(completedBadge.className).toMatch(/bg-green-100/)
@@ -189,7 +194,7 @@ describe('WeeklyPlanner', () => {
   it('renders the estimated duration when set', () => {
     renderPlanner()
 
-    const card = screen.getByText('Chapter 91').closest('[data-lesson-card]') as HTMLElement
+    const card = screen.getByTestId('lesson-card-lesson_003')
     expect(card).toHaveTextContent('30 min')
   })
 
@@ -198,6 +203,37 @@ describe('WeeklyPlanner', () => {
 
     expect(screen.getByText('Adam')).toBeInTheDocument()
     expect(screen.queryByText('Layth')).not.toBeInTheDocument()
+    expect(screen.queryByText('Ch. 91')).not.toBeInTheDocument()
+  })
+
+  it('renders chapter as the focal line and curriculum as a muted sub-line when chapter is set', () => {
+    renderPlanner()
+
+    const card = screen.getByTestId('lesson-card-lesson_003')
+    expect(card).toHaveTextContent('Ch. 91')
+    expect(card).toHaveTextContent('All About Reading Level 2')
+    // title is superseded by chapter as the focal line, not duplicated alongside it
     expect(screen.queryByText('Chapter 91')).not.toBeInTheDocument()
+  })
+
+  it('falls back to title as the focal line when chapter is not set', () => {
+    renderPlanner()
+
+    const card = screen.getByTestId('lesson-card-lesson_001')
+    expect(card).toHaveTextContent('Fractions practice')
+  })
+
+  it('renders homework/assessment indicators only when their flags are true, with no placeholder when unset', () => {
+    renderPlanner()
+
+    // lesson_003: hasHomework true, hasAssessment false
+    const card003 = screen.getByTestId('lesson-card-lesson_003')
+    expect(card003.querySelector('[data-testid="homework-indicator"]')).toBeInTheDocument()
+    expect(card003.querySelector('[data-testid="assessment-indicator"]')).not.toBeInTheDocument()
+
+    // lesson_001: neither field set
+    const card001 = screen.getByTestId('lesson-card-lesson_001')
+    expect(card001.querySelector('[data-testid="homework-indicator"]')).not.toBeInTheDocument()
+    expect(card001.querySelector('[data-testid="assessment-indicator"]')).not.toBeInTheDocument()
   })
 })

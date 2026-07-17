@@ -35,6 +35,12 @@ export interface LessonTask {
   completedAt?: string
   /** Shared link when one lesson was assigned to multiple learners (fan-out rows). */
   groupId?: string
+  /** Curriculum/program name (e.g. "All About Reading Level 2"); muted sub-line under chapter on the card. */
+  curriculum?: string
+  /** Specific chapter/lesson focus (e.g. "Chapter 91"); becomes the card's focal line when set. */
+  chapter?: string
+  hasHomework?: boolean
+  hasAssessment?: boolean
   createdAt: string
   updatedAt: string
 }

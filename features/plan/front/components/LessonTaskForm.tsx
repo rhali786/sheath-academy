@@ -68,6 +68,10 @@ export interface LessonFormData {
   scheduledStartTime?: string
   scheduledEndTime?: string
   lessonType?: string
+  curriculum?: string
+  chapter?: string
+  hasHomework?: boolean
+  hasAssessment?: boolean
 }
 
 interface LessonTaskFormProps {
@@ -104,6 +108,10 @@ export function LessonTaskForm({
   const [scheduledStartTime, setScheduledStartTime] = useState(editingLesson?.scheduledStartTime ?? '')
   const [scheduledEndTime, setScheduledEndTime] = useState(editingLesson?.scheduledEndTime ?? '')
   const [lessonType, setLessonType] = useState(editingLesson?.lessonType ?? '')
+  const [curriculum, setCurriculum] = useState(editingLesson?.curriculum ?? '')
+  const [chapter, setChapter] = useState(editingLesson?.chapter ?? '')
+  const [hasHomework, setHasHomework] = useState(editingLesson?.hasHomework ?? false)
+  const [hasAssessment, setHasAssessment] = useState(editingLesson?.hasAssessment ?? false)
   const [titleError, setTitleError] = useState('')
   const [timeError, setTimeError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -179,6 +187,10 @@ export function LessonTaskForm({
         scheduledStartTime: trimmedStartTime || undefined,
         scheduledEndTime: trimmedEndTime || undefined,
         lessonType: lessonType || undefined,
+        curriculum: curriculum.trim() || undefined,
+        chapter: chapter.trim() || undefined,
+        hasHomework: hasHomework || undefined,
+        hasAssessment: hasAssessment || undefined,
       })
     } finally {
       setIsSubmitting(false)
@@ -386,6 +398,59 @@ export function LessonTaskForm({
           onChange={e => setResourceLink(e.target.value)}
           className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
         />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="curriculum" className="block text-sm font-medium text-slate-700 mb-1">
+            Curriculum <span className="text-slate-400 font-normal">(optional)</span>
+          </label>
+          <input
+            id="curriculum"
+            type="text"
+            value={curriculum}
+            onChange={e => setCurriculum(e.target.value)}
+            placeholder="e.g. All About Reading Level 2"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="chapter" className="block text-sm font-medium text-slate-700 mb-1">
+            Chapter <span className="text-slate-400 font-normal">(optional)</span>
+          </label>
+          <input
+            id="chapter"
+            type="text"
+            value={chapter}
+            onChange={e => setChapter(e.target.value)}
+            placeholder="e.g. Chapter 91"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-6">
+        <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={hasHomework}
+            onChange={e => setHasHomework(e.target.checked)}
+            aria-label="Has homework"
+            className="rounded border-slate-300 text-forest-900 focus:ring-forest-500"
+          />
+          Has homework
+        </label>
+        <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={hasAssessment}
+            onChange={e => setHasAssessment(e.target.checked)}
+            aria-label="Has assessment"
+            className="rounded border-slate-300 text-forest-900 focus:ring-forest-500"
+          />
+          Has assessment
+        </label>
       </div>
 
       <div className="flex items-center gap-3 pt-2">

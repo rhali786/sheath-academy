@@ -201,13 +201,23 @@ export function WeeklyPlanner() {
                             <div
                               key={lesson.id}
                               data-lesson-card
+                              data-testid={`lesson-card-${lesson.id}`}
                               onClick={() => router.push(`/lessons?editId=${lesson.id}`)}
                               className="p-3 bg-white rounded-lg border border-forest-200 hover:shadow-md transition-shadow cursor-pointer"
                             >
                               <div className="text-xs font-medium text-forest-700 uppercase tracking-wide">
                                 {resolveSubjectName(lesson.subjectId)}
                               </div>
-                              <div className="font-semibold text-forest-900 text-sm mt-0.5">{lesson.title}</div>
+                              {lesson.chapter ? (
+                                <>
+                                  <div className="font-semibold text-forest-900 text-sm mt-0.5">{lesson.chapter}</div>
+                                  {lesson.curriculum && (
+                                    <div className="text-xs text-slate-500">{lesson.curriculum}</div>
+                                  )}
+                                </>
+                              ) : (
+                                <div className="font-semibold text-forest-900 text-sm mt-0.5">{lesson.title}</div>
+                              )}
                               <div className="mt-2 flex items-center flex-wrap gap-2">
                                 <span
                                   data-testid="status-badge"
@@ -223,6 +233,26 @@ export function WeeklyPlanner() {
                                     className="text-xs text-slate-500"
                                   >
                                     📎
+                                  </span>
+                                )}
+                                {lesson.hasHomework && (
+                                  <span
+                                    data-testid="homework-indicator"
+                                    aria-label="Has homework"
+                                    title="Has homework"
+                                    className="text-xs text-slate-500"
+                                  >
+                                    📝
+                                  </span>
+                                )}
+                                {lesson.hasAssessment && (
+                                  <span
+                                    data-testid="assessment-indicator"
+                                    aria-label="Has assessment"
+                                    title="Has assessment"
+                                    className="text-xs text-slate-500"
+                                  >
+                                    📋
                                   </span>
                                 )}
                                 {lesson.estimatedDuration && (

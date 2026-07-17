@@ -204,6 +204,62 @@ describe('LessonTaskForm — create mode', () => {
       )
     })
   })
+
+  it('submits curriculum, chapter, and homework/assessment flags when filled', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        onSubmit={onSubmit}
+      />
+    )
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
+    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'New Lesson' } })
+    fireEvent.change(screen.getByLabelText(/curriculum/i), { target: { value: 'Saxon Math 5/4' } })
+    fireEvent.change(screen.getByLabelText(/chapter/i), { target: { value: 'Lesson 12' } })
+    fireEvent.click(screen.getByLabelText(/has homework/i))
+    fireEvent.click(screen.getByLabelText(/has assessment/i))
+
+    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          curriculum: 'Saxon Math 5/4',
+          chapter: 'Lesson 12',
+          hasHomework: true,
+          hasAssessment: true,
+        })
+      )
+    })
+  })
+
+  it('omits curriculum/chapter/homework/assessment cleanly when left blank', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        onSubmit={onSubmit}
+      />
+    )
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
+    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'New Lesson' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalled()
+    })
+    const submitted = onSubmit.mock.calls[0][0]
+    expect(submitted.curriculum).toBeUndefined()
+    expect(submitted.chapter).toBeUndefined()
+    expect(submitted.hasHomework).toBeUndefined()
+    expect(submitted.hasAssessment).toBeUndefined()
+  })
 })
 
 describe('LessonTaskForm — edit mode', () => {

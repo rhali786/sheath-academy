@@ -253,6 +253,13 @@
       "when": 1784300024050,
       "tag": "0035_chilly_namorita",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1784304616660,
+      "tag": "0036_tense_secret_warriors",
+      "breakpoints": true
     }
   ]
 }

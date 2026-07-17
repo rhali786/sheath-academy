@@ -76,9 +76,9 @@
       "id": "phase-g8-p4-teaching-metadata",
       "title": "P4 — Curriculum / chapter / homework / assessment fields (schema + form + card indicators)",
       "gated": true,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
+      "status": "in_progress",
+      "model": "strong",
+      "startedAt": "2026-07-17T16:30:00.000Z",
       "completedAt": null,
       "outputs": {
         "filesChanged": [],
