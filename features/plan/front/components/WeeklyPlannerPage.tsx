@@ -10,6 +10,7 @@ import { WeekNavigator } from './WeekNavigator'
 import { ChildSubjectFilter } from './ChildSubjectFilter'
 import { WeekGrid } from './WeekGrid'
 import { WeeklyList } from './WeeklyList'
+import { WeeklyPlanner } from './WeeklyPlanner'
 import { EmptyWeekState } from './EmptyWeekState'
 import { LessonTaskForm, type LessonFormData } from './LessonTaskForm'
 import { PlannerViewToggle, type PlannerView } from './PlannerViewToggle'
@@ -129,7 +130,7 @@ export function WeeklyPlannerPage() {
       ) : (
         <div className="flex-1 overflow-auto bg-slate-50">
           <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-            {isMobile ? <WeeklyList /> : plannerView === 'matrix' ? <WeekGrid /> : <WeeklyList />}
+            {isMobile ? <WeeklyList /> : plannerView === 'matrix' ? <WeekGrid /> : <WeeklyPlanner />}
           </div>
         </div>
       )}
