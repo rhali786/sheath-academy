@@ -1,7 +1,7 @@
 {
   "plan": "docs/20260716-lesson-planner-ux-rework-g8-plan.json",
   "createdAt": "2026-07-17T15:12:38.062Z",
-  "updatedAt": "2026-07-17T15:12:38.062Z",
+  "updatedAt": "2026-07-17T01:00:00.000Z",
   "branch": "feat/lesson-planner-ux-rework-g8",
   "phases": [
     {
@@ -31,14 +31,22 @@
       "id": "phase-g8-p2-weekly-planner-component",
       "title": "P2 — Learner-grouped, lesson-centric Weekly Planner component",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T00:00:00.000Z",
+      "completedAt": "2026-07-17T00:45:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/plan/front/components/WeeklyPlanner.tsx",
+          "features/plan/front/components/WeeklyPlannerPage.tsx",
+          "features/plan/__tests__/integration/WeeklyPlanner.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/plan (28/31 suites; 3 DB-gated skipped; all passed, including new WeeklyPlanner.test.tsx)",
+          "npm test (full suite, run twice to rule out flakiness: 249/274 suites passed both times, 25 skipped [DB-gated/integration]; a ComplianceStatusCard.test.tsx failure seen on one interleaved run was confirmed pre-existing test-order flakiness in features/dashboard — unrelated to this phase, reproduced identically on a stash of this phase's changes, passes in isolation and in a clean full-suite re-run)",
+          "npm run build (bounded foreground run; type-check/lint stage completed with no new errors; failed at the known pre-existing /(shell)/about static-generation timeout per task instructions — non-blocking)"
+        ],
+        "notes": "Added features/plan/front/components/WeeklyPlanner.tsx: reads lessons/children/subjects/selectedChildIds/selectedSubjectIds from usePlanner() (same PlannerContext WeekGrid/WeeklyList already use). Groups lessons by learner (filtered to selectedChildIds and selectedSubjectIds), each learner rendered exactly once as a collapsible section (button with aria-expanded, reusing WeeklyList's day-section collapsible pattern — same rotate-180 chevron/hover/border treatment, not a new pattern). Within each learner section, lessons are nested by day (Mon-Sun, same week-start-day math copied from WeeklyList); days with zero lessons for that learner render a compact muted marker (data-testid=day-empty-<learnerId>-<dateStr>, just the day label + a dim em-dash) instead of a full card block; days with lessons render data-testid=day-lessons-<learnerId>-<dateStr>. A learner with zero lessons this week (after filters) shows a single muted 'No lessons this week' line instead of 7 empty markers. Learner spine: StudentProfile (features/lib/types.ts) does NOT have a displayColor field — only the DB/children-repository layer (db/schema.ts children.display_color) has one, and it is not plumbed through household context into the type this component receives; adding that plumbing was out of this phase's file scope (would touch features/children/server + household context), so P2 uses a deterministic hash-of-learner-id index into a small local LEARNER_SPINE_COLORS palette in WeeklyPlanner.tsx as the rail/avatar color instead. If a later phase wants the real per-learner displayColor threaded through StudentProfile, that's a scope decision for whoever owns that phase, not silently done here. Card in this phase shows subject (as an eyebrow-style label above title, informally — P3 owns the formal teaching-context-first ordering requirement/tests), title, and a status badge (same STATUS_BADGE/STATUS_LABEL color convention copied from WeeklyList.tsx, matching WeekGrid's green=completed/amber=skipped). No resourceLink indicator yet (that's explicitly P3's testsFirst item). WeeklyPlannerPage.tsx: mobile (isMobile) still renders WeeklyList unchanged; desktop 'matrix' view still renders WeekGrid unchanged; desktop 'planner' view now renders the new WeeklyPlanner instead of WeeklyList. WeekGrid.tsx, WeeklyList.tsx, and LessonTaskForm.tsx were NOT touched, per scope. No db/schema.ts or migration touched. PlannerLessonCard.tsx was NOT extracted in this phase — all card markup is still inline in WeeklyPlanner.tsx; P3's writeBack should record whether it extracts one. P3 must add: subject-before-title ordering test/enforcement, resourceLink -> paperclip indicator (only when resourceLink is set), and match the STATUS_BADGE map already established here (copy, don't reinvent)."
       },
       "failureReason": null
     },
