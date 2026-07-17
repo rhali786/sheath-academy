@@ -92,6 +92,61 @@ describe('FeedbackButton', () => {
     })
   })
 
+  it('lets the user attach an image and includes it in the submission', async () => {
+    const user = userEvent.setup()
+    render(<FeedbackButton />)
+    await user.click(screen.getByTestId('feedback-trigger'))
+    await user.click(screen.getByTestId('sentiment-good'))
+
+    const file = new File(['fake-image-bytes'], 'screenshot.png', { type: 'image/png' })
+    const input = screen.getByTestId('feedback-screenshot-input') as HTMLInputElement
+    await user.upload(input, file)
+
+    expect(screen.getByTestId('feedback-screenshot-filename')).toHaveTextContent('screenshot.png')
+
+    await user.click(screen.getByTestId('feedback-submit'))
+
+    await waitFor(() => {
+      expect(mockSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sentiment: 'good',
+          screenshotMimeType: 'image/png',
+          screenshot: expect.any(String),
+        }),
+      )
+    })
+  })
+
+  it('rejects an oversized screenshot before submission with a clear error', async () => {
+    const user = userEvent.setup()
+    render(<FeedbackButton />)
+    await user.click(screen.getByTestId('feedback-trigger'))
+    await user.click(screen.getByTestId('sentiment-good'))
+
+    const oversized = new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'big.png', { type: 'image/png' })
+    const input = screen.getByTestId('feedback-screenshot-input') as HTMLInputElement
+    await user.upload(input, oversized)
+
+    expect(screen.getByTestId('feedback-error')).toHaveTextContent(/too large/i)
+    expect(screen.queryByTestId('feedback-screenshot-filename')).not.toBeInTheDocument()
+  })
+
+  it('lets the user remove an attached screenshot before submitting', async () => {
+    const user = userEvent.setup()
+    render(<FeedbackButton />)
+    await user.click(screen.getByTestId('feedback-trigger'))
+    await user.click(screen.getByTestId('sentiment-good'))
+
+    const file = new File(['fake-image-bytes'], 'screenshot.png', { type: 'image/png' })
+    const input = screen.getByTestId('feedback-screenshot-input') as HTMLInputElement
+    await user.upload(input, file)
+    expect(screen.getByTestId('feedback-screenshot-filename')).toBeInTheDocument()
+
+    await user.click(screen.getByTestId('feedback-screenshot-remove'))
+    expect(screen.queryByTestId('feedback-screenshot-filename')).not.toBeInTheDocument()
+    expect(screen.getByTestId('feedback-screenshot-attach')).toBeInTheDocument()
+  })
+
   it('captures the page path at open time', async () => {
     const user = userEvent.setup()
     render(<FeedbackButton />)

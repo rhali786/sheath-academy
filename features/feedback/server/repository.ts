@@ -14,11 +14,24 @@ import type {
   AdminFeedbackFilters,
 } from '@/features/feedback/types'
 
+// Screenshot size cap enforced primarily at the API boundary (features/feedback/api/routes/submit.ts);
+// re-checked here as a defensive backstop so no caller can bypass it directly through the repository.
+export const MAX_FEEDBACK_SCREENSHOT_BYTES = 2 * 1024 * 1024 // ~2MB
+export const ALLOWED_FEEDBACK_SCREENSHOT_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
+
 export interface InsertFeedbackInput extends FeedbackSubmitInput {
   id: string
   userId: string | null
   householdId: string | null
   userEmail: string
+  /** Decoded screenshot bytes. Caller (API route) is responsible for base64-decoding. */
+  screenshotData?: Buffer | null
+}
+
+export interface FeedbackScreenshot {
+  data: Buffer
+  mimeType: string
+  userId: string | null
 }
 
 function rowToFeedbackRow(r: typeof userFeedback.$inferSelect, householdName: string | null = null): FeedbackRow {
@@ -32,6 +45,7 @@ function rowToFeedbackRow(r: typeof userFeedback.$inferSelect, householdName: st
     sentiment: r.sentiment as FeedbackSentiment,
     message: r.message,
     createdAt: r.createdAt.toISOString(),
+    hasScreenshot: r.screenshot != null,
     status: (r.status ?? 'submitted') as FeedbackStatus,
     featureArea: r.featureArea ?? null,
     feedbackType: (r.feedbackType ?? null) as FeedbackType | null,
@@ -51,6 +65,17 @@ function rowToFeedbackRow(r: typeof userFeedback.$inferSelect, householdName: st
 }
 
 export async function insertFeedback(input: InsertFeedbackInput): Promise<void> {
+  if (input.screenshotData) {
+    if (input.screenshotData.length > MAX_FEEDBACK_SCREENSHOT_BYTES) {
+      throw new Error(
+        `Screenshot size ${input.screenshotData.length} exceeds limit of ${MAX_FEEDBACK_SCREENSHOT_BYTES} bytes`,
+      )
+    }
+    if (!input.screenshotMimeType || !ALLOWED_FEEDBACK_SCREENSHOT_MIME_TYPES.has(input.screenshotMimeType)) {
+      throw new Error(`Screenshot MIME type ${input.screenshotMimeType ?? '(none)'} is not an allowed image type`)
+    }
+  }
+
   const db = getDb()
   await db.insert(userFeedback).values({
     id: input.id,
@@ -62,7 +87,27 @@ export async function insertFeedback(input: InsertFeedbackInput): Promise<void> 
     message: input.message ?? null,
     createdAt: new Date(),
     status: 'submitted',
+    screenshot: input.screenshotData ?? null,
+    screenshotMimeType: input.screenshotData ? (input.screenshotMimeType ?? null) : null,
   })
+}
+
+/** Fetches just the screenshot bytes + owner for a feedback row, for the download route. Never used by list views. */
+export async function getFeedbackScreenshot(id: string): Promise<FeedbackScreenshot | null> {
+  const db = getDb()
+  const rows = await db
+    .select({
+      screenshot: userFeedback.screenshot,
+      screenshotMimeType: userFeedback.screenshotMimeType,
+      userId: userFeedback.userId,
+    })
+    .from(userFeedback)
+    .where(eq(userFeedback.id, id))
+    .limit(1)
+
+  const row = rows[0]
+  if (!row || !row.screenshot || !row.screenshotMimeType) return null
+  return { data: row.screenshot, mimeType: row.screenshotMimeType, userId: row.userId }
 }
 
 export async function listFeedback(): Promise<FeedbackRow[]> {

@@ -239,6 +239,13 @@
       "when": 1784246152602,
       "tag": "0033_sad_human_torch",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1784297737303,
+      "tag": "0034_useful_vanisher",
+      "breakpoints": true
     }
   ]
 }

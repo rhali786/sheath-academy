@@ -51,6 +51,23 @@ describe('AdminFeedbackSection', () => {
     expect(screen.getAllByText(/great/i).length).toBeGreaterThan(0)
   })
 
+  it('shows a screenshot link when the row has an attached image', async () => {
+    mockList.mockResolvedValue([{ ...row, hasScreenshot: true }])
+    render(<AdminFeedbackSection />)
+    await waitFor(() => {
+      expect(screen.getByTestId('admin-feedback-screenshot-link-fb_01')).toHaveAttribute('href', '/feedback/fb_01')
+    })
+  })
+
+  it('shows no screenshot link when the row has no attached image', async () => {
+    mockList.mockResolvedValue([row])
+    render(<AdminFeedbackSection />)
+    await waitFor(() => {
+      expect(screen.getByTestId('admin-feedback-table')).toBeInTheDocument()
+    })
+    expect(screen.queryByTestId('admin-feedback-screenshot-link-fb_01')).not.toBeInTheDocument()
+  })
+
   it('shows forbidden state on 403', async () => {
     const err = Object.assign(new Error('Forbidden'), { status: 403 })
     mockList.mockRejectedValue(err)

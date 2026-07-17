@@ -35,6 +35,7 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
     changelogVersion: null,
     changelogLabel: null,
     changelogUserCredit: null,
+    hasScreenshot: false,
     ...overrides,
   }
 }
@@ -65,6 +66,24 @@ describe('getUnclassifiedFeedback', () => {
     expect(items).toEqual([])
   })
 
+  it('carries hasScreenshot through from the repository row', async () => {
+    mockListUnclassifiedFeedback.mockResolvedValue([makeRow({ hasScreenshot: true })] as never)
+
+    const items = await getUnclassifiedFeedback()
+
+    expect(items[0].hasScreenshot).toBe(true)
+  })
+
+  it('defaults hasScreenshot to false when the repository row omits it', async () => {
+    const row = makeRow()
+    delete (row as Record<string, unknown>).hasScreenshot
+    mockListUnclassifiedFeedback.mockResolvedValue([row] as never)
+
+    const items = await getUnclassifiedFeedback()
+
+    expect(items[0].hasScreenshot).toBe(false)
+  })
+
   it('handles null message', async () => {
     mockListUnclassifiedFeedback.mockResolvedValue([makeRow({ message: null })] as never)
 
@@ -80,7 +99,7 @@ describe('getUnclassifiedFeedback', () => {
 
     expect(mockListUnclassifiedFeedback).toHaveBeenCalledTimes(1)
     expect(Object.keys(items[0]).sort()).toEqual(
-      ['createdAt', 'id', 'message', 'pagePath', 'sentiment', 'userId', 'userEmail'].sort()
+      ['createdAt', 'hasScreenshot', 'id', 'message', 'pagePath', 'sentiment', 'userId', 'userEmail'].sort()
     )
   })
 })

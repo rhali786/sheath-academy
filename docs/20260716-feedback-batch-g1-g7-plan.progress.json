@@ -258,14 +258,40 @@
       "id": "phase-g7-feedback-screenshot",
       "title": "G7e — Feedback widget: attach a screenshot, stored as a blob on the feedback record",
       "gated": true,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "strong",
+      "startedAt": "2026-07-17T15:00:00.000Z",
+      "completedAt": "2026-07-17T16:10:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "db/schema.ts",
+          "db/migrations/0034_useful_vanisher.sql",
+          "db/migrations/meta/0034_snapshot.json",
+          "db/migrations/meta/_journal.json",
+          "features/feedback/types.ts",
+          "features/feedback/server/repository.ts",
+          "features/feedback/api/routes/submit.ts",
+          "features/feedback/api/routes/screenshot.ts",
+          "features/feedback/api/router.ts",
+          "features/feedback/front/components/FeedbackButton.tsx",
+          "features/feedback/front/pages/FeedbackDetailPage.tsx",
+          "features/feedback/front/components/AdminFeedbackSection.tsx",
+          "scripts/feedback-steward/feedback-requeue.ts",
+          "features/feedback/__tests__/api/routes/submit.test.ts",
+          "features/feedback/__tests__/api/routes/screenshot.test.ts",
+          "features/feedback/__tests__/api/screenshot-repository.test.ts",
+          "features/feedback/__tests__/integration/FeedbackButton.test.tsx",
+          "features/feedback/__tests__/integration/FeedbackDetailPage.test.tsx",
+          "features/feedback/__tests__/integration/AdminFeedbackSection.test.tsx",
+          "scripts/feedback-steward/__tests__/feedback-requeue.test.ts",
+          "scripts/feedback-steward/__tests__/feedback-dedupe.test.ts (fixture-only fix, unrelated pre-existing sentiment-type error untouched)"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/feedback scripts/feedback-steward (26 of 29 suites passed, 3 skipped/db-gated, 261 passed / 20 skipped)",
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" (247 of 272 suites passed, 25 skipped/db-gated, 2169 passed / 201 skipped)",
+          "npx tsc --noEmit (no NEW errors introduced anywhere in the repo — diffed the full error list before/after this phase's changes line-by-line; every remaining feedback/feedback-steward error is a pre-existing, unrelated one documented below)"
+        ],
+        "notes": "DB TARGET CONFIRMED per top-level dbMigrationPolicy: resolved DATABASE_URL_PROD host to dpg-d85140f7f7vs73fvdqhg-a.oregon-postgres.render.com (printed and verified equal to the required host BEFORE running any migrate command) via a standalone Node/dotenv check, matching the same host phase-g3 confirmed earlier in this batch.\n\nSCHEMA: added user_feedback.screenshot (bytea, nullable, via the existing `bytea` customType already used by message_attachments/portfolio_evidence_attachments) and user_feedback.screenshot_mime (text, nullable) to db/schema.ts.\n\nINVARIANT CHECK — pre-migrate: `npm run db:generate` produced exactly ONE new migration, 0034_useful_vanisher.sql (two ALTER TABLE ADD COLUMN statements, no FK, no composite-unique ordering concern). Re-ran `npm run db:generate` immediately after generating it and got 'No schema changes, nothing to migrate' — confirms schema.ts and the migrations dir agree, no drift from any earlier phase in this batch (0033 from phase-g3 was already applied and accounted for). `npm run db:status:prod` before migrating showed repo journal 35 migrations (0000..0034), prod applied 34, exactly 1 pending (0034) — no pre-existing gap.\n\nMIGRATION APPLIED: ran `npm run db:migrate:prod` (scripts/migrate-prod.ts / applyProdDatabaseUrl()) against the confirmed prod host — '[OK] migrations applied successfully!' with two idempotent NOTICEs (drizzle schema / __drizzle_migrations table already exist, expected). INVARIANT CHECK — post-migrate: re-ran `npm run db:status:prod`: repo journal 35, prod applied 35, pending 0 — no gap. Migration 0034_useful_vanisher is now the latest applied migration on prod.\n\nSIZE CAP: ~2MB (MAX_FEEDBACK_SCREENSHOT_BYTES = 2*1024*1024), enforced in TWO places per the plan's 'at the API boundary with a clear rejection error' instruction: (1) features/feedback/api/routes/submit.ts decodes the base64 payload and returns 400 with a clear message ('Screenshot is too large — the limit is 2MB') before ever calling the repository; (2) features/feedback/server/repository.ts's insertFeedback() re-checks the same cap as a defensive backstop (throws Error) so no other caller can bypass it by going around the API route — mirrors the existing MAX_ATTACHMENT_BYTES pattern in features/messaging/server/repository.ts (which this phase's implementation was modeled on, including the ALLOWED_*_MIME_TYPES allow-list of image/png, image/jpeg, image/webp, image/gif). Client-side (FeedbackButton.tsx) also validates size/type at file-select time so the user gets instant feedback before even opening a network request.\n\nDOWNLOAD/SURFACE DESIGN: rather than embedding base64 image bytes inside the FeedbackRow JSON (which would bloat every list/detail response), added a dedicated binary-serving route GET /api/feedback/:id/screenshot (features/feedback/api/routes/screenshot.ts, features/feedback/server/repository.ts's new getFeedbackScreenshot()) that mirrors the existing features/messaging/api/routes/attachments.ts pattern exactly (owner-or-admin authorization via isAppAdmin, same 401/403/404 shape). FeedbackRow gained a lightweight `hasScreenshot?: boolean` flag (left OPTIONAL, not required, specifically to avoid a wide breaking change across every existing FeedbackRow test fixture in this feature — verified via tsc --noEmit that this choice introduces zero new type errors anywhere).\n\nADMIN/STEWARD VIEW EXTENSION (per plan's 'check whether admin view should be extended, minimal only'): AdminFeedbackSection.tsx (the existing admin feedback table used by AdminFeedbackPage) already existed, so it was minimally extended — added one new 'Attachment' column showing a '📎 View' link to /feedback/:id (the existing FeedbackDetailPage, which is reachable by admins per userDetail.ts's owner-or-admin check) when hasScreenshot is true, else an em-dash. FeedbackDetailPage.tsx itself (used by both the submitting user and admins) was extended to render the image inline via <img src=/api/feedback/:id/screenshot> wrapped in a link to open it full-size, only when hasScreenshot is true — no new page was built. scripts/feedback-steward/feedback-requeue.ts's FeedbackRequeueItem gained a `hasScreenshot: boolean` field so the daily classification pipeline is aware an image was attached (the image bytes themselves are intentionally NOT embedded in the classify payload — a human/admin fetches them via the same download route if needed). No other steward script (feedback-classify skill, run-classify.ts, feedback-dedupe.ts) needed changes beyond consuming the new field type-transparently.\n\nWIDGET UX: FeedbackButton.tsx adds a hidden file input + 'Attach a screenshot (optional)' toggle button; on selection it validates MIME type and size client-side with an inline error, shows the filename with a Remove button, and on submit reads the file via FileReader.readAsDataURL, strips the data-URI prefix, and sends the raw base64 + MIME type alongside the existing sentiment/message/pagePath fields. Existing no-screenshot submission flow is unchanged (screenshot/screenshotMimeType are optional fields on FeedbackSubmitInput; the API route branches only when `screenshot !== undefined`).\n\nSCOPE NOTE: two test-fixture files outside features/feedback/ (scripts/feedback-steward/__tests__/feedback-dedupe.test.ts and feedback-requeue.test.ts) needed a one-line `hasScreenshot: false` addition to their makeRequeueItem/makeRow helpers because FeedbackRequeueItem's new field is required (unlike FeedbackRow's, this one has no back-compat reason to be optional since it's produced entirely by this phase's own script, not consumed by dozens of pre-existing UI fixtures) — confirmed via full-repo tsc diff that this was the only fixture-level fallout, and confirmed the already-existing, unrelated 'sentiment: string not assignable to FeedbackSentiment' errors in feedback-dedupe.test.ts and run-classify.test.ts are pre-existing (present in the tsc output before this phase's changes too, same line-shifted-by-one positions) and were left untouched, out of scope.\n\n`npm run build` (foreground, bounded ~150s): compiled with the same known pre-existing jose/Edge-runtime warnings as every prior phase, 'Linting and checking validity of types' completed cleanly (no errors), then failed identically to every prior phase in this batch (phase-0/g1/g4/g5/g6/g3/g2/g7a/g7b/g7c/g7d) at static generation with the /(shell)/about DB-handshake timeout ('Next.js build worker exited with code: 143') — confirmed unrelated to this phase's scope by the type-check stage passing first, consistent with every other phase's documented finding. Not treated as a phase-blocking failure per the orchestrator's explicit instruction.\n\nNo commit created yet at write-back time — committing immediately after this write-back per the worker contract."
       },
       "failureReason": null
     }

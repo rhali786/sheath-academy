@@ -13,22 +13,67 @@ const SENTIMENTS: { value: FeedbackSentiment; emoji: string; label: string }[] =
   { value: 'great',emoji: '😄', label: 'Great'},
 ]
 
+const MAX_SCREENSHOT_BYTES = 2 * 1024 * 1024 // ~2MB — mirrors the API boundary cap
+const ALLOWED_SCREENSHOT_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
+
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      // Strip the "data:<mime>;base64," prefix — the API expects raw base64.
+      const commaIndex = result.indexOf(',')
+      resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result)
+    }
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read file'))
+    reader.readAsDataURL(file)
+  })
+}
+
 export function FeedbackButton() {
   const [open, setOpen] = useState(false)
   const [pagePath, setPagePath] = useState('')
   const [sentiment, setSentiment] = useState<FeedbackSentiment | null>(null)
   const [message, setMessage] = useState('')
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null)
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
   const panelRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   function handleOpen() {
     setPagePath(window.location.pathname)
     setSentiment(null)
     setMessage('')
+    setScreenshotFile(null)
     setStatus('idle')
     setErrorMsg('')
     setOpen(true)
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!ALLOWED_SCREENSHOT_MIME_TYPES.has(file.type)) {
+      setErrorMsg('Screenshot must be a PNG, JPEG, WebP, or GIF image')
+      setStatus('error')
+      e.target.value = ''
+      return
+    }
+    if (file.size > MAX_SCREENSHOT_BYTES) {
+      setErrorMsg('Screenshot is too large — the limit is 2MB')
+      setStatus('error')
+      e.target.value = ''
+      return
+    }
+    setErrorMsg('')
+    setStatus('idle')
+    setScreenshotFile(file)
+  }
+
+  function handleRemoveScreenshot() {
+    setScreenshotFile(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   function handleClose() {
@@ -49,7 +94,19 @@ export function FeedbackButton() {
     if (!sentiment) return
     setStatus('submitting')
     try {
-      await submitFeedback({ pagePath, sentiment, message: message.trim() || undefined })
+      let screenshot: string | undefined
+      let screenshotMimeType: string | undefined
+      if (screenshotFile) {
+        screenshot = await readFileAsBase64(screenshotFile)
+        screenshotMimeType = screenshotFile.type
+      }
+      await submitFeedback({
+        pagePath,
+        sentiment,
+        message: message.trim() || undefined,
+        screenshot,
+        screenshotMimeType,
+      })
       setStatus('success')
       setTimeout(() => setOpen(false), 1500)
     } catch (err) {
@@ -140,6 +197,41 @@ export function FeedbackButton() {
                   className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-forest-400"
                   data-testid="feedback-message"
                 />
+
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    data-testid="feedback-screenshot-input"
+                  />
+                  {screenshotFile ? (
+                    <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600">
+                      <span className="truncate" data-testid="feedback-screenshot-filename">
+                        📎 {screenshotFile.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleRemoveScreenshot}
+                        className="text-slate-400 hover:text-slate-600"
+                        data-testid="feedback-screenshot-remove"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-xs text-slate-500 underline hover:text-slate-700"
+                      data-testid="feedback-screenshot-attach"
+                    >
+                      Attach a screenshot (optional)
+                    </button>
+                  )}
+                </div>
 
                 {status === 'error' && (
                   <p className="text-xs text-red-600" role="alert" data-testid="feedback-error">

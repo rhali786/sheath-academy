@@ -984,6 +984,11 @@ export const userFeedback = pgTable(
     // changelog_version/label/user_credit columns remain in the DB for
     // backward compat but are no longer written to by the steward.
     changelogEntryId: text('changelog_entry_id').references(() => changelogEntries.id),
+
+    // Optional user-attached screenshot. Nullable — most feedback has none.
+    // Size-capped (~2MB) at the API boundary (features/feedback/api/routes/submit.ts).
+    screenshot: bytea('screenshot'),
+    screenshotMimeType: text('screenshot_mime'),
   },
   (t) => [
     index('user_feedback_created_at_idx').on(t.createdAt),
