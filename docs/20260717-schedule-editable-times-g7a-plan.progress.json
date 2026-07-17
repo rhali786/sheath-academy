@@ -1,0 +1,23 @@
+{
+  "plan": "docs/20260717-schedule-editable-times-g7a-plan.json",
+  "createdAt": "2026-07-17T14:49:18.657Z",
+  "updatedAt": "2026-07-17T14:49:18.657Z",
+  "branch": "fix/feedback-batch-g1-g7",
+  "phases": [
+    {
+      "id": "phase-g7a-editable-schedule-times",
+      "title": "G7a — Persist and honor an explicit start/end time override on LessonTask, editable from the schedule",
+      "gated": true,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    }
+  ]
+}
