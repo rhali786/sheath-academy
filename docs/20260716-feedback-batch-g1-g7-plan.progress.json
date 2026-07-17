@@ -1,7 +1,7 @@
 {
   "plan": "docs/20260716-feedback-batch-g1-g7-plan.json",
   "createdAt": "2026-07-16T22:49:50.530Z",
-  "updatedAt": "2026-07-17T13:55:00.000Z",
+  "updatedAt": "2026-07-17T14:25:00.000Z",
   "branch": "fix/feedback-batch-g1-g7",
   "phases": [
     {
@@ -209,14 +209,22 @@
       "id": "phase-g7-dashboard-inline-edit",
       "title": "G7c — Dashboard: edit today's schedule item via inline popup",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T14:00:00.000Z",
+      "completedAt": "2026-07-17T14:25:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/dashboard/front/components/EditLessonModal.tsx",
+          "features/dashboard/front/components/DoToday.tsx",
+          "features/dashboard/__tests__/integration/components/DoToday.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/dashboard (24 suites / 157 passed)",
+          "npm test (245 of 269 suites passed, 24 skipped/db-gated, 2149 passed / 198 skipped)",
+          "npx tsc --noEmit (no new errors under features/dashboard; the 2 pre-existing DashboardContextType 'tasks' excess-property errors in ChildSelector.test.tsx and this phase's DoToday.test.tsx were already present before this phase and are unrelated to this phase's change — confirmed identical error also exists untouched in ChildSelector.test.tsx)"
+        ],
+        "notes": "Prior behavior confirmed by reading DoToday.tsx first: the Today item's edit (pencil) icon called router.push('/lessons?editId=' + id), navigating away from the Dashboard to the Lessons page (which then opened LessonTaskForm inline via LessonTaskList's editingLessonId handling). Replaced with a modal: new features/dashboard/front/components/EditLessonModal.tsx wraps the existing LessonTaskForm (features/plan/front/components/LessonTaskForm.tsx, unmodified/reused as instructed) inside a dialog, copying the SubjectEditDialog.tsx modal pattern (features/subjects/front/components/SubjectEditDialog.tsx: fixed inset-0 + bg-black/40 overlay, role=dialog/aria-modal, click-outside-to-close) since it was the closest existing 'edit record in a popup' pattern in the codebase (no shared/generic Modal component exists to reuse). LessonTaskForm itself needed NO changes to work inside the modal — its editingLesson/onSubmit/onCancel props already fit directly. EditLessonModal fetches the lesson via plannerApi.getLesson(id) on open and household children/subjects via useHousehold() (same context LessonsPage already uses), then calls plannerApi.updateLesson(id, data) on submit — the same update path LessonsPage/LessonTaskList already use, so behavior (validation, persistence) is identical to the existing Lessons-page edit flow, just presented as a Dashboard-local popup instead of a full navigation. DoToday.tsx: added editingLessonId state (opens the modal instead of navigating) and a refreshCount state that is passed as TodayLessonCard's `key` so a successful save forces TodayLessonCard to remount and re-fetch (TodayLessonCard owns its own internal fetch with no external refresh callback, and is out of this phase's fileScope — features/dashboard/front/ only — so it was left unmodified; the key-remount approach avoids touching features/plan/front/components/TodayLessonCard.tsx while still getting a fresh fetch after edits). Note: this modal approach is an explicit, plan-documented exception to ui-style-guide §1's default 'lesson/record cards edit inline, not via a bespoke modal' rule — the plan's own phase title and testsFirst explicitly require a popup/modal for this specific Dashboard affordance, which constitutes the 'plan documents an approved exception' condition §1 requires. Rewrote the stale DoToday.test.tsx 'edit lesson deep-link' describe block (previously asserted router.push('/lessons?editId=...'), which is no longer the behavior) into a new 'DoToday edit lesson inline popup (G7c)' block with 2 tests: (1) clicking the edit icon opens data-testid=edit-lesson-modal with the lesson's current title prefilled, and no modal is present before the click; (2) editing the title and clicking Save changes calls plannerApi.updateLesson(lessonId, {title: ...}), closes the modal, and the Dashboard ('Today —' heading) is still rendered throughout (never navigated away). Also added a useHousehold mock to the test file (jest.mock('@/features/household/front/context', ...)) since EditLessonModal now needs it. `npm run build`: bounded 90s foreground run per orchestrator instruction — compiled, 'Linting and checking validity of types' completed cleanly, then failed identically to every prior phase (phase-0/g1/g4/g5/g6/g3/g2/g7b) at static-generation with 'Next.js build worker exited with code: 143' partway through '(16/34)' pages — this is the same known pre-existing sandbox DB-connectivity limitation at /(shell)/about, not caused by this phase's 3-file scope. Committed as a8b5fee."
       },
       "failureReason": null
     },
