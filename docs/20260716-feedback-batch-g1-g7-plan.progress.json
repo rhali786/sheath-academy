@@ -179,14 +179,21 @@
       "id": "phase-g7-learning-time-quickstart",
       "title": "G7b — Learning-time: list courses with duration + one-click start",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T02:40:00.000Z",
+      "completedAt": "2026-07-17T03:05:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/learning-time/front/components/NowCard.tsx",
+          "features/learning-time/__tests__/integration/LearningTimePage.test.tsx"
+        ],
+        "testsRun": [
+          "npm test -- features/learning-time (4 suites / 72 passed, 7 skipped/db-gated)",
+          "npm test (242 suites / 2125 tests passed, 24 suites/193 tests skipped/db-gated)",
+          "npx tsc --noEmit (no new errors under features/learning-time)"
+        ],
+        "notes": "SubjectCourse (features/subjects/types.ts) has no course-level duration field, so per the plan's documented fallback, duration is derived from the course's next not-started lesson's estimatedDuration bucket (features/plan/types.ts LessonDuration: 15min/30min/45min/1hr/custom), shown as e.g. '30 min'; when no open lesson exists for that course the badge reads 'No duration set' — this is a real, honest fallback, not a placeholder value. Implementation lives entirely in NowCard.tsx (LearningTimePage.tsx was NOT changed — it already passed the needed allSubjects prop through unchanged): added a new effect that fetches ALL of the learner's open lessons unfiltered by course (plannerApi.getLessons(undefined, [learnerId], undefined)), independent of the page-level course-select filter, so the quick-start list always covers every course the learner is enrolled in regardless of what's selected in the top dropdown. Added quickStartCourses (allSubjects filtered by learnerIds.includes(learnerId), guarding learnerIds ?? [] since some existing test fixtures construct partial SubjectCourse objects without it) and handleQuickStart(course), which calls learningTimeApi.createSession({ learnerId, timeChannelType: 'stopwatch', subjectId: course.id }) followed by transition(...,{action:'start'}) directly — no 'configuring' screen is ever shown, satisfying the 'one click, no additional navigation or form-filling' requirement. Rendered only in the idle (!session) NowCard state as a 'Quick start by course' list below the existing 'Start session' button, each row: course name, duration badge (data-testid=quick-start-duration-<courseId>), Start button (data-testid=quick-start-course-<courseId>). Existing multi-step config flow (Start session -> configure -> Start) is untouched and still works as before — this is purely additive. Test file used: the existing features/learning-time/__tests__/integration/LearningTimePage.test.tsx (fileScope for this phase didn't list a test file explicitly, unlike other phases in this plan, but testsFirst required an integration test and this is the established convention/location for LearningTimePage+NowCard integration coverage) — added a new 'LearningTimePage — quick start by course (G7b)' describe block with 2 tests (duration display incl. the no-duration fallback; one-click start creates+starts a stopwatch session and never shows now-card-config). npm run build reproduces the same known pre-existing sandbox DB-connectivity failure documented by phase-0/g1/g4/g5 (static generation of /(shell)/about hangs on the Postgres wire-protocol handshake, worker exits code 143) — the build got through 'Linting and checking validity of types' cleanly before hitting that unrelated stage, confirming this phase's TypeScript is sound. Committed as 26d235f."
       },
       "failureReason": null
     },
