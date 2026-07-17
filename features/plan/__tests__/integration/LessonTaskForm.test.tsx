@@ -391,7 +391,7 @@ describe('LessonTaskForm — phase-1 date terminology', () => {
     render(
       <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
     )
-    expect(screen.getByText(/lesson can be completed any day from/i)).toBeInTheDocument()
+    expect(screen.getByText(/span multiple days/i)).toBeInTheDocument()
   })
 
   it('submits plannedStartDate and dueDate with new labels', async () => {
@@ -611,6 +611,29 @@ describe('LessonTaskForm — off-day (household schoolDays) awareness', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /dismiss off-day warning/i }))
     expect(screen.queryByText(/off day/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('LessonTaskForm — multi-day span clarity (item 3)', () => {
+  it('states the multi-day span behavior in plain language, not just field presence', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    expect(
+      screen.getByText(/span multiple days.*appear every day from/i)
+    ).toBeInTheDocument()
+  })
+
+  it('"This week (Mon–Fri)" quick-pick sets plannedStartDate/dueDate to that week\'s Monday–Friday range', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    // 2026-05-13 is a Wednesday; its school week runs Monday 2026-05-11 – Friday 2026-05-15
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-13' } })
+    fireEvent.click(screen.getByRole('button', { name: /this week \(mon.{0,3}fri\)/i }))
+
+    expect((screen.getByLabelText(/available from/i) as HTMLInputElement).value).toBe('2026-05-11')
+    expect((screen.getByLabelText(/due date/i) as HTMLInputElement).value).toBe('2026-05-15')
   })
 })
 

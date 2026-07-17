@@ -43,14 +43,26 @@
       "id": "phase-g9-item3-multi-day-span-clarity",
       "title": "Item 3 — Relabel/clarify multi-day lesson span in LessonTaskForm + quick-pick + Dashboard Today-card consistency fix",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T00:35:00.000Z",
+      "completedAt": "2026-07-17T01:15:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/plan/front/components/LessonTaskForm.tsx",
+          "features/plan/front/components/TodayLessonCard.tsx",
+          "features/plan/__tests__/integration/LessonTaskForm.test.tsx",
+          "features/plan/__tests__/integration/TodayLessonCard.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/plan/__tests__/integration/LessonTaskForm.test.tsx features/plan/__tests__/integration/TodayLessonCard.test.tsx features/plan/__tests__/integration/WeekGrid.test.tsx features/plan/__tests__/integration/WeeklyList.test.tsx — 4 suites passed, 110 passed",
+          "npx jest features/plan (via npm test -- features/plan pattern) — 29 of 32 suites passed (3 pre-existing DB-gated suites skipped), 316 passed",
+          "npx jest features/dashboard/__tests__/integration/components/DoToday.test.tsx (TodayLessonCard's dashboard consumer) — 1 suite passed, 6 passed, confirming no regression from the filter-predicate change",
+          "npm test (full mocked suite, integration dir excluded per jest.config.js) — 250 suites passed, 2221 passed",
+          "npx tsc --noEmit -p tsconfig.json — 85 pre-existing errors, identical count before and after this phase's changes (confirmed via git stash diff); the 2 errors that do land inside LessonTaskForm.test.tsx (SubjectCourseCategory 'Islamic' literal, missing learnerIds on a Quran-category fixture) are pre-existing fixture-typing issues untouched by this phase's edits, not newly introduced",
+          "npm run build — started under a bounded foreground timeout per instructions; type-check step (tsc) already confirmed clean (no new errors) so the build result is treated as non-blocking per the explicit environment guidance about the known pre-existing /(shell)/about static-generation failure; not chased further to avoid violating the no-monitor/no-poll instruction"
+        ],
+        "notes": "Chose the 'always-visible with clearer copy' variant from decided-design option 1 (not toggle+reveal) — kept the existing two <input type=\"date\"> fields and their 'Available from'/'Due date' labels completely unchanged (required: an existing regression test explicitly asserts 'Available from' is present AND 'Start date' is absent, so relabeling the field itself was out). Only the helper paragraph below the date grid changed, from mechanism-first ('Lesson can be completed any day from Available-from through Due-date') to outcome-first ('Setting both dates makes this lesson span multiple days — it will appear every day from Available-from through Due-date, for example Monday through Friday for a lesson that runs all week'). Updated the one pre-existing test that asserted the old copy verbatim, plus added two new tests: one asserting the outcome-first copy is present (discoverability), one exercising a new 'This week (Mon–Fri)' quick-pick button that sets plannedStartDate to that Monday and dueDate to that Friday of the current due-date's week (pure client-side date math, no new field, no API change). The off-day warning box from item 2 (role=status, dismissible, keyed off dueDate/plannedStartDate changes) sits immediately below this block and was left completely untouched — verified by re-running the full 'off-day (household schoolDays) awareness' describe block, all still green. TodayLessonCard.tsx: swapped both filter sites (the internal-fetch path at the old line 62 and the externalLessons path at the old line 81) from `l.dueDate === today` to `lessonSpansDate(l, today)`, imported from features/plan/utils/lessonCompletionWindow.ts (pre-existing, tested utility — no new file). Pure predicate swap, no other behavior change: loading/error/empty states, optimistic Mark-done/Skip, child-name chips, and the mondayOfWeek week-fetch range are all untouched. Regression-tested that a single-day lesson (no plannedStartDate) still only appears on its own due date, since lessonSpansDate degrades to dueDate===dateStr in that case. WeekGrid.test.tsx ('renders window lesson on intermediate days, not only due date') and WeeklyList.test.tsx ('shows window lesson on days inside the completion window', asserting the card appears on both Monday and Wednesday of a Mon–Wed window) were verified (not assumed) to already adequately cover the '3-day span renders in matrix/list' acceptance criterion — per the plan's own instruction to verify existing fixtures before adding new ones, no new WeekGrid/WeeklyList tests were added. Did not touch db/schema.ts, LessonTask type, or any server/repository file — this was a pure UI-layer (LessonTaskForm.tsx, TodayLessonCard.tsx) change as scoped."
       },
       "failureReason": null
     },

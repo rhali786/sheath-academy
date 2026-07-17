@@ -90,6 +90,29 @@ function dateStrDayOfWeek(dateStr: string): number {
   return new Date(`${dateStr}T00:00:00`).getDay()
 }
 
+function toDateStr(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
+}
+
+/** Monday of the school week containing dateStr. */
+function mondayOfSchoolWeek(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`)
+  const dayOfWeek = d.getDay()
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+  d.setDate(d.getDate() - daysFromMonday)
+  return toDateStr(d)
+}
+
+/** Friday of the school week containing dateStr. */
+function fridayOfSchoolWeek(dateStr: string): string {
+  const monday = new Date(`${mondayOfSchoolWeek(dateStr)}T00:00:00`)
+  monday.setDate(monday.getDate() + 4)
+  return toDateStr(monday)
+}
+
 export function LessonTaskForm({
   children,
   subjects,
@@ -142,6 +165,12 @@ export function LessonTaskForm({
   useEffect(() => {
     setOffDayWarningDismissed(false)
   }, [dueDate, plannedStartDate])
+
+  function applyThisWeekSpan() {
+    const base = dueDate || todayLocal()
+    setPlannedStartDate(mondayOfSchoolWeek(base))
+    setDueDate(fridayOfSchoolWeek(base))
+  }
 
   function toggleChild(id: string) {
     setSelectedChildIds(prev =>
@@ -304,9 +333,18 @@ export function LessonTaskForm({
           />
         </div>
       </div>
-      <p className="text-xs text-slate-500 -mt-2">
-        Lesson can be completed any day from &lsquo;Available from&rsquo; through &lsquo;Due date&rsquo;.
-      </p>
+      <div className="-mt-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-slate-500">
+          Setting both dates makes this lesson span multiple days — it will appear every day from &lsquo;Available from&rsquo; through &lsquo;Due date&rsquo;, for example Monday through Friday for a lesson that runs all week.
+        </p>
+        <button
+          type="button"
+          onClick={applyThisWeekSpan}
+          className="text-xs font-medium text-forest-700 hover:text-forest-900 underline underline-offset-2 whitespace-nowrap"
+        >
+          This week (Mon–Fri)
+        </button>
+      </div>
       {showOffDayWarning && (
         <div role="status" className="flex items-start justify-between gap-2 -mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           <span>
