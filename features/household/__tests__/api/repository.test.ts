@@ -9,12 +9,22 @@
 const hasDb = !!process.env.DATABASE_URL
 const itDb = hasDb ? it : it.skip
 
-import { upsertUserByEmail, upsertHouseholdForUser, getHouseholdForUser, addMember, listMembers } from '../../server/repository'
+import {
+  upsertUserByEmail,
+  upsertHouseholdForUser,
+  getHouseholdForUser,
+  addMember,
+  listMembers,
+  getMembership,
+  deactivateMember,
+  reactivateMember,
+} from '../../server/repository'
 
 const TS = Date.now()
 const testEmail = `repo-test-${TS}@sheath.test`
 const teacherEmail1 = `repo-teacher1-${TS}@sheath.test`
 const teacherEmail2 = `repo-teacher2-${TS}@sheath.test`
+const learnerLoginEmail = `repo-learner-login-${TS}@sheath.test`
 
 afterAll(async () => {
   if (!hasDb) return
@@ -25,7 +35,7 @@ afterAll(async () => {
   const testUsers = await db
     .select()
     .from(users)
-    .where(inArray(users.email, [testEmail, teacherEmail1, teacherEmail2]))
+    .where(inArray(users.email, [testEmail, teacherEmail1, teacherEmail2, learnerLoginEmail]))
   const ids = testUsers.map(u => u.id)
   if (ids.length > 0) {
     await db.delete(householdMembers).where(inArray(householdMembers.userId, ids))
@@ -101,5 +111,50 @@ describe('household teacher role', () => {
     const members = await listMembers(household.id)
     const teacherMembers = members.filter(m => m.role === 'teacher')
     expect(teacherMembers.length).toBeGreaterThanOrEqual(1)
+  })
+})
+
+describe('household learner role + membership deactivation (G3)', () => {
+  itDb('addMember(existingHouseholdId, userId, "learner") attaches to the SAME household — no new household row is created', async () => {
+    const owner = await upsertUserByEmail(teacherEmail1, 'Owner')
+    const household = await upsertHouseholdForUser(owner.id, 'Learner Login Household')
+    const learnerUser = await upsertUserByEmail(learnerLoginEmail, 'Learner Credential User')
+
+    const householdCountBefore = (await getHouseholdForUser(learnerUser.id)) // learner has no own household
+    expect(householdCountBefore).toBeNull()
+
+    const membership = await addMember(household.id, learnerUser.id, 'learner')
+    expect(membership.role).toBe('learner')
+    expect(membership.householdId).toBe(household.id)
+
+    // Still no household row owned by the learner user — confirms no new household was created
+    const householdForLearner = await getHouseholdForUser(learnerUser.id)
+    expect(householdForLearner).toBeNull()
+  })
+
+  itDb('new memberships default to isActive=true', async () => {
+    const owner = await upsertUserByEmail(teacherEmail1)
+    const household = await upsertHouseholdForUser(owner.id)
+    const learnerUser = await upsertUserByEmail(learnerLoginEmail)
+    await addMember(household.id, learnerUser.id, 'learner')
+    const membership = await getMembership(household.id, learnerUser.id)
+    expect(membership!.isActive).toBe(true)
+  })
+
+  itDb('deactivateMember sets isActive=false without deleting the row; reactivateMember restores it', async () => {
+    const owner = await upsertUserByEmail(teacherEmail1)
+    const household = await upsertHouseholdForUser(owner.id)
+    const learnerUser = await upsertUserByEmail(learnerLoginEmail)
+    await addMember(household.id, learnerUser.id, 'learner')
+
+    const deactivated = await deactivateMember(household.id, learnerUser.id)
+    expect(deactivated!.isActive).toBe(false)
+
+    const stillPresent = await getMembership(household.id, learnerUser.id)
+    expect(stillPresent).not.toBeNull()
+    expect(stillPresent!.isActive).toBe(false)
+
+    const reactivated = await reactivateMember(household.id, learnerUser.id)
+    expect(reactivated!.isActive).toBe(true)
   })
 })

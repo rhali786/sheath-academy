@@ -100,7 +100,10 @@ export const householdMembers = pgTable(
     id: text('id').primaryKey(),
     householdId: text('household_id').notNull().references(() => households.id, { onDelete: 'cascade' }),
     userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-    role: text('role').notNull().default('member'), // 'owner' | 'member'
+    role: text('role').notNull().default('member'), // 'owner' | 'member' | 'teacher' | 'learner'
+    // Deactivated (not deleted) when a household disables learner login — see
+    // features/household/server/repository.ts deactivateMember/reactivateMember.
+    isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),
   },
@@ -141,11 +144,22 @@ export const learners = pgTable(
     id: text('id').primaryKey(),
     householdId: text('household_id').notNull().references(() => households.id),
     name: text('name').notNull(),
+    // firstName/lastName are the canonical source for `name` (derived display/report
+    // value = firstName + ' ' + lastName). Nullable for backfill safety on legacy rows.
+    firstName: text('first_name'),
+    lastName: text('last_name'),
+    dob: date('dob'),
     displayColor: text('display_color'),
     gradeLevel: text('grade_level'),
     isActive: boolean('is_active').notNull().default(true),
     archivedAt: timestamp('archived_at'),
     sortOrder: integer('sort_order').notNull().default(0),
+    // Nullable — set only when the household enables "Allow learner to sign in".
+    // Points at the credential user created for the learner (see
+    // features/auth/server/repository.ts createLearnerCredentialUser). Disabling
+    // login deactivates the credential/membership rather than clearing this link,
+    // so re-enabling can detect "previously had login" vs "never had login".
+    userId: text('user_id').references(() => users.id),
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),
   },

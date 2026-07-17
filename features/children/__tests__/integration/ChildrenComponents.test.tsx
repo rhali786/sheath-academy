@@ -245,12 +245,30 @@ describe('ChildForm — Wave 7 FB-002', () => {
     const toggle = screen.getByLabelText(/Allow learner to sign in/i)
     fireEvent.click(toggle)
     expect(screen.getByLabelText(/Username/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/Password/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^Password/i)).toBeInTheDocument()
   })
 
   test('shows helper text about reports and transcripts', () => {
     render(<ChildForm householdId="workspace_test" onSubmit={onSubmit} onCancel={onCancel} />)
     expect(screen.getByText(/reports, transcripts/i)).toBeInTheDocument()
+  })
+
+  test('edit mode pre-fills firstName/lastName/dob from stored values (not blank)', () => {
+    render(<ChildForm householdId="workspace_test" child={profileWithFullName} onSubmit={onSubmit} onCancel={onCancel} />)
+    expect(screen.getByLabelText(/First name/i)).toHaveValue('Adam')
+    expect(screen.getByLabelText(/Last name/i)).toHaveValue('Al-Rashid')
+    expect(screen.getByLabelText(/Date of birth/i)).toHaveValue('2015-03-10')
+  })
+
+  test('clicking the eye icon toggles the password input from type=password to type=text and reveals the typed value', () => {
+    render(<ChildForm householdId="workspace_test" child={profileWithFullName} onSubmit={onSubmit} onCancel={onCancel} />)
+    const passwordInput = screen.getByLabelText(/^Password/i) as HTMLInputElement
+    expect(passwordInput.type).toBe('password')
+    fireEvent.click(screen.getByRole('button', { name: /show password/i }))
+    expect(passwordInput.type).toBe('text')
+    expect(passwordInput).toHaveValue(profileWithFullName.password)
+    fireEvent.click(screen.getByRole('button', { name: /hide password/i }))
+    expect(passwordInput.type).toBe('password')
   })
 })
 

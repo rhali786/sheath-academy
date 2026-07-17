@@ -6,7 +6,7 @@ export type UserRow = typeof users.$inferSelect
 export type HouseholdRow = typeof households.$inferSelect
 export type HouseholdMemberRow = typeof householdMembers.$inferSelect
 export type HouseholdInvitationRow = typeof householdInvitations.$inferSelect
-export type MembershipRole = 'owner' | 'member' | 'teacher'
+export type MembershipRole = 'owner' | 'member' | 'teacher' | 'learner'
 
 export interface HouseholdMembership {
   householdId: string
@@ -184,6 +184,30 @@ export async function removeMember(householdId: string, userId: string): Promise
   await getDb()
     .delete(householdMembers)
     .where(and(eq(householdMembers.householdId, householdId), eq(householdMembers.userId, userId)))
+}
+
+/**
+ * Deactivates (does not delete) a membership row — used when a household
+ * disables "Allow learner to sign in" for a learner's linked credential user.
+ * The row and its history remain queryable; isActive=false is the gate.
+ */
+export async function deactivateMember(householdId: string, userId: string): Promise<HouseholdMemberRow | null> {
+  const result = await getDb()
+    .update(householdMembers)
+    .set({ isActive: false, updatedAt: new Date() })
+    .where(and(eq(householdMembers.householdId, householdId), eq(householdMembers.userId, userId)))
+    .returning()
+  return result[0] ?? null
+}
+
+/** Reactivates a previously deactivated membership row. */
+export async function reactivateMember(householdId: string, userId: string): Promise<HouseholdMemberRow | null> {
+  const result = await getDb()
+    .update(householdMembers)
+    .set({ isActive: true, updatedAt: new Date() })
+    .where(and(eq(householdMembers.householdId, householdId), eq(householdMembers.userId, userId)))
+    .returning()
+  return result[0] ?? null
 }
 
 /** Returns all membership rows for a household, including user identity. */
