@@ -2,6 +2,7 @@
   "version": 1,
   "planMarkdownPath": "docs/20260716-feedback-batch-g1-g7-plan.md",
   "branch": "fix/feedback-batch-g1-g7",
+  "dbMigrationPolicy": "DECIDED 2026-07-17: the dev Postgres instance (virginia-postgres.render.com/sacad) is unreachable/gone. Schema-touching phases (phase-g3-learner-profile-and-login, phase-g2-course-rollover, phase-g7-feedback-screenshot) must run npm run db:generate / npm run db:migrate against PRODUCTION directly, using DATABASE_URL_PROD remapped to DATABASE_URL (mirror scripts/migrate-prod.ts's applyProdDatabaseUrl() pattern from scripts/lib/prod-env.ts) rather than the plain dotenv -e .env.local DATABASE_URL. Rollback strategy: a single full read-only backup was taken via `npm run db:backup:prod` BEFORE this policy went into effect, at backups/prod-2026-07-17T00-58-42/ (31 tables, gitignored, contains real household/user data — never commit it). That backup is the rollback point for this entire batch of schema-touching phases, not re-taken per phase. Every schema-touching phase remains `gated: true` — do not auto-run db:migrate against prod without the user's explicit per-phase approval of the generated migration SQL first.",
   "phases": [
     {
       "id": "phase-0-prod-seed-ops",
@@ -33,7 +34,9 @@
       "title": "G1 — Persist Planning Defaults & Records/Compliance settings tabs with an explicit Save button",
       "gated": false,
       "modelTier": "standard",
-      "preconditions": ["phase-0-prod-seed-ops"],
+      "preconditions": [
+        "phase-0-prod-seed-ops"
+      ],
       "fileScope": [
         "features/settings/api/router.ts",
         "features/settings/api/routes/settings.ts",
@@ -72,7 +75,9 @@
       "title": "G4 — Compliance empty-state copy + info tooltips for ruleset/pathway",
       "gated": false,
       "modelTier": "standard",
-      "preconditions": ["phase-0-prod-seed-ops"],
+      "preconditions": [
+        "phase-0-prod-seed-ops"
+      ],
       "fileScope": [
         "features/compliance/front/pages/CompliancePage.tsx",
         "features/compliance/__tests__/integration/CompliancePage.test.tsx"
@@ -98,7 +103,9 @@
       "title": "G5 — Make 'Add badge' clearly discoverable",
       "gated": false,
       "modelTier": "cheap",
-      "preconditions": ["phase-0-prod-seed-ops"],
+      "preconditions": [
+        "phase-0-prod-seed-ops"
+      ],
       "fileScope": [
         "features/badges/front/pages/BadgesPage.tsx",
         "features/badges/__tests__/integration/BadgesPage.test.tsx"
@@ -124,7 +131,9 @@
       "title": "G6 — Verify parent display name works for magic-link users; fix only if a real gap is found",
       "gated": false,
       "modelTier": "standard",
-      "preconditions": ["phase-0-prod-seed-ops"],
+      "preconditions": [
+        "phase-0-prod-seed-ops"
+      ],
       "fileScope": [
         "features/settings/front/pages/SettingsPage.tsx",
         "features/layout/front/components/Header.tsx",
@@ -151,7 +160,9 @@
       "title": "G3 — Learner profile fields (dob/first/last) persist + real learner login via the existing add-member path",
       "gated": true,
       "modelTier": "strong",
-      "preconditions": ["phase-g1-settings-persistence"],
+      "preconditions": [
+        "phase-g1-settings-persistence"
+      ],
       "fileScope": [
         "db/schema.ts",
         "db/migrations/",
@@ -175,6 +186,7 @@
         "features/children/__tests__/integration/ChildForm.test.tsx: edit mode pre-fills firstName/lastName/dob from stored values (not blank); clicking the eye icon toggles the password input from type=password to type=text and reveals the typed value"
       ],
       "implementationSteps": [
+        "DB TARGET (per top-level dbMigrationPolicy): the dev DB is gone. Run npm run db:generate as usual (schema-diff only, no DB connection needed), but for npm run db:migrate, target PRODUCTION by remapping DATABASE_URL_PROD -> DATABASE_URL first (mirror scripts/migrate-prod.ts / scripts/lib/prod-env.ts applyProdDatabaseUrl()) rather than plain dotenv -e .env.local. A full prod backup already exists at backups/prod-2026-07-17T00-58-42/ as the rollback point for this migration — do not take a new one, but DO print/record the prod host you are targeting before migrating, and confirm in notes that DATABASE_URL_PROD (not a guess) was used.",
         "Migration: add dob, first_name, last_name, user_id (nullable, references users.id) columns to the learners table in db/schema.ts. Keep the existing 'name' column as the derived display/report value (first+last). Run npm run db:generate and review the SQL before npm run db:migrate — check for the CLAUDE.md composite-FK-ordering caveat if it applies (it likely does not here, single nullable FK, but verify).",
         "Membership role: household_members.role is free-text (no DB enum) — add a 'learner' value to the MembershipRole union in features/household/server/repository.ts and to VALID_ROLES in features/household/api/routes/invite.ts (existing precedent: 'teacher' already extends beyond owner/member). No DB migration needed for this part.",
         "Template to mirror EXACTLY: features/household/api/routes/accept.ts — it does upsertUserByEmail(...) + addMember(householdId, user.id, role) and explicitly does NOT create a new household. The learner login path must do the credential-user-creation equivalent of createCredentialUser (features/auth/server/repository.ts) — username + passwordHash (reuse hashing/normalizeUsername from features/auth/server/password.ts) — but must SKIP upsertHouseholdForUser entirely, then call addMember(existingHouseholdId, newUserId, 'learner').",
@@ -185,7 +197,7 @@
       ],
       "doneWhen": [
         "npm run db:generate",
-        "npm run db:migrate",
+        "DATABASE_URL=$DATABASE_URL_PROD npx drizzle-kit migrate (or equivalent prod-targeted invocation per scripts/migrate-prod.ts)",
         "npm test -- features/children",
         "npm run build",
         "npm test"
@@ -201,7 +213,9 @@
       "title": "G2 — Single active-year course visibility across Settings/Gradebook/Learning-time; rollover hides-but-keeps prior-year copies",
       "gated": true,
       "modelTier": "strong",
-      "preconditions": ["phase-g1-settings-persistence"],
+      "preconditions": [
+        "phase-g1-settings-persistence"
+      ],
       "fileScope": [
         "features/subjects/server/repository.ts",
         "features/subjects/front/components/SubjectsAllTable.tsx",
@@ -215,6 +229,7 @@
         "Consistency test/integration: Settings, Gradebook, and Learning-time, given the same household + active year, render the same course set (same count, same names) — add a shared test helper or repeat the assertion per surface"
       ],
       "implementationSteps": [
+        "DB TARGET (per top-level dbMigrationPolicy): the dev DB is gone. Run npm run db:generate as usual (schema-diff only, no DB connection needed), but for npm run db:migrate, target PRODUCTION by remapping DATABASE_URL_PROD -> DATABASE_URL first (mirror scripts/migrate-prod.ts / scripts/lib/prod-env.ts applyProdDatabaseUrl()) rather than plain dotenv -e .env.local. A full prod backup already exists at backups/prod-2026-07-17T00-58-42/ as the rollback point for this migration — do not take a new one, but DO print/record the prod host you are targeting before migrating, and confirm in notes that DATABASE_URL_PROD (not a guess) was used.",
         "FIRST: spike/confirm exactly which schoolYearId (if any) each of features/subjects/front/components/SubjectsAllTable.tsx, features/gradebook/front/pages/GradebookPage.tsx, and features/learning-time/front/pages/LearningTimePage.tsx currently pass to the subjects list call. Record findings in notes before changing anything — if this reveals the root cause is different from documented, stop and fail the phase with that finding rather than proceeding on the wrong fix.",
         "Decision already made (do not re-litigate): previous-year course copies should be HIDDEN from active-year views but KEPT/recoverable — nothing is deleted.",
         "Establish a single active-year-scoped course query (in features/subjects/server/repository.ts, likely tightening listSubjects to require schoolYearId = activeYear rather than `OR schoolYearId IS NULL`, after confirming/backfilling any legitimately-NULL legacy rows first if they exist) and make Settings, Gradebook, and Learning-time all call it the same way.",
@@ -234,7 +249,9 @@
       "title": "G7a — Editable start/end time for scheduled classes",
       "gated": false,
       "modelTier": "standard",
-      "preconditions": ["phase-g1-settings-persistence"],
+      "preconditions": [
+        "phase-g1-settings-persistence"
+      ],
       "fileScope": [
         "app/(shell)/plan/schedule/page.tsx",
         "features/schedule/"
@@ -259,7 +276,9 @@
       "title": "G7b — Learning-time: list courses with duration + one-click start",
       "gated": false,
       "modelTier": "standard",
-      "preconditions": ["phase-g1-settings-persistence"],
+      "preconditions": [
+        "phase-g1-settings-persistence"
+      ],
       "fileScope": [
         "features/learning-time/front/pages/LearningTimePage.tsx",
         "features/learning-time/front/components/NowCard.tsx"
@@ -284,7 +303,9 @@
       "title": "G7c — Dashboard: edit today's schedule item via inline popup",
       "gated": false,
       "modelTier": "standard",
-      "preconditions": ["phase-g1-settings-persistence"],
+      "preconditions": [
+        "phase-g1-settings-persistence"
+      ],
       "fileScope": [
         "features/dashboard/front/"
       ],
@@ -308,7 +329,9 @@
       "title": "G7d — Gradebook: list scheduled assignments and assign grades directly",
       "gated": false,
       "modelTier": "standard",
-      "preconditions": ["phase-g1-settings-persistence"],
+      "preconditions": [
+        "phase-g1-settings-persistence"
+      ],
       "fileScope": [
         "features/gradebook/front/pages/GradebookPage.tsx"
       ],
@@ -332,7 +355,9 @@
       "title": "G7e — Feedback widget: attach a screenshot, stored as a blob on the feedback record",
       "gated": true,
       "modelTier": "strong",
-      "preconditions": ["phase-g1-settings-persistence"],
+      "preconditions": [
+        "phase-g1-settings-persistence"
+      ],
       "fileScope": [
         "db/schema.ts",
         "db/migrations/",
@@ -344,6 +369,7 @@
         "Integration test: the feedback widget lets the user attach an image before submitting; submission includes it"
       ],
       "implementationSteps": [
+        "DB TARGET (per top-level dbMigrationPolicy): the dev DB is gone. Run npm run db:generate as usual (schema-diff only, no DB connection needed), but for npm run db:migrate, target PRODUCTION by remapping DATABASE_URL_PROD -> DATABASE_URL first (mirror scripts/migrate-prod.ts / scripts/lib/prod-env.ts applyProdDatabaseUrl()) rather than plain dotenv -e .env.local. A full prod backup already exists at backups/prod-2026-07-17T00-58-42/ as the rollback point for this migration — do not take a new one, but DO print/record the prod host you are targeting before migrating, and confirm in notes that DATABASE_URL_PROD (not a guess) was used.",
         "Migration: add screenshot (bytea, nullable) and screenshot_mime (text, nullable) columns to user_feedback in db/schema.ts. Run npm run db:generate and review the SQL before npm run db:migrate.",
         "Add a size cap (~2MB) enforced at the API boundary — reject oversized payloads with a clear error rather than silently truncating.",
         "Wire the feedback widget UI to allow selecting/attaching one image, encode it appropriately for the existing feedback submission call, and persist via the repository.",
@@ -351,7 +377,7 @@
       ],
       "doneWhen": [
         "npm run db:generate",
-        "npm run db:migrate",
+        "DATABASE_URL=$DATABASE_URL_PROD npx drizzle-kit migrate (or equivalent prod-targeted invocation per scripts/migrate-prod.ts)",
         "npm test -- features/feedback",
         "npm run build",
         "npm test"

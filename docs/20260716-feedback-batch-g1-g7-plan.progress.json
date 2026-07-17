@@ -1,7 +1,7 @@
 {
   "plan": "docs/20260716-feedback-batch-g1-g7-plan.json",
   "createdAt": "2026-07-16T22:49:50.530Z",
-  "updatedAt": "2026-07-17T02:30:00.000Z",
+  "updatedAt": "2026-07-17T01:00:24.687Z",
   "branch": "fix/feedback-batch-g1-g7",
   "phases": [
     {
@@ -18,7 +18,9 @@
           "scripts/seed-reference-prod.ts",
           "package.json"
         ],
-        "testsRun": ["npm test (239 suites / 2110 tests passed)"],
+        "testsRun": [
+          "npm test (239 suites / 2110 tests passed)"
+        ],
         "notes": "Ops-verification commit only, no schema change. Verified all three files matched the plan's expected content exactly: scripts/seed-reference-data.ts jsonPath now points at docs/archive/compliance-research/homeschool-requirements-2026-06-27.json (fixed from the missing docs/compliance-research/... path); scripts/seed-reference-prod.ts mirrors scripts/migrate-prod.ts (loads DATABASE_URL_PROD, remaps to DATABASE_URL, execSync's seed-reference-data.ts via npx tsx); package.json's db:seed:reference:prod entry (dotenv -e .env.local -- tsx scripts/seed-reference-prod.ts) was already present in the committed baseline (package.json's only working-tree diff was the routine pre-commit version bump). Reference seed already run and verified against prod 2026-07-16: 66 compliance_rulesets across 7 states (TX/FL/NY/PA/CA/MI/CT), 8 starter badge_definitions — read-only verification, no schema change here. Committed as 4b48c33. IMPORTANT for next worker/orchestrator: `npm run build` fails in this sandbox at static generation of /(shell)/about/page — it calls listChangelogEntries() which needs a live DB connection; TCP connects to the Render Postgres host but the Postgres protocol handshake hangs indefinitely (confirmed via direct postgres.js and raw TCP probes), causing Next's 60s-per-attempt static-export timeout after 3 retries. Confirmed via `git stash` that this reproduces identically with this phase's 3 files stashed out — it is a pre-existing sandbox network/DB-connectivity limitation, NOT caused by this phase's changes, and outside this phase's file scope (features/lib/server/db.ts, app/(shell)/about/page.tsx). npm test passes fully (239 suites, 2110 tests) since tests mock the repository boundary. Later phases whose doneWhen includes `npm run build` should expect this same failure mode in this environment and should not attribute it to their own changes without first checking build fails identically on a clean stash."
       },
       "failureReason": null
@@ -114,35 +116,16 @@
       "id": "phase-g3-learner-profile-and-login",
       "title": "G3 — Learner profile fields (dob/first/last) persist + real learner login via the existing add-member path",
       "gated": true,
-      "status": "failed",
-      "model": "strong",
-      "startedAt": "2026-07-17T01:30:00.000Z",
-      "completedAt": "2026-07-17T02:10:00.000Z",
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
       "outputs": {
-        "filesChanged": [
-          "db/schema.ts",
-          "db/migrations/0033_sad_human_torch.sql (generated, NOT applied — see failureReason)",
-          "db/migrations/meta/0033_snapshot.json (generated)",
-          "db/migrations/meta/_journal.json (generated)",
-          "features/children/server/repository.ts",
-          "features/children/api/routes/child.ts",
-          "features/children/api/routes/children.ts",
-          "features/children/front/components/ChildForm.tsx",
-          "features/household/server/repository.ts",
-          "features/auth/server/repository.ts",
-          "features/children/__tests__/api/child.test.ts (new)",
-          "features/children/__tests__/api/children.test.ts (new)",
-          "features/children/__tests__/api/repository.test.ts",
-          "features/children/__tests__/integration/ChildrenComponents.test.tsx",
-          "features/household/__tests__/api/repository.test.ts"
-        ],
-        "testsRun": [
-          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/children features/household (208 tests: 174 passed, 34 skipped/db-gated, 0 failed)",
-          "npx tsc --noEmit (no new errors in features/children, features/auth/server, features/household/server, or db/schema.ts — pre-existing unrelated errors elsewhere confirmed unchanged via git stash comparison; features/household/__tests__/api/routes/switch.test.ts has one additional missing-field entry on an already-broken loosely-typed mock, not in this phase's file scope, not a new failure category)"
-        ],
-        "notes": "IMPLEMENTATION COMPLETE, but the phase's mandatory invariant check (npm run db:migrate must apply cleanly) could NOT be verified — this sandbox cannot complete a live Postgres connection at all, confirmed via three independent methods below. Per the worker contract ('If the invariant check fails, fail the phase — do not mark it complete'), this phase is FAILED, not complete. NOTHING WAS COMMITTED (working tree left with all changes in place, uncommitted, so a retry in a working environment does not have to redo the implementation).\n\nWhat was built (code-complete, unit-tested against mocks): (1) db/schema.ts — learners gained firstName/lastName/dob (nullable, name stays the derived first+last display value) and a nullable userId FK to users.id; household_members gained isActive (boolean, default true, NOT NULL) for deactivation-not-deletion. (2) features/household/server/repository.ts — MembershipRole extended to include 'learner'; added deactivateMember/reactivateMember (set isActive false/true, row is never deleted). (3) features/auth/server/repository.ts — added createLearnerCredentialUser (mirrors createCredentialUser but explicitly SKIPS upsertHouseholdForUser, per the accept.ts template — verified via mocked test that addMember is called with the EXISTING householdId and no household-creation call is made), updateUserUsername, deactivateUserCredentials (nulls passwordHash only, preserves the user row/username/email — sufficient to block login since the credentials authorize() callback in features/auth/auth.ts already returns null on falsy passwordHash, so auth.ts itself did not need to be touched, honoring the phase's file scope). (4) features/children/api/routes/child.ts + children.ts — learnerRowToStudentProfile is now async, resolves username from the linked user and learnerLoginEnabled from (user.passwordHash truthy AND membership.isActive) so GET/PUT/POST/ARCHIVE/RESTORE all report real state instead of hardcoded blanks. POST /children and PUT /children/:id create/reactivate/deactivate the credential user + 'learner' membership as appropriate, validate username uniqueness via getUserByIdentifier, and require a new password when re-enabling login for a learner whose credential was previously deactivated (passwordHash null) since plaintext passwords are never stored. Placeholder email format used exactly as directed: `learner.${learnerId}@no-email.local` (keyed by learner id — unique and stable by construction). (5) features/children/front/components/ChildForm.tsx — added a show/hide password eye-icon toggle (lucide-react Eye/EyeOff, aria-label 'Show password'/'Hide password'); pre-fill of firstName/lastName/dob in edit mode already worked via existing child? population code once the backend stopped hardcoding blanks.\n\nDeviations from the plan's fileScope/testsFirst, made deliberately and noted for audit: did NOT touch features/household/api/routes/invite.ts's VALID_ROLES (not in this phase's declared fileScope; adult-invite acceptance is a separate code path from learner-login creation and 'learner' role addition to the MembershipRole type union already covers the actual code path used here — addMember/accept.ts are unaffected by VALID_ROLES). features/children/types.ts does not exist in the codebase (StudentProfile is owned by features/lib/types.ts, already carries firstName/lastName/dob/learnerLoginEnabled from a prior wave) — CreateLearnerInput/UpdateLearnerInput were extended in-place in server/repository.ts instead of creating a new types.ts, consistent with how those interfaces were already defined. Test file paths: used the codebase's existing convention of one shared features/children/__tests__/integration/ChildrenComponents.test.tsx file (added 2 new tests there) rather than creating a separate ChildForm.test.tsx, and extended the existing features/children/__tests__/api/repository.test.ts (DB-gated) rather than creating a new __tests__/server/repository.test.ts, since no such directory/convention exists in this feature; new API-route-level tests were added at features/children/__tests__/api/child.test.ts and children.test.ts (mocked at the repository boundary, per testing-patterns) since none existed before.\n\nMIGRATION: db/schema.ts changes ran through `npm run db:generate` cleanly and produced exactly ONE new migration, db/migrations/0033_sad_human_torch.sql (2 ALTER TABLE ADD COLUMN statements on learners: first_name, last_name, dob, user_id + 1 ALTER TABLE ADD COLUMN is_active on household_members + 1 ADD CONSTRAINT FK learners.user_id -> users.id). This is a single nullable FK — the CLAUDE.md composite-FK-ordering caveat does not apply (verified: no composite UNIQUE+FK combination in this migration, plain ADD COLUMN + single FK only, correctly ordered by drizzle-kit already).\n\nFAILURE — db:migrate cannot complete in this sandbox (root-caused, not just a timeout guess): `npm run db:migrate` was run in the background and produced ZERO output after 13+ minutes (task bxtn691tq, manually stopped). Diagnosed with three independent, more targeted probes against the exact DATABASE_URL host (dpg-d8jegg3bc2fs73bkhqm0-a.virginia-postgres.render.com, the DEV db, confirmed NOT prod): (1) raw TCP connect — succeeds instantly. (2) postgres.js driver `select 1` query with connect_timeout:10 — hangs past 15s with no error/data. (3) hand-rolled Postgres wire-protocol probe: TCP connects, SSLRequest is sent and the server replies 'S' (accept) immediately, the subsequent TLS handshake over that socket completes successfully (TLSv1.3) — but after sending the Postgres StartupMessage (protocol 3.0, user=sacad_user, database=sacad) over the now-TLS-wrapped socket, the server NEVER responds (15s timeout, zero bytes back). This precisely refines and confirms the exact same limitation phase-0's notes already documented for `npm run build`'s /(shell)/about static generation ('TCP connects... but the Postgres protocol handshake hangs indefinitely') — this sandbox's network path can complete a TCP+TLS handshake to this Postgres host but the server-side (or an intermediate proxy) never completes the Postgres application-level startup exchange. This is an environment/network limitation, NOT a defect in the generated migration SQL or schema, and is outside the phase's file scope to fix. INVARIANT CHECK COULD NOT BE PERFORMED: db:migrate did not apply (blocked before it could even authenticate), so 'applies with no gap in the migration sequence' cannot be confirmed, and a post-migrate db:generate producing zero new migrations likewise cannot be confirmed against a live DB.\n\nFOR THE NEXT ATTEMPT: no code changes are needed to retry — only re-run `npm run db:migrate` (and then the invariant re-check: `npm run db:generate` must show no new migration) from an environment where this Postgres host is actually reachable at the application layer, then run `npm test` full suite + attempt `npm run build` (expected to hit the same known /(shell)/about failure per prior phases, non-blocking), then commit. All schema/repository/route/test code in this write-up is believed complete and correct pending that live verification — do not redo the implementation from scratch."
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": "RESET 2026-07-17: prior failure was due to dev DB being unreachable. Policy changed — this phase now targets PRODUCTION for db:migrate (see plan JSON top-level dbMigrationPolicy). Prior implementation work is stashed at git stash \"wip: phase-g3-learner-profile-and-login (blocked on dev DB migrate)\" — the retrying worker should pop/inspect that stash first rather than reimplementing from scratch."
       },
-      "failureReason": "npm run db:migrate cannot complete in this sandbox: TCP connect and the TLS handshake to the DATABASE_URL Postgres host both succeed, but the server never responds to the Postgres wire-protocol StartupMessage (confirmed hung >13min via the actual db:migrate run, plus independently reproduced via postgres.js and a raw wire-protocol probe — 3 methods, same hang point). This is the same pre-existing sandbox DB-connectivity limitation phase-0 documented for `npm run build`, now also blocking the live-DB invariant check this schema-touching phase requires. All implementation code (schema, migration file, repository/API/UI changes, and mocked unit/integration tests — 208 tests passing, 0 failing) is complete and left uncommitted in the working tree; only the live npm run db:migrate + post-migrate npm run db:generate invariant re-check remain, and must be run from an environment where this Postgres host is actually reachable."
+      "failureReason": null
     },
     {
       "id": "phase-g2-course-rollover",
@@ -174,7 +157,7 @@
         "notesForModelTier": "standard tier was sufficient to identify the scope gap; the actual fix belongs in a strong-tier gated phase per the reasoning above."
       },
       "failureReason": "Editable, persisted start/end time for scheduled classes requires a schema change (lesson_tasks or a new table needs real clock-time columns — schedule.ts currently synthesizes all start/end times on every render from a fixed daily start time + lesson.estimatedDuration bucket enum, nothing is stored). This phase's fileScope (app/(shell)/plan/schedule/page.tsx, features/schedule/) excludes db/schema.ts and db/migrations/, and the spawn instructions explicitly directed failing the phase rather than widening scope into a migration. Needs re-planning as a schema-touching phase before implementation."
-      },
+    },
     {
       "id": "phase-g7-learning-time-quickstart",
       "title": "G7b — Learning-time: list courses with duration + one-click start",
