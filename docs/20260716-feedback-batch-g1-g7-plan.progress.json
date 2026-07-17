@@ -1,7 +1,7 @@
 {
   "plan": "docs/20260716-feedback-batch-g1-g7-plan.json",
   "createdAt": "2026-07-16T22:49:50.530Z",
-  "updatedAt": "2026-07-17T13:20:24.994Z",
+  "updatedAt": "2026-07-17T13:55:00.000Z",
   "branch": "fix/feedback-batch-g1-g7",
   "phases": [
     {
@@ -150,14 +150,20 @@
       "id": "phase-g2-course-rollover",
       "title": "G2 — Single active-year course visibility across Settings/Gradebook/Learning-time; rollover hides-but-keeps prior-year copies",
       "gated": true,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "strong",
+      "startedAt": "2026-07-17T13:30:00.000Z",
+      "completedAt": "2026-07-17T13:55:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": "RE-SCOPED 2026-07-17 after spike: root cause is features/gradebook/server/repository.ts listGradebookSummaries querying subjects unfiltered (no schoolYearId/isActive scoping), bypassing listSubjectRows. Settings/Learning-time already correctly scoped, need no fix. fileScope now includes the gradebook repository/route. No schema migration needed for this phase."
+        "filesChanged": [
+          "features/gradebook/server/repository.ts",
+          "features/gradebook/__tests__/server/repository.test.ts"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/gradebook (8 of 9 suites, 1 skipped/db-gated, 87 passed / 12 skipped)",
+          "npm test (245 of 269 suites passed, 24 skipped/db-gated, 2148 passed / 198 skipped)"
+        ],
+        "notes": "No spike redone — implemented directly against the already-known root cause from the prior attempt's notes (still present in this file's history before this write): listGradebookSummaries queried the `subjects` table directly with only a householdId filter, no schoolYearId/isActive scoping, bypassing listSubjectRows. Settings (SubjectsAllTable.tsx) and Learning-time (LearningTimePage.tsx) were confirmed already correctly active-year-scoped via GET /api/subjects -> listSubjectRows (features/subjects/api/routes/subjects.ts calls getActiveSchoolYear then listSubjectRows(householdId, childId, false, {schoolYearId: activeYear.id})) — left completely untouched, no cosmetic simplification attempted (out of caution per orchestrator instruction).\n\nFIX: did NOT literally call listSubjectRows() from inside listGradebookSummaries (that function hydrates via 2 extra join-table queries — subject_learners, subject_resources — which would have restructured the existing 5-call sequential Promise.all shape that features/gradebook/__tests__/server/overallMastery.test.ts's mock depends on, an existing test outside this phase's fileScope). Instead: added a 6th parallel query to the SAME Promise.all (last position, so the first 5 calls' order/positions — learners, subjects, scores, gradingScales, aggregationRules — are unchanged) that fetches the household's active school_years row (schoolYears table, isActive=true). Then filtered subjectRows in-memory into a new scopedSubjectRows array BEFORE any GPA/mastery/needsAttention math runs, replicating listSubjectRows's exact semantics: isActive !== false required always; when an active year exists, schoolYearId must equal that year's id OR be null/undefined (legacy no-year rows still show); when no active year exists, no year filtering is applied (matches listSubjectRows's behavior when the subjects.ts route's getActiveSchoolYear() returns null — it skips the schoolYearId option entirely). The rest of the function (gpaEntries, subjectResults, needsAttentionSubjects, overallMastery) now derives from scopedSubjectRows instead of the raw subjectRows.\n\nNo schema change — schoolYearId and isActive already existed on subjects; only db/schema.ts's already-existing schoolYears/subjects tables were read, nothing added. No db:generate/db:migrate run for this phase (correctly out of scope per orchestrator instruction).\n\nTests (features/gradebook/__tests__/server/repository.test.ts, new file, TDD-first): 4 cases — (1) a course rolled over into a new year (source-year row sub_year_a still isActive=true) is excluded from both summary.subjects and needsAttentionSubjects, and overallMastery reflects ONLY the current-year row's score (90, not an average with the stale 60); (2) legacy subjects with schoolYearId=null still show even when an active year is set; (3) isActive=false subjects are excluded regardless of school year; (4) when no active school year row exists, no year-based filtering happens (prior no-op-safe behavior preserved). All 4 pass; pre-existing overallMastery.test.ts (3 tests, unmodified) still passes unchanged, confirming the 6th-query-in-last-position approach didn't disturb its fixed 5-element mock sequence.\n\nfeatures/gradebook full suite: 8/9 suites pass (1 db-gated skip, pre-existing/unrelated), 87 passed/12 skipped. Full npm test: 245/269 suites pass, 2148/2346 tests pass, 198 skipped (same pre-existing db-gated skip set as every prior phase). `npm run build`: 'Linting and checking validity of types' completed cleanly (no new errors) before failing at the same known pre-existing /(shell)/about static-generation DB-handshake timeout documented identically by phase-0/g1/g4/g5/g3/g7b — confirmed unrelated to this phase's 2-file scope by the type-check passing first. Committed as 554656f."
       },
       "failureReason": null
     },
