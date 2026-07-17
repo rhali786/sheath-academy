@@ -1,6 +1,6 @@
 {
   "name": "sheath-academy",
-  "version": "2.103.2",
+  "version": "2.104.0",
   "private": true,
   "engines": {
     "node": ">=22.22.2"
