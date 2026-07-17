@@ -57,6 +57,19 @@ const mockLessons: LessonTask[] = [
     dueDate: '2026-05-11',
     status: 'completed' as const,
     order: 1,
+    estimatedDuration: '30min' as const,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: 'lesson_004',
+    childId: 'child_002',
+    subjectId: 'subj_002',
+    householdId: 'hh_001',
+    title: 'Spelling review',
+    dueDate: '2026-05-12',
+    status: 'skipped' as const,
+    order: 2,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
   },
@@ -112,7 +125,8 @@ describe('WeeklyPlanner', () => {
   it('compresses a day with no lessons for a learner instead of rendering a full empty block', () => {
     renderPlanner()
 
-    // Layth only has a Monday lesson; Tuesday should be a muted marker, not a populated day block.
+    // Layth has Monday and Tuesday lessons; the rest of the week should be muted markers,
+    // not populated day blocks.
     const laythSection = screen.getByText('Layth').closest('div[data-learner-section]') as HTMLElement
     expect(laythSection).toBeInTheDocument()
 
@@ -126,9 +140,57 @@ describe('WeeklyPlanner', () => {
   it('a lesson card shows subject, title, and a status indicator', () => {
     renderPlanner()
 
-    expect(screen.getByText('Reading')).toBeInTheDocument()
+    expect(screen.getAllByText('Reading').length).toBeGreaterThan(0)
     expect(screen.getByText('Chapter 91')).toBeInTheDocument()
     expect(screen.getByText('Completed')).toBeInTheDocument()
+  })
+
+  it('renders the subject eyebrow visually before the title within a lesson card', () => {
+    renderPlanner()
+
+    const titleEl = screen.getByText('Chapter 91')
+    const card = titleEl.closest('[data-lesson-card]') as HTMLElement
+    expect(card).toBeInTheDocument()
+
+    const subjectEl = screen.getAllByText('Reading').find(el => card.contains(el)) as HTMLElement
+    expect(subjectEl).toBeInTheDocument()
+
+    // subject eyebrow must precede the title in DOM order (teaching-context-first)
+    const position = subjectEl.compareDocumentPosition(titleEl)
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('renders a resource indicator only when the lesson has a resourceLink', () => {
+    renderPlanner()
+
+    const withResource = screen.getByText('Chapter 91').closest('[data-lesson-card]') as HTMLElement
+    expect(withResource.querySelector('[data-testid="resource-indicator"]')).toBeInTheDocument()
+
+    const withoutResource = screen.getByText('Word problems').closest('[data-lesson-card]') as HTMLElement
+    expect(withoutResource.querySelector('[data-testid="resource-indicator"]')).not.toBeInTheDocument()
+  })
+
+  it('status badge uses the same color convention as WeekGrid: green for completed, amber for skipped', () => {
+    renderPlanner()
+
+    const completedCard = screen.getByText('Chapter 91').closest('[data-lesson-card]') as HTMLElement
+    const completedBadge = completedCard.querySelector('[data-testid="status-badge"]') as HTMLElement
+    expect(completedBadge).toBeInTheDocument()
+    expect(completedBadge.className).toMatch(/bg-green-100/)
+    expect(completedBadge.className).toMatch(/text-green-700/)
+
+    const skippedCard = screen.getByText('Spelling review').closest('[data-lesson-card]') as HTMLElement
+    const skippedBadge = skippedCard.querySelector('[data-testid="status-badge"]') as HTMLElement
+    expect(skippedBadge).toBeInTheDocument()
+    expect(skippedBadge.className).toMatch(/bg-amber-100/)
+    expect(skippedBadge.className).toMatch(/text-amber-700/)
+  })
+
+  it('renders the estimated duration when set', () => {
+    renderPlanner()
+
+    const card = screen.getByText('Chapter 91').closest('[data-lesson-card]') as HTMLElement
+    expect(card).toHaveTextContent('30 min')
   })
 
   it('respects selectedChildIds/selectedSubjectIds filters, narrowing which learners/lessons appear', () => {

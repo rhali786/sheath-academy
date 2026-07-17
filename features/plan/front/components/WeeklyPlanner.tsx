@@ -18,6 +18,14 @@ const STATUS_LABEL: Record<LessonTaskStatus, string> = {
   skipped:     'Skipped',
 }
 
+const DURATION_LABEL: Record<string, string> = {
+  '15min': '15 min',
+  '30min': '30 min',
+  '45min': '45 min',
+  '1hr':   '1 hr',
+  custom:  'Custom',
+}
+
 // Deterministic per-learner accent color for the "learner spine" rail. StudentProfile does not
 // yet carry a stored displayColor (only the children/schema layer has it — out of this phase's
 // file scope), so we derive a stable index from the learner id instead of positional order.
@@ -192,6 +200,7 @@ export function WeeklyPlanner() {
                           {dayLessons.map(lesson => (
                             <div
                               key={lesson.id}
+                              data-lesson-card
                               onClick={() => router.push(`/lessons?editId=${lesson.id}`)}
                               className="p-3 bg-white rounded-lg border border-forest-200 hover:shadow-md transition-shadow cursor-pointer"
                             >
@@ -199,10 +208,28 @@ export function WeeklyPlanner() {
                                 {resolveSubjectName(lesson.subjectId)}
                               </div>
                               <div className="font-semibold text-forest-900 text-sm mt-0.5">{lesson.title}</div>
-                              <div className="mt-2">
-                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_BADGE[lesson.status]}`}>
+                              <div className="mt-2 flex items-center flex-wrap gap-2">
+                                <span
+                                  data-testid="status-badge"
+                                  className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_BADGE[lesson.status]}`}
+                                >
                                   {STATUS_LABEL[lesson.status]}
                                 </span>
+                                {lesson.resourceLink && (
+                                  <span
+                                    data-testid="resource-indicator"
+                                    aria-label="Has resource link"
+                                    title="Has resource link"
+                                    className="text-xs text-slate-500"
+                                  >
+                                    📎
+                                  </span>
+                                )}
+                                {lesson.estimatedDuration && (
+                                  <span className="text-xs text-slate-400">
+                                    {DURATION_LABEL[lesson.estimatedDuration] ?? lesson.estimatedDuration}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           ))}

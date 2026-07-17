@@ -1,7 +1,7 @@
 {
   "plan": "docs/20260716-lesson-planner-ux-rework-g8-plan.json",
   "createdAt": "2026-07-17T15:12:38.062Z",
-  "updatedAt": "2026-07-17T01:00:00.000Z",
+  "updatedAt": "2026-07-17T15:50:41.785Z",
   "branch": "feat/lesson-planner-ux-rework-g8",
   "phases": [
     {
@@ -54,14 +54,21 @@
       "id": "phase-g8-p3-card-enrichment",
       "title": "P3 — Card enrichment: teaching-context ordering (subject before title), resource indicator, status badge",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T15:44:42.588Z",
+      "completedAt": "2026-07-17T16:20:00.000Z",
       "outputs": {
-        "filesChanged": [],
-        "testsRun": [],
-        "notes": ""
+        "filesChanged": [
+          "features/plan/front/components/WeeklyPlanner.tsx",
+          "features/plan/__tests__/integration/WeeklyPlanner.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/plan (28/31 suites; 3 DB-gated skipped; all passed, including the extended WeeklyPlanner.test.tsx with 4 new tests)",
+          "npm test (full suite: 249/274 suites passed, 25 skipped [DB-gated/integration], 2193 tests passed)",
+          "npm run build (bounded foreground run; type-check/lint stage completed with no new errors; failed at the known pre-existing /(shell)/about static-generation timeout — non-blocking per task instructions, same failure mode as P1/P2)"
+        ],
+        "notes": "PlannerLessonCard.tsx was NOT extracted — card markup remains inline in WeeklyPlanner.tsx (confirmed decision; the plan explicitly allows this as optional and P2 already established the inline pattern). P4 should add its new indicators directly to the lesson-card block inside WeeklyPlanner.tsx (the `data-lesson-card` div in the per-day lesson map), not to a separate file. Changes made: (1) subject-before-title ordering was already correct from P2 (subject eyebrow div precedes title div in DOM) — added an explicit test asserting DOM order via compareDocumentPosition rather than changing markup. (2) Added a resourceLink indicator: `<span data-testid=\"resource-indicator\" aria-label=\"Has resource link\">📎</span>`, rendered only when `lesson.resourceLink` is truthy — presence-only, no placeholder for unset links. (3) Added `data-testid=\"status-badge\"` to the existing status span for test targeting; STATUS_BADGE color map was NOT changed (P2's map already matched WeekGrid's convention: bg-green-100/text-green-700 for completed, bg-amber-100/text-amber-700 for skipped — verified by direct comparison against WeekGrid.tsx's STATUS_BADGE before touching anything, so no edit was needed there). (4) Added an estimatedDuration display (new DURATION_LABEL map, e.g. '30min' -> '30 min') per the plan's card-anatomy field list ('subject eyebrow, title, status dot, resourceLink indicator, duration') — this was not in P3's testsFirst list verbatim but is named as a P2-P3 field in the plan's anatomy diagram, so a minimal render-when-present test was added. (5) Added `data-lesson-card` attribute to each lesson's wrapper div as a stable test/DOM anchor for this and future phases. Also updated two pre-existing P2 tests that broke due to new fixture data added for skipped-status coverage (a new lesson_004 'Spelling review', status skipped, no resourceLink, for child_002/Reading): the 'shows subject, title, status' test now uses getAllByText for 'Reading' since it appears on two cards, and the day-empty/day-lessons comment was corrected to reflect Layth now having two populated days. No curriculum/chapter/hasHomework/hasAssessment fields were added anywhere — those remain explicitly out of scope for P4. No db/schema.ts or migration touched. WeekGrid.tsx was read for comparison but not modified."
       },
       "failureReason": null
     },
