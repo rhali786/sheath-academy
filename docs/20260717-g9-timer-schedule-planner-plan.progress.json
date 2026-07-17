@@ -1,0 +1,53 @@
+{
+  "plan": "docs/20260717-g9-timer-schedule-planner-plan.json",
+  "createdAt": "2026-07-17T19:14:15.111Z",
+  "updatedAt": "2026-07-17T19:14:15.111Z",
+  "branch": "feat/g9-timer-schedule-planner",
+  "phases": [
+    {
+      "id": "phase-g9-item2-school-days-enforcement",
+      "title": "Item 2 — Off-day (household schoolDays) awareness across plan/schedule views, non-blocking warnings",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g9-item3-multi-day-span-clarity",
+      "title": "Item 3 — Relabel/clarify multi-day lesson span in LessonTaskForm + quick-pick + Dashboard Today-card consistency fix",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g9-item1-learning-time-clock-mode",
+      "title": "Item 1 — Learning-Time: pre-fill scheduled window from lesson, client-side clock-driven auto-start/end-reminder",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": ""
+      },
+      "failureReason": null
+    }
+  ]
+}

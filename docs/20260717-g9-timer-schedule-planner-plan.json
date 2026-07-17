@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/20260717-g9-timer-schedule-planner-plan.md",
+  "branch": "feat/g9-timer-schedule-planner",
+  "dbMigrationPolicy": "No schema changes anywhere in this plan (confirmed by the plan's own audit: all three items reuse existing fields — LessonTask.scheduledStartTime/scheduledEndTime from G7a, HouseholdProfile.schoolDays, LessonTask.plannedStartDate/dueDate). No DATABASE_URL/prod-targeting caution needed for any phase.",
+  "phases": [
+    {
+      "id": "phase-g9-item2-school-days-enforcement",
+      "title": "Item 2 — Off-day (household schoolDays) awareness across plan/schedule views, non-blocking warnings",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [],
+      "fileScope": [
+        "features/plan/utils/schoolDays.ts",
+        "features/plan/front/components/WeekGrid.tsx",
+        "features/plan/front/components/WeeklyList.tsx",
+        "features/plan/front/components/LessonTaskForm.tsx",
+        "features/schedule/front/pages/SchedulePage.tsx",
+        "features/schedule/front/components/WeekCalendarView.tsx",
+        "features/schedule/front/components/MonthCalendarView.tsx",
+        "features/plan/__tests__/unit/schoolDays.test.ts",
+        "features/plan/__tests__/integration/WeekGrid.test.tsx",
+        "features/plan/__tests__/integration/LessonTaskForm.test.tsx",
+        "features/schedule/__tests__/integration/SchedulePage.test.tsx"
+      ],
+      "testsFirst": [
+        "features/plan/__tests__/unit/schoolDays.test.ts: isOffDay(dayIndex, schoolDays) returns correct boolean for a custom schoolDays set; returns Mon-Fri-is-school default when schoolDays is undefined; explicit case proving Saturday is NOT off when schoolDays includes Saturday (proves not hardcoded).",
+        "features/plan/__tests__/integration/WeekGrid.test.tsx: with householdProfile.schoolDays = Mon-Fri, Saturday/Sunday columns render the off-day style; with schoolDays including Saturday, Saturday renders as a normal day (not muted). Existing default-household Sat/Sun-muted assertions must still pass unchanged (regression).",
+        "features/plan/__tests__/integration/LessonTaskForm.test.tsx: setting a due date that falls on an off day shows a visible, non-blocking inline warning; setting it on a school day shows no warning; form submission succeeds either way (not blocked).",
+        "features/plan/__tests__/integration/WeekGrid.test.tsx (or a dedicated drag-and-drop test): dropping a lesson onto an off-day column succeeds (not blocked) and the resulting confirmation/success message notes the target day is an off day.",
+        "features/schedule/__tests__/integration/SchedulePage.test.tsx: the day view for a date whose weekday is an off day shows a small 'off day' indicator in the header area; a school-day date does not."
+      ],
+      "implementationSteps": [
+        "Read the plan at docs/20260717-g9-timer-schedule-planner-plan.md's Item 2 section in FULL first — it contains a complete code-path audit with exact file:line references for every consumer (WeekGrid.tsx:31-33 isWeekend, WeeklyList.tsx:26-28 identical hardcoded function, LessonTaskForm.tsx date fields, WeekGrid.tsx:215-248 handleDragEnd/DroppableCell, SchedulePage.tsx). Do not re-derive this audit from scratch.",
+        "Household.schoolDays is already the confirmed, working source of truth (features/household, HouseholdSettings.tsx, household_settings key 'schoolDays') — do not add any new setting or duplicate storage.",
+        "Add features/plan/utils/schoolDays.ts exporting a shared isOffDay(dayIndex, schoolDays?: DayOfWeek[]) helper AND the Mon-Fri default as a named export, so HouseholdSettings.tsx's own default and this helper's default can both reference the same constant (per the plan's explicit risk note: do not hand-copy the Mon-Fri default in two places).",
+        "Replace WeekGrid.tsx's and WeeklyList.tsx's hardcoded isWeekend(dayIndex) (dayIndex === 0 || 6) with the new shared isOffDay helper, sourced from useHousehold().householdProfile.schoolDays (both components already sit under HouseholdProvider and already consume useHousehold() for other fields).",
+        "LessonTaskForm.tsx: add a non-blocking, dismissible inline warning (amber-toned, reusing the existing inline-message visual language already used for titleError/timeError in the same file — NOT a window.confirm or hard block) when the chosen dueDate/plannedStartDate falls on an off day per household.schoolDays.",
+        "WeekGrid.tsx handleDragEnd: extend the existing InlineSuccess 'Moved to <Day>' message to note when the target day is an off day. Do not block the drop.",
+        "SchedulePage.tsx: add a small header note when selectedDate's weekday is an off day (text label, not color-only, per accessibility standards).",
+        "Before implementing, grep features/schedule/front/components/WeekCalendarView.tsx and MonthCalendarView.tsx for any hardcoded weekend/isWeekend concept (the plan flags this as unconfirmed/not traced) — if found, fix consistently in the same phase; if not found, note that in write-back and skip.",
+        "Do not touch features/resources/server/service.ts or LessonGenerationPanel.tsx's generation logic (already correct, confirmed by the plan's audit) — optional label-only tweak there is explicitly low-priority/optional, skip unless trivial."
+      ],
+      "doneWhen": [
+        "npm test -- features/plan features/schedule",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Record the exact export names from schoolDays.ts (so item 3's phase, which touches the same LessonTaskForm.tsx file, knows what's already there), and whether WeekCalendarView/MonthCalendarView needed the same fix or were already clean."
+    },
+    {
+      "id": "phase-g9-item3-multi-day-span-clarity",
+      "title": "Item 3 — Relabel/clarify multi-day lesson span in LessonTaskForm + quick-pick + Dashboard Today-card consistency fix",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["phase-g9-item2-school-days-enforcement"],
+      "fileScope": [
+        "features/plan/front/components/LessonTaskForm.tsx",
+        "features/plan/front/components/TodayLessonCard.tsx",
+        "features/plan/__tests__/integration/LessonTaskForm.test.tsx",
+        "features/plan/__tests__/integration/WeekGrid.test.tsx",
+        "features/plan/__tests__/integration/WeeklyList.test.tsx",
+        "features/plan/__tests__/integration/TodayLessonCard.test.tsx"
+      ],
+      "testsFirst": [
+        "features/plan/__tests__/integration/LessonTaskForm.test.tsx: the relabeled span control is present and its rendered copy states the multi-day behavior in plain language (assert on rendered text, not just field presence).",
+        "features/plan/__tests__/integration/LessonTaskForm.test.tsx: the quick-pick ('This week (Mon-Fri)' or equivalent) sets plannedStartDate/dueDate to the expected Mon-Fri range for a given due date.",
+        "features/plan/__tests__/integration/WeekGrid.test.tsx and WeeklyList.test.tsx: verify existing fixtures first (per the plan's instruction not to assume coverage) — if not already asserted, add an explicit test that a lesson with a 3-day window renders in all 3 day cells/sections, not just one.",
+        "features/plan/__tests__/integration/TodayLessonCard.test.tsx: a lesson spanning today (plannedStartDate <= today <= dueDate) but not due today appears on the Today card; a lesson due on a different day and not spanning today does not."
+      ],
+      "implementationSteps": [
+        "Read this branch's phase-g9-item2-school-days-enforcement outputs.notes in progress.json FIRST — it records the exact schoolDays.ts export names and confirms what item 2 already changed in LessonTaskForm.tsx (the off-day warning), so this phase's edits to the same file's date-field block don't clobber it.",
+        "Read the plan's Item 3 section in full — it already confirms lessonSpansDate/getLessonWindowStart (features/plan/utils/lessonCompletionWindow.ts) are fully wired into WeekGrid.tsx and WeeklyList.tsx today; this is a discoverability/labeling fix in LessonTaskForm.tsx, not a new capability, plus one small TodayLessonCard filter fix. Do not add any new LessonTask field or migration.",
+        "LessonTaskForm.tsx: relabel/restructure the date section so the span framing is explicit — the plan allows either a toggle+reveal widget or simply clearer always-visible copy leading with the outcome ('This lesson will appear every day from ... through ...') instead of the mechanism ('Available from'). Do not overbuild a new date-range-picker component.",
+        "Add a small quick-pick control (e.g. 'This week (Mon-Fri)' button) that sets plannedStartDate/dueDate to the current due-date's school week in one action. Keep minimal — no general recurrence engine.",
+        "TodayLessonCard.tsx: change its filter from `l.dueDate === today` to `lessonSpansDate(l, today)` (import from features/plan/utils/lessonCompletionWindow.ts, already tested/existing) so the Dashboard's Today card is consistent with /plan's matrix/list views.",
+        "Non-contiguous per-day spans (Mon+Wed+Fri, skip Tue/Thu) are explicitly OUT OF SCOPE per the plan's decided design — do not attempt to build this."
+      ],
+      "doneWhen": [
+        "npm test -- features/plan",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Confirm the exact widget approach chosen for the span framing (toggle+reveal vs. always-visible relabeled), and confirm the TodayLessonCard filter change was a pure predicate swap with no other behavior change."
+    },
+    {
+      "id": "phase-g9-item1-learning-time-clock-mode",
+      "title": "Item 1 — Learning-Time: pre-fill scheduled window from lesson, client-side clock-driven auto-start/end-reminder",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": ["phase-g9-item2-school-days-enforcement", "phase-g9-item3-multi-day-span-clarity"],
+      "fileScope": [
+        "features/learning-time/front/components/NowCard.tsx",
+        "features/learning-time/__tests__/integration/LearningTimePage.test.tsx",
+        "features/learning-time/__tests__/integration/NowCard.test.tsx"
+      ],
+      "testsFirst": [
+        "Integration test: selecting a lesson with scheduledStartTime/scheduledEndTime set (from LessonTask, G7a) auto-selects the 'Scheduled window' radio in the config panel and fills both time inputs with the lesson's values.",
+        "Integration test: selecting a lesson WITHOUT those fields set, or no lesson (ad-hoc), leaves the channel/time fields unchanged from current defaults (regression — no behavior change for existing stopwatch/timer paths).",
+        "Integration test: a pre-filled time value can still be hand-edited by the parent before starting (override is not locked).",
+        "Integration test: with a mocked 'now' past a draft scheduled session's scheduledStart, the component calls learningTimeApi.transition with {action:'start'} without a manual click, and only once (no duplicate calls across re-renders/polling ticks) — guard against double-firing.",
+        "Integration test: with a mocked 'now' before scheduledStart, the card shows a 'Starts at HH:MM' state and does NOT call transition.",
+        "Integration test: with a mocked 'now' past a running scheduled session's scheduledEnd, a visible 'time to finish' prompt renders; the existing manual Finish/outcome flow is unchanged (no silent auto-finalize)."
+      ],
+      "implementationSteps": [
+        "Read the plan's Item 1 section in FULL first, especially the 'What's traced vs. unknown' subsection — server-side/background auto-start (working with no browser tab open) requires cron/worker infrastructure NOT confirmed to exist in this repo and is explicitly OUT OF SCOPE. Only build the client-side, page-open-dependent version described in 'Decided design'.",
+        "No schema change, no new API routes. NowCard.tsx's existing lessonChoice onChange handler gains a lookup into openLessons to read scheduledStartTime/scheduledEndTime off the selected LessonTask and set timeChannelType/scheduledStart/scheduledEnd local state accordingly (today's date + the lesson's HH:MM, consistent with the existing 'applies to this session only, today' model).",
+        "Add a new client-side polling effect in NowCard.tsx, alongside the existing running-session ticker (same setInterval pattern already used, per the plan's audit at NowCard.tsx:190-194): when session?.status === 'draft' && session.timeChannelType === 'scheduled', compare Date.now() to session.scheduledStart and call learningTimeApi.transition(session.id, {action:'start'}) once the threshold is crossed. Use a ref (e.g. hasAutoStartedRef) to guard against double-firing across re-renders/ticks.",
+        "RISK NOTED IN PLAN — implement the bounded-window mitigation: only auto-start when 'now' is within a bounded window past scheduledStart (e.g. same calendar day), not indefinitely, so a tab left open for hours/days past a stale scheduled time doesn't surprise-start a session. Make this an explicit, named constant, not a silent assumption.",
+        "Add a new idle-but-scheduled UI state ('Starts at HH:MM') between the existing idle and running states, shown when a draft scheduled session's start time hasn't arrived yet.",
+        "Add a visible 'Time to finish [lesson]' prompt (styled consistently with existing inline prompts already in NowCard.tsx — no new modal) when wall-clock time passes a running scheduled session's scheduledEnd. This is a prompt only — do NOT auto-finalize the session; the existing manual Finish/outcome/Save flow is unchanged.",
+        "Add a small caption noting the auto-start only works while the page is open, to set honest expectations (per the plan's explicit UI-copy guidance).",
+        "Do not touch features/learning-time/server/service.ts, repository.ts, types.ts, or db/schema.ts — the plan confirms none of this needs a service-layer or schema change; transitionSession('start') already exists and does exactly what's needed, it's just being called from a timer instead of only a click."
+      ],
+      "doneWhen": [
+        "npm test -- features/learning-time",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Record the exact bounded-window constant chosen for auto-start staleness, and confirm via test that the double-fire guard works across at least 2 polling ticks."
+    }
+  ]
+}
