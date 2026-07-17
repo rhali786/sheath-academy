@@ -222,11 +222,15 @@
         "features/learning-time/front/pages/LearningTimePage.tsx",
         "features/gradebook/front/pages/GradebookPage.tsx",
         "features/subjects/__tests__/server/repository.test.ts",
-        "features/subjects/__tests__/integration/"
+        "features/subjects/__tests__/integration/",
+        "features/gradebook/server/repository.ts",
+        "features/gradebook/api/routes/summaries.ts",
+        "features/gradebook/__tests__/server/repository.test.ts"
       ],
       "testsFirst": [
         "Repository test: seed a course in school year A, roll it over to year B, query the active-year (B) course list -> exactly one row returned for that course name+learner (fails today: rollover leaves the source-year row visible via the `schoolYearId = year OR schoolYearId IS NULL` clause)",
-        "Consistency test/integration: Settings, Gradebook, and Learning-time, given the same household + active year, render the same course set (same count, same names) — add a shared test helper or repeat the assertion per surface"
+        "Consistency test/integration: Settings, Gradebook, and Learning-time, given the same household + active year, render the same course set (same count, same names) — add a shared test helper or repeat the assertion per surface",
+        "features/gradebook/__tests__/server/repository.test.ts: a course rolled over into a new school year (source-year row still isActive=true per the hides-but-keeps decision) contributes NEITHER to the visible subject list NOR to GPA/needs-attention aggregation in listGradebookSummaries for the new active year — only the current-year row counts."
       ],
       "implementationSteps": [
         "DB TARGET (per top-level dbMigrationPolicy): the dev DB is gone. Run npm run db:generate as usual (schema-diff only, no DB connection needed), but for npm run db:migrate, target PRODUCTION by remapping DATABASE_URL_PROD -> DATABASE_URL first (mirror scripts/migrate-prod.ts / scripts/lib/prod-env.ts applyProdDatabaseUrl()) rather than plain dotenv -e .env.local. A full prod backup already exists at backups/prod-2026-07-17T00-58-42/ as the rollback point for this migration — do not take a new one, but DO print/record the prod host you are targeting before migrating, and confirm in notes that DATABASE_URL_PROD (not a guess) was used.",
@@ -234,7 +238,8 @@
         "Decision already made (do not re-litigate): previous-year course copies should be HIDDEN from active-year views but KEPT/recoverable — nothing is deleted.",
         "Establish a single active-year-scoped course query (in features/subjects/server/repository.ts, likely tightening listSubjects to require schoolYearId = activeYear rather than `OR schoolYearId IS NULL`, after confirming/backfilling any legitimately-NULL legacy rows first if they exist) and make Settings, Gradebook, and Learning-time all call it the same way.",
         "Rollover: ensure the source-year row is excluded from the active-year query once cloned (e.g. by not matching a stale schoolYearId), while the row itself remains in the table and is reachable via a non-active-year/history query if one exists — do not add new UI for 'view archived courses' unless it's trivial; the acceptance bar is 'not duplicated in the active view', not a new archive browser.",
-        "Once the source is consistent, remove the ad-hoc name-grouping de-dupe workaround in features/learning-time/front/pages/LearningTimePage.tsx (the courseGroups Map keyed by name) since it will no longer be needed — but only remove it after confirming the new query genuinely returns one row per course."
+        "Once the source is consistent, remove the ad-hoc name-grouping de-dupe workaround in features/learning-time/front/pages/LearningTimePage.tsx (the courseGroups Map keyed by name) since it will no longer be needed — but only remove it after confirming the new query genuinely returns one row per course.",
+        "SPIKE COMPLETE (see prior failed attempt notes in progress.json for phase-g2-course-rollover): the actual root cause is features/gradebook/server/repository.ts listGradebookSummaries querying the subjects table directly with NO schoolYearId/isActive filtering, bypassing listSubjectRows entirely, so GPA/needs-attention aggregation includes rolled-over source-year duplicate courses indefinitely. Settings (SubjectsAllTable) and Learning-time (LearningTimePage via useHousehold().allSubjects) are ALREADY correctly active-year-scoped via GET /api/subjects -> listSubjectRows and need NO functional fix — do not modify SubjectsAllTable.tsx or LearningTimePage.tsx beyond, optionally, simplifying LearningTimePage.tsx redundant client-side courseGroups dedupe (cosmetic only, skip if any doubt). The fix: filter listGradebookSummaries subjectRows by the same active-year + isActive scoping listSubjectRows already applies (ideally have it call/reuse listSubjectRows's already-correct row set instead of querying subjects directly a second time) BEFORE any GPA/aggregation math runs. No schema change needed — schoolYearId and isActive already exist on subjects."
       ],
       "doneWhen": [
         "npm test -- features/subjects",

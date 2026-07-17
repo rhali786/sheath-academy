@@ -1,7 +1,7 @@
 {
   "plan": "docs/20260716-feedback-batch-g1-g7-plan.json",
   "createdAt": "2026-07-16T22:49:50.530Z",
-  "updatedAt": "2026-07-17T01:22:40.488Z",
+  "updatedAt": "2026-07-17T13:20:24.994Z",
   "branch": "fix/feedback-batch-g1-g7",
   "phases": [
     {
@@ -157,7 +157,7 @@
       "outputs": {
         "filesChanged": [],
         "testsRun": [],
-        "notes": ""
+        "notes": "RE-SCOPED 2026-07-17 after spike: root cause is features/gradebook/server/repository.ts listGradebookSummaries querying subjects unfiltered (no schoolYearId/isActive scoping), bypassing listSubjectRows. Settings/Learning-time already correctly scoped, need no fix. fileScope now includes the gradebook repository/route. No schema migration needed for this phase."
       },
       "failureReason": null
     },
