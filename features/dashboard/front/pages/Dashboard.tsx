@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { SchoolYearProgressCard } from '../components/SchoolYearProgressCard'
@@ -23,6 +23,7 @@ import { DashboardHeader } from '../components/DashboardHeader'
 import { dashboardDateToStr } from '../components/DashboardDatePicker'
 import { TodayTaskSummaryCards } from '../components/TodayTaskSummaryCards'
 import { TodaySchedulePanel } from '../components/TodaySchedulePanel'
+import { selectDayLessons } from '../lib/selectDayLessons'
 import type { LessonTask } from '@/features/plan/types'
 import type { DaySchedule } from '@/features/schedule/types'
 
@@ -59,7 +60,7 @@ export default function Dashboard() {
   const { enabled: reminderEnabled } = useIslamicReminderSettings()
 
   const dayLessons = useMemo(
-    () => allLessons.filter(l => l.dueDate === selectedDate).sort((a, b) => a.order - b.order),
+    () => selectDayLessons(allLessons, selectedDate),
     [allLessons, selectedDate],
   )
 
@@ -72,7 +73,7 @@ export default function Dashboard() {
     }), date: selectedDate }
   }, [dayLessons, selectedDate])
 
-  useEffect(() => {
+  const fetchDayLessons = useCallback(() => {
     plannerApi.getLessons(
       undefined,
       selectedChildId ? [selectedChildId] : undefined,
@@ -83,6 +84,10 @@ export default function Dashboard() {
       .then(lessons => setAllLessons(lessons))
       .catch(() => {})
   }, [selectedChildId, selectedDate])
+
+  useEffect(() => {
+    fetchDayLessons()
+  }, [fetchDayLessons])
 
   useEffect(() => {
     if (dateParam && !isValidDateParam(dateParam)) {
@@ -137,6 +142,8 @@ export default function Dashboard() {
                 schedule={daySchedule}
                 currentTime={getCurrentTime()}
                 subjects={allSubjects}
+                learnerId={selectedChildId}
+                onLessonSaved={fetchDayLessons}
               />
             </div>
             <aside data-testid="dashboard-attention-hub">

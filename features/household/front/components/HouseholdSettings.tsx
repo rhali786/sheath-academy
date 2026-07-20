@@ -35,7 +35,7 @@ function profileToForm(p: HouseholdProfile | null) {
 }
 
 export function HouseholdSettings() {
-  const { householdProfile } = useHousehold()
+  const { householdProfile, refetch } = useHousehold()
   const [form, setForm] = useState(() => profileToForm(householdProfile))
   const [saved, setSaved] = useState(() => profileToForm(householdProfile))
   const [loading, setLoading] = useState(false)
@@ -96,6 +96,7 @@ export function HouseholdSettings() {
         jumuahReturnWindow: form.jumuahReturnWindow || undefined,
       })
       setSaved(form)
+      refetch()
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err) {

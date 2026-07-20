@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { learningTimeApi } from '@/features/learning-time/front/services/api'
 import { formatElapsed } from '@/features/learning-time/front/lib/formatElapsed'
+import { QuickStartByCourseList } from '@/features/learning-time/front/components/QuickStartByCourseList'
 import { plannerApi } from '@/features/plan/front/services/api'
 import {
   OUTCOMES,
@@ -70,19 +71,6 @@ function formatTimeLabel(iso: string): string {
   return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 }
 
-const DURATION_LABELS: Record<string, string> = {
-  '15min': '15 min',
-  '30min': '30 min',
-  '45min': '45 min',
-  '1hr': '1 hr',
-  custom: 'Custom',
-}
-
-function durationLabel(duration: string | undefined): string {
-  if (!duration) return 'No duration set'
-  return DURATION_LABELS[duration] ?? duration
-}
-
 export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
   const [loading, setLoading] = useState(true)
   const [session, setSession] = useState<LearningTimeSession | null>(null)
@@ -91,7 +79,6 @@ export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
   const [configuring, setConfiguring] = useState(false)
   const [next, setNext] = useState<LessonTask | null | undefined>(undefined)
   const [openLessons, setOpenLessons] = useState<LessonTask[]>([])
-  const [quickStartLessons, setQuickStartLessons] = useState<LessonTask[]>([])
 
   const [lessonChoice, setLessonChoice] = useState<string>('adhoc')
   const [timeChannelType, setTimeChannelType] = useState<TimeChannelType>('stopwatch')
@@ -169,47 +156,6 @@ export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
       })
     return () => { cancelled = true }
   }, [learnerId, course?.id])
-
-  // Independent of the page-level course filter: fetches every open lesson for this learner
-  // (no subject filter) so the quick-start course list below can show each course's next
-  // configured duration regardless of which course (if any) is selected at the top of the page.
-  useEffect(() => {
-    let cancelled = false
-    plannerApi.getLessons(undefined, [learnerId], undefined)
-      .then(lessons => {
-        if (cancelled) return
-        setQuickStartLessons(lessons.filter(l => l.status === 'not_started'))
-      })
-      .catch(() => {
-        if (!cancelled) setQuickStartLessons([])
-      })
-    return () => { cancelled = true }
-  }, [learnerId])
-
-  const quickStartCourses = allSubjects
-    .filter(s => (s.learnerIds ?? []).includes(learnerId))
-    .map(s => {
-      const nextLesson = quickStartLessons
-        .filter(l => l.subjectId === s.id)
-        .sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0]
-      return { id: s.id, name: s.name, duration: nextLesson?.estimatedDuration }
-    })
-
-  async function handleQuickStart(quickCourse: { id: string; name: string }) {
-    setError(null)
-    try {
-      const input: CreateSessionInput = {
-        learnerId,
-        timeChannelType: 'stopwatch',
-        subjectId: quickCourse.id,
-      }
-      const created = await learningTimeApi.createSession(input)
-      const started = await learningTimeApi.transition(created.data.id, { action: 'start' })
-      applySession(started.data)
-    } catch {
-      setError('Failed to start session. Please try again.')
-    }
-  }
 
   useEffect(() => {
     if (session?.status !== 'running') return
@@ -539,31 +485,12 @@ export function NowCard({ learnerId, course, allSubjects }: NowCardProps) {
           </button>
           {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
 
-          {quickStartCourses.length > 0 && (
-            <div className="mt-5 pt-4 border-t border-slate-100" data-testid="quick-start-list">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Quick start by course</p>
-              <ul className="space-y-2">
-                {quickStartCourses.map(qc => (
-                  <li key={qc.id} className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-700 truncate">{qc.name}</p>
-                      <p className="text-xs text-slate-400" data-testid={`quick-start-duration-${qc.id}`}>
-                        {durationLabel(qc.duration)}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleQuickStart(qc)}
-                      data-testid={`quick-start-course-${qc.id}`}
-                      className={secondaryButtonClass}
-                    >
-                      Start
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <QuickStartByCourseList
+            learnerId={learnerId}
+            allSubjects={allSubjects}
+            onStarted={applySession}
+            className="mt-5 pt-4 border-t border-slate-100"
+          />
         </div>
       </div>
     )

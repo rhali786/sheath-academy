@@ -854,8 +854,12 @@ describe('LearningTimePage — quick start by course (G7b)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('now-card-idle')).toBeInTheDocument()
     })
-    expect(screen.getByTestId('quick-start-course-subj_math')).toBeInTheDocument()
-    expect(screen.getByTestId('quick-start-duration-subj_math')).toHaveTextContent(/30 ?min/i)
+    await waitFor(() => {
+      expect(screen.getByTestId('quick-start-course-subj_math')).toBeInTheDocument()
+    })
+    await waitFor(() => {
+      expect(screen.getByTestId('quick-start-duration-subj_math')).toHaveTextContent(/30 ?min/i)
+    })
     expect(screen.getByTestId('quick-start-course-subj_reading')).toBeInTheDocument()
     expect(screen.getByTestId('quick-start-duration-subj_reading')).toHaveTextContent(/no duration set/i)
   })
@@ -867,6 +871,7 @@ describe('LearningTimePage — quick start by course (G7b)', () => {
 
     renderPage()
     await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByTestId('quick-start-course-subj_math')).toBeInTheDocument())
 
     fireEvent.click(screen.getByTestId('quick-start-course-subj_math'))
 
