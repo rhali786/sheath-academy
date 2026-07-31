@@ -13,11 +13,17 @@ export interface CreateLessonTaskInput {
   resourceLink?: string
   lessonType?: string
   estimatedDuration?: string
+  scheduledStartTime?: string | null
+  scheduledEndTime?: string | null
   plannedStartDate?: string
   dueDate?: string
   status?: string
   sortOrder?: number
   groupId?: string | null
+  curriculum?: string
+  chapter?: string
+  hasHomework?: boolean
+  hasAssessment?: boolean
 }
 
 export interface LessonAssignmentInput {
@@ -42,10 +48,16 @@ export interface UpdateLessonTaskInput {
   resourceLink?: string
   lessonType?: string
   estimatedDuration?: string
+  scheduledStartTime?: string | null
+  scheduledEndTime?: string | null
   plannedStartDate?: string | null
   dueDate?: string
   status?: string
   sortOrder?: number
+  curriculum?: string | null
+  chapter?: string | null
+  hasHomework?: boolean
+  hasAssessment?: boolean
 }
 
 export interface LessonTaskFilters {
@@ -106,11 +118,17 @@ export async function createLessonTaskRow(
       resourceLink: input.resourceLink ?? null,
       lessonType: input.lessonType ?? null,
       estimatedDuration: input.estimatedDuration ?? null,
+      scheduledStartTime: input.scheduledStartTime ?? null,
+      scheduledEndTime: input.scheduledEndTime ?? null,
       plannedStartDate: input.plannedStartDate ?? null,
       dueDate: input.dueDate ?? null,
       status: input.status ?? 'not_started',
       sortOrder: input.sortOrder ?? 0,
       groupId: input.groupId ?? null,
+      curriculum: input.curriculum ?? null,
+      chapter: input.chapter ?? null,
+      hasHomework: input.hasHomework ?? false,
+      hasAssessment: input.hasAssessment ?? false,
       createdAt: now,
       updatedAt: now,
     })
@@ -138,10 +156,16 @@ function buildSharedInsertValues(
     resourceLink: base.resourceLink ?? null,
     lessonType: base.lessonType ?? null,
     estimatedDuration: base.estimatedDuration ?? null,
+    scheduledStartTime: base.scheduledStartTime ?? null,
+    scheduledEndTime: base.scheduledEndTime ?? null,
     plannedStartDate: base.plannedStartDate ?? null,
     dueDate: base.dueDate ?? null,
     status: base.status ?? 'not_started',
     sortOrder: base.sortOrder ?? 0,
+    curriculum: base.curriculum ?? null,
+    chapter: base.chapter ?? null,
+    hasHomework: base.hasHomework ?? false,
+    hasAssessment: base.hasAssessment ?? false,
     createdAt: now,
     updatedAt: now,
   }
@@ -227,9 +251,15 @@ export async function updateLessonTaskRow(
   if (input.resourceLink !== undefined) patch.resourceLink = input.resourceLink
   if (input.lessonType !== undefined) patch.lessonType = input.lessonType
   if (input.estimatedDuration !== undefined) patch.estimatedDuration = input.estimatedDuration
+  if (input.scheduledStartTime !== undefined) patch.scheduledStartTime = input.scheduledStartTime
+  if (input.scheduledEndTime !== undefined) patch.scheduledEndTime = input.scheduledEndTime
   if (input.plannedStartDate !== undefined) patch.plannedStartDate = input.plannedStartDate
   if (input.dueDate !== undefined) patch.dueDate = input.dueDate
   if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder
+  if (input.curriculum !== undefined) patch.curriculum = input.curriculum
+  if (input.chapter !== undefined) patch.chapter = input.chapter
+  if (input.hasHomework !== undefined) patch.hasHomework = input.hasHomework
+  if (input.hasAssessment !== undefined) patch.hasAssessment = input.hasAssessment
 
   if (options.applyToGroup && existing.groupId) {
     const result = await db

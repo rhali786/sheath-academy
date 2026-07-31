@@ -18,6 +18,8 @@ export interface FeedbackRequeueItem {
   createdAt: string
   userId: string | null
   userEmail: string
+  /** True when the submitter attached a screenshot. The image itself is not embedded here — fetch it via GET /api/feedback/:id/screenshot if a human/admin needs to view it. */
+  hasScreenshot: boolean
 }
 
 export async function getUnclassifiedFeedback(options: { ids?: string[] } = {}): Promise<FeedbackRequeueItem[]> {
@@ -31,6 +33,7 @@ export async function getUnclassifiedFeedback(options: { ids?: string[] } = {}):
     createdAt: r.createdAt,
     userId: r.userId ?? null,
     userEmail: r.userEmail,
+    hasScreenshot: r.hasScreenshot === true,
   }))
 }
 

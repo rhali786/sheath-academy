@@ -2,11 +2,14 @@ import React, { ReactElement } from 'react'
 import { render, RenderOptions } from '@testing-library/react'
 import { DashboardProvider } from '@/features/dashboard/front/context'
 import { LearnerProvider } from '@/features/layout/front/context/LearnerContext'
+import { ActiveSchoolYearProvider } from '@/features/school-year/front/context/ActiveSchoolYearContext'
 
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
   return (
     <LearnerProvider>
-      <DashboardProvider>{children}</DashboardProvider>
+      <ActiveSchoolYearProvider>
+        <DashboardProvider>{children}</DashboardProvider>
+      </ActiveSchoolYearProvider>
     </LearnerProvider>
   )
 }

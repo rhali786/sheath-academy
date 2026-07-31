@@ -64,4 +64,16 @@ describe('ScheduleTimeline', () => {
     fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
     expect(mockPush).toHaveBeenCalledWith('/lessons?editId=l1')
   })
+
+  test('an onEditLesson override is called instead of navigating', () => {
+    const schedule = buildDailySchedule(
+      [makeLesson('l1', 'Mathematics', 'not_started')],
+      { startTime: '08:30', transitionMinutes: 10 },
+    )
+    const onEditLesson = jest.fn()
+    render(<ScheduleTimeline schedule={schedule} currentTime="09:00" showAdjustDay={false} onEditLesson={onEditLesson} />)
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(onEditLesson).toHaveBeenCalledWith('l1')
+    expect(mockPush).not.toHaveBeenCalled()
+  })
 })

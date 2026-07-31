@@ -1,0 +1,299 @@
+{
+  "plan": "docs/20260716-feedback-batch-g1-g7-plan.json",
+  "createdAt": "2026-07-16T22:49:50.530Z",
+  "updatedAt": "2026-07-17T13:45:08.831Z",
+  "branch": "fix/feedback-batch-g1-g7",
+  "phases": [
+    {
+      "id": "phase-0-prod-seed-ops",
+      "title": "Commit the already-applied prod reference-seed fix + wrapper script",
+      "gated": false,
+      "status": "complete",
+      "model": "cheap",
+      "startedAt": "2026-07-16T23:00:00.000Z",
+      "completedAt": "2026-07-16T23:20:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "scripts/seed-reference-data.ts",
+          "scripts/seed-reference-prod.ts",
+          "package.json"
+        ],
+        "testsRun": [
+          "npm test (239 suites / 2110 tests passed)"
+        ],
+        "notes": "Ops-verification commit only, no schema change. Verified all three files matched the plan's expected content exactly: scripts/seed-reference-data.ts jsonPath now points at docs/archive/compliance-research/homeschool-requirements-2026-06-27.json (fixed from the missing docs/compliance-research/... path); scripts/seed-reference-prod.ts mirrors scripts/migrate-prod.ts (loads DATABASE_URL_PROD, remaps to DATABASE_URL, execSync's seed-reference-data.ts via npx tsx); package.json's db:seed:reference:prod entry (dotenv -e .env.local -- tsx scripts/seed-reference-prod.ts) was already present in the committed baseline (package.json's only working-tree diff was the routine pre-commit version bump). Reference seed already run and verified against prod 2026-07-16: 66 compliance_rulesets across 7 states (TX/FL/NY/PA/CA/MI/CT), 8 starter badge_definitions — read-only verification, no schema change here. Committed as 4b48c33. IMPORTANT for next worker/orchestrator: `npm run build` fails in this sandbox at static generation of /(shell)/about/page — it calls listChangelogEntries() which needs a live DB connection; TCP connects to the Render Postgres host but the Postgres protocol handshake hangs indefinitely (confirmed via direct postgres.js and raw TCP probes), causing Next's 60s-per-attempt static-export timeout after 3 retries. Confirmed via `git stash` that this reproduces identically with this phase's 3 files stashed out — it is a pre-existing sandbox network/DB-connectivity limitation, NOT caused by this phase's changes, and outside this phase's file scope (features/lib/server/db.ts, app/(shell)/about/page.tsx). npm test passes fully (239 suites, 2110 tests) since tests mock the repository boundary. Later phases whose doneWhen includes `npm run build` should expect this same failure mode in this environment and should not attribute it to their own changes without first checking build fails identically on a clean stash."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g1-settings-persistence",
+      "title": "G1 — Persist Planning Defaults & Records/Compliance settings tabs with an explicit Save button",
+      "gated": false,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-16T23:30:00.000Z",
+      "completedAt": "2026-07-16T23:59:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/settings/api/router.ts",
+          "features/settings/api/routes/settings.ts",
+          "features/settings/front/services/api.ts",
+          "features/settings/front/components/PlanningDefaultsTab.tsx",
+          "features/settings/front/components/RecordsComplianceTab.tsx",
+          "app/api/[...slug]/route.ts",
+          "features/settings/__tests__/api/settings.test.ts",
+          "features/settings/__tests__/integration/PlanningDefaultsTab.test.tsx",
+          "features/settings/__tests__/integration/RecordsComplianceTab.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/settings (29 passed, 7 skipped/db-gated)",
+          "npm test (242 suites / 2119 tests passed)"
+        ],
+        "notes": "Route pattern followed: features/badges/api/router.ts + features/badges/api/routes/settings.ts (most recently added sibling router) — new top-level GET/PUT /api/settings route added to app/api/[...slug]/route.ts's handleRoute() dispatch (new 'settings' slug case, after 'badges'). Reused the existing features/settings/server/repository.ts (getAllHouseholdSettings/setHouseholdSetting against household_settings) unchanged — no duplication. Exact setting keys used: planning.maxLessonsPerDay (number), planning.carryForward ('none'|'next-day'|'next-week'), records.trackingMethod ('days'|'hours'), records.exportFormat ('pdf'|'csv'). Front contract for G7/G8: features/settings/front/services/api.ts exports settingsApi.getSettings() -> ApiResponse<Record<string,unknown>> and settingsApi.updateSettings(patch: Record<string,unknown>) -> ApiResponse<Record<string,unknown>|null> (PUT merges/upserts only the provided keys, returns the full updated map). Both PlanningDefaultsTab.tsx and RecordsComplianceTab.tsx load on mount, track dirty state against last-saved values, and disable the 'Save changes' button until dirty — confirmed via integration tests. No auto-save on change, per plan decision. Found and fixed a test race during TDD: an integration test's initial waitFor assertion (toHaveValue matching the default state, which happened to equal the mocked loaded value) passed before the component's load effect actually finished, so a subsequent userEvent.selectOptions fired on a still-disabled <select> and silently no-op'd. Fixed by asserting `.not.toBeDisabled()` in the waitFor instead of relying on the value coincidentally matching. `npm run build` fails identically to the phase-0 note (static generation of /(shell)/about times out on a DB handshake) — confirmed via `git stash`/`git stash pop` with this phase's files fully stashed out: same 3-retry 60s timeout on /(shell)/about, unrelated to any file in this phase's scope. `npx tsc --noEmit` shows only pre-existing unrelated errors (subjects/messaging/feedback-steward fixtures) — nothing in features/settings/**."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g4-compliance-empty-state",
+      "title": "G4 — Compliance empty-state copy + info tooltips for ruleset/pathway",
+      "gated": false,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-16T23:59:30.000Z",
+      "completedAt": "2026-07-17T00:20:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/compliance/front/pages/CompliancePage.tsx",
+          "features/compliance/__tests__/integration/CompliancePage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/compliance (61 passed, 10 skipped/db-gated)",
+          "npm test (242 suites / 2121 tests passed)"
+        ],
+        "notes": "No existing dedicated tooltip component was found in the codebase (grepped for Tooltip/title= across features/**/front/**/*.tsx); used the plan's documented fallback — a plain <span title=\"...\"> wrapper around the lucide-react Info icon (lucide-react's Info component does not accept a `title` prop directly in its LucideProps type, so the title attribute must live on a wrapping element) plus small visible helper-text paragraphs below the ruleset select and pathway input, per ui-style-guide's 'don't invent a new global tooltip component for this alone' guidance. RulesetCard's editing view now branches on rulesets.length === 0: empty case renders a muted explanatory message ('No rulesets available yet for your state...') in place of the <select>; non-empty case keeps the <select> plus a data-testid='ruleset-select-info' info icon and helper text, and the Pathway field always gets a data-testid='pathway-info' info icon and helper text (pathway is free-text and usable even without a ruleset). 'Mark deadline complete' was left untouched per the plan. Build note: `npm run build` reproduces the exact same known sandbox failure documented by phase-0 and phase-g1 (static generation of /(shell)/about times out on a DB handshake after 3x60s retries) — cross-checked via `git stash` (stashing this phase's 2 files + progress.json, running `npm run build` with a 120s bounded timeout, observing the identical `/(shell)/about ... took more than 60 seconds` failure) before `git stash pop` restored the work. `npx tsc` build step did initially catch a real type error introduced by this phase (Info icon does not accept `title` prop) which was fixed by wrapping in <span title=...> before the stash-comparison run — so the build's type-check portion was exercised and passed on this phase's code, only the static-generation phase (unrelated to this phase) fails."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g5-badges-discoverability",
+      "title": "G5 — Make 'Add badge' clearly discoverable",
+      "gated": false,
+      "status": "complete",
+      "model": "cheap",
+      "startedAt": "2026-07-17T00:30:00.000Z",
+      "completedAt": "2026-07-17T00:45:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/badges/front/pages/BadgesPage.tsx",
+          "features/badges/__tests__/integration/BadgesPage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/badges (85 passed, 11 skipped/db-gated)",
+          "npm test (242 suites / 2123 tests passed)"
+        ],
+        "notes": "Followed the ui-style-guide collapsible-add-form pattern (§5, same as planner's 'Add lesson' toggle): the header toggle button (data-testid='add-badge-toggle') was renamed from 'Create badge' to 'Add badge' when hidden / 'Cancel' when the form is open, and the form's own submit button keeps the label 'Create badge' (submitLabel prop, unchanged) so the two are no longer text-ambiguous. Added one line of helper text under the 'Add badge' form heading: 'Badges you create here are custom to your household — design your own goals for your kids to work toward.' Fixed a real discoverability gap beyond the label rename: previously the collection.length===0 branch returned early WITHOUT the header/toggle at all, so there was no way to add a badge from the empty state — restructured BadgesPage() to always render the header (with the Add badge toggle) and branch only the body between EmptyBadgeState and the trophy-case grid. Updated the pre-existing 'authors a custom badge via the create form' test to click 'Add badge' instead of 'Create badge' for the toggle, and added two new tests: one confirming the header control is visible/labeled 'Add badge' and reveals the form with helper text, and one confirming it is present even when the collection is empty. `npm run build` reproduces the same known sandbox failure documented by phase-0/g1/g4 (static generation of /(shell)/about times out on a DB handshake after 3x60s retries, unrelated to this phase's 2-file scope) — the build's earlier type-check/lint step completed successfully before that unrelated failure. Committed as 385c6bd."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g6-verify-display-name",
+      "title": "G6 — Verify parent display name works for magic-link users; fix only if a real gap is found",
+      "gated": false,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T01:00:00.000Z",
+      "completedAt": "2026-07-17T01:15:00.000Z",
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/settings/__tests__/integration/SettingsPage.test.tsx features/layout/__tests__/Header.test.tsx features/household/__tests__/api/user-profile.test.ts (3 suites / 36 tests passed)"
+        ],
+        "notes": "NO GAP FOUND — verification only, no functional code change made (working tree left clean, no commit created since nothing changed). Confirming tests already existed pre-phase and were inspected/run, not newly written: SettingsPage.test.tsx's 'Display name — Your profile section' describe block (renders form, pre-fills from session.user.name, saves via householdApi.updateUserProfile + updateSession({name}), shows success/error), Header.test.tsx's 'Header — authenticated' block (greeting uses session.user.name when set, falls back to 'there' — never to email — when absent; email always shown separately in parens), and household/__tests__/api/user-profile.test.ts (PUT /api/household/user-profile persists via updateUserName to the users table). Traced full chain end-to-end: SettingsPage.handleSaveDisplayName -> householdApi.updateUserProfile -> PUT /api/household/user-profile -> updateUserName(userId, name) persists users.name -> updateSession({name}) -> NextAuth jwt callback (features/auth/auth.ts, trigger==='update') sets token.name -> session callback sets session.user.name -> Header.tsx reads session.user.name directly. Session strategy is 'jwt' globally (features/auth/auth.config.ts: session.strategy='jwt', applies to ALL providers) with no provider-specific branching on the name field anywhere in the jwt/session callbacks or resolveTenant — magic-link (Resend), credentials/password, dev-bypass, and OAuth sessions all flow through the identical code path. Conclusion: the display-name flow already works correctly for magic-link sessions exactly as documented in the plan's expected 'no-op verified' outcome — G6 is a no-op verification, not a fix."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g3-learner-profile-and-login",
+      "title": "G3 — Learner profile fields (dob/first/last) persist + real learner login via the existing add-member path",
+      "gated": true,
+      "status": "complete",
+      "model": "strong",
+      "startedAt": "2026-07-17T00:00:00.000Z",
+      "completedAt": "2026-07-17T00:40:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "db/schema.ts",
+          "db/migrations/0033_sad_human_torch.sql",
+          "db/migrations/meta/0033_snapshot.json",
+          "db/migrations/meta/_journal.json",
+          "features/children/server/repository.ts",
+          "features/children/api/routes/child.ts",
+          "features/children/api/routes/children.ts",
+          "features/children/front/components/ChildForm.tsx",
+          "features/household/server/repository.ts",
+          "features/auth/server/repository.ts",
+          "features/children/__tests__/api/child.test.ts",
+          "features/children/__tests__/api/children.test.ts",
+          "features/children/__tests__/api/repository.test.ts",
+          "features/children/__tests__/integration/ChildrenComponents.test.tsx",
+          "features/household/__tests__/api/repository.test.ts"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/children features/household features/auth (32 of 36 suites, 288 passed / 46 skipped-db-gated)",
+          "npm test (244 of 268 suites, 2144 passed / 198 skipped-db-gated)"
+        ],
+        "notes": "RESTORED FROM STASH \"wip: phase-g3-learner-profile-and-login (blocked on dev DB migrate)\" per orchestrator instruction — this was a previously-complete implementation (208 mocked tests) that only failed because the dev DB was unreachable; not reimplemented from scratch. `git stash pop` had exactly one conflict (package.json version field, routine pre-commit-hook churn) — resolved by keeping the working-tree's higher version (2.98.2) and staging it; stash then dropped. Verified restored content matches this phase's fileScope and implementationSteps exactly (schema/migration/repository/routes/ChildForm/tests all present and correct) before proceeding — did not re-derive independently.\n\nDB TARGET CONFIRMED per top-level dbMigrationPolicy: resolved DATABASE_URL_PROD (via node + dotenv, before running any migrate command) to host dpg-d85140f7f7vs73fvdqhg-a.oregon-postgres.render.com — matches the required prod host exactly. Proceeded only after this printed confirmation.\n\nMIGRATION: 0033_sad_human_torch.sql (already generated pre-stash) — adds learners.first_name (text), learners.last_name (text), learners.dob (date), learners.user_id (text, FK -> users.id, nullable), and household_members.is_active (boolean, default true, not null). `npm run db:generate` run first and confirmed 'No schema changes, nothing to migrate' — schema.ts and the migrations dir already agreed, no new/duplicate migration produced (invariant satisfied, no drift). `npm run db:status:prod` before migrating showed repo journal at 34 migrations (0000..0033), prod at 33 applied, exactly 1 pending (0033) — confirms no gap existed before this phase's migration. Ran `npm run db:migrate:prod` (uses scripts/migrate-prod.ts / applyProdDatabaseUrl()) against the confirmed host — applied successfully (drizzle-kit reported '[OK] migrations applied successfully!', two idempotent NOTICEs for pre-existing drizzle schema/migrations-table, no errors). Re-ran `npm run db:status:prod` after: repo journal 34, prod applied 34, pending 0 — invariant confirmed, no gap, migration 0033 is now the latest applied migration on prod.\n\nPlaceholder email format for username-only learners: `learner.${learnerId}@no-email.local` (users.email is NOT NULL UNIQUE, learners created via the add-member path have no real email). 'learner' added to the MembershipRole union in features/household/server/repository.ts (existing precedent: 'teacher'). NOTE: the plan's implementationSteps also mentioned adding 'learner' to VALID_ROLES in features/household/api/routes/invite.ts, but that file is NOT in this phase's fileScope and was correctly left untouched by the restored implementation — invite.ts's VALID_ROLES governs household co-parent email invites, a separate flow from the ChildForm/addMember learner-login path this phase implements, so the omission does not affect this phase's functionality; flagging for awareness only, not fixed here (out of scope).\n\nConfirmed via repository-level test assertions (features/children/__tests__/api/repository.test.ts, features/children/__tests__/api/child.test.ts, features/children/__tests__/api/children.test.ts) that enabling learner login creates a credential user + membership on the EXISTING household without creating a new household row (mirrors features/household/api/routes/accept.ts's addMember-without-upsertHouseholdForUser pattern, per the plan's explicit template instruction). household_members.is_active supports deactivate-not-delete when login is later disabled (features/household/server/repository.ts).\n\nTests: features/children, features/household, features/auth suites all pass (32/36 suites; 4 skipped are pre-existing db-gated suites unrelated to this phase). Full `npm test`: 244/268 suites pass, 2144 tests pass, 198 skipped (pre-existing db-gated, same skip set as prior phases). `npx tsc`/type-check portion of `npm run build` (\"Linting and checking validity of types\") completed cleanly before the build failed later at static generation of /(shell)/about — reproduces the exact same known pre-existing sandbox failure documented by phase-0/g1/g4/g5/g7b (Postgres wire-protocol handshake to the DB never completes during Next's static-export step, 3x60s retries then exit). Confirmed this is unrelated to this phase and behaves IDENTICALLY to before — even though the dev-tooling scripts (db:status:prod, db:migrate:prod, drizzle-kit) can reach the DB fine via the `postgres` npm driver from a plain Node/tsx process, the Next.js build's static-generation worker still cannot complete the handshake; the two code paths evidently differ in a way this phase did not investigate further (out of scope per orchestrator's explicit instruction not to block phase completion on this). Committed as 3b9d4c9."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g2-course-rollover",
+      "title": "G2 — Single active-year course visibility across Settings/Gradebook/Learning-time; rollover hides-but-keeps prior-year copies",
+      "gated": true,
+      "status": "complete",
+      "model": "strong",
+      "startedAt": "2026-07-17T13:30:00.000Z",
+      "completedAt": "2026-07-17T13:55:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/gradebook/server/repository.ts",
+          "features/gradebook/__tests__/server/repository.test.ts"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/gradebook (8 of 9 suites, 1 skipped/db-gated, 87 passed / 12 skipped)",
+          "npm test (245 of 269 suites passed, 24 skipped/db-gated, 2148 passed / 198 skipped)"
+        ],
+        "notes": "No spike redone — implemented directly against the already-known root cause from the prior attempt's notes (still present in this file's history before this write): listGradebookSummaries queried the `subjects` table directly with only a householdId filter, no schoolYearId/isActive scoping, bypassing listSubjectRows. Settings (SubjectsAllTable.tsx) and Learning-time (LearningTimePage.tsx) were confirmed already correctly active-year-scoped via GET /api/subjects -> listSubjectRows (features/subjects/api/routes/subjects.ts calls getActiveSchoolYear then listSubjectRows(householdId, childId, false, {schoolYearId: activeYear.id})) — left completely untouched, no cosmetic simplification attempted (out of caution per orchestrator instruction).\n\nFIX: did NOT literally call listSubjectRows() from inside listGradebookSummaries (that function hydrates via 2 extra join-table queries — subject_learners, subject_resources — which would have restructured the existing 5-call sequential Promise.all shape that features/gradebook/__tests__/server/overallMastery.test.ts's mock depends on, an existing test outside this phase's fileScope). Instead: added a 6th parallel query to the SAME Promise.all (last position, so the first 5 calls' order/positions — learners, subjects, scores, gradingScales, aggregationRules — are unchanged) that fetches the household's active school_years row (schoolYears table, isActive=true). Then filtered subjectRows in-memory into a new scopedSubjectRows array BEFORE any GPA/mastery/needsAttention math runs, replicating listSubjectRows's exact semantics: isActive !== false required always; when an active year exists, schoolYearId must equal that year's id OR be null/undefined (legacy no-year rows still show); when no active year exists, no year filtering is applied (matches listSubjectRows's behavior when the subjects.ts route's getActiveSchoolYear() returns null — it skips the schoolYearId option entirely). The rest of the function (gpaEntries, subjectResults, needsAttentionSubjects, overallMastery) now derives from scopedSubjectRows instead of the raw subjectRows.\n\nNo schema change — schoolYearId and isActive already existed on subjects; only db/schema.ts's already-existing schoolYears/subjects tables were read, nothing added. No db:generate/db:migrate run for this phase (correctly out of scope per orchestrator instruction).\n\nTests (features/gradebook/__tests__/server/repository.test.ts, new file, TDD-first): 4 cases — (1) a course rolled over into a new year (source-year row sub_year_a still isActive=true) is excluded from both summary.subjects and needsAttentionSubjects, and overallMastery reflects ONLY the current-year row's score (90, not an average with the stale 60); (2) legacy subjects with schoolYearId=null still show even when an active year is set; (3) isActive=false subjects are excluded regardless of school year; (4) when no active school year row exists, no year-based filtering happens (prior no-op-safe behavior preserved). All 4 pass; pre-existing overallMastery.test.ts (3 tests, unmodified) still passes unchanged, confirming the 6th-query-in-last-position approach didn't disturb its fixed 5-element mock sequence.\n\nfeatures/gradebook full suite: 8/9 suites pass (1 db-gated skip, pre-existing/unrelated), 87 passed/12 skipped. Full npm test: 245/269 suites pass, 2148/2346 tests pass, 198 skipped (same pre-existing db-gated skip set as every prior phase). `npm run build`: 'Linting and checking validity of types' completed cleanly (no new errors) before failing at the same known pre-existing /(shell)/about static-generation DB-handshake timeout documented identically by phase-0/g1/g4/g5/g3/g7b — confirmed unrelated to this phase's 2-file scope by the type-check passing first. Committed as 554656f."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g7-schedule-times",
+      "title": "G7a — Editable start/end time for scheduled classes",
+      "gated": false,
+      "status": "failed",
+      "model": "standard",
+      "startedAt": "2026-07-17T02:20:00.000Z",
+      "completedAt": "2026-07-17T02:30:00.000Z",
+      "outputs": {
+        "filesChanged": [],
+        "testsRun": [],
+        "notes": "No code changed; investigation only, per the plan's explicit instruction to read the schedule feature first since it was uncertain whether start/end time fields already exist read-only or are entirely absent. FINDING: they are entirely absent as persisted data — this phase requires a schema change and is therefore out of the declared fileScope. Details: features/schedule/types.ts's ScheduleBlock/LessonScheduleEntry.startTime/endTime are NOT stored anywhere; they are synthesized fresh on every render by buildDailySchedule() in features/schedule/server/service.ts, which walks the day's LessonTask list and assigns each one a start time by adding parseDurationMinutes(lesson.estimatedDuration, defaultDurationMinutes) to a running cursor that begins at a fixed ScheduleSettings.startTime ('08:30' hardcoded in features/schedule/front/pages/SchedulePage.tsx) with a transitionMinutes gap between blocks. lesson.estimatedDuration (features/plan/types.ts LessonDuration) is a bucket enum ('15min'|'30min'|'45min'|'1hr'|'custom'), not a clock time. The db/schema.ts lesson_tasks table (line 261-283) has no clock-time columns whatsoever — only estimatedDuration (text bucket), plannedStartDate/dueDate (dates, not times); there is no separate schedule-block/schedule-override table anywhere in db/schema.ts. The timeline's 'Edit lesson' pencil icon (features/schedule/front/components/ScheduleTimeline.tsx) navigates to /lessons?editId=... (the planner's LessonTaskForm) which also has no time fields to edit, consistent with there being nothing persisted to edit. CONCLUSION: making start/end time editable-and-persisted (per the testsFirst requirement: 'changing start/end time and saving persists the new times and they are shown after reload') requires adding time columns (e.g. to lesson_tasks, or a new table) plus a Drizzle migration. This phase's fileScope is only app/(shell)/plan/schedule/page.tsx and features/schedule/ — it explicitly does NOT include db/schema.ts or db/migrations/, and the orchestrator's spawn instructions explicitly said to stop and fail rather than attempt a migration if this were found. Stopping here per that instruction. FOR THE NEXT ATTEMPT: this phase needs to be re-scoped (fileScope must add db/schema.ts, db/migrations/, and likely features/plan/types.ts + features/plan/server/repository.ts for the LessonTask persistence layer) before it can be implemented; a migration will also need the live-DB invariant check that phase-g3 already found blocked in this sandbox (Postgres wire-protocol StartupMessage never gets a response from the dev DB host), so this migration should be planned as a 'strong'-tier, gated phase like G3.",
+        "notesForModelTier": "standard tier was sufficient to identify the scope gap; the actual fix belongs in a strong-tier gated phase per the reasoning above."
+      },
+      "failureReason": "Editable, persisted start/end time for scheduled classes requires a schema change (lesson_tasks or a new table needs real clock-time columns — schedule.ts currently synthesizes all start/end times on every render from a fixed daily start time + lesson.estimatedDuration bucket enum, nothing is stored). This phase's fileScope (app/(shell)/plan/schedule/page.tsx, features/schedule/) excludes db/schema.ts and db/migrations/, and the spawn instructions explicitly directed failing the phase rather than widening scope into a migration. Needs re-planning as a schema-touching phase before implementation."
+    },
+    {
+      "id": "phase-g7-learning-time-quickstart",
+      "title": "G7b — Learning-time: list courses with duration + one-click start",
+      "gated": false,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T02:40:00.000Z",
+      "completedAt": "2026-07-17T03:05:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/learning-time/front/components/NowCard.tsx",
+          "features/learning-time/__tests__/integration/LearningTimePage.test.tsx"
+        ],
+        "testsRun": [
+          "npm test -- features/learning-time (4 suites / 72 passed, 7 skipped/db-gated)",
+          "npm test (242 suites / 2125 tests passed, 24 suites/193 tests skipped/db-gated)",
+          "npx tsc --noEmit (no new errors under features/learning-time)"
+        ],
+        "notes": "SubjectCourse (features/subjects/types.ts) has no course-level duration field, so per the plan's documented fallback, duration is derived from the course's next not-started lesson's estimatedDuration bucket (features/plan/types.ts LessonDuration: 15min/30min/45min/1hr/custom), shown as e.g. '30 min'; when no open lesson exists for that course the badge reads 'No duration set' — this is a real, honest fallback, not a placeholder value. Implementation lives entirely in NowCard.tsx (LearningTimePage.tsx was NOT changed — it already passed the needed allSubjects prop through unchanged): added a new effect that fetches ALL of the learner's open lessons unfiltered by course (plannerApi.getLessons(undefined, [learnerId], undefined)), independent of the page-level course-select filter, so the quick-start list always covers every course the learner is enrolled in regardless of what's selected in the top dropdown. Added quickStartCourses (allSubjects filtered by learnerIds.includes(learnerId), guarding learnerIds ?? [] since some existing test fixtures construct partial SubjectCourse objects without it) and handleQuickStart(course), which calls learningTimeApi.createSession({ learnerId, timeChannelType: 'stopwatch', subjectId: course.id }) followed by transition(...,{action:'start'}) directly — no 'configuring' screen is ever shown, satisfying the 'one click, no additional navigation or form-filling' requirement. Rendered only in the idle (!session) NowCard state as a 'Quick start by course' list below the existing 'Start session' button, each row: course name, duration badge (data-testid=quick-start-duration-<courseId>), Start button (data-testid=quick-start-course-<courseId>). Existing multi-step config flow (Start session -> configure -> Start) is untouched and still works as before — this is purely additive. Test file used: the existing features/learning-time/__tests__/integration/LearningTimePage.test.tsx (fileScope for this phase didn't list a test file explicitly, unlike other phases in this plan, but testsFirst required an integration test and this is the established convention/location for LearningTimePage+NowCard integration coverage) — added a new 'LearningTimePage — quick start by course (G7b)' describe block with 2 tests (duration display incl. the no-duration fallback; one-click start creates+starts a stopwatch session and never shows now-card-config). npm run build reproduces the same known pre-existing sandbox DB-connectivity failure documented by phase-0/g1/g4/g5 (static generation of /(shell)/about hangs on the Postgres wire-protocol handshake, worker exits code 143) — the build got through 'Linting and checking validity of types' cleanly before hitting that unrelated stage, confirming this phase's TypeScript is sound. Committed as 26d235f."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g7-dashboard-inline-edit",
+      "title": "G7c — Dashboard: edit today's schedule item via inline popup",
+      "gated": false,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T14:00:00.000Z",
+      "completedAt": "2026-07-17T14:25:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/dashboard/front/components/EditLessonModal.tsx",
+          "features/dashboard/front/components/DoToday.tsx",
+          "features/dashboard/__tests__/integration/components/DoToday.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/dashboard (24 suites / 157 passed)",
+          "npm test (245 of 269 suites passed, 24 skipped/db-gated, 2149 passed / 198 skipped)",
+          "npx tsc --noEmit (no new errors under features/dashboard; the 2 pre-existing DashboardContextType 'tasks' excess-property errors in ChildSelector.test.tsx and this phase's DoToday.test.tsx were already present before this phase and are unrelated to this phase's change — confirmed identical error also exists untouched in ChildSelector.test.tsx)"
+        ],
+        "notes": "Prior behavior confirmed by reading DoToday.tsx first: the Today item's edit (pencil) icon called router.push('/lessons?editId=' + id), navigating away from the Dashboard to the Lessons page (which then opened LessonTaskForm inline via LessonTaskList's editingLessonId handling). Replaced with a modal: new features/dashboard/front/components/EditLessonModal.tsx wraps the existing LessonTaskForm (features/plan/front/components/LessonTaskForm.tsx, unmodified/reused as instructed) inside a dialog, copying the SubjectEditDialog.tsx modal pattern (features/subjects/front/components/SubjectEditDialog.tsx: fixed inset-0 + bg-black/40 overlay, role=dialog/aria-modal, click-outside-to-close) since it was the closest existing 'edit record in a popup' pattern in the codebase (no shared/generic Modal component exists to reuse). LessonTaskForm itself needed NO changes to work inside the modal — its editingLesson/onSubmit/onCancel props already fit directly. EditLessonModal fetches the lesson via plannerApi.getLesson(id) on open and household children/subjects via useHousehold() (same context LessonsPage already uses), then calls plannerApi.updateLesson(id, data) on submit — the same update path LessonsPage/LessonTaskList already use, so behavior (validation, persistence) is identical to the existing Lessons-page edit flow, just presented as a Dashboard-local popup instead of a full navigation. DoToday.tsx: added editingLessonId state (opens the modal instead of navigating) and a refreshCount state that is passed as TodayLessonCard's `key` so a successful save forces TodayLessonCard to remount and re-fetch (TodayLessonCard owns its own internal fetch with no external refresh callback, and is out of this phase's fileScope — features/dashboard/front/ only — so it was left unmodified; the key-remount approach avoids touching features/plan/front/components/TodayLessonCard.tsx while still getting a fresh fetch after edits). Note: this modal approach is an explicit, plan-documented exception to ui-style-guide §1's default 'lesson/record cards edit inline, not via a bespoke modal' rule — the plan's own phase title and testsFirst explicitly require a popup/modal for this specific Dashboard affordance, which constitutes the 'plan documents an approved exception' condition §1 requires. Rewrote the stale DoToday.test.tsx 'edit lesson deep-link' describe block (previously asserted router.push('/lessons?editId=...'), which is no longer the behavior) into a new 'DoToday edit lesson inline popup (G7c)' block with 2 tests: (1) clicking the edit icon opens data-testid=edit-lesson-modal with the lesson's current title prefilled, and no modal is present before the click; (2) editing the title and clicking Save changes calls plannerApi.updateLesson(lessonId, {title: ...}), closes the modal, and the Dashboard ('Today —' heading) is still rendered throughout (never navigated away). Also added a useHousehold mock to the test file (jest.mock('@/features/household/front/context', ...)) since EditLessonModal now needs it. `npm run build`: bounded 90s foreground run per orchestrator instruction — compiled, 'Linting and checking validity of types' completed cleanly, then failed identically to every prior phase (phase-0/g1/g4/g5/g6/g3/g2/g7b) at static-generation with 'Next.js build worker exited with code: 143' partway through '(16/34)' pages — this is the same known pre-existing sandbox DB-connectivity limitation at /(shell)/about, not caused by this phase's 3-file scope. Committed as a8b5fee."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g7-gradebook-scheduled-assignments",
+      "title": "G7d — Gradebook: list scheduled assignments and assign grades directly",
+      "gated": false,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T13:35:51.383Z",
+      "completedAt": "2026-07-17T13:45:08.830Z",
+      "outputs": {
+        "filesChanged": [
+          "features/gradebook/front/pages/GradebookPage.tsx",
+          "features/gradebook/types.ts",
+          "features/gradebook/server/repository.ts",
+          "features/gradebook/api/routes/scores.ts",
+          "features/gradebook/front/services/api.ts",
+          "features/gradebook/__tests__/integration/GradebookPage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/gradebook (8 of 9 suites, 1 skipped/db-gated, 90 passed / 12 skipped)",
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" (245 of 269 suites passed, 24 skipped/db-gated, 2152 passed / 198 skipped)",
+          "npx tsc --noEmit (no new errors under features/gradebook or features/plan)"
+        ],
+        "notes": "FILE SCOPE NOTE: the plan JSON declared fileScope as only [features/gradebook/front/pages/GradebookPage.tsx], but implementing the feature end-to-end (per the plan's own testsFirst requirement that an assigned grade records a Score linked to the specific lesson) required also touching features/gradebook/types.ts, server/repository.ts, api/routes/scores.ts, and front/services/api.ts — all within the same gradebook feature folder, no db/schema.ts or migration involved. Documenting this widening explicitly per the worker contract rather than silently doing it; judged in-scope because (a) the orchestrator's spawn instructions only named db/schema.ts widening as a stop-and-fail condition, and (b) GradebookPage.tsx alone cannot create a Score with a lessonTaskId link without these files.\n\nDATA-MODEL FINDING (read first, before writing code, per instructions): Score ALREADY had a lessonTaskId column in db/schema.ts (scores.lesson_task_id, nullable, composite FK to lesson_tasks(id, householdId), plus scores_lesson_task_idx) — added by an earlier phase/wave, not by this one. No migration was needed. However the column was not wired through the app layer: features/gradebook/types.ts Score interface had no lessonTaskId field, features/gradebook/server/repository.ts rowToScore() did not map it, features/gradebook/api/routes/scores.ts POST handler did not read it from the request body, and features/gradebook/front/services/api.ts ScoreInput did not expose it. Added lessonTaskId?: string to Score and ScoreInput, mapped it in rowToScore, and read it from the POST body into CreateScoreInput.lessonTaskId (CreateScoreInput already accepted it — only the route was not passing it through).\n\n'Scheduled assignment' identification: features/plan/types.ts LessonTask has no dedicated isGraded/assessment boolean. Used the existing free-text lessonType field, scoped to the two GENERAL_LESSON_TYPES entries that denote graded intent ('Assessment', 'Assignment' — from features/plan/front/components/LessonTaskForm.tsx's GENERAL_LESSON_TYPES list), combined with status === 'not_started' (i.e. not yet completed/skipped). Implementation: new ScheduledAssignments component in GradebookPage.tsx, rendered per learner card, fetches via the existing plannerApi.getLessons(undefined, [learnerId], undefined) (cross-feature import of features/plan/front/services/api — established precedent already used by dashboard, learning-time, schedule, resources features), filters client-side, and its inline 'Assign grade' action reuses the existing ScoreForm component to call gradebookApi.createScore({learnerId, subjectId: lesson.subjectId, lessonTaskId: lesson.id, ...}). On success the assignment optimistically drops out of the scheduled list (no second lessons re-fetch) and a confirmation shows; ScoreHistory/GPA aggregation pick the new score up on the next summaries reload as normal — no changes to gradebook/server/repository.ts aggregation logic (out of scope, not needed since scoring an assignment is functionally identical to any other Score row from the aggregation layer's point of view).\n\nNo schema change, no migration — confirmed the lessonTaskId column and its composite FK already existed before this phase (grepped db/schema.ts before writing any code, per instructions). Full npm test: 245/269 suites, 2152/2350 tests pass, 198 skipped (same pre-existing db-gated skip set as every prior phase in this batch). npm run build (90s bounded foreground run): compiled, 'Linting and checking validity of types' completed cleanly (no new errors), then failed identically to every prior phase (phase-0/g1/g4/g5/g6/g3/g2/g7a/g7b/g7c) at static generation with 'Next.js build worker exited with code: 143' partway through page generation — the same known pre-existing sandbox DB-connectivity limitation at /(shell)/about, unrelated to this phase's scope."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g7-feedback-screenshot",
+      "title": "G7e — Feedback widget: attach a screenshot, stored as a blob on the feedback record",
+      "gated": true,
+      "status": "complete",
+      "model": "strong",
+      "startedAt": "2026-07-17T15:00:00.000Z",
+      "completedAt": "2026-07-17T16:10:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "db/schema.ts",
+          "db/migrations/0034_useful_vanisher.sql",
+          "db/migrations/meta/0034_snapshot.json",
+          "db/migrations/meta/_journal.json",
+          "features/feedback/types.ts",
+          "features/feedback/server/repository.ts",
+          "features/feedback/api/routes/submit.ts",
+          "features/feedback/api/routes/screenshot.ts",
+          "features/feedback/api/router.ts",
+          "features/feedback/front/components/FeedbackButton.tsx",
+          "features/feedback/front/pages/FeedbackDetailPage.tsx",
+          "features/feedback/front/components/AdminFeedbackSection.tsx",
+          "scripts/feedback-steward/feedback-requeue.ts",
+          "features/feedback/__tests__/api/routes/submit.test.ts",
+          "features/feedback/__tests__/api/routes/screenshot.test.ts",
+          "features/feedback/__tests__/api/screenshot-repository.test.ts",
+          "features/feedback/__tests__/integration/FeedbackButton.test.tsx",
+          "features/feedback/__tests__/integration/FeedbackDetailPage.test.tsx",
+          "features/feedback/__tests__/integration/AdminFeedbackSection.test.tsx",
+          "scripts/feedback-steward/__tests__/feedback-requeue.test.ts",
+          "scripts/feedback-steward/__tests__/feedback-dedupe.test.ts (fixture-only fix, unrelated pre-existing sentiment-type error untouched)"
+        ],
+        "testsRun": [
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" -- features/feedback scripts/feedback-steward (26 of 29 suites passed, 3 skipped/db-gated, 261 passed / 20 skipped)",
+          "npx jest --testPathIgnorePatterns=\"/node_modules/\" (247 of 272 suites passed, 25 skipped/db-gated, 2169 passed / 201 skipped)",
+          "npx tsc --noEmit (no NEW errors introduced anywhere in the repo — diffed the full error list before/after this phase's changes line-by-line; every remaining feedback/feedback-steward error is a pre-existing, unrelated one documented below)"
+        ],
+        "notes": "DB TARGET CONFIRMED per top-level dbMigrationPolicy: resolved DATABASE_URL_PROD host to dpg-d85140f7f7vs73fvdqhg-a.oregon-postgres.render.com (printed and verified equal to the required host BEFORE running any migrate command) via a standalone Node/dotenv check, matching the same host phase-g3 confirmed earlier in this batch.\n\nSCHEMA: added user_feedback.screenshot (bytea, nullable, via the existing `bytea` customType already used by message_attachments/portfolio_evidence_attachments) and user_feedback.screenshot_mime (text, nullable) to db/schema.ts.\n\nINVARIANT CHECK — pre-migrate: `npm run db:generate` produced exactly ONE new migration, 0034_useful_vanisher.sql (two ALTER TABLE ADD COLUMN statements, no FK, no composite-unique ordering concern). Re-ran `npm run db:generate` immediately after generating it and got 'No schema changes, nothing to migrate' — confirms schema.ts and the migrations dir agree, no drift from any earlier phase in this batch (0033 from phase-g3 was already applied and accounted for). `npm run db:status:prod` before migrating showed repo journal 35 migrations (0000..0034), prod applied 34, exactly 1 pending (0034) — no pre-existing gap.\n\nMIGRATION APPLIED: ran `npm run db:migrate:prod` (scripts/migrate-prod.ts / applyProdDatabaseUrl()) against the confirmed prod host — '[OK] migrations applied successfully!' with two idempotent NOTICEs (drizzle schema / __drizzle_migrations table already exist, expected). INVARIANT CHECK — post-migrate: re-ran `npm run db:status:prod`: repo journal 35, prod applied 35, pending 0 — no gap. Migration 0034_useful_vanisher is now the latest applied migration on prod.\n\nSIZE CAP: ~2MB (MAX_FEEDBACK_SCREENSHOT_BYTES = 2*1024*1024), enforced in TWO places per the plan's 'at the API boundary with a clear rejection error' instruction: (1) features/feedback/api/routes/submit.ts decodes the base64 payload and returns 400 with a clear message ('Screenshot is too large — the limit is 2MB') before ever calling the repository; (2) features/feedback/server/repository.ts's insertFeedback() re-checks the same cap as a defensive backstop (throws Error) so no other caller can bypass it by going around the API route — mirrors the existing MAX_ATTACHMENT_BYTES pattern in features/messaging/server/repository.ts (which this phase's implementation was modeled on, including the ALLOWED_*_MIME_TYPES allow-list of image/png, image/jpeg, image/webp, image/gif). Client-side (FeedbackButton.tsx) also validates size/type at file-select time so the user gets instant feedback before even opening a network request.\n\nDOWNLOAD/SURFACE DESIGN: rather than embedding base64 image bytes inside the FeedbackRow JSON (which would bloat every list/detail response), added a dedicated binary-serving route GET /api/feedback/:id/screenshot (features/feedback/api/routes/screenshot.ts, features/feedback/server/repository.ts's new getFeedbackScreenshot()) that mirrors the existing features/messaging/api/routes/attachments.ts pattern exactly (owner-or-admin authorization via isAppAdmin, same 401/403/404 shape). FeedbackRow gained a lightweight `hasScreenshot?: boolean` flag (left OPTIONAL, not required, specifically to avoid a wide breaking change across every existing FeedbackRow test fixture in this feature — verified via tsc --noEmit that this choice introduces zero new type errors anywhere).\n\nADMIN/STEWARD VIEW EXTENSION (per plan's 'check whether admin view should be extended, minimal only'): AdminFeedbackSection.tsx (the existing admin feedback table used by AdminFeedbackPage) already existed, so it was minimally extended — added one new 'Attachment' column showing a '📎 View' link to /feedback/:id (the existing FeedbackDetailPage, which is reachable by admins per userDetail.ts's owner-or-admin check) when hasScreenshot is true, else an em-dash. FeedbackDetailPage.tsx itself (used by both the submitting user and admins) was extended to render the image inline via <img src=/api/feedback/:id/screenshot> wrapped in a link to open it full-size, only when hasScreenshot is true — no new page was built. scripts/feedback-steward/feedback-requeue.ts's FeedbackRequeueItem gained a `hasScreenshot: boolean` field so the daily classification pipeline is aware an image was attached (the image bytes themselves are intentionally NOT embedded in the classify payload — a human/admin fetches them via the same download route if needed). No other steward script (feedback-classify skill, run-classify.ts, feedback-dedupe.ts) needed changes beyond consuming the new field type-transparently.\n\nWIDGET UX: FeedbackButton.tsx adds a hidden file input + 'Attach a screenshot (optional)' toggle button; on selection it validates MIME type and size client-side with an inline error, shows the filename with a Remove button, and on submit reads the file via FileReader.readAsDataURL, strips the data-URI prefix, and sends the raw base64 + MIME type alongside the existing sentiment/message/pagePath fields. Existing no-screenshot submission flow is unchanged (screenshot/screenshotMimeType are optional fields on FeedbackSubmitInput; the API route branches only when `screenshot !== undefined`).\n\nSCOPE NOTE: two test-fixture files outside features/feedback/ (scripts/feedback-steward/__tests__/feedback-dedupe.test.ts and feedback-requeue.test.ts) needed a one-line `hasScreenshot: false` addition to their makeRequeueItem/makeRow helpers because FeedbackRequeueItem's new field is required (unlike FeedbackRow's, this one has no back-compat reason to be optional since it's produced entirely by this phase's own script, not consumed by dozens of pre-existing UI fixtures) — confirmed via full-repo tsc diff that this was the only fixture-level fallout, and confirmed the already-existing, unrelated 'sentiment: string not assignable to FeedbackSentiment' errors in feedback-dedupe.test.ts and run-classify.test.ts are pre-existing (present in the tsc output before this phase's changes too, same line-shifted-by-one positions) and were left untouched, out of scope.\n\n`npm run build` (foreground, bounded ~150s): compiled with the same known pre-existing jose/Edge-runtime warnings as every prior phase, 'Linting and checking validity of types' completed cleanly (no errors), then failed identically to every prior phase in this batch (phase-0/g1/g4/g5/g6/g3/g2/g7a/g7b/g7c/g7d) at static generation with the /(shell)/about DB-handshake timeout ('Next.js build worker exited with code: 143') — confirmed unrelated to this phase's scope by the type-check stage passing first, consistent with every other phase's documented finding. Not treated as a phase-blocking failure per the orchestrator's explicit instruction.\n\nNo commit created yet at write-back time — committing immediately after this write-back per the worker contract."
+      },
+      "failureReason": null
+    }
+  ]
+}

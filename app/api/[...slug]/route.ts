@@ -25,6 +25,7 @@ import { handleLearningTimeRoute } from '@/features/learning-time/api/router'
 import { handleGradebookRoute } from '@/features/gradebook/api/router'
 import { handleComplianceRoute } from '@/features/compliance/api/router'
 import { handleBadgesRoute } from '@/features/badges/api/router'
+import { handleSettingsRoute } from '@/features/settings/api/router'
 
 async function handleRoute(slug: string[], request: Request): Promise<NextResponse | Response | null> {
   if (slug[0] === 'dashboard') {
@@ -120,6 +121,10 @@ async function handleRoute(slug: string[], request: Request): Promise<NextRespon
 
   if (slug[0] === 'badges') {
     return await handleBadgesRoute(slug.slice(1), request)
+  }
+
+  if (slug[0] === 'settings') {
+    return await handleSettingsRoute(slug.slice(1), request)
   }
 
   return null

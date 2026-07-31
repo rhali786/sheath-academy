@@ -124,6 +124,20 @@ export function FeedbackDetailPage({ id }: { id: string }) {
             <p className="text-sm text-slate-700 whitespace-pre-wrap">{row.message}</p>
           </div>
         )}
+        {row.hasScreenshot && (
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Attached screenshot</p>
+            <a href={`/api/feedback/${row.id}/screenshot`} target="_blank" rel="noopener noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element -- served from our own API, not a static asset */}
+              <img
+                src={`/api/feedback/${row.id}/screenshot`}
+                alt="Attached screenshot"
+                className="max-h-64 rounded-lg border border-slate-200"
+                data-testid="feedback-screenshot-image"
+              />
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Classification */}

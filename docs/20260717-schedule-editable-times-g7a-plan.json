@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/20260717-schedule-editable-times-g7a-plan.md",
+  "branch": "fix/feedback-batch-g1-g7",
+  "dbMigrationPolicy": "The dev Postgres instance is gone. This phase's db:migrate must target PRODUCTION directly via DATABASE_URL_PROD remapped to DATABASE_URL (mirror scripts/migrate-prod.ts's applyProdDatabaseUrl() from scripts/lib/prod-env.ts, or run `npm run db:migrate:prod` directly). Rollback point: backups/prod-2026-07-17T00-58-42/ (pre-existing from the G1-G7 batch; migrations 0033/0034 were additive/nullable and don't invalidate it as a rollback reference for this additive migration). The user has explicitly authorized prod migrations for this batch of work. Confirm the target host resolves to dpg-d85140f7f7vs73fvdqhg-a.oregon-postgres.render.com before migrating and record that in notes.",
+  "phases": [
+    {
+      "id": "phase-g7a-editable-schedule-times",
+      "title": "G7a — Persist and honor an explicit start/end time override on LessonTask, editable from the schedule",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": [],
+      "fileScope": [
+        "db/schema.ts",
+        "db/migrations/",
+        "features/plan/types.ts",
+        "features/plan/server/repository.ts",
+        "features/plan/api/routes/",
+        "features/schedule/server/service.ts",
+        "features/plan/front/components/LessonTaskForm.tsx",
+        "features/schedule/__tests__/",
+        "features/plan/__tests__/"
+      ],
+      "testsFirst": [
+        "features/schedule/__tests__/server/service.test.ts (or existing equivalent test file for buildDailySchedule): a lesson with scheduledStartTime/scheduledEndTime set is placed at exactly those times in the resulting schedule, is marked flexibilityState 'locked', and the cursor for subsequent lessons without an override advances past the override's end time + transitionMinutes (no overlap); a lesson without the override fields is scheduled exactly as today (regression case using existing fixtures) — this must be a genuinely new/failing test before the implementation, not a rewrite of an existing passing one",
+        "API test for whichever route creates/updates a LessonTask: setting scheduledStartTime/scheduledEndTime persists and is returned; scheduledEndTime <= scheduledStartTime returns a 400 with a clear message and does not persist",
+        "features/plan/__tests__ integration test for LessonTaskForm: setting both time fields and submitting includes them in the update payload; clearing both after they were set submits them as cleared (null/undefined); entering an end time at or before the start time shows an inline validation error and does not call submit"
+      ],
+      "implementationSteps": [
+        "Read the plan at docs/20260717-schedule-editable-times-g7a-plan.md in full first — it contains a completed code-path audit (exact file:line references for buildDailySchedule's cursor logic, the existing-but-synthetic flexibilityState 'locked' special-case already implemented in features/schedule/server/service.ts, and confirmation that lesson_tasks has no time-of-day columns today). Do not re-derive this audit from scratch.",
+        "Migration: add scheduled_start_time (text, nullable, 'HH:MM') and scheduled_end_time (text, nullable, 'HH:MM') to the lessonTasks table in db/schema.ts. Purely additive/nullable — no backfill. Run npm run db:generate and review the SQL before migrating.",
+        "features/plan/types.ts: add scheduledStartTime?: string and scheduledEndTime?: string to LessonTask.",
+        "features/plan/server/repository.ts: persist these two fields on create and update (find the exact create/update functions and their input types by reading the file first).",
+        "Find the API route(s) that handle LessonTask create/update (features/plan/api/routes/) and add validation: reject when both fields are set and scheduledEndTime <= scheduledStartTime, with a 400 and a clear message. Allow either field to be omitted/cleared (both null is the 'no override' state — do not require both-or-neither at the type level if the existing codebase pattern doesn't already enforce paired optional fields elsewhere, but DO enforce paired-or-neither as a runtime validation rule since a single time with no matching end/start is meaningless for a duration).",
+        "features/schedule/server/service.ts buildDailySchedule: when a lesson has both scheduledStartTime and scheduledEndTime, use them directly for that lesson's block (compute durationMinutes from the pair), set flexibilityState: 'locked' on that block (reusing the existing special-case reflow already implements for 'locked', per the plan's audit), and advance the running cursor to max(cursor, overrideEndMinutes + transitionMinutes) so later unset lessons don't overlap it. A lesson without both fields set continues through the existing synthesized path unchanged — do not alter that branch's behavior.",
+        "features/plan/front/components/LessonTaskForm.tsx: add two optional time inputs ('Start time' / 'End time'), following the file's existing labeled-input/inline-validation-error conventions. Submitting with only one of the two filled should show a validation error (paired-or-neither) rather than silently dropping one. Clearing both previously-set values and submitting should send the cleared state through to persist as 'no override'.",
+        "DB TARGET: per the plan's top-level dbMigrationPolicy, run db:migrate against PRODUCTION via DATABASE_URL_PROD (or npm run db:migrate:prod). Confirm and record the resolved host before migrating. Run the invariant checks: db:generate must produce exactly one new migration (confirm no drift against the two migrations already applied earlier in this session, 0033 and 0034); after migrating, confirm no gap via npm run db:status:prod (repo journal count vs prod applied count, before and after)."
+      ],
+      "doneWhen": [
+        "npm run db:generate",
+        "DATABASE_URL=$DATABASE_URL_PROD npx drizzle-kit migrate (or equivalent prod-targeted invocation per scripts/migrate-prod.ts / npm run db:migrate:prod)",
+        "npm test -- features/schedule features/plan",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [
+        "npm run db:generate produces exactly one new migration for this phase (schema and migrations agree, no drift from migrations 0033/0034 already applied)",
+        "npm run db:migrate (against prod) applies with no gap in the migration sequence — record the migration file name/number and the before/after db:status:prod counts in notes"
+      ],
+      "writeBack": "Record the exact migration file name/number, the resolved prod host confirmation, the exact API route file that got the validation, and confirm via the service-layer test that a locked/overridden lesson's cursor math does not overlap subsequent lessons. Note npm run build's expected pre-existing /(shell)/about static-generation failure (documented across every phase of the prior G1-G7 batch) as non-blocking if the type-check step passes and all other doneWhen commands succeed."
+    }
+  ]
+}

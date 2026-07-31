@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { listAdminFeedback } from '@/features/feedback/front/services/api'
 import type { FeedbackRow, FeedbackSentiment } from '@/features/feedback/types'
 
@@ -87,6 +88,7 @@ export function AdminFeedbackSection() {
             <th className="px-4 py-3 whitespace-nowrap">User</th>
             <th className="px-4 py-3 whitespace-nowrap">Sentiment</th>
             <th className="px-4 py-3">Message</th>
+            <th className="px-4 py-3 whitespace-nowrap">Attachment</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100 bg-white">
@@ -110,6 +112,19 @@ export function AdminFeedbackSection() {
                 </td>
                 <td className="px-4 py-3 text-slate-600 max-w-xs truncate">
                   {row.message ?? <span className="text-slate-300">—</span>}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {row.hasScreenshot ? (
+                    <Link
+                      href={`/feedback/${row.id}`}
+                      className="text-xs text-forest-700 hover:underline"
+                      data-testid={`admin-feedback-screenshot-link-${row.id}`}
+                    >
+                      📎 View
+                    </Link>
+                  ) : (
+                    <span className="text-slate-300">—</span>
+                  )}
                 </td>
               </tr>
             )

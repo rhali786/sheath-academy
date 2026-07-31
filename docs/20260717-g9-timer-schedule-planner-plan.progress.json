@@ -1,0 +1,93 @@
+{
+  "plan": "docs/20260717-g9-timer-schedule-planner-plan.json",
+  "createdAt": "2026-07-17T19:14:15.111Z",
+  "updatedAt": "2026-07-17T02:10:00.000Z",
+  "branch": "feat/g9-timer-schedule-planner",
+  "phases": [
+    {
+      "id": "phase-g9-item2-school-days-enforcement",
+      "title": "Item 2 — Off-day (household schoolDays) awareness across plan/schedule views, non-blocking warnings",
+      "gated": false,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T00:00:00.000Z",
+      "completedAt": "2026-07-17T00:30:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/plan/utils/schoolDays.ts (new)",
+          "features/plan/__tests__/unit/schoolDays.test.ts (new)",
+          "features/plan/front/components/WeekGrid.tsx",
+          "features/plan/front/components/WeeklyList.tsx",
+          "features/plan/front/components/LessonTaskForm.tsx",
+          "features/plan/front/pages/LessonsPage.tsx",
+          "features/plan/front/components/WeeklyPlannerPage.tsx",
+          "features/dashboard/front/components/EditLessonModal.tsx",
+          "features/schedule/front/pages/SchedulePage.tsx",
+          "features/plan/__tests__/integration/WeekGrid.test.tsx",
+          "features/plan/__tests__/integration/WeeklyList.test.tsx",
+          "features/plan/__tests__/integration/LessonTaskForm.test.tsx",
+          "features/schedule/__tests__/integration/SchedulePage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/plan/__tests__/unit/schoolDays.test.ts — 4 passed",
+          "npm test -- features/plan features/schedule (via npx jest features/plan features/schedule) — 38 suites passed (3 pre-existing DB-gated suites skipped), 395 passed",
+          "npm test (full mocked suite, integration dir excluded per jest.config.js) — 250 suites passed, 2215 passed",
+          "npx tsc --noEmit -p tsconfig.json — 148 pre-existing errors, identical count before and after this phase's changes (confirmed via git stash diff) — no new type errors introduced",
+          "npm run build — type-check/lint step passed; build fails only at the known pre-existing, unrelated /(shell)/about static-generation timeout (worker exited 143), consistent with prior phases this session"
+        ],
+        "notes": "Added features/plan/utils/schoolDays.ts exporting `isOffDay(dayIndex, schoolDays?: DayOfWeek[])` and `DEFAULT_SCHOOL_DAYS` (Mon–Fri) as named exports — this is the shared source the next LessonTaskForm-touching phase (item 3) should reuse/import, not redefine. WeekGrid.tsx and WeeklyList.tsx now derive off-day styling from `useHousehold().householdProfile.schoolDays` via isOffDay() instead of a hardcoded isWeekend(dayIndex===0||6); both components had to start calling useHousehold(), so their integration test files (WeekGrid.test.tsx, WeeklyList.test.tsx) now mock '@/features/household/front/context' (standard project pattern, matches WeeklyPlannerPage.test.tsx). LessonTaskForm.tsx gained an optional `schoolDays?: DayOfWeek[]` PROP (not an internal useHousehold() call, to avoid breaking ~30 existing tests that render it without a HouseholdProvider) — its three real callers (LessonsPage.tsx, WeeklyPlannerPage.tsx, EditLessonModal.tsx) already call useHousehold() and now pass householdProfile?.schoolDays through. The warning is a dismissible amber inline box (role=status) shown when dueDate or plannedStartDate falls on an off day; it resets its dismissed state when either date changes; submission is never blocked. WeekGrid's drag-and-drop InlineSuccess message now appends '(an off day)' when the drop target is an off day (undoNotice gained an `isOffDayTarget: boolean` field). SchedulePage.tsx shows a small amber 'Off day' pill next to the page heading, only in day view, when selectedDate's weekday is an off day per household.schoolDays. CONFIRMED CLEAN (no fix needed): grepped features/schedule/front/components/WeekCalendarView.tsx and MonthCalendarView.tsx for isWeekend/getDay()===0/6 concepts — neither has any hardcoded weekend/off-day logic at all (WeekCalendarView lists days as plain rows with no per-day styling variance; MonthCalendarView only distinguishes in-month vs lead/trail-month cells), so per the plan's own instruction ('if not found, note that in write-back and skip') these two files were left untouched. Did not touch db/schema.ts, LessonGenerationPanel.tsx, or resources/server/service.ts (out of scope per plan). GradebookPage.tsx references LessonTaskForm only in a code comment, not an actual usage — no wiring needed there."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g9-item3-multi-day-span-clarity",
+      "title": "Item 3 — Relabel/clarify multi-day lesson span in LessonTaskForm + quick-pick + Dashboard Today-card consistency fix",
+      "gated": false,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T00:35:00.000Z",
+      "completedAt": "2026-07-17T01:15:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/plan/front/components/LessonTaskForm.tsx",
+          "features/plan/front/components/TodayLessonCard.tsx",
+          "features/plan/__tests__/integration/LessonTaskForm.test.tsx",
+          "features/plan/__tests__/integration/TodayLessonCard.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/plan/__tests__/integration/LessonTaskForm.test.tsx features/plan/__tests__/integration/TodayLessonCard.test.tsx features/plan/__tests__/integration/WeekGrid.test.tsx features/plan/__tests__/integration/WeeklyList.test.tsx — 4 suites passed, 110 passed",
+          "npx jest features/plan (via npm test -- features/plan pattern) — 29 of 32 suites passed (3 pre-existing DB-gated suites skipped), 316 passed",
+          "npx jest features/dashboard/__tests__/integration/components/DoToday.test.tsx (TodayLessonCard's dashboard consumer) — 1 suite passed, 6 passed, confirming no regression from the filter-predicate change",
+          "npm test (full mocked suite, integration dir excluded per jest.config.js) — 250 suites passed, 2221 passed",
+          "npx tsc --noEmit -p tsconfig.json — 85 pre-existing errors, identical count before and after this phase's changes (confirmed via git stash diff); the 2 errors that do land inside LessonTaskForm.test.tsx (SubjectCourseCategory 'Islamic' literal, missing learnerIds on a Quran-category fixture) are pre-existing fixture-typing issues untouched by this phase's edits, not newly introduced",
+          "npm run build — started under a bounded foreground timeout per instructions; type-check step (tsc) already confirmed clean (no new errors) so the build result is treated as non-blocking per the explicit environment guidance about the known pre-existing /(shell)/about static-generation failure; not chased further to avoid violating the no-monitor/no-poll instruction"
+        ],
+        "notes": "Chose the 'always-visible with clearer copy' variant from decided-design option 1 (not toggle+reveal) — kept the existing two <input type=\"date\"> fields and their 'Available from'/'Due date' labels completely unchanged (required: an existing regression test explicitly asserts 'Available from' is present AND 'Start date' is absent, so relabeling the field itself was out). Only the helper paragraph below the date grid changed, from mechanism-first ('Lesson can be completed any day from Available-from through Due-date') to outcome-first ('Setting both dates makes this lesson span multiple days — it will appear every day from Available-from through Due-date, for example Monday through Friday for a lesson that runs all week'). Updated the one pre-existing test that asserted the old copy verbatim, plus added two new tests: one asserting the outcome-first copy is present (discoverability), one exercising a new 'This week (Mon–Fri)' quick-pick button that sets plannedStartDate to that Monday and dueDate to that Friday of the current due-date's week (pure client-side date math, no new field, no API change). The off-day warning box from item 2 (role=status, dismissible, keyed off dueDate/plannedStartDate changes) sits immediately below this block and was left completely untouched — verified by re-running the full 'off-day (household schoolDays) awareness' describe block, all still green. TodayLessonCard.tsx: swapped both filter sites (the internal-fetch path at the old line 62 and the externalLessons path at the old line 81) from `l.dueDate === today` to `lessonSpansDate(l, today)`, imported from features/plan/utils/lessonCompletionWindow.ts (pre-existing, tested utility — no new file). Pure predicate swap, no other behavior change: loading/error/empty states, optimistic Mark-done/Skip, child-name chips, and the mondayOfWeek week-fetch range are all untouched. Regression-tested that a single-day lesson (no plannedStartDate) still only appears on its own due date, since lessonSpansDate degrades to dueDate===dateStr in that case. WeekGrid.test.tsx ('renders window lesson on intermediate days, not only due date') and WeeklyList.test.tsx ('shows window lesson on days inside the completion window', asserting the card appears on both Monday and Wednesday of a Mon–Wed window) were verified (not assumed) to already adequately cover the '3-day span renders in matrix/list' acceptance criterion — per the plan's own instruction to verify existing fixtures before adding new ones, no new WeekGrid/WeeklyList tests were added. Did not touch db/schema.ts, LessonTask type, or any server/repository file — this was a pure UI-layer (LessonTaskForm.tsx, TodayLessonCard.tsx) change as scoped."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g9-item1-learning-time-clock-mode",
+      "title": "Item 1 — Learning-Time: pre-fill scheduled window from lesson, client-side clock-driven auto-start/end-reminder",
+      "gated": false,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T01:20:00.000Z",
+      "completedAt": "2026-07-17T02:10:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/learning-time/front/components/NowCard.tsx",
+          "features/learning-time/__tests__/integration/NowCard.test.tsx (new)"
+        ],
+        "testsRun": [
+          "npx jest features/learning-time — 5 suites passed (1 pre-existing DB-gated suite skipped), 82 passed",
+          "npm test (full mocked suite, integration dir excluded per jest.config.js) — 251 suites passed, 2231 passed",
+          "npx tsc --noEmit -p tsconfig.json — 85 pre-existing errors, none in features/learning-time (grepped explicitly); identical pre-existing count to phase 2's write-back",
+          "npm run build (bounded foreground run, non-blocking per instructions) — 'Linting and checking validity of types' step completed with no errors; build then fails only at the known pre-existing /(shell)/about static-generation timeout (worker exited 143), consistent with prior phases"
+        ],
+        "notes": "Created a new features/learning-time/__tests__/integration/NowCard.test.tsx (LearningTimePage.test.tsx did not exist test coverage for NowCard's clock/pre-fill behavior and uses real timers throughout, which would conflict with the fake-timer tests this phase needs — NowCard requires no context providers, only props, so it renders standalone). Chose SCHEDULED_CLOCK_POLL_INTERVAL_MS = 30_000 (30s, matches the plan's acceptance criterion 'define interval, e.g. <=30s'). Bounded auto-start staleness window implemented as an explicit same-calendar-day check (isSameCalendarDay helper) rather than a raw millisecond threshold, per the plan's risk note wording ('e.g. same calendar day') — verified by a dedicated test ('does not auto-start a stale draft scheduled session whose scheduledStart was on a previous calendar day'). Double-fire guard uses hasAutoStartedSessionIdRef (a ref, not state) keyed by session.id, set synchronously BEFORE the async transition() call; verified across 2 polling ticks in a mocked-timer test ('does not fire the auto-start transition more than once across multiple polling ticks, even before the first call resolves') using a manually-controlled unresolved Promise so both ticks land while the first call is still pending. Pre-fill: NowCard's lesson-select onChange now calls handleLessonChoiceChange, which looks up the selected lesson in the existing openLessons state and, only if BOTH scheduledStartTime and scheduledEndTime are set, switches timeChannelType to 'scheduled' and sets scheduledStart/scheduledEnd from the lesson's HH:MM values (format already matches the <input type='time'> value format, confirmed via features/plan/types.ts's LessonTask comment). New idle-but-scheduled render branch (data-testid='now-card-scheduled-pending', 'Starts at HH:MM') inserted between the finalized and configuring/draft branches, gated on !configuring so a parent who explicitly reopens the config form can still hand-edit/override. New 'time to finish' reminder (data-testid='scheduled-end-reminder', role=status) added inside the existing running/paused render block, purely additive — Finish/outcome flow completely unchanged, no auto-finalize anywhere. Did not touch features/learning-time/server/service.ts, repository.ts, types.ts, or db/schema.ts — confirmed no service-layer or schema change was needed; transitionSession('start') was called exactly as-is, just from a timer instead of a click. Server-side/background auto-start (tab closed) remains explicitly out of scope per the plan; verified no cron/worker infrastructure was added or assumed."
+      },
+      "failureReason": null
+    }
+  ]
+}

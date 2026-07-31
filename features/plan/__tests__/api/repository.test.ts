@@ -66,6 +66,49 @@ describe('lesson tasks repository', () => {
     await deleteLessonTaskRow(row.id, householdId)
   })
 
+  itDb('createLessonTaskRow round-trips curriculum/chapter/hasHomework/hasAssessment', async () => {
+    const row = await createLessonTaskRow(householdId, {
+      learnerId,
+      title: 'Read Chapter 91',
+      dueDate: '2026-06-03',
+      curriculum: 'All About Reading Level 2',
+      chapter: 'Chapter 91',
+      hasHomework: true,
+      hasAssessment: false,
+    })
+    expect(row.curriculum).toBe('All About Reading Level 2')
+    expect(row.chapter).toBe('Chapter 91')
+    expect(row.hasHomework).toBe(true)
+    expect(row.hasAssessment).toBe(false)
+
+    const updated = await updateLessonTaskRow(row.id, householdId, {
+      curriculum: 'Saxon Math 5/4',
+      chapter: 'Lesson 12',
+      hasHomework: false,
+      hasAssessment: true,
+    })
+    expect(updated?.curriculum).toBe('Saxon Math 5/4')
+    expect(updated?.chapter).toBe('Lesson 12')
+    expect(updated?.hasHomework).toBe(false)
+    expect(updated?.hasAssessment).toBe(true)
+
+    await deleteLessonTaskRow(row.id, householdId)
+  })
+
+  itDb('createLessonTaskRow omits curriculum/chapter/homework/assessment cleanly when not provided', async () => {
+    const row = await createLessonTaskRow(householdId, {
+      learnerId,
+      title: 'Plain lesson, no teaching metadata',
+      dueDate: '2026-06-04',
+    })
+    expect(row.curriculum).toBeNull()
+    expect(row.chapter).toBeNull()
+    expect(row.hasHomework).toBe(false)
+    expect(row.hasAssessment).toBe(false)
+
+    await deleteLessonTaskRow(row.id, householdId)
+  })
+
   itDb('listLessonTaskRows returns tasks for household', async () => {
     const rows = await listLessonTaskRows(householdId)
     expect(rows.some(r => r.id === taskId)).toBe(true)

@@ -250,4 +250,35 @@ describe('CompliancePage', () => {
     expect(screen.queryByTestId('add-deadline-toggle')).not.toBeInTheDocument()
     expect(screen.getByText(/set up a school year/i)).toBeInTheDocument()
   })
+
+  // ─── G4: empty-state copy + info tooltips for ruleset/pathway ─────────────
+  it('shows a helpful empty-state message instead of a bare empty ruleset selector when no rulesets exist', async () => {
+    mockGetRulesets.mockImplementation(() => ok([]))
+    render(<CompliancePage />)
+    await waitFor(() => expect(screen.getByTestId('compliance-ruleset')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }))
+    expect(screen.queryByLabelText('Active ruleset')).not.toBeInTheDocument()
+    expect(screen.getByText(/no rulesets available yet/i)).toBeInTheDocument()
+  })
+
+  it('shows info tooltips next to the ruleset and pathway selectors when rulesets are present', async () => {
+    render(<CompliancePage />)
+    await waitFor(() => expect(screen.getByTestId('compliance-ruleset')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }))
+    expect(screen.getByLabelText('Active ruleset')).toBeInTheDocument()
+    const rulesetOptions = screen.getAllByRole('option')
+    expect(rulesetOptions.length).toBeGreaterThan(1)
+    expect(screen.getByTestId('ruleset-select-info')).toBeInTheDocument()
+    expect(screen.getByTestId('pathway-info')).toBeInTheDocument()
+  })
+
+  it('hovering the ruleset info icon shows a visible explanatory tooltip, not just a native title attribute', async () => {
+    render(<CompliancePage />)
+    await waitFor(() => expect(screen.getByTestId('compliance-ruleset')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }))
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    fireEvent.mouseEnter(screen.getByTestId('ruleset-select-info').parentElement as Element)
+    expect(screen.getByRole('tooltip')).toHaveTextContent(/ruleset defines your state's homeschool requirements/i)
+  })
 })

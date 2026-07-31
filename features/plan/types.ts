@@ -28,10 +28,19 @@ export interface LessonTask {
   status: LessonTaskStatus
   order: number
   estimatedDuration?: LessonDuration
+  /** Explicit HH:MM (24-hour) override for the schedule timeline; both set together or neither. */
+  scheduledStartTime?: string
+  scheduledEndTime?: string
   lessonType?: string
   completedAt?: string
   /** Shared link when one lesson was assigned to multiple learners (fan-out rows). */
   groupId?: string
+  /** Curriculum/program name (e.g. "All About Reading Level 2"); muted sub-line under chapter on the card. */
+  curriculum?: string
+  /** Specific chapter/lesson focus (e.g. "Chapter 91"); becomes the card's focal line when set. */
+  chapter?: string
+  hasHomework?: boolean
+  hasAssessment?: boolean
   createdAt: string
   updatedAt: string
 }

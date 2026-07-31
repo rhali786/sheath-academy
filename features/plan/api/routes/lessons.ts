@@ -5,6 +5,7 @@ import type { LessonTask } from '@/features/plan/types'
 import { listLessonTaskRows, createLessonTaskRow, createLessonTasksFanOut, type LessonAssignmentInput } from '@/features/plan/server/repository'
 import { mapLessonTaskRow } from '@/features/plan/api/mapLessonTaskRow'
 import { guardOwnership, assertSessionOwnership } from '@/features/auth/server/routeOwnership'
+import { validateScheduleTimeWindow } from '@/features/plan/server/validation'
 
 function formatLocalDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -83,6 +84,11 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<L
     return NextResponse.json({ status: 'error', data: null, message: 'childId, title, and dueDate are required', timestamp: new Date().toISOString() }, { status: 400 })
   }
 
+  const timeCheck = validateScheduleTimeWindow(body.scheduledStartTime ?? null, body.scheduledEndTime ?? null)
+  if (!timeCheck.valid) {
+    return NextResponse.json({ status: 'error', data: null, message: timeCheck.error ?? 'Invalid schedule time range', timestamp: new Date().toISOString() }, { status: 400 })
+  }
+
   return guardOwnership(async () => {
     for (const learnerId of learnerIds) {
       await assertSessionOwnership('learner', learnerId)
@@ -94,10 +100,16 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<L
       resourceLink: body.resourceLink?.trim() || undefined,
       lessonType: body.lessonType || undefined,
       estimatedDuration: body.estimatedDuration || undefined,
+      scheduledStartTime: body.scheduledStartTime || undefined,
+      scheduledEndTime: body.scheduledEndTime || undefined,
       plannedStartDate: body.plannedStartDate || undefined,
       dueDate,
       status: body.status ?? 'not_started',
       sortOrder: body.order || 0,
+      curriculum: body.curriculum?.trim() || undefined,
+      chapter: body.chapter?.trim() || undefined,
+      hasHomework: body.hasHomework === true,
+      hasAssessment: body.hasAssessment === true,
     }
 
     if (learnerIds.length >= 2) {

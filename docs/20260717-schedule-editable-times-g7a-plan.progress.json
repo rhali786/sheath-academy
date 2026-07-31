@@ -1,0 +1,49 @@
+{
+  "plan": "docs/20260717-schedule-editable-times-g7a-plan.json",
+  "createdAt": "2026-07-17T14:49:18.657Z",
+  "updatedAt": "2026-07-17T15:10:00.000Z",
+  "branch": "fix/feedback-batch-g1-g7",
+  "phases": [
+    {
+      "id": "phase-g7a-editable-schedule-times",
+      "title": "G7a — Persist and honor an explicit start/end time override on LessonTask, editable from the schedule",
+      "gated": true,
+      "status": "complete",
+      "model": "claude-sonnet-5",
+      "startedAt": "2026-07-17T15:00:00.000Z",
+      "completedAt": "2026-07-17T15:10:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "db/schema.ts",
+          "db/migrations/0035_chilly_namorita.sql",
+          "db/migrations/meta/0035_snapshot.json",
+          "db/migrations/meta/_journal.json",
+          "features/plan/types.ts",
+          "features/plan/api/mapLessonTaskRow.ts",
+          "features/plan/api/routes/lesson.ts",
+          "features/plan/api/routes/lessons.ts",
+          "features/plan/server/repository.ts",
+          "features/plan/server/validation.ts",
+          "features/plan/front/components/LessonTaskForm.tsx",
+          "features/schedule/server/service.ts",
+          "features/schedule/__tests__/api/schedule.test.ts",
+          "features/plan/__tests__/api/lesson-handler.test.ts",
+          "features/plan/__tests__/integration/LessonTaskForm.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/schedule features/plan --testPathIgnorePatterns=\"/node_modules/\" (359 passed, 0 failed)",
+          "npm test (247 suites passed, 2179 tests passed)"
+        ],
+        "notes": "Added nullable text columns scheduled_start_time/scheduled_end_time to lesson_tasks (db/schema.ts). Migration db/migrations/0035_chilly_namorita.sql — exactly one new migration produced by npm run db:generate, confirmed no drift against 0033/0034 already on prod. Migrated PRODUCTION directly via `npm run db:migrate:prod` (mirrors scripts/migrate-prod.ts's applyProdDatabaseUrl()); resolved/confirmed host dpg-d85140f7f7vs73fvdqhg-a.oregon-postgres.render.com in the command output. Invariant check: npm run db:status:prod BEFORE = repo journal 35 (0000..0034) / prod applied 35 / pending 0; AFTER = repo journal 36 (0000..0035_chilly_namorita) / prod applied 36 / pending 0 — no gap. Rollback point backups/prod-2026-07-17T00-58-42/ untouched (not needed; migration succeeded cleanly, additive-only ALTER TABLE ADD COLUMN, no FK/UNIQUE ordering concern). LessonTask type gained scheduledStartTime?/scheduledEndTime? (features/plan/types.ts); repository.ts persists both on create (createLessonTaskRow, createLessonTasksFanOut/buildSharedInsertValues) and update (updateLessonTaskRow); mapLessonTaskRow.ts maps them back. Validation: new validateScheduleTimeWindow() in features/plan/server/validation.ts enforces paired-or-neither and end>start; wired into both features/plan/api/routes/lesson.ts (PUT, the route the form actually uses) and features/plan/api/routes/lessons.ts (POST, for symmetry with create-time input). features/schedule/server/service.ts buildDailySchedule: a lesson with BOTH scheduledStartTime and scheduledEndTime set is placed at those exact times, marked flexibilityState:'locked' (reusing the existing reflow special-case), and the cursor advances to max(cursor, overrideEnd + transitionMinutes) so later unset lessons don't overlap; a lesson with only one of the two fields set falls through to the unchanged synthesized path (partial overrides are never honored, per the paired-or-neither rule — validated at the API boundary, and defensively true in the scheduler too). LessonTaskForm.tsx gained optional 'Start time'/'End time' <input type=time> fields with inline validation (paired-or-neither, end<=start) mirroring the existing titleError pattern; clearing both submits undefined for both. npm run build: type-check ('Linting and checking validity of types...') completed with no errors; build then failed at static generation of /(shell)/about — this is the same known, pre-existing, unrelated Next.js build-worker DB-path issue documented across every phase of the prior G1-G7 batch, not caused by this phase's changes. Per the orchestrator's explicit instruction this is non-blocking since db:generate/db:migrate succeeded and all test suites passed.",
+        "prodMigration": {
+          "file": "db/migrations/0035_chilly_namorita.sql",
+          "number": "0035",
+          "resolvedHost": "dpg-d85140f7f7vs73fvdqhg-a.oregon-postgres.render.com",
+          "statusBefore": { "repoJournal": 35, "prodApplied": 35, "pending": 0 },
+          "statusAfter": { "repoJournal": 36, "prodApplied": 36, "pending": 0 }
+        }
+      },
+      "failureReason": null
+    }
+  ]
+}

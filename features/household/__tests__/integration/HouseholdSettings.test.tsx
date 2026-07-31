@@ -195,6 +195,28 @@ describe('HouseholdSettings — save', () => {
       expect(screen.getByText(/network error/i)).toBeInTheDocument()
     })
   })
+
+  it('calls the household context refetch after a successful save, so other pages (e.g. the planner off-day styling) see the new schoolDays without a full page reload', async () => {
+    const user = userEvent.setup()
+    render(<HouseholdSettings />)
+    await user.click(screen.getByRole('checkbox', { name: 'Saturday' }))
+    await user.click(screen.getByRole('button', { name: /save settings/i }))
+    await waitFor(() => {
+      expect(baseCtx.refetch).toHaveBeenCalled()
+    })
+  })
+
+  it('does not call refetch when save fails', async () => {
+    householdApi.updateProfile.mockRejectedValue(new Error('Network error'))
+    const user = userEvent.setup()
+    render(<HouseholdSettings />)
+    await user.selectOptions(screen.getByLabelText('Week starts on'), 'Sunday')
+    await user.click(screen.getByRole('button', { name: /save settings/i }))
+    await waitFor(() => {
+      expect(screen.getByText(/network error/i)).toBeInTheDocument()
+    })
+    expect(baseCtx.refetch).not.toHaveBeenCalled()
+  })
 })
 
 describe('HouseholdSettings — unsaved changes warning', () => {

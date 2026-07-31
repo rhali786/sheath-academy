@@ -827,6 +827,68 @@ describe('LearningTimePage — Lesson dropdown tied to course (feedback follow-u
   })
 })
 
+describe('LearningTimePage — quick start by course (G7b)', () => {
+  const mathSubject = { id: 'subj_math', name: 'Math', learnerIds: ['child_001'], isActive: true } as SubjectCourse
+  const readingSubject = { id: 'subj_reading', name: 'Reading', learnerIds: ['child_001'], isActive: true } as SubjectCourse
+
+  beforeEach(() => {
+    mockUseHousehold.mockImplementation(() => ({
+      householdProfile: { id: 'hh_001' },
+      studentProfiles: mockChildren,
+      allSubjects: [mathSubject, readingSubject],
+      loading: false,
+      needsSetup: false,
+      familyName: '',
+      error: null,
+      refetch: jest.fn(),
+    }))
+  })
+
+  it('lists each enrolled course with its configured duration and a Start button while idle', async () => {
+    mockGetLessons.mockResolvedValue([
+      makeLesson({ id: 'l1', subjectId: 'subj_math', title: 'Algebra worksheet', estimatedDuration: '30min' }),
+    ])
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('now-card-idle')).toBeInTheDocument()
+    })
+    await waitFor(() => {
+      expect(screen.getByTestId('quick-start-course-subj_math')).toBeInTheDocument()
+    })
+    await waitFor(() => {
+      expect(screen.getByTestId('quick-start-duration-subj_math')).toHaveTextContent(/30 ?min/i)
+    })
+    expect(screen.getByTestId('quick-start-course-subj_reading')).toBeInTheDocument()
+    expect(screen.getByTestId('quick-start-duration-subj_reading')).toHaveTextContent(/no duration set/i)
+  })
+
+  it('clicking Start on a course begins the timer immediately, with no additional navigation or form-filling', async () => {
+    mockGetLessons.mockResolvedValue([])
+    mockCreateSession.mockResolvedValue(ok(makeSession({ id: 'lts_quick', status: 'draft', subjectId: 'subj_math', startedAt: null })))
+    mockTransition.mockResolvedValue(ok(makeSession({ id: 'lts_quick', status: 'running', subjectId: 'subj_math', elapsedSeconds: 0 })))
+
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByTestId('quick-start-course-subj_math')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByTestId('quick-start-course-subj_math'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('now-card-running')).toBeInTheDocument()
+    })
+    expect(mockCreateSession).toHaveBeenCalledWith(expect.objectContaining({
+      learnerId: 'child_001',
+      subjectId: 'subj_math',
+      timeChannelType: 'stopwatch',
+    }))
+    expect(mockTransition).toHaveBeenCalledWith('lts_quick', { action: 'start' })
+    // No intermediate configuration screen should ever have appeared.
+    expect(screen.queryByTestId('now-card-config')).not.toBeInTheDocument()
+  })
+})
+
 describe('LearningTimePage — session history', () => {
   it('shows a loading state for session history before the list resolves', async () => {
     let resolveList: (value: ApiResponse<LearningTimeSession[]>) => void = () => {}

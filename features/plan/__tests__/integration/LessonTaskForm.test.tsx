@@ -204,6 +204,62 @@ describe('LessonTaskForm — create mode', () => {
       )
     })
   })
+
+  it('submits curriculum, chapter, and homework/assessment flags when filled', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        onSubmit={onSubmit}
+      />
+    )
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
+    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'New Lesson' } })
+    fireEvent.change(screen.getByLabelText(/curriculum/i), { target: { value: 'Saxon Math 5/4' } })
+    fireEvent.change(screen.getByLabelText(/chapter/i), { target: { value: 'Lesson 12' } })
+    fireEvent.click(screen.getByLabelText(/has homework/i))
+    fireEvent.click(screen.getByLabelText(/has assessment/i))
+
+    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          curriculum: 'Saxon Math 5/4',
+          chapter: 'Lesson 12',
+          hasHomework: true,
+          hasAssessment: true,
+        })
+      )
+    })
+  })
+
+  it('omits curriculum/chapter/homework/assessment cleanly when left blank', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        onSubmit={onSubmit}
+      />
+    )
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
+    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'New Lesson' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalled()
+    })
+    const submitted = onSubmit.mock.calls[0][0]
+    expect(submitted.curriculum).toBeUndefined()
+    expect(submitted.chapter).toBeUndefined()
+    expect(submitted.hasHomework).toBeUndefined()
+    expect(submitted.hasAssessment).toBeUndefined()
+  })
 })
 
 describe('LessonTaskForm — edit mode', () => {
@@ -335,7 +391,7 @@ describe('LessonTaskForm — phase-1 date terminology', () => {
     render(
       <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
     )
-    expect(screen.getByText(/lesson can be completed any day from/i)).toBeInTheDocument()
+    expect(screen.getByText(/span multiple days/i)).toBeInTheDocument()
   })
 
   it('submits plannedStartDate and dueDate with new labels', async () => {
@@ -413,6 +469,171 @@ describe('LessonTaskForm — completion window (plannedStartDate)', () => {
       )
       expect(onSubmit.mock.calls[0][0].plannedStartDate).toBeUndefined()
     })
+  })
+})
+
+describe('LessonTaskForm — scheduled start/end time override', () => {
+  it('includes scheduledStartTime/scheduledEndTime in the update payload when both are set', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        editingLesson={editingLesson}
+        onSubmit={onSubmit}
+        onCancel={jest.fn()}
+      />
+    )
+    fireEvent.change(screen.getByLabelText(/start time/i), { target: { value: '11:00' } })
+    fireEvent.change(screen.getByLabelText(/end time/i), { target: { value: '11:30' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scheduledStartTime: '11:00',
+          scheduledEndTime: '11:30',
+        })
+      )
+    })
+  })
+
+  it('submits cleared (undefined) times when both previously-set values are cleared', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    const withTimes: LessonTask = { ...editingLesson, scheduledStartTime: '11:00', scheduledEndTime: '11:30' }
+    render(
+      <LessonTaskForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        editingLesson={withTimes}
+        onSubmit={onSubmit}
+        onCancel={jest.fn()}
+      />
+    )
+    fireEvent.change(screen.getByLabelText(/start time/i), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText(/end time/i), { target: { value: '' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalled()
+    })
+    expect(onSubmit.mock.calls[0][0].scheduledStartTime).toBeUndefined()
+    expect(onSubmit.mock.calls[0][0].scheduledEndTime).toBeUndefined()
+  })
+
+  it('shows an inline validation error and does not submit when end time is at or before start time', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        editingLesson={editingLesson}
+        onSubmit={onSubmit}
+        onCancel={jest.fn()}
+      />
+    )
+    fireEvent.change(screen.getByLabelText(/start time/i), { target: { value: '11:30' } })
+    fireEvent.change(screen.getByLabelText(/end time/i), { target: { value: '11:00' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/end time must be after start time/i)).toBeInTheDocument()
+    })
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+})
+
+describe('LessonTaskForm — off-day (household schoolDays) awareness', () => {
+  it('shows a non-blocking inline warning when due date falls on an off day (default Mon–Fri schedule)', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    // 2026-05-16 is a Saturday — an off day under the default Mon–Fri schedule
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-16' } })
+    expect(screen.getByText(/off day/i)).toBeInTheDocument()
+  })
+
+  it('shows no warning when due date falls on a school day', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    // 2026-05-14 is a Thursday — a school day under the default Mon–Fri schedule
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-14' } })
+    expect(screen.queryByText(/off day/i)).not.toBeInTheDocument()
+  })
+
+  it('honors a custom schoolDays prop (co-op Saturday is not a warning; Wednesday off is)', () => {
+    render(
+      <LessonTaskForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        schoolDays={['Monday', 'Tuesday', 'Thursday', 'Friday', 'Saturday']}
+        onSubmit={jest.fn()}
+      />
+    )
+    // 2026-05-16 is a Saturday — a school day for this household
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-16' } })
+    expect(screen.queryByText(/off day/i)).not.toBeInTheDocument()
+
+    // 2026-05-13 is a Wednesday — an off day for this household
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-13' } })
+    expect(screen.getByText(/off day/i)).toBeInTheDocument()
+  })
+
+  it('submission is not blocked when due date falls on an off day', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={onSubmit} />
+    )
+    fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
+    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Off-day lesson' } })
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-16' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ dueDate: '2026-05-16' })
+      )
+    })
+  })
+
+  it('warning is dismissible', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-16' } })
+    expect(screen.getByText(/off day/i)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /dismiss off-day warning/i }))
+    expect(screen.queryByText(/off day/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('LessonTaskForm — multi-day span clarity (item 3)', () => {
+  it('states the multi-day span behavior in plain language, not just field presence', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    expect(
+      screen.getByText(/span multiple days.*appear every day from/i)
+    ).toBeInTheDocument()
+  })
+
+  it('"This week (Mon–Fri)" quick-pick sets plannedStartDate/dueDate to that week\'s Monday–Friday range', () => {
+    render(
+      <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
+    )
+    // 2026-05-13 is a Wednesday; its school week runs Monday 2026-05-11 – Friday 2026-05-15
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-13' } })
+    fireEvent.click(screen.getByRole('button', { name: /this week \(mon.{0,3}fri\)/i }))
+
+    expect((screen.getByLabelText(/available from/i) as HTMLInputElement).value).toBe('2026-05-11')
+    expect((screen.getByLabelText(/due date/i) as HTMLInputElement).value).toBe('2026-05-15')
   })
 })
 

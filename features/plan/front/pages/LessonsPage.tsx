@@ -142,6 +142,7 @@ export function LessonsPage() {
               children={children}
               subjects={subjects}
               defaultSelectedChildIds={selectedChildId ? [selectedChildId] : undefined}
+              schoolDays={householdProfile?.schoolDays}
               onSubmit={handleSubmit}
             />
           </div>

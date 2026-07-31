@@ -25,6 +25,10 @@ export interface FeedbackSubmitInput {
   pagePath: string
   sentiment: FeedbackSentiment
   message?: string
+  /** Base64-encoded image bytes (no data: URI prefix). Capped at ~2MB decoded size. */
+  screenshot?: string
+  /** MIME type of `screenshot`, e.g. 'image/png'. Required if screenshot is present. */
+  screenshotMimeType?: string
 }
 
 export interface FeedbackRow {
@@ -37,6 +41,9 @@ export interface FeedbackRow {
   sentiment: FeedbackSentiment
   message: string | null
   createdAt: string
+
+  /** True when this feedback has an attached screenshot. Fetch the bytes via GET /api/feedback/:id/screenshot. Optional for backward compat with existing fixtures/mocks that predate this field. */
+  hasScreenshot?: boolean
 
   status: FeedbackStatus
   featureArea: string | null

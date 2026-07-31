@@ -180,6 +180,24 @@ describe('FeedbackDetailPage', () => {
     })
   })
 
+  it('shows the attached screenshot when hasScreenshot is true', async () => {
+    mockGet.mockResolvedValue({ ...mockRow, hasScreenshot: true })
+    render(<FeedbackDetailPage id="fb_1" />)
+    await waitFor(() => {
+      const img = screen.getByTestId('feedback-screenshot-image')
+      expect(img).toHaveAttribute('src', '/api/feedback/fb_1/screenshot')
+    })
+  })
+
+  it('does not show a screenshot section when hasScreenshot is false', async () => {
+    mockGet.mockResolvedValue({ ...mockRow, hasScreenshot: false })
+    render(<FeedbackDetailPage id="fb_1" />)
+    await waitFor(() => {
+      expect(screen.getByText('Feedback detail')).toBeInTheDocument()
+    })
+    expect(screen.queryByTestId('feedback-screenshot-image')).not.toBeInTheDocument()
+  })
+
   it('calls getUserFeedback with the given id', async () => {
     mockGet.mockResolvedValue(mockRow)
     render(<FeedbackDetailPage id="fb_1" />)

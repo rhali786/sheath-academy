@@ -1,23 +1,32 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { usePlanner } from '../context/PlannerContext'
 import { useHousehold } from '@/features/household/front/context'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { plannerApi } from '@/features/plan/front/services/api'
+import { settingsApi } from '@/features/settings/front/services/api'
 import { WeekNavigator } from './WeekNavigator'
 import { ChildSubjectFilter } from './ChildSubjectFilter'
 import { WeekGrid } from './WeekGrid'
 import { WeeklyList } from './WeeklyList'
+import { WeeklyPlanner } from './WeeklyPlanner'
 import { EmptyWeekState } from './EmptyWeekState'
 import { LessonTaskForm, type LessonFormData } from './LessonTaskForm'
+import { PlannerViewToggle, type PlannerView } from './PlannerViewToggle'
+
+const PLANNER_VIEW_SETTINGS_KEY = 'planner.defaultView'
+const DEFAULT_PLANNER_VIEW: PlannerView = 'planner'
 
 export function WeeklyPlannerPage() {
   const { lessons, isInitializing, isLessonsLoading, error, refreshLessons } = usePlanner()
   const { loading: householdLoading, householdProfile, studentProfiles, allSubjects } = useHousehold()
   const { selectedChildId } = useLearner()
+  const router = useRouter()
   const [isMobile, setIsMobile] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [plannerView, setPlannerView] = useState<PlannerView>(DEFAULT_PLANNER_VIEW)
 
   useEffect(() => {
     const handleResize = () => {
@@ -28,6 +37,32 @@ export function WeeklyPlannerPage() {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    settingsApi
+      .getSettings()
+      .then(res => {
+        if (cancelled) return
+        const saved = res.data?.[PLANNER_VIEW_SETTINGS_KEY]
+        if (saved === 'planner' || saved === 'matrix') {
+          setPlannerView(saved)
+        }
+      })
+      .catch(() => {
+        // Keep the default view if the preference can't be loaded.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  function handleViewChange(view: PlannerView) {
+    setPlannerView(view)
+    settingsApi.updateSettings({ [PLANNER_VIEW_SETTINGS_KEY]: view }).catch(() => {
+      // Non-fatal: the view still applies for this session even if persistence fails.
+    })
+  }
 
   async function handleAddLesson(data: LessonFormData) {
     const householdId = householdProfile?.id ?? ''
@@ -72,6 +107,7 @@ export function WeeklyPlannerPage() {
               children={studentProfiles.filter(c => c.isActive !== false)}
               subjects={allSubjects}
               defaultSelectedChildIds={selectedChildId ? [selectedChildId] : undefined}
+              schoolDays={householdProfile?.schoolDays}
               onSubmit={handleAddLesson}
               onCancel={() => setShowAddForm(false)}
             />
@@ -79,6 +115,14 @@ export function WeeklyPlannerPage() {
         </div>
       )}
       <ChildSubjectFilter />
+
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4 bg-white">
+        <PlannerViewToggle
+          view={plannerView}
+          onChange={handleViewChange}
+          onOpenCalendar={() => router.push('/plan/schedule')}
+        />
+      </div>
 
       {isLessonsLoading ? (
         <div className="flex-1 overflow-auto flex items-center justify-center" aria-busy="true">
@@ -93,7 +137,7 @@ export function WeeklyPlannerPage() {
       ) : (
         <div className="flex-1 overflow-auto bg-slate-50">
           <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-            {isMobile ? <WeeklyList /> : <WeekGrid />}
+            {isMobile ? <WeeklyList /> : plannerView === 'matrix' ? <WeekGrid /> : <WeeklyPlanner />}
           </div>
         </div>
       )}

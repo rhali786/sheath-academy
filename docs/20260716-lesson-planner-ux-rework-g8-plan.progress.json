@@ -1,0 +1,113 @@
+{
+  "plan": "docs/20260716-lesson-planner-ux-rework-g8-plan.json",
+  "createdAt": "2026-07-17T15:12:38.062Z",
+  "updatedAt": "2026-07-17T15:50:41.785Z",
+  "branch": "feat/lesson-planner-ux-rework-g8",
+  "phases": [
+    {
+      "id": "phase-g8-p1-view-toggle",
+      "title": "P1 — View toggle (Weekly Planner default / Planning Matrix), matrix preserved unchanged",
+      "gated": false,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T00:00:00.000Z",
+      "completedAt": "2026-07-17T00:30:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/plan/front/components/WeeklyPlannerPage.tsx",
+          "features/plan/front/components/PlannerViewToggle.tsx",
+          "features/plan/__tests__/integration/PlannerViewToggle.test.tsx"
+        ],
+        "testsRun": [
+          "npm test -- features/plan (27/27 suites passed, 3 DB-gated skipped)",
+          "npm test (full suite: 248 passed, 25 skipped [DB-gated/integration])",
+          "npm run build (kicked off per instructions; not blocking on the known pre-existing /(shell)/about static-generation failure; targeted `npx tsc --noEmit` showed no new type errors introduced by this phase — the two errors in PlannerViewToggle.test.tsx are the same pre-existing SubjectCourse.learnerIds / global.fetch mock-typing gaps already present in sibling files WeeklyPlannerPage.test.tsx, WeekGrid.test.tsx, WeeklyList.test.tsx on this branch)"
+        ],
+        "notes": "Settings key used: 'planner.defaultView' with values 'planner' | 'matrix', persisted via settingsApi.updateSettings({'planner.defaultView': view}) and loaded via settingsApi.getSettings() in WeeklyPlannerPage's mount effect. Default is 'planner' whenever the key is absent/invalid (DEFAULT_PLANNER_VIEW constant in WeeklyPlannerPage.tsx) — confirmed by test 'defaults to the Weekly Planner view when no preference is saved'. Added PlannerViewToggle.tsx (tabs pattern copied from SettingsPage.tsx's role=tablist/role=tab segmented control — reused, not invented). WeeklyPlannerPage.tsx render logic: isMobile always renders WeeklyList unchanged (mobile behavior untouched); on desktop, plannerView === 'matrix' renders WeekGrid unchanged, otherwise (default) renders WeeklyList as-is for this phase (P2 replaces this branch with the new learner-grouped WeeklyPlanner component). WeekGrid.tsx and WeeklyList.tsx were NOT modified, per scope. No db/schema.ts or migration touched. P2/P3/P4 should reuse the exact key 'planner.defaultView' and the same settingsApi import path (@/features/settings/front/services/api)."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g8-p2-weekly-planner-component",
+      "title": "P2 — Learner-grouped, lesson-centric Weekly Planner component",
+      "gated": false,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T00:00:00.000Z",
+      "completedAt": "2026-07-17T00:45:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/plan/front/components/WeeklyPlanner.tsx",
+          "features/plan/front/components/WeeklyPlannerPage.tsx",
+          "features/plan/__tests__/integration/WeeklyPlanner.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/plan (28/31 suites; 3 DB-gated skipped; all passed, including new WeeklyPlanner.test.tsx)",
+          "npm test (full suite, run twice to rule out flakiness: 249/274 suites passed both times, 25 skipped [DB-gated/integration]; a ComplianceStatusCard.test.tsx failure seen on one interleaved run was confirmed pre-existing test-order flakiness in features/dashboard — unrelated to this phase, reproduced identically on a stash of this phase's changes, passes in isolation and in a clean full-suite re-run)",
+          "npm run build (bounded foreground run; type-check/lint stage completed with no new errors; failed at the known pre-existing /(shell)/about static-generation timeout per task instructions — non-blocking)"
+        ],
+        "notes": "Added features/plan/front/components/WeeklyPlanner.tsx: reads lessons/children/subjects/selectedChildIds/selectedSubjectIds from usePlanner() (same PlannerContext WeekGrid/WeeklyList already use). Groups lessons by learner (filtered to selectedChildIds and selectedSubjectIds), each learner rendered exactly once as a collapsible section (button with aria-expanded, reusing WeeklyList's day-section collapsible pattern — same rotate-180 chevron/hover/border treatment, not a new pattern). Within each learner section, lessons are nested by day (Mon-Sun, same week-start-day math copied from WeeklyList); days with zero lessons for that learner render a compact muted marker (data-testid=day-empty-<learnerId>-<dateStr>, just the day label + a dim em-dash) instead of a full card block; days with lessons render data-testid=day-lessons-<learnerId>-<dateStr>. A learner with zero lessons this week (after filters) shows a single muted 'No lessons this week' line instead of 7 empty markers. Learner spine: StudentProfile (features/lib/types.ts) does NOT have a displayColor field — only the DB/children-repository layer (db/schema.ts children.display_color) has one, and it is not plumbed through household context into the type this component receives; adding that plumbing was out of this phase's file scope (would touch features/children/server + household context), so P2 uses a deterministic hash-of-learner-id index into a small local LEARNER_SPINE_COLORS palette in WeeklyPlanner.tsx as the rail/avatar color instead. If a later phase wants the real per-learner displayColor threaded through StudentProfile, that's a scope decision for whoever owns that phase, not silently done here. Card in this phase shows subject (as an eyebrow-style label above title, informally — P3 owns the formal teaching-context-first ordering requirement/tests), title, and a status badge (same STATUS_BADGE/STATUS_LABEL color convention copied from WeeklyList.tsx, matching WeekGrid's green=completed/amber=skipped). No resourceLink indicator yet (that's explicitly P3's testsFirst item). WeeklyPlannerPage.tsx: mobile (isMobile) still renders WeeklyList unchanged; desktop 'matrix' view still renders WeekGrid unchanged; desktop 'planner' view now renders the new WeeklyPlanner instead of WeeklyList. WeekGrid.tsx, WeeklyList.tsx, and LessonTaskForm.tsx were NOT touched, per scope. No db/schema.ts or migration touched. PlannerLessonCard.tsx was NOT extracted in this phase — all card markup is still inline in WeeklyPlanner.tsx; P3's writeBack should record whether it extracts one. P3 must add: subject-before-title ordering test/enforcement, resourceLink -> paperclip indicator (only when resourceLink is set), and match the STATUS_BADGE map already established here (copy, don't reinvent)."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g8-p3-card-enrichment",
+      "title": "P3 — Card enrichment: teaching-context ordering (subject before title), resource indicator, status badge",
+      "gated": false,
+      "status": "complete",
+      "model": "standard",
+      "startedAt": "2026-07-17T15:44:42.588Z",
+      "completedAt": "2026-07-17T16:20:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/plan/front/components/WeeklyPlanner.tsx",
+          "features/plan/__tests__/integration/WeeklyPlanner.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/plan (28/31 suites; 3 DB-gated skipped; all passed, including the extended WeeklyPlanner.test.tsx with 4 new tests)",
+          "npm test (full suite: 249/274 suites passed, 25 skipped [DB-gated/integration], 2193 tests passed)",
+          "npm run build (bounded foreground run; type-check/lint stage completed with no new errors; failed at the known pre-existing /(shell)/about static-generation timeout — non-blocking per task instructions, same failure mode as P1/P2)"
+        ],
+        "notes": "PlannerLessonCard.tsx was NOT extracted — card markup remains inline in WeeklyPlanner.tsx (confirmed decision; the plan explicitly allows this as optional and P2 already established the inline pattern). P4 should add its new indicators directly to the lesson-card block inside WeeklyPlanner.tsx (the `data-lesson-card` div in the per-day lesson map), not to a separate file. Changes made: (1) subject-before-title ordering was already correct from P2 (subject eyebrow div precedes title div in DOM) — added an explicit test asserting DOM order via compareDocumentPosition rather than changing markup. (2) Added a resourceLink indicator: `<span data-testid=\"resource-indicator\" aria-label=\"Has resource link\">📎</span>`, rendered only when `lesson.resourceLink` is truthy — presence-only, no placeholder for unset links. (3) Added `data-testid=\"status-badge\"` to the existing status span for test targeting; STATUS_BADGE color map was NOT changed (P2's map already matched WeekGrid's convention: bg-green-100/text-green-700 for completed, bg-amber-100/text-amber-700 for skipped — verified by direct comparison against WeekGrid.tsx's STATUS_BADGE before touching anything, so no edit was needed there). (4) Added an estimatedDuration display (new DURATION_LABEL map, e.g. '30min' -> '30 min') per the plan's card-anatomy field list ('subject eyebrow, title, status dot, resourceLink indicator, duration') — this was not in P3's testsFirst list verbatim but is named as a P2-P3 field in the plan's anatomy diagram, so a minimal render-when-present test was added. (5) Added `data-lesson-card` attribute to each lesson's wrapper div as a stable test/DOM anchor for this and future phases. Also updated two pre-existing P2 tests that broke due to new fixture data added for skipped-status coverage (a new lesson_004 'Spelling review', status skipped, no resourceLink, for child_002/Reading): the 'shows subject, title, status' test now uses getAllByText for 'Reading' since it appears on two cards, and the day-empty/day-lessons comment was corrected to reflect Layth now having two populated days. No curriculum/chapter/hasHomework/hasAssessment fields were added anywhere — those remain explicitly out of scope for P4. No db/schema.ts or migration touched. WeekGrid.tsx was read for comparison but not modified."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-g8-p4-teaching-metadata",
+      "title": "P4 — Curriculum / chapter / homework / assessment fields (schema + form + card indicators)",
+      "gated": true,
+      "status": "complete",
+      "model": "strong",
+      "startedAt": "2026-07-17T16:30:00.000Z",
+      "completedAt": "2026-07-17T17:20:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "db/schema.ts",
+          "db/migrations/0036_tense_secret_warriors.sql",
+          "db/migrations/meta/_journal.json",
+          "db/migrations/meta/0036_snapshot.json",
+          "features/plan/types.ts",
+          "features/plan/server/repository.ts",
+          "features/plan/api/mapLessonTaskRow.ts",
+          "features/plan/api/routes/lesson.ts",
+          "features/plan/api/routes/lessons.ts",
+          "features/plan/front/components/LessonTaskForm.tsx",
+          "features/plan/front/components/WeeklyPlanner.tsx",
+          "features/plan/__tests__/api/repository.test.ts",
+          "features/plan/__tests__/integration/LessonTaskForm.test.tsx",
+          "features/plan/__tests__/integration/WeeklyPlanner.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/plan (28/31 suites; 3 DB-gated skipped; all passed, including the new repository.test.ts round-trip/omit cases, the two new LessonTaskForm.test.tsx cases, and the three new/updated WeeklyPlanner.test.tsx cases)",
+          "npm test (full suite: 249/274 suites passed, 25 skipped [DB-gated/integration], 2198 tests passed, 0 failed)",
+          "npx tsc --noEmit — no NEW type errors introduced by this phase; remaining errors are the pre-existing SubjectCourse.learnerIds gap and global.fetch mock-typing gaps already present in sibling files before P4 (confirmed via targeted grep of the full tsc output for features/plan and db/schema)",
+          "npm run db:generate — produced exactly one new migration (0036_tense_secret_warriors.sql), purely additive ALTER TABLE ADD COLUMN statements, no FK/composite-unique ordering concern",
+          "npm run db:migrate:prod — applied cleanly to PRODUCTION (dpg-d85140f7f7vs73fvdqhg-a.oregon-postgres.render.com), no errors (two harmless NOTICEs: drizzle schema/table already exist, expected)",
+          "npm run build — type-check/lint stage completed with NO new errors; failed at the known pre-existing /(shell)/about static-generation timeout (documented in every phase of this session) — non-blocking per task instructions"
+        ],
+        "notes": "Resolved prod host CONFIRMED as dpg-d85140f7f7vs73fvdqhg-a.oregon-postgres.render.com (matched exactly against npm run db:status:prod output header) before migrating. Invariant checks: BEFORE db:generate, npm run db:status:prod showed repo journal 36 / prod applied 36 / pending 0 (up to date, matching the plan's note that this session already applied through 0035). AFTER db:generate, exactly one new migration was produced: 0036_tense_secret_warriors.sql (curriculum text nullable, chapter text nullable, has_homework boolean not-null default false, has_assessment boolean not-null default false — all additive ALTER TABLE ADD COLUMN on lesson_tasks, no backfill, no composite-FK ordering issue). Re-ran db:status:prod immediately before migrating to reconfirm 0036 was the only pending entry. AFTER db:migrate:prod, db:status:prod showed repo journal 37 / prod applied 37 / pending 0 — no gap — and lesson_tasks row count unchanged at 776 (no data loss), all 31 schema tables still reachable. Final field names chosen exactly as the plan suggested: curriculum?: string, chapter?: string, hasHomework?: boolean, hasAssessment?: boolean on LessonTask — no collision with this branch's existing scheduledStartTime/scheduledEndTime (G7a) fields; confirmed by reading db/schema.ts and features/plan/types.ts before finalizing. Card precedence decided per the plan's anatomy diagram (which shows only chapter, not title, once chapter is set): when lesson.chapter is set, chapter renders as the card's focal line and curriculum (if set) as a muted sub-line directly beneath it; the original title is NOT duplicated alongside chapter. When chapter is unset, the card falls back to title as the focal line (P2/P3 behavior unchanged). hasHomework/hasAssessment render as 📝/📋 spans (data-testid=homework-indicator/assessment-indicator) only when true — presence-only, confirmed by a dedicated test (card001 with neither flag renders neither indicator). All P4 card work landed inline in WeeklyPlanner.tsx's existing data-lesson-card block (per P3's handoff note — PlannerLessonCard.tsx was never extracted); a data-testid=lesson-card-<id> attribute was added alongside the existing data-lesson-card boolean attribute so tests could target a specific card by id now that title text is no longer always present on the card (needed because several pre-existing P2/P3 tests located lesson_003's card via screen.getByText('Chapter 91'), which broke once chapter='Ch. 91' replaced title as the focal text — those tests were updated to use the new testid, not the card behavior). API routes (lesson.ts PUT, lessons.ts POST) and repository.ts (create/update/fan-out) wire the four new fields through exactly the same optional-field pattern already used for scheduledStartTime/scheduledEndTime ('field' in body ? ... : undefined for PUT, ?? undefined/null for POST/create). IMPORTANT CAVEAT: the repository.test.ts itDb round-trip/omit tests for the new fields were written (TDD) but were NOT executed against a live DB in this run — the non-prod .env.local DATABASE_URL (a different host, dpg-d8jegg3bc2fs73bkhqm0-a.virginia-postgres.render.com) timed out/was unreachable when actually attempted (confirmed via a direct npx dotenv -e .env.local -- jest run against features/plan/__tests__/api/repository.test.ts, which failed all 13 itDb cases in that file on a 30s beforeAll timeout, not just the 2 new ones — this is a pre-existing DB-reachability problem, not something introduced by this phase). Running those CRUD round-trip tests against PRODUCTION instead was deliberately avoided since the user's authorization covered only the schema migration, not exploratory insert/delete traffic against prod's lesson_tasks table (776 real rows). The itDb tests will run automatically once a reachable non-prod DATABASE_URL exists; until then they skip cleanly (hasDb=false) inside plain npm test, which is what doneWhen actually requires. Whoever next needs a working non-prod Postgres target should treat this as an open infra gap, not assume the current .env.local DATABASE_URL is live."
+      },
+      "failureReason": null
+    }
+  ]
+}

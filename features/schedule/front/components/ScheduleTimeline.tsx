@@ -18,6 +18,8 @@ interface ScheduleTimelineProps {
   subjects?: SubjectCourse[]
   showAdjustDay?: boolean
   onScheduleChange?: (schedule: DaySchedule) => void
+  /** Override for the edit (pencil) action. Defaults to navigating to /lessons?editId=<id>. */
+  onEditLesson?: (id: string) => void
 }
 
 const STATUS_PILL: Record<Exclude<TimelineDisplayStatus, 'none'>, string> = {
@@ -127,9 +129,11 @@ export function ScheduleTimeline({
   subjects = [],
   showAdjustDay = true,
   onScheduleChange,
+  onEditLesson,
 }: ScheduleTimelineProps) {
   const [schedule, setSchedule] = useState(initialSchedule)
   const router = useRouter()
+  const handleEditLesson = onEditLesson ?? (id => router.push('/lessons?editId=' + id))
 
   function handleScheduleChange(next: DaySchedule) {
     setSchedule(next)
@@ -170,7 +174,7 @@ export function ScheduleTimeline({
           currentTime={currentTime}
           subjectsById={subjectsById}
           isLast={index === entries.length - 1}
-          onEditLesson={id => router.push('/lessons?editId=' + id)}
+          onEditLesson={handleEditLesson}
         />
       ))}
 

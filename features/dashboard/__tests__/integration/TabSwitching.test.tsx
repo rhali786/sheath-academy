@@ -6,8 +6,12 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { HouseholdProvider } from '@/features/household/front/context'
 import { LearnerProvider } from '@/features/layout/front/context/LearnerContext'
 import { DashboardProvider } from '@/features/dashboard/front/context'
+import { ActiveSchoolYearProvider } from '@/features/school-year/front/context/ActiveSchoolYearContext'
 import { Sidebar } from '@/features/layout/front/components/Sidebar'
 import Dashboard from '@/features/dashboard/front/pages/Dashboard'
+import { alertsApi } from '@/features/alerts/front/services/api'
+import { quranApi } from '@/features/quran/front/services/api'
+import { dashboardApi } from '@/features/dashboard/front/services/api'
 
 jest.mock('next-auth/react', () => ({
   useSession: jest.fn(() => ({ data: null, status: 'unauthenticated' })),
@@ -105,14 +109,22 @@ jest.mock('@/features/household/front/services/api', () => ({
   },
 }))
 
+jest.mock('@/features/school-year/front/services/api', () => ({
+  schoolYearApi: {
+    getActiveSchoolYear: jest.fn(() => Promise.resolve({ data: null })),
+  },
+}))
+
 function renderWithShell() {
   return render(
     <HouseholdProvider>
       <LearnerProvider>
-        <Sidebar />
-        <DashboardProvider>
-          <Dashboard />
-        </DashboardProvider>
+        <ActiveSchoolYearProvider>
+          <Sidebar />
+          <DashboardProvider>
+            <Dashboard />
+          </DashboardProvider>
+        </ActiveSchoolYearProvider>
       </LearnerProvider>
     </HouseholdProvider>
   )
@@ -126,6 +138,7 @@ async function waitForDashboard() {
 
 describe('Sidebar + Dashboard shell', () => {
   beforeEach(() => {
+    jest.clearAllMocks()
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -153,5 +166,19 @@ describe('Sidebar + Dashboard shell', () => {
     renderWithShell()
     await waitForDashboard()
     expect(screen.getByTestId('dashboard-header')).toBeInTheDocument()
+  })
+
+  test('does not double-fetch per-child dashboard data on initial load', async () => {
+    renderWithShell()
+    await waitForDashboard()
+    // DashboardProvider's initial-load effect flips `initialLoadDone` right after
+    // fetching; a prior bug had the child-refetch effect (keyed on initialLoadDone)
+    // treat that flip as a change and immediately re-fetch with the same childId.
+    await waitFor(() => {
+      expect(alertsApi.getAlerts).toHaveBeenCalledTimes(1)
+    })
+    expect(quranApi.getSessions).toHaveBeenCalledTimes(1)
+    expect(dashboardApi.getRecords).toHaveBeenCalledTimes(1)
+    expect(dashboardApi.getSummary).toHaveBeenCalledTimes(1)
   })
 })

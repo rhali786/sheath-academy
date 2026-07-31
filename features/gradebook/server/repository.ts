@@ -1,6 +1,6 @@
 import { eq, and } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
-import { learners, subjects, scores, gradingScales, aggregationRules } from '@/db/schema'
+import { learners, subjects, scores, gradingScales, aggregationRules, schoolYears } from '@/db/schema'
 import { aggregateScore, gradeFromBands, computeGpaFromPoints, decayStatus } from './aggregation'
 import type {
   GradebookSummary,
@@ -75,6 +75,7 @@ export function rowToScore(row: ScoreRow): Score {
     // Drizzle returns timestamp columns as Date objects
     occurredAt: row.occurredAt instanceof Date ? row.occurredAt.toISOString() : String(row.occurredAt),
     comment: row.comment ?? undefined,
+    lessonTaskId: row.lessonTaskId ?? undefined,
   }
 }
 
@@ -183,13 +184,36 @@ export async function listScores(
 export async function listGradebookSummaries(householdId: string): Promise<GradebookSummary[]> {
   const db = getDb()
 
-  const [learnerRows, subjectRows, allScoreRows, scaleRows, ruleRows] = await Promise.all([
+  // NOTE: subjects is queried unfiltered here (all school years, all
+  // isActive states) and then scoped in-memory below to the active school
+  // year, mirroring the filtering features/subjects/server/repository.ts's
+  // listSubjectRows already applies. This keeps the existing Promise.all
+  // call order/shape stable (learners, subjects, scores, gradingScales,
+  // aggregationRules) for callers/tests that mock getDb() sequentially, and
+  // adds the active-school-year lookup as a 6th, final parallel query.
+  const [learnerRows, subjectRows, allScoreRows, scaleRows, ruleRows, activeYearRows] = await Promise.all([
     db.select().from(learners).where(eq(learners.householdId, householdId)),
     db.select().from(subjects).where(eq(subjects.householdId, householdId)),
     db.select().from(scores).where(eq(scores.householdId, householdId)),
     db.select().from(gradingScales).where(eq(gradingScales.householdId, householdId)),
     db.select().from(aggregationRules).where(eq(aggregationRules.householdId, householdId)),
+    db.select().from(schoolYears).where(and(eq(schoolYears.householdId, householdId), eq(schoolYears.isActive, true))),
   ])
+
+  // Scope subjects to the active school year the same way listSubjectRows
+  // does: isActive rows only, and — when a school year is active — either
+  // matching that year or having no year at all (legacy rows). A course
+  // rolled over into a new year keeps its source-year row (isActive stays
+  // true, per the "hide but keep" rollover decision), but that source row's
+  // schoolYearId no longer matches the active year, so it is excluded here —
+  // this is what keeps rolled-over duplicates out of GPA/needs-attention
+  // aggregation below.
+  const activeYearId = activeYearRows[0]?.id
+  const scopedSubjectRows = subjectRows.filter((s) => {
+    if (s.isActive === false) return false
+    if (!activeYearId) return true
+    return s.schoolYearId === activeYearId || s.schoolYearId === null || s.schoolYearId === undefined
+  })
 
   // Reference maps for the per-subject grading scale + aggregation rule.
   const scaleBands = new Map<string, GradingScaleBand[]>()
@@ -220,7 +244,7 @@ export async function listGradebookSummaries(householdId: string): Promise<Grade
   }
 
   return learnerRows.map(learner => {
-    const learnerSubjects = subjectRows.filter(
+    const learnerSubjects = scopedSubjectRows.filter(
       s => s.learnerId === learner.id || s.learnerId === null,
     )
 

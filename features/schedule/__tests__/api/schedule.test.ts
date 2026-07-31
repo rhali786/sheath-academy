@@ -79,6 +79,59 @@ describe('buildDailySchedule', () => {
   })
 })
 
+describe('buildDailySchedule — scheduledStartTime/scheduledEndTime override', () => {
+  it('places a lesson with both override fields at exactly those times and marks it locked', () => {
+    const overridden: LessonTask = {
+      ...makeLesson('L1', 'Quran', '30min'),
+      scheduledStartTime: '11:00',
+      scheduledEndTime: '11:20',
+    }
+    const schedule = buildDailySchedule([overridden], DEFAULT_SETTINGS)
+    expect(schedule.blocks).toHaveLength(1)
+    expect(schedule.blocks[0].startTime).toBe('11:00')
+    expect(schedule.blocks[0].endTime).toBe('11:20')
+    expect(schedule.blocks[0].durationMinutes).toBe(20)
+    expect(schedule.blocks[0].flexibilityState).toBe('locked')
+  })
+
+  it('advances the cursor for subsequent unset lessons past the override end + transitionMinutes, without overlap', () => {
+    const overridden: LessonTask = {
+      ...makeLesson('L1', 'Quran', '30min'),
+      scheduledStartTime: '11:00',
+      scheduledEndTime: '11:20',
+    }
+    const unset = makeLesson('L2', 'Math', '30min')
+    const schedule = buildDailySchedule([overridden, unset], DEFAULT_SETTINGS)
+    const block2 = schedule.blocks.find(b => b.lesson.id === 'L2')!
+    // override ends 11:20, + 10 min transition => 11:30
+    expect(block2.startTime).toBe('11:30')
+    expect(block2.endTime).toBe('12:00')
+  })
+
+  it('a lesson without both override fields is scheduled exactly as before (regression)', () => {
+    const lessons = [
+      makeLesson('L1', 'Quran', '30min'),
+      makeLesson('L2', 'Math', '45min'),
+    ]
+    const schedule = buildDailySchedule(lessons, DEFAULT_SETTINGS)
+    expect(schedule.blocks[0].startTime).toBe('08:30')
+    expect(schedule.blocks[0].endTime).toBe('09:00')
+    expect(schedule.blocks[0].flexibilityState).toBeUndefined()
+    expect(schedule.blocks[1].startTime).toBe('09:10')
+    expect(schedule.blocks[1].endTime).toBe('09:55')
+  })
+
+  it('ignores a partial override (only one of start/end set) and falls back to synthesized timing', () => {
+    const partial: LessonTask = {
+      ...makeLesson('L1', 'Quran', '30min'),
+      scheduledStartTime: '11:00',
+    }
+    const schedule = buildDailySchedule([partial], DEFAULT_SETTINGS)
+    expect(schedule.blocks[0].startTime).toBe('08:30')
+    expect(schedule.blocks[0].endTime).toBe('09:00')
+  })
+})
+
 describe('reflow', () => {
   function makeSchedule(overrides?: Partial<DaySchedule>): DaySchedule {
     const lessons = [

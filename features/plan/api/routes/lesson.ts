@@ -5,7 +5,7 @@ import type { LessonTask } from '@/features/plan/types'
 import { getLessonTaskRow, updateLessonTaskRow, completeLessonTaskRow, deleteLessonTaskRow } from '@/features/plan/server/repository'
 import { mapLessonTaskRow } from '@/features/plan/api/mapLessonTaskRow'
 import { notFoundResponse } from '@/features/auth/server/context'
-import { validateLessonWindow } from '@/features/plan/server/validation'
+import { validateLessonWindow, validateScheduleTimeWindow } from '@/features/plan/server/validation'
 
 function rowToLesson(r: Parameters<typeof mapLessonTaskRow>[0]): LessonTask {
   return mapLessonTaskRow(r)
@@ -33,6 +33,16 @@ export async function PUT(id: string, request: Request): Promise<NextResponse<Ap
     }
   }
 
+  if ('scheduledStartTime' in body || 'scheduledEndTime' in body) {
+    const timeCheck = validateScheduleTimeWindow(body.scheduledStartTime ?? null, body.scheduledEndTime ?? null)
+    if (!timeCheck.valid) {
+      return NextResponse.json(
+        { status: 'error', data: null, message: timeCheck.error ?? 'Invalid schedule time range', timestamp: new Date().toISOString() },
+        { status: 400 },
+      )
+    }
+  }
+
   try {
     const { householdId } = getRequestAuthCtx()
     const updated = await updateLessonTaskRow(id, householdId, {
@@ -41,10 +51,16 @@ export async function PUT(id: string, request: Request): Promise<NextResponse<Ap
       resourceLink: body.resourceLink?.trim(),
       lessonType: body.lessonType,
       estimatedDuration: body.estimatedDuration,
+      scheduledStartTime: 'scheduledStartTime' in body ? (body.scheduledStartTime ?? null) : undefined,
+      scheduledEndTime: 'scheduledEndTime' in body ? (body.scheduledEndTime ?? null) : undefined,
       plannedStartDate: body.plannedStartDate ?? null,
       dueDate: body.dueDate,
       status: body.status,
       sortOrder: body.order,
+      curriculum: 'curriculum' in body ? (body.curriculum?.trim() || null) : undefined,
+      chapter: 'chapter' in body ? (body.chapter?.trim() || null) : undefined,
+      hasHomework: 'hasHomework' in body ? body.hasHomework === true : undefined,
+      hasAssessment: 'hasAssessment' in body ? body.hasAssessment === true : undefined,
     }, { applyToGroup: body.applyToGroup === true })
     if (!updated) return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 })
     return NextResponse.json({ status: 'success', data: rowToLesson(updated), message: 'Lesson updated', timestamp: new Date().toISOString() })

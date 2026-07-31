@@ -220,6 +220,47 @@ describe('TodayLessonCard', () => {
     })
   })
 
+  describe('multi-day span (item 3 — consistency with /plan)', () => {
+    it('shows a lesson that spans today but is not due today (fetched path)', async () => {
+      mockGetLessons.mockResolvedValue(makeLessons([
+        { title: 'Spanning lesson', plannedStartDate: '2026-05-11', dueDate: '2026-05-13' },
+      ]))
+      render(<TodayLessonCard children={[mockChild]} today="2026-05-12" />)
+      await waitFor(() => {
+        expect(screen.getByText('Spanning lesson')).toBeInTheDocument()
+      })
+    })
+
+    it('does not show a lesson due on a different day that does not span today', async () => {
+      mockGetLessons.mockResolvedValue(makeLessons([
+        { title: 'Unrelated lesson', dueDate: '2026-05-20' },
+      ]))
+      render(<TodayLessonCard children={[mockChild]} today="2026-05-12" />)
+      await waitFor(() => {
+        expect(screen.getByText(/no lessons scheduled for today/i)).toBeInTheDocument()
+      })
+      expect(screen.queryByText('Unrelated lesson')).not.toBeInTheDocument()
+    })
+
+    it('a single-day lesson (no plannedStartDate) still only shows on its due date (regression)', async () => {
+      mockGetLessons.mockResolvedValue(makeLessons([
+        { title: 'Single-day lesson', dueDate: '2026-05-12' },
+      ]))
+      render(<TodayLessonCard children={[mockChild]} today="2026-05-12" />)
+      await waitFor(() => {
+        expect(screen.getByText('Single-day lesson')).toBeInTheDocument()
+      })
+    })
+
+    it('shows a spanning lesson via externalLessons on an intermediate day', () => {
+      const external = makeLessons([
+        { title: 'External spanning lesson', plannedStartDate: '2026-05-14', dueDate: '2026-05-16' },
+      ])
+      render(<TodayLessonCard children={[mockChild]} today="2026-05-15" externalLessons={external} />)
+      expect(screen.getByText('External spanning lesson')).toBeInTheDocument()
+    })
+  })
+
   describe('onEditLesson prop', () => {
     it('renders edit icon when onEditLesson is provided', async () => {
       const lessons = makeLessons([{ title: 'Pending lesson', dueDate: '2026-05-12', status: 'not_started' }])

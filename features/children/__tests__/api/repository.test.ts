@@ -56,6 +56,39 @@ describe('learner repository', () => {
     expect(learner.isActive).toBe(true)
   })
 
+  itDb('createLearner persists firstName/lastName/dob', async () => {
+    const learner = await createLearner(testHouseholdId, {
+      name: 'Adam Al-Rashid',
+      firstName: 'Adam',
+      lastName: 'Al-Rashid',
+      dob: '2015-03-10',
+      gradeLevel: 'Grade 5',
+    })
+    expect(learner.firstName).toBe('Adam')
+    expect(learner.lastName).toBe('Al-Rashid')
+    expect(learner.dob).toBe('2015-03-10')
+    const { getDb } = await import('@/features/lib/server/db')
+    const { learners } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+    await getDb().delete(learners).where(eq(learners.id, learner.id))
+  })
+
+  itDb('updateLearner persists userId (linking a learner to a credential user) and it round-trips on re-fetch', async () => {
+    const { upsertUserByEmail } = await import('@/features/household/server/repository')
+    const linkedUser = await upsertUserByEmail(`learner-link-${TS}@sheath.test`)
+    const learner = await createLearner(testHouseholdId, { name: 'Linked Learner' })
+    const updated = await updateLearner(learner.id, testHouseholdId, { userId: linkedUser.id })
+    expect(updated!.userId).toBe(linkedUser.id)
+    const refetched = await getLearner(learner.id, testHouseholdId)
+    expect(refetched!.userId).toBe(linkedUser.id)
+
+    const { getDb } = await import('@/features/lib/server/db')
+    const { learners, users } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+    await getDb().delete(learners).where(eq(learners.id, learner.id))
+    await getDb().delete(users).where(eq(users.id, linkedUser.id))
+  })
+
   itDb('listLearners returns only active learners for the household', async () => {
     const list = await listLearners(testHouseholdId)
     expect(list.length).toBeGreaterThan(0)

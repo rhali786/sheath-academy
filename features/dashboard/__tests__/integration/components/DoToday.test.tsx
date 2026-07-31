@@ -7,12 +7,15 @@ import type { StudentProfile } from '@/features/lib/types'
 import type { LessonTask } from '@/features/plan/types'
 
 jest.mock('@/features/plan/front/services/api', () => ({
-  plannerApi: { getLessons: jest.fn().mockResolvedValue([]) },
+  plannerApi: {
+    getLessons: jest.fn().mockResolvedValue([]),
+    getLesson: jest.fn().mockResolvedValue(null),
+    updateLesson: jest.fn().mockResolvedValue(undefined),
+  },
 }))
 
-const mockPush = jest.fn()
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush }),
+jest.mock('@/features/household/front/context', () => ({
+  useHousehold: jest.fn(() => ({ studentProfiles: [], allSubjects: [] })),
 }))
 
 const mockChild: StudentProfile = {
@@ -47,6 +50,11 @@ function makeCtx(overrides: Partial<DashboardContextType> = {}): DashboardContex
     setSelectedChildId: jest.fn(),
     ...overrides,
   }
+}
+
+function todayLocalForTest(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function renderDoToday(ctx: DashboardContextType) {
@@ -94,29 +102,32 @@ describe('DashboardProvider auto-selects first child', () => {
   })
 })
 
-describe('DoToday edit lesson deep-link', () => {
+describe('DoToday edit lesson inline popup (G7c)', () => {
+  const today = todayLocalForTest()
+  const lesson: LessonTask = {
+    id: 'lesson_abc',
+    childId: 'child_001',
+    subjectId: 'subj_001',
+    householdId: 'hh_001',
+    title: 'Test Lesson',
+    dueDate: today,
+    status: 'not_started',
+    order: 0,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  }
+
   beforeEach(() => {
-    mockPush.mockReset()
+    jest.clearAllMocks()
   })
 
-  it('edit icon click navigates to /lessons?editId=<id>', async () => {
-    const d = new Date()
-    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    const lesson: LessonTask = {
-      id: 'lesson_abc',
-      childId: 'child_001',
-      subjectId: 'subj_001',
-      householdId: 'hh_001',
-      title: 'Test Lesson',
-      dueDate: today,
-      status: 'not_started',
-      order: 0,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z',
-    }
-
+  it('edit icon click opens an inline modal instead of navigating away', async () => {
     const { plannerApi } = jest.requireMock('@/features/plan/front/services/api')
     plannerApi.getLessons.mockResolvedValue([lesson])
+    plannerApi.getLesson.mockResolvedValue(lesson)
+
+    const { useHousehold } = jest.requireMock('@/features/household/front/context')
+    useHousehold.mockReturnValue({ studentProfiles: [mockChild], allSubjects: [] })
 
     renderDoToday(makeCtx({ children: [mockChild], selectedChildId: 'child_001' }))
 
@@ -124,7 +135,47 @@ describe('DoToday edit lesson deep-link', () => {
       expect(screen.getByText('Test Lesson')).toBeInTheDocument()
     })
 
+    expect(screen.queryByTestId('edit-lesson-modal')).not.toBeInTheDocument()
+
     fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
-    expect(mockPush).toHaveBeenCalledWith('/lessons?editId=lesson_abc')
+
+    expect(await screen.findByTestId('edit-lesson-modal')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Test Lesson')).toBeInTheDocument()
+    })
+  })
+
+  it('saving within the modal updates the lesson without leaving the Dashboard', async () => {
+    const { plannerApi } = jest.requireMock('@/features/plan/front/services/api')
+    plannerApi.getLessons.mockResolvedValue([lesson])
+    plannerApi.getLesson.mockResolvedValue(lesson)
+    plannerApi.updateLesson.mockResolvedValue({ ...lesson, title: 'Updated Lesson' })
+
+    const { useHousehold } = jest.requireMock('@/features/household/front/context')
+    useHousehold.mockReturnValue({ studentProfiles: [mockChild], allSubjects: [] })
+
+    renderDoToday(makeCtx({ children: [mockChild], selectedChildId: 'child_001' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Lesson')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    await screen.findByTestId('edit-lesson-modal')
+
+    const titleInput = await screen.findByDisplayValue('Test Lesson')
+    fireEvent.change(titleInput, { target: { value: 'Updated Lesson' } })
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => {
+      expect(plannerApi.updateLesson).toHaveBeenCalledWith(
+        'lesson_abc',
+        expect.objectContaining({ title: 'Updated Lesson' }),
+      )
+    })
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-lesson-modal')).not.toBeInTheDocument()
+    })
+    // Never navigated away — DoToday itself is still rendered
+    expect(screen.getByText(/today —/i)).toBeInTheDocument()
   })
 })

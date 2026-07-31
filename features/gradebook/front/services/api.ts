@@ -29,6 +29,8 @@ export interface ScoreInput {
   numericValue?: number | null
   occurredAt?: string
   comment?: string
+  /** Links this score to a specific scheduled lesson/assignment. */
+  lessonTaskId?: string
 }
 
 export type ScorePatch = Partial<Omit<ScoreInput, 'learnerId' | 'subjectId'>>

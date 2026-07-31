@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useActiveSchoolYear } from '@/features/school-year/front/context/ActiveSchoolYearContext'
 import type { SchoolYear } from '@/features/school-year/types'
 
 function countWeekdays(start: Date, end: Date): number {
@@ -75,14 +75,7 @@ const PACING_STYLES: Record<SchoolYearProgress['pacing'], { label: string; color
 }
 
 export function SchoolYearProgressCard() {
-  const [year, setYear] = useState<SchoolYear | null>(null)
-
-  useEffect(() => {
-    fetch('/api/school-years/active')
-      .then(r => r.json())
-      .then(body => { if (body.status === 'success') setYear(body.data) })
-      .catch(() => {})
-  }, [])
+  const { activeSchoolYear: year } = useActiveSchoolYear()
 
   if (!year) return null
 

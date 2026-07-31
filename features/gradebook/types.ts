@@ -14,6 +14,8 @@ export interface Score {
   source: ScoreSource
   occurredAt: string
   comment?: string
+  /** Set when this score was recorded against a specific scheduled lesson/assignment. */
+  lessonTaskId?: string
 }
 
 export interface SubjectGradingConfig {

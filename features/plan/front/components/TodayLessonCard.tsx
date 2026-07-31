@@ -5,6 +5,7 @@ import { Pencil } from 'lucide-react'
 import { plannerApi } from '@/features/plan/front/services/api'
 import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
+import { lessonSpansDate } from '@/features/plan/utils/lessonCompletionWindow'
 
 function mondayOfWeek(today: string): string {
   const d = new Date(`${today}T00:00:00`)
@@ -59,7 +60,7 @@ export function TodayLessonCard({ children, today, externalLessons, onEditLesson
         const week = mondayOfWeek(today)
         const all = await plannerApi.getLessons(week, childIds)
         if (!cancelled) {
-          setFetchedLessons(all.filter(l => l.dueDate === today))
+          setFetchedLessons(all.filter(l => lessonSpansDate(l, today)))
         }
       } catch {
         if (!cancelled) {
@@ -78,7 +79,7 @@ export function TodayLessonCard({ children, today, externalLessons, onEditLesson
   }, [today, externalLessons, childIdsKey])
 
   const baseLessons = externalLessons !== undefined
-    ? externalLessons.filter(l => l.dueDate === today && childIds.includes(l.childId))
+    ? externalLessons.filter(l => lessonSpansDate(l, today) && childIds.includes(l.childId))
     : fetchedLessons
 
   const lessons = baseLessons.map(l =>

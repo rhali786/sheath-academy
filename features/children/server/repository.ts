@@ -6,16 +6,24 @@ export type LearnerRow = typeof learners.$inferSelect
 
 export interface CreateLearnerInput {
   name: string
+  firstName?: string
+  lastName?: string
+  dob?: string
   gradeLevel?: string
   displayColor?: string
   sortOrder?: number
+  userId?: string | null
 }
 
 export interface UpdateLearnerInput {
   name?: string
+  firstName?: string
+  lastName?: string
+  dob?: string | null
   gradeLevel?: string
   displayColor?: string
   sortOrder?: number
+  userId?: string | null
 }
 
 export async function listLearners(householdId: string): Promise<LearnerRow[]> {
@@ -56,10 +64,14 @@ export async function createLearner(
       id: `learner_${Date.now()}`,
       householdId,
       name: input.name,
+      firstName: input.firstName ?? null,
+      lastName: input.lastName ?? null,
+      dob: input.dob ?? null,
       gradeLevel: input.gradeLevel ?? null,
       displayColor: input.displayColor ?? null,
       isActive: true,
       sortOrder: input.sortOrder ?? 0,
+      userId: input.userId ?? null,
       createdAt: now,
       updatedAt: now,
     })
@@ -103,9 +115,13 @@ export async function updateLearner(
   const db = getDb()
   const patch: Partial<LearnerRow> = { updatedAt: new Date() }
   if (input.name !== undefined) patch.name = input.name
+  if (input.firstName !== undefined) patch.firstName = input.firstName
+  if (input.lastName !== undefined) patch.lastName = input.lastName
+  if (input.dob !== undefined) patch.dob = input.dob
   if (input.gradeLevel !== undefined) patch.gradeLevel = input.gradeLevel
   if (input.displayColor !== undefined) patch.displayColor = input.displayColor
   if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder
+  if (input.userId !== undefined) patch.userId = input.userId
 
   const result = await db
     .update(learners)

@@ -50,7 +50,7 @@ async function main() {
 
   const jsonPath = path.join(
     __dirname,
-    '../docs/compliance-research/homeschool-requirements-2026-06-27.json',
+    '../docs/archive/compliance-research/homeschool-requirements-2026-06-27.json',
   )
   const raw = fs.readFileSync(jsonPath, 'utf-8')
   const states: StateEntry[] = JSON.parse(raw)

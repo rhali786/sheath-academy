@@ -170,6 +170,7 @@ function makeRequeueItem(overrides: Partial<Record<string, unknown>> = {}) {
     createdAt: '2026-05-25T10:00:00.000Z',
     userId: 'user_1',
     userEmail: 'test@example.com',
+    hasScreenshot: false,
     ...overrides,
   }
 }

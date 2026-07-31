@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, FormEvent } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import type { StudentProfile } from '@/features/lib/types'
 
 const GRADE_OPTIONS = [
@@ -27,6 +28,7 @@ export function ChildForm({ householdId, child, onSubmit, onCancel }: ChildFormP
   )
   const [username, setUsername] = useState(child?.username || '')
   const [password, setPassword] = useState(child?.password || '')
+  const [showPassword, setShowPassword] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -164,15 +166,25 @@ export function ChildForm({ householdId, child, onSubmit, onCancel }: ChildFormP
             <label htmlFor="password" className="block text-xs font-medium text-slate-600 mb-1.5">
               Password *
             </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900"
-              maxLength={100}
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3 py-2 pr-9 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-900"
+                maxLength={100}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
         </div>
       )}

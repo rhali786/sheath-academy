@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { complianceApi } from '@/features/compliance/front/services/api'
+import { useActiveSchoolYear } from '@/features/school-year/front/context/ActiveSchoolYearContext'
 import type { ComplianceDeadline, StatusEngineResult } from '@/features/compliance/types'
 
 function statusColor(status: StatusEngineResult['status']) {
@@ -89,26 +90,26 @@ function CardShell({ children, testId }: { children: React.ReactNode; testId: st
 }
 
 export function ComplianceStatusCard() {
+  const { activeSchoolYear, loading: activeSchoolYearLoading } = useActiveSchoolYear()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [hasSchoolYear, setHasSchoolYear] = useState(true)
   const [result, setResult] = useState<StatusEngineResult | null>(null)
   const [deadlines, setDeadlines] = useState<ComplianceDeadline[]>([])
 
-  const load = useCallback(() => {
+  const load = useCallback((schoolYearId: string | undefined) => {
+    if (!schoolYearId) {
+      setHasSchoolYear(false)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(false)
-    complianceApi.getActiveSchoolYearId()
-      .then(async schoolYearId => {
-        if (!schoolYearId) {
-          setHasSchoolYear(false)
-          setLoading(false)
-          return
-        }
-        const [statusRes, deadlinesRes] = await Promise.all([
-          complianceApi.getStatus('', schoolYearId),
-          complianceApi.getDeadlines('', schoolYearId),
-        ])
+    Promise.all([
+      complianceApi.getStatus('', schoolYearId),
+      complianceApi.getDeadlines('', schoolYearId),
+    ])
+      .then(([statusRes, deadlinesRes]) => {
         setHasSchoolYear(true)
         setResult(statusRes.data)
         setDeadlines(deadlinesRes.data)
@@ -120,9 +121,12 @@ export function ComplianceStatusCard() {
       })
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    if (activeSchoolYearLoading) return
+    load(activeSchoolYear?.id)
+  }, [activeSchoolYearLoading, activeSchoolYear?.id, load])
 
-  if (loading) {
+  if (activeSchoolYearLoading || loading) {
     return (
       <CardShell testId="compliance-status-card-loading">
         <div className="space-y-2 animate-pulse">
@@ -140,7 +144,7 @@ export function ComplianceStatusCard() {
         <p className="text-sm text-slate-500 mb-3">Couldn&apos;t load compliance status.</p>
         <button
           type="button"
-          onClick={load}
+          onClick={() => load(activeSchoolYear?.id)}
           className="px-3 py-1.5 bg-forest-900 text-white text-xs font-medium rounded-lg hover:bg-forest-800 transition-colors"
         >
           Retry
