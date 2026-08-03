@@ -8,11 +8,22 @@
       "id": "phase-1-12hr-time-picker",
       "title": "Wave 4 — Custom 12-hour time picker on LessonTaskForm",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "status": "complete",
+      "model": "claude-sonnet-5",
+      "startedAt": "2026-08-03T00:00:00.000Z",
+      "completedAt": "2026-08-03T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/plan/front/components/LessonTaskForm.tsx",
+          "features/plan/__tests__/integration/LessonTaskForm.test.tsx"
+        ],
+        "testsRun": [
+          "npm test -- features/plan (29 suites, 319 passed, 20 skipped)",
+          "npm test (full suite: 254 suites, 2253 passed, 203 skipped)",
+          "npm run build (see notes — pre-existing unrelated failure, verified via git stash)"
+        ],
+        "notes": "New `TimePicker12h` sub-component added inline in features/plan/front/components/LessonTaskForm.tsx (not exported separately) — renders hour (1-12) / minute (5-min increments: 00,05,...,55) / AM-PM selects per field, keyed by idPrefix ('scheduledStartTime' / 'scheduledEndTime'), each select aria-labelled as '<Label> hour' / '<Label> minute' / '<Label> period' for test targeting. Stored value contract is UNCHANGED: LessonTaskForm still holds scheduledStartTime/scheduledEndTime as 24-hour 'HH:MM' strings in state and submits them unchanged in LessonFormData — TimePicker12h only converts to/from 12-hour parts at the render boundary via timeToParts()/partsToTime() helpers in the same file. No changes to LessonTask contract, buildDailySchedule, or formatTime12. ScheduleTimeline.tsx was not touched (out of scope, already correct). Rewrote the 3 existing 'scheduled start/end time override' tests in LessonTaskForm.test.tsx (they previously drove the native <input type=\"time\"> directly with a raw HH:MM string) to use the new hour/minute/period selects, and added 2 new tests per the plan's testsFirst spec (9:30 PM -> '21:30' on submit; prefill of an existing '21:30' lesson shows hour=9/minute=30/period=PM). All other features/plan tests were unaffected (grepped repo-wide for scheduledStartTime/scheduledEndTime/'start time'/'end time' usage first — only this test file interacts with the UI labels; other hits are data-layer, not UI). `npm run build` fails at the `/(shell)/about/page` static-generation step (DB call in app/(shell)/about/page.tsx hangs against the unreachable dev Postgres instance noted in this plan's dbMigrationPolicy, 3x 60s timeout then exit code 1) — reproduced identically with `git stash` (i.e. with this phase's changes removed), confirming it is a pre-existing environment issue, not a regression introduced by this phase. Downstream phases should expect the same `npm run build` behavior in this environment unless dev DB connectivity is restored."
+      },
       "failureReason": null
     },
     {
