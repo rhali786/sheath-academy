@@ -1,0 +1,63 @@
+{
+  "plan": "docs/20260802-feedback-batch-prod-pull-plan.md",
+  "createdAt": "2026-08-03T00:00:00.000Z",
+  "updatedAt": "2026-08-03T00:00:00.000Z",
+  "branch": "feature/feedback-batch-20260802-open-gaps",
+  "phases": [
+    {
+      "id": "phase-1-12hr-time-picker",
+      "title": "Wave 4 — Custom 12-hour time picker on LessonTaskForm",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "phase-2-learning-time-course-first-selector",
+      "title": "Wave 3 (part 1) — Course-first selector on Learning Time",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "phase-3-planner-dragdrop-and-combined-view",
+      "title": "Wave 2 — Weekly Planner drag-to-move + combined multi-child daily view",
+      "gated": false,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "phase-4-badges-progress-and-image",
+      "title": "Wave 1 — Badge progress tracking + custom badge images (schema-touching)",
+      "gated": true,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    },
+    {
+      "id": "phase-5-subjects-recurring-schedule",
+      "title": "Wave 3 (part 2) — Recurring per-class schedule on SubjectCourse (schema-touching)",
+      "gated": true,
+      "status": "pending",
+      "model": null,
+      "startedAt": null,
+      "completedAt": null,
+      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "failureReason": null
+    }
+  ]
+}

@@ -1,0 +1,171 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/20260802-feedback-batch-prod-pull-plan.md",
+  "branch": "feature/feedback-batch-20260802-open-gaps",
+  "dbMigrationPolicy": "CONFIRMED 2026-08-03: the dev Postgres instance (virginia-postgres.render.com/sacad) is unreachable (ECONNRESET on connect), same as the prior 07-16 batch. Schema-touching phases (phase-4-badges-progress-and-image, phase-5-subjects-recurring-schedule) must run npm run db:generate / npm run db:migrate against PRODUCTION directly, remapping DATABASE_URL_PROD to DATABASE_URL (mirror scripts/migrate-prod.ts's pattern from scripts/lib/prod-env.ts) rather than the plain dotenv -e .env.local DATABASE_URL. Both schema-touching phases remain gated: true — do not auto-run db:migrate against prod without the user's explicit per-phase approval of the generated migration SQL first. Take a fresh npm run db:backup:prod before either migration as the rollback point.",
+  "phases": [
+    {
+      "id": "phase-1-12hr-time-picker",
+      "title": "Wave 4 — Custom 12-hour time picker on LessonTaskForm",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [],
+      "fileScope": [
+        "features/plan/front/components/LessonTaskForm.tsx",
+        "features/plan/__tests__/integration/LessonTaskForm.test.tsx"
+      ],
+      "testsFirst": [
+        "features/plan/__tests__/integration/LessonTaskForm.test.tsx: setting the new 12-hour control to hour '9', minute '30', period 'PM' results in the underlying scheduledStartTime value being '21:30' on submit; opening the form with an existing lesson where scheduledStartTime='21:30' pre-fills the control as 9:30 PM (hour=9, minute=30, period=PM)"
+      ],
+      "implementationSteps": [
+        "Read features/plan/front/components/LessonTaskForm.tsx lines ~418-445 (scheduledStartTime/scheduledEndTime native <input type=\"time\"> fields) before changing anything.",
+        "Build a small custom 12-hour control (hour 1-12 select, minute select in 5-min increments matching existing UX conventions if any, AM/PM toggle) that stores/reads the same HH:MM 24-hour string the rest of the system already expects — no change to the LessonTask contract, buildDailySchedule, or formatTime12.",
+        "Swap the native time inputs for the new control for both scheduledStartTime and scheduledEndTime.",
+        "Do not touch features/schedule/front/components/ScheduleTimeline.tsx — it already displays 12-hour format correctly and is out of scope."
+      ],
+      "doneWhen": [
+        "npm test -- features/plan",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Record the component name/location of the new 12-hour control and confirm the stored value contract (HH:MM 24-hour string) is unchanged, so later phases touching LessonTaskForm know the field shape is stable."
+    },
+    {
+      "id": "phase-2-learning-time-course-first-selector",
+      "title": "Wave 3 (part 1) — Course-first selector on Learning Time",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [],
+      "fileScope": [
+        "features/learning-time/front/components/NowCard.tsx",
+        "features/learning-time/front/pages/LearningTimePage.tsx",
+        "features/learning-time/__tests__/integration/NowCard.test.tsx"
+      ],
+      "testsFirst": [
+        "features/learning-time/__tests__/integration/NowCard.test.tsx (or LearningTimePage.test.tsx if the selector lives there): selecting a Course first narrows the Learner dropdown to only learners enrolled in that course; starting a session after selecting a course pre-fills subjectId on the CreateSessionInput without requiring the learner to be picked first"
+      ],
+      "implementationSteps": [
+        "Read features/learning-time/front/components/NowCard.tsx in full first — getLessons/getSubjects are learner-scoped today per the existing reviewed recommendation on feedback id 66087f44.",
+        "Add a Course selector to NowCard/LearningTimePage that, when set, narrows the Learner dropdown to learners enrolled in that course (reuse features/subjects/lib/enrollment's subjectEnrollsLearner helper — do not duplicate enrollment logic).",
+        "Pre-fill subjectId on session start once a course is selected (CreateSessionInput already carries subjectId — no schema change needed here).",
+        "This is additive UI composition only — no API/store contract change beyond what already exists."
+      ],
+      "doneWhen": [
+        "npm test -- features/learning-time",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Record which component ended up owning the Course selector (NowCard vs LearningTimePage) and the exact helper reused for enrollment-scoped narrowing, so phase-5 (recurring schedule) can reuse the same enrollment helper if needed."
+    },
+    {
+      "id": "phase-3-planner-dragdrop-and-combined-view",
+      "title": "Wave 2 — Weekly Planner drag-to-move + combined multi-child daily view",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [],
+      "fileScope": [
+        "features/plan/front/components/WeeklyPlanner.tsx",
+        "features/plan/front/components/WeekGrid.tsx",
+        "features/plan/front/components/PlannerViewToggle.tsx",
+        "features/plan/__tests__/integration/WeeklyPlanner.test.tsx",
+        "features/plan/__tests__/integration/PlannerViewToggle.test.tsx"
+      ],
+      "testsFirst": [
+        "features/plan/__tests__/integration/WeeklyPlanner.test.tsx: dragging a lesson card from Monday to Wednesday updates its date and it renders under Wednesday after the drag completes (mirror WeekGrid's existing drag test pattern)",
+        "features/plan/__tests__/integration/WeeklyPlanner.test.tsx: switching to 'By day' mode shows Child A and Child B's lessons together under a given date, color-coded by learner via the existing learnerColor() helper; switching back to 'By learner' restores the current stacked-per-child layout with no lessons duplicated or dropped"
+      ],
+      "implementationSteps": [
+        "Read features/plan/front/components/WeekGrid.tsx in full first — it already implements drag-to-move via @dnd-kit/core (DndContext, useDraggable, useDroppable, DragOverlay) and a handleDragEnd-style mutation path. Reuse that exact mutation path; do not build a second one.",
+        "Read features/plan/front/components/WeeklyPlanner.tsx in full — confirm no draggable/onDrop/dnd code exists today (per the plan's audit), then wire the same DndContext/useDraggable/useDroppable pattern into it.",
+        "Add a display-mode toggle ('By learner' default / 'By day') near or inside PlannerViewToggle.tsx. 'By day' groups all learners' lessons for a given date together in one column, learner-color-coded using the existing learnerColor() helper from WeeklyPlanner.tsx (do not invent a new color scheme).",
+        "Do not change WeekGrid.tsx's own behavior or PlannerViewToggle's existing two-view (Weekly Planner vs Planning Matrix) semantics beyond adding the new display-mode control."
+      ],
+      "doneWhen": [
+        "npm test -- features/plan",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Record whether WeekGrid's drag-drop mutation path needed to be extracted into a shared hook to be reusable, and the exact prop/state name for the by-learner/by-day toggle, in case future planner work needs it."
+    },
+    {
+      "id": "phase-4-badges-progress-and-image",
+      "title": "Wave 1 — Badge progress tracking + custom badge images (schema-touching)",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": [],
+      "fileScope": [
+        "db/schema.ts",
+        "db/migrations/",
+        "features/badges/types.ts",
+        "features/badges/server/repository.ts",
+        "features/badges/front/pages/BadgesPage.tsx",
+        "features/badges/__tests__/api/repository.test.ts",
+        "features/badges/__tests__/integration/BadgesPage.test.tsx"
+      ],
+      "testsFirst": [
+        "features/badges/__tests__/api/repository.test.ts: creating a badge definition with imageUrl persists and returns it; updating progressCurrent on an award persists and round-trips",
+        "features/badges/__tests__/integration/BadgesPage.test.tsx: BadgeDefinitionForm — filling an image URL and saving shows the custom image in the definition list instead of the emblem icon; AwardCard — setting progress to 5/10 renders '5 / 10' and a proportional bar, incrementing updates the display"
+      ],
+      "implementationSteps": [
+        "Read features/badges/types.ts, features/badges/server/repository.ts, and features/badges/front/pages/BadgesPage.tsx in full first — emblemKey is the only visual field today, awards are binary earned/not-earned with no progress model.",
+        "Add imageUrl: text().nullable() to badge_definitions in db/schema.ts (emblemKey stays as the fallback when imageUrl is unset). Add progressCurrent/progressTarget (nullable integers) to badge_awards.",
+        "Run npm run db:generate. Per this plan's dbMigrationPolicy, the dev DB is unreachable — this phase is gated specifically so the user can review the generated migration SQL before it is applied. Do NOT run db:migrate until the user approves in this checkpoint.",
+        "After migration is approved and applied (against prod per dbMigrationPolicy, using the DATABASE_URL_PROD remap pattern from scripts/lib/prod-env.ts / scripts/migrate-prod.ts), extend the repository create/update functions and BadgeDefinitionForm (image URL field) and AwardCard (progress bar + edit control, fraction display like '3 / 10'), with BadgeEmblem preferring imageUrl over the emblem-key icon lookup when present.",
+        "Do not build automatic cross-feature progress aggregation (e.g. from Gradebook) — progress is a manually-set value only, per the plan's explicit out-of-scope note."
+      ],
+      "doneWhen": [
+        "npm test -- features/badges",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [
+        "npm run db:generate produces no further new migration after this phase's migration is committed",
+        "npm run db:migrate applies cleanly with no gap in the migration sequence"
+      ],
+      "writeBack": "Record the migration file name/number added, whether it was applied to prod or is still pending the user's manual db:migrate run, and the final decision on 'does hitting progressTarget auto-mark earned' (flagged as a product decision in the plan)."
+    },
+    {
+      "id": "phase-5-subjects-recurring-schedule",
+      "title": "Wave 3 (part 2) — Recurring per-class schedule on SubjectCourse (schema-touching)",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": [
+        "phase-2-learning-time-course-first-selector"
+      ],
+      "fileScope": [
+        "db/schema.ts",
+        "db/migrations/",
+        "features/subjects/types.ts",
+        "features/subjects/server/repository.ts",
+        "features/subjects/front/components/SubjectForm.tsx",
+        "features/learning-time/front/pages/LearningTimePage.tsx",
+        "features/subjects/__tests__/api/repository.test.ts",
+        "features/learning-time/__tests__/integration/LearningTimePage.test.tsx"
+      ],
+      "testsFirst": [
+        "features/subjects/__tests__/api/repository.test.ts: saving a course with a recurringSchedule (array of { daysOfWeek, startTime, endTime }) persists and round-trips",
+        "features/learning-time/__tests__/integration/LearningTimePage.test.tsx: a course with a recurring schedule shows a 'next scheduled: <day> <time>' line in the quick-start list alongside the existing duration"
+      ],
+      "implementationSteps": [
+        "Before writing any code, re-confirm ownership: read features/subjects/types.ts and features/schedule/server/service.ts to decide whether the recurring schedule belongs on SubjectCourse (features/subjects/) or an existing scheduling primitive in features/schedule/. The plan defaults to features/subjects/ but requires this confirmation, not an assumption.",
+        "Add a recurringSchedule field to SubjectCourse (or the confirmed alternative owner): nullable/optional array shape { daysOfWeek: DayOfWeek[], startTime: string, endTime: string }[], so existing courses are unaffected.",
+        "Run npm run db:generate. This phase is gated so the user can review the generated migration SQL before it is applied — do NOT run db:migrate until approved.",
+        "After migration is approved/applied, extend features/subjects/front/components/SubjectForm.tsx with an optional recurring-time-block editor, and read phase-2's writeBack notes for which component owns the course selector before wiring LearningTimePage's 'next scheduled' display off the new field.",
+        "Do not auto-generate lesson instances from the recurring schedule — that touches features/resources/server/service.ts and is explicitly out of scope per the plan."
+      ],
+      "doneWhen": [
+        "npm test -- features/subjects features/learning-time",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [
+        "npm run db:generate produces no further new migration after this phase's migration is committed",
+        "npm run db:migrate applies cleanly with no gap in the migration sequence"
+      ],
+      "writeBack": "Record the final ownership decision (features/subjects/ vs features/schedule/) and why, the migration file name/number, and whether it was applied to prod or is still pending the user's manual db:migrate run."
+    }
+  ]
+}
