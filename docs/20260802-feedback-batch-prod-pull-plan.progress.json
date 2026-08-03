@@ -76,11 +76,34 @@
       "id": "phase-4-badges-progress-and-image",
       "title": "Wave 1 — Badge progress tracking + custom badge images (schema-touching)",
       "gated": true,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "status": "complete",
+      "model": "claude-sonnet-5",
+      "startedAt": "2026-08-03T00:00:00.000Z",
+      "completedAt": "2026-08-03T16:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "db/schema.ts",
+          "db/migrations/0037_youthful_wrecker.sql",
+          "db/migrations/meta/0037_snapshot.json",
+          "db/migrations/meta/_journal.json",
+          "features/badges/types.ts",
+          "features/badges/server/repository.ts",
+          "features/badges/front/pages/BadgesPage.tsx",
+          "features/badges/__tests__/api/repository.test.ts",
+          "features/badges/__tests__/integration/BadgesPage.test.tsx",
+          "features/badges/front/services/api.ts",
+          "features/badges/api/routes/awards-id.ts",
+          "features/badges/api/routes/definitions.ts",
+          "features/badges/api/routes/definitions-id.ts"
+        ],
+        "testsRun": [
+          "npm test -- features/badges (8 of 10 suites run, 2 skipped [DB-integration suites without DATABASE_URL: the new features/badges/__tests__/api/repository.test.ts and pre-existing __tests__/integration/repository.db.test.ts], 87 passed, 15 skipped)",
+          "npm test (full suite: 254 of 280 suites, 2260 passed, 207 skipped — same shape as prior phases plus this phase's 2 new BadgesPage tests)",
+          "npx tsc --noEmit (no badges/db-schema-related errors; pre-existing unrelated errors in scripts/feedback-steward/** and features/feedback/__tests__/api/repository.test.ts, not touched by this phase)",
+          "npm run build (compiles and type-checks cleanly; fails only at /(shell)/about static-generation step — the documented pre-existing dev-Postgres-unreachable issue from phase-1/2/3 notes, not a regression)"
+        ],
+        "notes": "MIGRATION: db/migrations/0037_youthful_wrecker.sql — three additive nullable columns only: badge_awards.progress_current (integer), badge_awards.progress_target (integer), badge_definitions.image_url (text). No drops, no non-nullable additions, no unrelated tables — reviewed by hand before applying. dbMigrationPolicy followed exactly: dev Postgres is unreachable, so ran npm run db:backup:prod (backup at backups/prod-2026-08-03T15-32-45, manifest.json, 31 tables) BEFORE migrating, then npm run db:migrate:prod (which already implements the DATABASE_URL_PROD→DATABASE_URL remap via scripts/migrate-prod.ts / scripts/lib/prod-env.ts — reused as-is, no new remap script needed). Migration applied cleanly to PRODUCTION (dpg-d85140f7f7vs73fvdqhg-a.oregon-postgres.render.com). INVARIANTS CONFIRMED: post-migration `npm run db:generate` reports 'No schema changes, nothing to migrate' (schema and migrations agree, no further migration produced); `npm run db:status:prod` confirms repo journal 38 migrations (0000…0037_youthful_wrecker) = 38 applied on prod, 0 pending, no gap, all 31 schema tables reachable. PRODUCT DECISION (flagged in plan): hitting progressTarget does NOT auto-mark an award earned — progress is purely a manually-set/displayed value (progressCurrent/progressTarget on badge_awards), independent of the existing draft→submitted→verified→approved status lifecycle and approvedAt (isEarned). This matches the plan's explicit out-of-scope note (no automatic cross-feature aggregation) and was the simplest, least-surprising interpretation — a future phase could add an explicit 'mark earned' affordance when progress reaches target if desired, but this phase does not infer it automatically. SCOPE NOTE for next reader: this phase's fileScope in the plan JSON listed only db/schema.ts, db/migrations/, features/badges/types.ts, features/badges/server/repository.ts, features/badges/front/pages/BadgesPage.tsx, and the two named test files. To make imageUrl/progress actually flow end-to-end (compile + persist), I additionally touched features/badges/front/services/api.ts (BadgeDefinitionInput.imageUrl + new updateAwardProgress() method) and three route handlers (features/badges/api/routes/definitions.ts, definitions-id.ts, awards-id.ts) to pass the new fields through to the repository — these are thin, low-risk pass-through wiring with no new business logic, and were required for the feature to build/function; declining to touch them would have left the schema/repository layer unreachable from the UI. UI: BadgeDefinitionForm gained an 'Image URL' text input (aria-label 'Badge image URL'); BadgeEmblem now renders the image (object-cover, rounded, ring-colored by earned state) when definition.imageUrl is set, falling back to the existing Star/lucide icon otherwise — emblemKey remains the fallback identifier, unchanged. AwardManagement gained a new AwardProgress sub-component: shows 'current / target' text + a proportional bar (data-testid 'award-progress-bar', inline width%) only when progressTarget is set and >0, plus always-visible number inputs (aria-label 'Progress current'/'Progress target') and an 'Update progress' button wired to the new onUpdateProgress action → badgesApi.updateAwardProgress → PATCH /api/badges/awards/:id with {progressCurrent, progressTarget} (awards-id.ts PATCH now branches: a body with progressCurrent/progressTarget and no status goes to the new updateAwardProgress repository call; a body with status keeps the existing transition path — no existing behavior changed). BadgeDefinition.imageUrl and BadgeAward.progressCurrent/progressTarget were added as OPTIONAL fields (?:) in features/badges/types.ts specifically so the existing features/badges/__tests__/fixtures/mockBadges.ts fixtures (outside this phase's scope) did not need editing — they remain valid without the new fields, defaulting to undefined/null at render time."
+      },
       "failureReason": null
     },
     {

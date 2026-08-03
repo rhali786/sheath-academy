@@ -10,6 +10,7 @@ export interface BadgeDefinitionInput {
   description: string
   criteria: string
   emblemKey: string
+  imageUrl?: string | null
   gradeBands?: GradeBand[]
   verificationRequirement?: VerificationRequirement
   visibility?: BadgeVisibility
@@ -60,6 +61,10 @@ export const badgesApi = {
 
   advanceAward: async (awardId: string, status: AwardTransition): Promise<ApiResponse<BadgeAward | null>> => {
     return mutate<BadgeAward | null>(`/api/badges/awards/${encodeURIComponent(awardId)}`, 'PATCH', { status })
+  },
+
+  updateAwardProgress: async (awardId: string, progressCurrent: number | null, progressTarget: number | null): Promise<ApiResponse<BadgeAward | null>> => {
+    return mutate<BadgeAward | null>(`/api/badges/awards/${encodeURIComponent(awardId)}`, 'PATCH', { progressCurrent, progressTarget })
   },
 
   deleteAward: async (awardId: string): Promise<ApiResponse<null>> => {

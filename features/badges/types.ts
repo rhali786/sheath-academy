@@ -12,6 +12,8 @@ export interface BadgeDefinition {
   description: string
   criteria: string
   emblemKey: string
+  /** Custom badge art URL; when set, the UI prefers it over the emblemKey icon lookup. */
+  imageUrl?: string | null
   gradeBands: GradeBand[]
   verificationRequirement: VerificationRequirement
   isStarter: boolean
@@ -35,6 +37,9 @@ export interface BadgeAward {
   submittedAt: string | null
   verifiedAt: string | null
   approvedAt: string | null
+  /** Manually-set progress toward earning the badge (e.g. 5 of 10). Null until set. */
+  progressCurrent?: number | null
+  progressTarget?: number | null
   /** Evidence items supporting this award (portfolio evidence ids) */
   evidenceIds: string[]
   /** Evidence links (link-row id + evidence id) — populated by the repository for unlinking */

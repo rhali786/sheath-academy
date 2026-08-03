@@ -656,6 +656,8 @@ export const badgeDefinitions = pgTable(
     description: text('description').notNull(),
     criteria: text('criteria').notNull(),
     emblemKey: text('emblem_key').notNull(),
+    // Custom badge art URL; when set, the UI prefers it over the emblemKey icon lookup.
+    imageUrl: text('image_url'),
     gradeBands: jsonb('grade_bands').notNull().default([]),
     verificationRequirement: text('verification_requirement').notNull().default('none'), // none|parent|external
     isStarter: boolean('is_starter').notNull().default(false),
@@ -683,6 +685,10 @@ export const badgeAwards = pgTable(
     submittedAt: timestamp('submitted_at'),
     verifiedAt: timestamp('verified_at'),
     approvedAt: timestamp('approved_at'),
+    // Manually-set progress toward earning the badge (e.g. 5 of 10). Both null
+    // until set; no automatic aggregation from other features.
+    progressCurrent: integer('progress_current'),
+    progressTarget: integer('progress_target'),
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),
   },

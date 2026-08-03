@@ -34,6 +34,7 @@ function rowToDefinition(row: BadgeDefinitionRow): BadgeDefinition {
     description: row.description,
     criteria: row.criteria,
     emblemKey: row.emblemKey,
+    imageUrl: row.imageUrl ?? null,
     gradeBands: (row.gradeBands as GradeBand[]) ?? [],
     verificationRequirement: row.verificationRequirement as VerificationRequirement,
     isStarter: row.isStarter,
@@ -52,6 +53,8 @@ function rowToAward(row: BadgeAwardRow, evidence: BadgeAwardEvidenceLink[]): Bad
     submittedAt: row.submittedAt instanceof Date ? row.submittedAt.toISOString() : (row.submittedAt ?? null),
     verifiedAt: row.verifiedAt instanceof Date ? row.verifiedAt.toISOString() : (row.verifiedAt ?? null),
     approvedAt: row.approvedAt instanceof Date ? row.approvedAt.toISOString() : (row.approvedAt ?? null),
+    progressCurrent: row.progressCurrent ?? null,
+    progressTarget: row.progressTarget ?? null,
     evidenceIds: evidence.map(e => e.evidenceId),
     evidence,
   }
@@ -167,6 +170,7 @@ export interface BadgeDefinitionInput {
   description: string
   criteria: string
   emblemKey: string
+  imageUrl?: string | null
   gradeBands?: GradeBand[]
   verificationRequirement?: VerificationRequirement
   visibility?: BadgeVisibility
@@ -200,6 +204,7 @@ export async function createBadgeDefinition(
       description: input.description,
       criteria: input.criteria,
       emblemKey: input.emblemKey,
+      imageUrl: input.imageUrl ?? null,
       gradeBands: input.gradeBands ?? [],
       verificationRequirement: input.verificationRequirement ?? 'none',
       isStarter: false,
@@ -229,6 +234,7 @@ export async function updateBadgeDefinition(
   if (patch.description !== undefined) updates.description = patch.description
   if (patch.criteria !== undefined) updates.criteria = patch.criteria
   if (patch.emblemKey !== undefined) updates.emblemKey = patch.emblemKey
+  if (patch.imageUrl !== undefined) updates.imageUrl = patch.imageUrl
   if (patch.gradeBands !== undefined) updates.gradeBands = patch.gradeBands
   if (patch.verificationRequirement !== undefined) updates.verificationRequirement = patch.verificationRequirement
   if (patch.visibility !== undefined) updates.visibility = patch.visibility
@@ -310,6 +316,44 @@ export async function updateAwardStatus(
       ...(extra?.submittedAt !== undefined ? { submittedAt: extra.submittedAt } : {}),
       ...(extra?.verifiedAt !== undefined ? { verifiedAt: extra.verifiedAt } : {}),
       ...(extra?.approvedAt !== undefined ? { approvedAt: extra.approvedAt } : {}),
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(badgeAwards.id, id),
+        eq(badgeAwards.householdId, householdId),
+      ),
+    )
+    .returning()
+
+  if (rows.length === 0) return null
+
+  const evidenceRows = await db
+    .select()
+    .from(badgeAwardEvidence)
+    .where(eq(badgeAwardEvidence.badgeAwardId, id))
+
+  return rowToAward(rows[0], evidenceRows.map(e => ({ id: e.id, evidenceId: e.evidenceId })))
+}
+
+/**
+ * Updates the manually-set progress (current/target) on a badge award, scoped
+ * to the household. Returns the updated award, or null if not found/foreign.
+ * Progress is manually set only — no automatic cross-feature aggregation.
+ */
+export async function updateAwardProgress(
+  id: string,
+  householdId: string,
+  progress: { progressCurrent: number | null; progressTarget: number | null },
+): Promise<BadgeAward | null> {
+  const db = getDb()
+  const now = new Date()
+
+  const rows = await db
+    .update(badgeAwards)
+    .set({
+      progressCurrent: progress.progressCurrent,
+      progressTarget: progress.progressTarget,
       updatedAt: now,
     })
     .where(
