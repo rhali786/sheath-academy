@@ -1,7 +1,7 @@
 {
   "plan": "docs/20260802-feedback-batch-prod-pull-plan.md",
   "createdAt": "2026-08-03T00:00:00.000Z",
-  "updatedAt": "2026-08-03T00:00:00.000Z",
+  "updatedAt": "2026-08-03T01:00:00.000Z",
   "branch": "feature/feedback-batch-20260802-open-gaps",
   "phases": [
     {
@@ -51,11 +51,25 @@
       "id": "phase-3-planner-dragdrop-and-combined-view",
       "title": "Wave 2 — Weekly Planner drag-to-move + combined multi-child daily view",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "status": "complete",
+      "model": "claude-sonnet-5",
+      "startedAt": "2026-08-03T00:00:00.000Z",
+      "completedAt": "2026-08-03T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/plan/front/components/WeekGrid.tsx",
+          "features/plan/front/components/WeeklyPlanner.tsx",
+          "features/plan/front/components/PlannerViewToggle.tsx",
+          "features/plan/__tests__/integration/WeeklyPlanner.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/plan/__tests__/integration/WeeklyPlanner.test.tsx features/plan/__tests__/integration/PlannerViewToggle.test.tsx features/plan/__tests__/integration/WeekGrid.test.tsx (3 suites, 49 passed)",
+          "npm test -- features/plan (29 suites, 322 passed, 20 skipped)",
+          "npm test (full suite: 254 suites, 2258 passed, 203 skipped)",
+          "npm run build (fails at /(shell)/about — same pre-existing dev-DB-unreachable issue documented in phase-1's and phase-2's notes and this plan's dbMigrationPolicy; TypeScript/lint/build compile passed before that page's static-generation timeout)"
+        ],
+        "notes": "SHARED MUTATION HOOK: extracted WeekGrid's drag-to-reschedule logic (handleDragStart/handleDragEnd/handleUndo + activeLesson/undoNotice state) into a new exported hook `useLessonReschedule(lessons, schoolDays, refreshLessons)` in features/plan/front/components/WeekGrid.tsx (also exports `RescheduleUndo`). WeekGrid itself now just calls this hook — its own behavior, droppable-cell id shape (`${childId}:${subjectId}:${dateStr}`), and all pre-existing WeekGrid tests are unchanged/still passing. WeeklyPlanner.tsx imports and calls the same hook, wraps its content in the same DndContext/DragOverlay pattern, and uses its own droppable cell id shape: `${learnerId}:${dateStr}` in 'By learner' mode (drop target scoped to that learner's day column) and `all:${dateStr}` in 'By day' mode (single combined column per date, any learner). Only `over.data.current.dateStr` is read by the shared handler, so the id-shape difference between the two views/components is irrelevant to the mutation path itself — this satisfies 'reuse the exact mutation path; do not build a second one.' DISPLAY-MODE TOGLE: added a new exported `DisplayModeToggle` component + `PlannerDisplayMode` ('byLearner' | 'byDay') type to features/plan/front/components/PlannerViewToggle.tsx, deliberately separate from the existing `PlannerViewToggle` (planner/matrix) tab component — it is a display-mode control *within* the Weekly Planner view, not a new top-level view, and does not touch PlannerViewToggle's existing planner/matrix/calendar tab semantics (PlannerViewToggle.test.tsx passes unchanged, no edits needed there). WeeklyPlanner.tsx owns the mode state (`useState<PlannerDisplayMode>('byLearner')`) and renders `<DisplayModeToggle>` itself — WeeklyPlannerPage.tsx (which composes WeeklyPlanner/WeekGrid/PlannerViewToggle) was NOT touched and did not need to be, since it was out of this phase's declared fileScope and the toggle is fully self-contained within WeeklyPlanner. 'By learner' (default) renders exactly the pre-existing stacked-per-learner layout (all existing WeeklyPlanner.test.tsx tests pass unmodified in content, only augmented with a household-context mock + dnd-kit mock + refreshLessons in the render helper, all required because WeeklyPlanner now calls useHousehold()/useLessonReschedule()). 'By day' groups every learner's lessons for a date into one column (`data-testid=\"planner-combined-view\"`, per-date containers `combined-day-lessons-<date>` / `combined-day-empty-<date>`), each lesson card showing a small circular learner-initial badge color-coded via the existing `learnerColor()` helper (`data-testid=\"combined-learner-badge-<lessonId>\"`) — no new color scheme was invented. LessonCard is now a single shared sub-component used by both modes (previously the by-learner-only inline JSX), so subject-eyebrow/chapter/status-badge/resource/homework/assessment-indicator markup and all their data-testids are byte-identical to before, just now also draggable via a grip handle. TEST-MOCKING NOTE for future workers: WeeklyPlanner.tsx now imports useHousehold and real @dnd-kit/core — any test importing WeeklyPlanner directly must mock '@/features/household/front/context' and '@dnd-kit/core' the same way WeekGrid.test.tsx already did (jsdom lacks the APIs dnd-kit's real sensors need, hence the manual mock, matching WeekGrid's pre-existing pattern) — WeeklyPlanner.test.tsx was updated accordingly. WeekGrid.tsx itself is otherwise behaviorally unchanged (only the internal refactor into the hook); PlannerViewToggle's existing two-view (Weekly Planner vs Planning Matrix) semantics are unchanged."
+      },
       "failureReason": null
     },
     {

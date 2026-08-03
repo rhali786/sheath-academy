@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { usePlanner } from '../context/PlannerContext'
 import { plannerApi } from '../services/api'
 import type { LessonTask, LessonTaskStatus, LessonDuration } from '../../types'
+import type { DayOfWeek } from '@/features/lib/types'
 import { subjectEnrollsLearner } from '@/features/subjects/lib/enrollment'
 import { formatCompletionWindow, lessonSpansDate } from '../../utils/lessonCompletionWindow'
 import { isOffDay } from '../../utils/schoolDays'
@@ -151,7 +152,7 @@ function DroppableCell({ id, dateStr, isWeekendDay, lesson, onEdit }: DroppableC
   )
 }
 
-interface RescheduleUndo {
+export interface RescheduleUndo {
   lessonTitle: string
   newDueDateLabel: string
   isOffDayTarget: boolean
@@ -160,53 +161,23 @@ interface RescheduleUndo {
   lessonId: string
 }
 
-export function WeekGrid() {
-  const { lessons, selectedWeek, weekStartDay, children, subjects, selectedChildIds, selectedSubjectIds, refreshLessons } = usePlanner()
-  const { householdProfile } = useHousehold()
-  const schoolDays = householdProfile?.schoolDays
-  const router = useRouter()
+/**
+ * Shared drag-to-reschedule mutation path: dragging a lesson card onto a droppable cell whose
+ * `data.current.dateStr` differs from the lesson's current dueDate shifts its whole completion
+ * window (via shiftLessonWindow, preserving multi-day span), persists via plannerApi.updateLesson,
+ * refreshes the lesson list, and surfaces an Undo notice. Extracted here (WeekGrid originated this
+ * behavior) so WeeklyPlanner's "By learner" list view can reuse the exact same mutation path
+ * instead of a second implementation — the two views only differ in how droppable cell ids are
+ * shaped (WeekGrid: `${childId}:${subjectId}:${dateStr}`; WeeklyPlanner: `${learnerId}:${dateStr}`),
+ * which is irrelevant here since only `over.data.current.dateStr` is read.
+ */
+export function useLessonReschedule(
+  lessons: LessonTask[],
+  schoolDays: DayOfWeek[] | undefined,
+  refreshLessons?: () => void,
+) {
   const [activeLesson, setActiveLesson] = useState<LessonTask | null>(null)
   const [undoNotice, setUndoNotice] = useState<RescheduleUndo | null>(null)
-
-  const todayStr = formatLocalDate(new Date())
-
-  const d = new Date(selectedWeek)
-  const dayOfWeek = d.getDay()
-  const daysFromStart = weekStartDay === 'Monday' ? (dayOfWeek === 0 ? 6 : dayOfWeek - 1) : dayOfWeek
-  d.setDate(d.getDate() - daysFromStart)
-  const weekStart = new Date(d)
-
-  const orderedDays = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i)
-    return date
-  })
-
-  const rows = children
-    .filter(child => selectedChildIds.includes(child.id))
-    .flatMap(child =>
-      subjects
-        .filter(
-          (subject) =>
-            selectedSubjectIds.includes(subject.id) && subjectEnrollsLearner(subject, child.id),
-        )
-        .map(subject => ({ childId: child.id, childName: child.name, subjectId: subject.id, subjectName: subject.name }))
-    )
-
-  function getDayTotalMinutes(dateStr: string): number {
-    return lessons
-      .filter(l => l.dueDate === dateStr && l.estimatedDuration)
-      .reduce((sum, l) => sum + (DURATION_MINUTES[l.estimatedDuration!] ?? 0), 0)
-  }
-
-  function getLessonForCell(dateStr: string, childId: string, subjectId: string) {
-    return lessons.find(
-      l => l.childId === childId && l.subjectId === subjectId && lessonSpansDate(l, dateStr),
-    )
-  }
-
-  function handleEdit(lessonId: string) {
-    router.push(`/lessons?editId=${lessonId}`)
-  }
 
   function handleDragStart(event: DragStartEvent) {
     const lesson = lessons.find(l => l.id === (event.active.id as string))
@@ -258,6 +229,57 @@ export function WeekGrid() {
     await plannerApi.updateLesson(undoNotice.lessonId, undoPatch)
     refreshLessons?.()
     setUndoNotice(null)
+  }
+
+  return { activeLesson, undoNotice, setUndoNotice, handleDragStart, handleDragEnd, handleUndo }
+}
+
+export function WeekGrid() {
+  const { lessons, selectedWeek, weekStartDay, children, subjects, selectedChildIds, selectedSubjectIds, refreshLessons } = usePlanner()
+  const { householdProfile } = useHousehold()
+  const schoolDays = householdProfile?.schoolDays
+  const router = useRouter()
+  const { activeLesson, undoNotice, setUndoNotice, handleDragStart, handleDragEnd, handleUndo } =
+    useLessonReschedule(lessons, schoolDays, refreshLessons)
+
+  const todayStr = formatLocalDate(new Date())
+
+  const d = new Date(selectedWeek)
+  const dayOfWeek = d.getDay()
+  const daysFromStart = weekStartDay === 'Monday' ? (dayOfWeek === 0 ? 6 : dayOfWeek - 1) : dayOfWeek
+  d.setDate(d.getDate() - daysFromStart)
+  const weekStart = new Date(d)
+
+  const orderedDays = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i)
+    return date
+  })
+
+  const rows = children
+    .filter(child => selectedChildIds.includes(child.id))
+    .flatMap(child =>
+      subjects
+        .filter(
+          (subject) =>
+            selectedSubjectIds.includes(subject.id) && subjectEnrollsLearner(subject, child.id),
+        )
+        .map(subject => ({ childId: child.id, childName: child.name, subjectId: subject.id, subjectName: subject.name }))
+    )
+
+  function getDayTotalMinutes(dateStr: string): number {
+    return lessons
+      .filter(l => l.dueDate === dateStr && l.estimatedDuration)
+      .reduce((sum, l) => sum + (DURATION_MINUTES[l.estimatedDuration!] ?? 0), 0)
+  }
+
+  function getLessonForCell(dateStr: string, childId: string, subjectId: string) {
+    return lessons.find(
+      l => l.childId === childId && l.subjectId === subjectId && lessonSpansDate(l, dateStr),
+    )
+  }
+
+  function handleEdit(lessonId: string) {
+    router.push(`/lessons?editId=${lessonId}`)
   }
 
   return (
