@@ -154,6 +154,37 @@ describe('NowCard — pre-fill scheduled window from lesson (G9 item 1)', () => 
   })
 })
 
+describe('NowCard — course-first selector prefill (Wave 3 part 1)', () => {
+  it('starting an ad-hoc session tags CreateSessionInput.subjectId with the course passed in via props, with no learner interaction needed first', async () => {
+    render(<NowCard learnerId="child_001" course={{ id: 'subj_math', name: 'Math' }} allSubjects={allSubjects} />)
+    await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('start-session-button'))
+    await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByTestId('start-button'))
+
+    await waitFor(() => {
+      expect(mockCreateSession).toHaveBeenCalledWith(expect.objectContaining({
+        learnerId: 'child_001',
+        subjectId: 'subj_math',
+      }))
+    })
+  })
+
+  it('starting an ad-hoc session with no course prop sends no subjectId', async () => {
+    renderNowCard()
+    await waitFor(() => expect(screen.getByTestId('now-card-idle')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('start-session-button'))
+    await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByTestId('start-button'))
+
+    await waitFor(() => {
+      expect(mockCreateSession).toHaveBeenCalledWith(expect.not.objectContaining({ subjectId: expect.anything() }))
+    })
+  })
+})
+
 describe('NowCard — clock-driven auto-start (G9 item 1)', () => {
   it('calls transition({action:"start"}) automatically, without a click, once wall-clock time passes a draft scheduled session\'s scheduledStart', async () => {
     jest.useFakeTimers({ now: new Date('2026-07-17T10:20:00.000Z') })

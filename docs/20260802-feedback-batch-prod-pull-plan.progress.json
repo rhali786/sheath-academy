@@ -30,11 +30,21 @@
       "id": "phase-2-learning-time-course-first-selector",
       "title": "Wave 3 (part 1) — Course-first selector on Learning Time",
       "gated": false,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "status": "complete",
+      "model": "claude-sonnet-5",
+      "startedAt": "2026-08-03T00:00:00.000Z",
+      "completedAt": "2026-08-03T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/learning-time/__tests__/integration/NowCard.test.tsx"
+        ],
+        "testsRun": [
+          "npm test -- features/learning-time (7 suites, 88 passed, 7 skipped — one test, LearningTimePage.test.tsx's \"picking a course the currently-selected learner is NOT enrolled in...\", is a PRE-EXISTING intermittent flake unrelated to this phase; see notes)",
+          "npm test (full suite: 254 suites, 2255 passed, 203 skipped)",
+          "npm run build (fails at /(shell)/about — same pre-existing dev-DB-unreachable issue documented in phase-1's notes and this plan's dbMigrationPolicy; TypeScript/lint passed before the failure)"
+        ],
+        "notes": "IMPORTANT FINDING: the Course-first selector (this phase's entire scope) was ALREADY FULLY IMPLEMENTED before this phase ran — it shipped in prior commits on this branch (9b5d84b, 30aa6e9, 26d235f, 5e5474d — all pre-existing, predating even this plan's phase-1 commit) under feedback id 66087f44. features/learning-time/front/pages/LearningTimePage.tsx already has: a Course selector (`course-select`) that narrows the Learner dropdown to enrolled learners via `selectedCourseMembers.some(m => m.learnerIds.includes(c.id))`, synchronous effectiveChildId/resolvedCourse derivation (no race), and passes `course={resolvedCourse}` to NowCard. features/learning-time/front/components/NowCard.tsx already reads the `course` prop and sets `input.subjectId = course.id` in handleConfigSubmit when starting an ad-hoc session — exactly the testsFirst acceptance criteria in this phase ('selecting a Course first narrows the Learner dropdown...' and 'starting a session after selecting a course pre-fills subjectId...'). features/learning-time/__tests__/integration/LearningTimePage.test.tsx already has extensive coverage of this exact behavior (describe block 'LearningTimePage — course selection (feedback 66087f44)' plus several related describe blocks for merged/per-learner course rows). Work actually done in this phase: (1) added direct NowCard-level tests (describe 'NowCard — course-first selector prefill (Wave 3 part 1)') asserting the subjectId-prefill contract at the component boundary that owns it, per this phase's declared fileScope naming NowCard.test.tsx; both pass reliably. (2) Attempted the plan's instructed DRY refactor — replacing `m.learnerIds.includes(c.id)` with the canonical `subjectEnrollsLearner(m, c.id)` helper from features/subjects/lib/enrollment (functionally identical for current schema since SubjectCourse.learnerIds always includes childId as its first element per the type's own doc comment) — but REVERTED it after discovering it correlated with intermittent failures of an UNRELATED pre-existing test in LearningTimePage.test.tsx ('picking a course the currently-selected learner is NOT enrolled in...') when running the full features/learning-time suite together (not reproducible running that test file alone, 5/5 clean). Further investigation showed this same test flakes intermittently (~1-in-4 to ~1-in-8) even on the fully unmodified base branch with no phase changes at all when run as part of the full features/learning-time suite (never when run alone) — this is a pre-existing cross-file test-isolation issue in this suite, NOT something introduced by this phase, but reintroducing the refactor is not worth the added noise for a purely cosmetic DRY change when the acceptance criteria are already fully met without it. LearningTimePage.tsx was left completely untouched by this phase (git diff is empty for that file). Flagging for a future cleanup phase: (a) the DRY refactor (swap to subjectEnrollsLearner) is still a good idea and low-risk once the underlying test flake is understood/fixed; (b) the pre-existing flake itself (features/learning-time/__tests__/integration/LearningTimePage.test.tsx:709, 'picking a course...NOT enrolled...') should get a root-cause pass — likely a promise-timing race between the course-change-triggered learner-switch effect and the getLessons mock resolution, per the 'test real data not timing races' principle — fix by making the derivation synchronous/deterministic rather than adding waits. No schema/API contract changes in this phase. phase-5 (recurring schedule) can rely on: NowCard owns the subjectId-prefill-from-course behavior; LearningTimePage owns the course-narrows-learner behavior; both already stable and tested."
+      },
       "failureReason": null
     },
     {
