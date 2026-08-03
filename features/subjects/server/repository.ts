@@ -1,9 +1,14 @@
 import { and, eq, inArray, isNull, or } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
 import { subjects, subjectLearners, subjectResources } from '@/db/schema'
+import type { RecurringScheduleBlock } from '@/features/subjects/types'
 
 export type SubjectRow = typeof subjects.$inferSelect
-export type SubjectRowWithLearners = SubjectRow & { learnerIds: string[]; resourceIds: string[] }
+export type SubjectRowWithLearners = SubjectRow & {
+  learnerIds: string[]
+  resourceIds: string[]
+  recurringSchedule: RecurringScheduleBlock[] | null
+}
 
 export interface CreateSubjectInput {
   name: string
@@ -17,6 +22,8 @@ export interface CreateSubjectInput {
   color?: string
   description?: string
   sortOrder?: number
+  /** Optional recurring per-class weekly schedule. */
+  recurringSchedule?: RecurringScheduleBlock[]
 }
 
 export interface UpdateSubjectInput {
@@ -29,6 +36,8 @@ export interface UpdateSubjectInput {
   learnerIds?: string[]
   /** Replace linked resources when provided. */
   resourceIds?: string[]
+  /** Replace the recurring schedule when provided. Pass null to clear it. */
+  recurringSchedule?: RecurringScheduleBlock[] | null
   // ─── Gradebook course-config (Phase 6) ───────────────────────────────────────
   creditHours?: number | null
   isFormalCourse?: boolean
@@ -117,7 +126,8 @@ async function hydrate(row: SubjectRow): Promise<SubjectRowWithLearners> {
   const ids = await readLearnerIds(row.id)
   const learnerIds = ids.length > 0 ? ids : row.learnerId ? [row.learnerId] : []
   const resourceIds = await readResourceIds(row.id)
-  return { ...row, learnerIds, resourceIds }
+  const recurringSchedule = row.recurringSchedule as RecurringScheduleBlock[] | null
+  return { ...row, learnerIds, resourceIds, recurringSchedule }
 }
 
 async function hydrateMany(rows: SubjectRow[]): Promise<SubjectRowWithLearners[]> {
@@ -148,7 +158,8 @@ async function hydrateMany(rows: SubjectRow[]): Promise<SubjectRowWithLearners[]
     const ids = bySubject.get(row.id) ?? []
     const learnerIds = ids.length > 0 ? ids : row.learnerId ? [row.learnerId] : []
     const resourceIds = resourcesBySubject.get(row.id) ?? []
-    return { ...row, learnerIds, resourceIds }
+    const recurringSchedule = row.recurringSchedule as RecurringScheduleBlock[] | null
+    return { ...row, learnerIds, resourceIds, recurringSchedule }
   })
 }
 
@@ -211,6 +222,7 @@ export async function upsertSubjectRow(
       color: input.color ?? null,
       sortOrder: input.sortOrder ?? 0,
       isActive: true,
+      recurringSchedule: input.recurringSchedule ?? null,
       createdAt: now,
       updatedAt: now,
     })
@@ -218,7 +230,12 @@ export async function upsertSubjectRow(
   const row = inserted[0]
   const allLearnerIds = input.learnerIds ?? (primaryLearnerId ? [primaryLearnerId] : [])
   await writeLearnerRows(row.id, allLearnerIds)
-  return { ...row, learnerIds: allLearnerIds, resourceIds: [] }
+  return {
+    ...row,
+    learnerIds: allLearnerIds,
+    resourceIds: [],
+    recurringSchedule: (row.recurringSchedule as RecurringScheduleBlock[] | null) ?? null,
+  }
 }
 
 export async function createSubjectRow(
@@ -241,6 +258,7 @@ export async function createSubjectRow(
       color: input.color ?? null,
       sortOrder: input.sortOrder ?? 0,
       isActive: true,
+      recurringSchedule: input.recurringSchedule ?? null,
       createdAt: now,
       updatedAt: now,
     })
@@ -248,7 +266,12 @@ export async function createSubjectRow(
   const row = inserted[0]
   const allLearnerIds = input.learnerIds ?? (primaryLearnerId ? [primaryLearnerId] : [])
   await writeLearnerRows(row.id, allLearnerIds)
-  return { ...row, learnerIds: allLearnerIds, resourceIds: [] }
+  return {
+    ...row,
+    learnerIds: allLearnerIds,
+    resourceIds: [],
+    recurringSchedule: (row.recurringSchedule as RecurringScheduleBlock[] | null) ?? null,
+  }
 }
 
 export async function updateSubjectRow(
@@ -265,6 +288,9 @@ export async function updateSubjectRow(
   if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder
   if (input.learnerIds !== undefined) {
     patch.learnerId = input.learnerIds[0] ?? null
+  }
+  if (input.recurringSchedule !== undefined) {
+    patch.recurringSchedule = input.recurringSchedule
   }
   // Gradebook course-config (Phase 6). creditHours is a numeric column → string|null.
   if (input.creditHours !== undefined) {

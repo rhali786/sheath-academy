@@ -2,7 +2,7 @@ import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { BadgeAward } from '@/features/badges/types'
-import { updateAwardStatus, deleteAward } from '@/features/badges/server/repository'
+import { updateAwardStatus, updateAwardProgress, deleteAward } from '@/features/badges/server/repository'
 
 /**
  * The award lifecycle the UI drives: draft → submitted → verified → approved.
@@ -17,6 +17,24 @@ export async function PATCH(
   request: Request,
 ): Promise<NextResponse<ApiResponse<BadgeAward | null>>> {
   const body = await request.json()
+
+  // Progress-only update (no status transition): PATCH { progressCurrent, progressTarget }
+  if (body.status === undefined && ('progressCurrent' in body || 'progressTarget' in body)) {
+    try {
+      const { householdId } = getRequestAuthCtx()
+      const updated = await updateAwardProgress(id, householdId, {
+        progressCurrent: body.progressCurrent ?? null,
+        progressTarget: body.progressTarget ?? null,
+      })
+      if (!updated) {
+        return NextResponse.json({ status: 'error', data: null, message: 'Award not found', timestamp: new Date().toISOString() }, { status: 404 })
+      }
+      return NextResponse.json({ status: 'success', data: updated, message: 'Award progress updated', timestamp: new Date().toISOString() })
+    } catch {
+      return NextResponse.json({ status: 'error', data: null, message: 'Award not found', timestamp: new Date().toISOString() }, { status: 404 })
+    }
+  }
+
   const transition = body.status as AwardTransition
 
   if (!transition || !VALID_TRANSITIONS.includes(transition)) {

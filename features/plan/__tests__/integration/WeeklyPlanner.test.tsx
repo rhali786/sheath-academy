@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import React from 'react'
 import { WeeklyPlanner } from '@/features/plan/front/components/WeeklyPlanner'
 import { PlannerContext } from '@/features/plan/front/context/PlannerContext'
@@ -7,6 +8,55 @@ const mockPush = jest.fn()
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }))
+
+jest.mock('@/features/household/front/context', () => ({
+  useHousehold: jest.fn(() => ({
+    householdProfile: { id: 'hh_001', weekStartDay: 'Monday', familyName: 'Test' },
+    studentProfiles: [],
+    allSubjects: [],
+    loading: false,
+    familyName: 'Test',
+    needsSetup: false,
+    error: null,
+    refetch: jest.fn(),
+  })),
+}))
+
+let mockCapturedDragEnd: ((event: any) => Promise<void>) | null = null
+
+jest.mock('@dnd-kit/core', () => {
+  const React = require('react')
+  return {
+    DndContext: jest.fn().mockImplementation(({ children, onDragEnd }: any) => {
+      mockCapturedDragEnd = onDragEnd
+      return React.createElement(React.Fragment, null, children)
+    }),
+    useDraggable: jest.fn().mockReturnValue({
+      attributes: {},
+      listeners: {},
+      setNodeRef: jest.fn(),
+      transform: null,
+      isDragging: false,
+    }),
+    useDroppable: jest.fn().mockReturnValue({
+      setNodeRef: jest.fn(),
+      isOver: false,
+    }),
+    DragOverlay: jest.fn().mockImplementation(({ children }: any) =>
+      React.createElement(React.Fragment, null, children ?? null)
+    ),
+  }
+})
+
+jest.mock('@/features/plan/front/services/api', () => ({
+  plannerApi: {
+    updateLesson: jest.fn(() => Promise.resolve({})),
+  },
+}))
+
+import { plannerApi } from '@/features/plan/front/services/api'
+const mockUpdateLesson = plannerApi.updateLesson as jest.Mock
+
 import type { LessonTask } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
@@ -21,7 +71,7 @@ const mockSubjects: SubjectCourse[] = [
   { id: 'subj_002', childId: 'child_002', name: 'Reading', category: 'Reading', isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
 ]
 
-// 2026-05-11 is Monday; 2026-05-12 is Tuesday
+// 2026-05-11 is Monday; 2026-05-12 is Tuesday; 2026-05-13 is Wednesday
 const mockLessons: LessonTask[] = [
   {
     id: 'lesson_001',
@@ -79,6 +129,8 @@ const mockLessons: LessonTask[] = [
   },
 ]
 
+const mockRefreshLessons = jest.fn()
+
 function renderPlanner(overrides: Partial<React.ComponentProps<typeof PlannerContext.Provider>['value']> = {}) {
   const mockContext = {
     lessons: mockLessons,
@@ -95,6 +147,7 @@ function renderPlanner(overrides: Partial<React.ComponentProps<typeof PlannerCon
     weekStartDay: 'Monday' as const,
     children: mockChildren,
     subjects: mockSubjects,
+    refreshLessons: mockRefreshLessons,
     ...overrides,
   }
 
@@ -104,6 +157,11 @@ function renderPlanner(overrides: Partial<React.ComponentProps<typeof PlannerCon
     </PlannerContext.Provider>
   )
 }
+
+beforeEach(() => {
+  jest.clearAllMocks()
+  mockCapturedDragEnd = null
+})
 
 describe('WeeklyPlanner', () => {
   it("renders each learner's name/header exactly once, not repeated per lesson", () => {
@@ -235,5 +293,100 @@ describe('WeeklyPlanner', () => {
     const card001 = screen.getByTestId('lesson-card-lesson_001')
     expect(card001.querySelector('[data-testid="homework-indicator"]')).not.toBeInTheDocument()
     expect(card001.querySelector('[data-testid="assessment-indicator"]')).not.toBeInTheDocument()
+  })
+
+  it('lesson card shows a drag-to-reschedule affordance', () => {
+    renderPlanner()
+
+    expect(screen.getAllByLabelText(/drag to reschedule/i).length).toBeGreaterThan(0)
+  })
+
+  it('dragging a lesson card from Tuesday to Wednesday updates its date and re-renders it under Wednesday', () => {
+    const { rerender } = renderPlanner()
+
+    // lesson_001 (Adam / Fractions practice) starts on Tuesday 2026-05-12
+    expect(screen.getByTestId('day-lessons-child_001-2026-05-12')).toHaveTextContent('Fractions practice')
+
+    expect(mockCapturedDragEnd).not.toBeNull()
+
+    return mockCapturedDragEnd!({
+      active: { id: 'lesson_001', data: { current: {} } },
+      over: {
+        id: 'child_001:2026-05-13',
+        data: { current: { dateStr: '2026-05-13' } },
+      },
+    }).then(() => {
+      expect(mockUpdateLesson).toHaveBeenCalledWith('lesson_001', { dueDate: '2026-05-13' })
+      expect(mockRefreshLessons).toHaveBeenCalled()
+
+      // Simulate the refreshLessons()-driven refetch bringing back the lesson with its new date.
+      const updatedLessons = mockLessons.map(l =>
+        l.id === 'lesson_001' ? { ...l, dueDate: '2026-05-13' } : l,
+      )
+      rerender(
+        <PlannerContext.Provider
+          value={{
+            lessons: updatedLessons,
+            selectedWeek: new Date('2026-05-11'),
+            setSelectedWeek: jest.fn(),
+            selectedChildIds: ['child_001', 'child_002'],
+            setSelectedChildIds: jest.fn(),
+            selectedSubjectIds: ['subj_001', 'subj_002'],
+            setSelectedSubjectIds: jest.fn(),
+            isInitializing: false,
+            isLessonsLoading: false,
+            isLoading: false,
+            error: null,
+            weekStartDay: 'Monday',
+            children: mockChildren,
+            subjects: mockSubjects,
+            refreshLessons: mockRefreshLessons,
+          }}
+        >
+          <WeeklyPlanner />
+        </PlannerContext.Provider>,
+      )
+
+      expect(screen.getByTestId('day-lessons-child_001-2026-05-13')).toHaveTextContent('Fractions practice')
+      expect(screen.queryByTestId('day-lessons-child_001-2026-05-12')).not.toBeInTheDocument()
+    })
+  })
+
+  it("switching to 'By day' mode shows Child A and Child B's lessons together under a given date, color-coded by learner; switching back to 'By learner' restores the stacked-per-child layout with no lessons duplicated or dropped", async () => {
+    renderPlanner()
+
+    // Default is "By learner": per-learner sections exist, no combined view container.
+    expect(screen.queryByTestId('planner-combined-view')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Adam')).toHaveLength(1)
+    expect(screen.getAllByText('Layth')).toHaveLength(1)
+
+    await userEvent.click(screen.getByTestId('planner-display-mode-byDay'))
+
+    // Both learners' Monday lessons appear together under the same combined day column.
+    const mondayColumn = screen.getByTestId('combined-day-lessons-2026-05-11')
+    expect(mondayColumn).toHaveTextContent('Ch. 91') // child_002 (Layth) lesson_003, due Monday
+
+    // learner badges are color-coded per learnerColor()
+    const badge = mondayColumn.querySelector('[data-testid="combined-learner-badge-lesson_003"]') as HTMLElement
+    expect(badge).toBeInTheDocument()
+    expect(badge.getAttribute('style')).toMatch(/background-color/i)
+
+    // "By learner" per-child sections are gone while in combined mode.
+    expect(screen.queryByTestId('day-lessons-child_002-2026-05-11')).not.toBeInTheDocument()
+
+    // No lessons duplicated or dropped: every lesson still renders exactly once across the week.
+    expect(screen.getAllByTestId('lesson-card-lesson_001')).toHaveLength(1)
+    expect(screen.getAllByTestId('lesson-card-lesson_002')).toHaveLength(1)
+    expect(screen.getAllByTestId('lesson-card-lesson_003')).toHaveLength(1)
+    expect(screen.getAllByTestId('lesson-card-lesson_004')).toHaveLength(1)
+
+    await userEvent.click(screen.getByTestId('planner-display-mode-byLearner'))
+
+    // Switching back restores the stacked-per-learner layout with nothing duplicated or dropped.
+    expect(screen.queryByTestId('planner-combined-view')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Adam')).toHaveLength(1)
+    expect(screen.getAllByText('Layth')).toHaveLength(1)
+    expect(screen.getAllByTestId('lesson-card-lesson_001')).toHaveLength(1)
+    expect(screen.getAllByTestId('lesson-card-lesson_003')).toHaveLength(1)
   })
 })

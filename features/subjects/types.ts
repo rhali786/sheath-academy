@@ -1,3 +1,14 @@
+import type { DayOfWeek } from '@/features/lib/types'
+
+/** One recurring weekly time block for a course, e.g. "Mon/Wed 9:00-9:45". */
+export interface RecurringScheduleBlock {
+  daysOfWeek: DayOfWeek[]
+  /** 24-hour "HH:MM" string, matching the LessonTask scheduled-time contract. */
+  startTime: string
+  /** 24-hour "HH:MM" string, matching the LessonTask scheduled-time contract. */
+  endTime: string
+}
+
 export type SubjectCourseCategory =
   | 'Quran'
   | 'Arabic'
@@ -45,6 +56,8 @@ export interface SubjectCourse {
   schoolYearId?: string
   /** IDs of resources linked to this course. Optional for back-compat with existing fixtures/mocks. */
   resourceIds?: string[]
+  /** Optional recurring per-class weekly schedule. Does not auto-generate lesson instances. */
+  recurringSchedule?: RecurringScheduleBlock[]
   isActive: boolean
   order: number
   createdAt: string

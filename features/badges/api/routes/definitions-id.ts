@@ -41,6 +41,7 @@ export async function PATCH(
       description: body.description,
       criteria: body.criteria,
       emblemKey: body.emblemKey,
+      imageUrl: body.imageUrl,
       gradeBands: body.gradeBands,
       verificationRequirement: body.verificationRequirement,
       visibility: body.visibility,

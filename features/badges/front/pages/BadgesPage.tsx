@@ -38,6 +38,7 @@ function BadgeDefinitionForm({
   const [description, setDescription] = useState(initial?.description ?? '')
   const [criteria, setCriteria] = useState(initial?.criteria ?? '')
   const [emblemKey, setEmblemKey] = useState(initial?.emblemKey ?? '')
+  const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? '')
   const [gradeBands, setGradeBands] = useState<GradeBand[]>(initial?.gradeBands ?? [])
   const [verificationRequirement, setVerificationRequirement] = useState<VerificationRequirement>(initial?.verificationRequirement ?? 'none')
   const [enabled, setEnabled] = useState(initial?.enabled ?? true)
@@ -62,6 +63,7 @@ function BadgeDefinitionForm({
         description: description.trim(),
         criteria: criteria.trim(),
         emblemKey: emblemKey.trim(),
+        imageUrl: imageUrl.trim() || null,
         gradeBands,
         verificationRequirement,
         visibility: 'household',
@@ -79,6 +81,7 @@ function BadgeDefinitionForm({
       <input aria-label="Badge description" type="text" placeholder="Description" value={description} onChange={e => setDescription(e.target.value)} className="w-full rounded border border-slate-300 px-2 py-1 text-sm text-slate-700" />
       <input aria-label="Badge criteria" type="text" placeholder="How to earn this" value={criteria} onChange={e => setCriteria(e.target.value)} className="w-full rounded border border-slate-300 px-2 py-1 text-sm text-slate-700" />
       <input aria-label="Badge emblem key" type="text" placeholder="Emblem key (e.g. quran-champion)" value={emblemKey} onChange={e => setEmblemKey(e.target.value)} className="w-full rounded border border-slate-300 px-2 py-1 text-sm text-slate-700" />
+      <input aria-label="Badge image URL" type="text" placeholder="Image URL (optional — overrides the emblem icon)" value={imageUrl} onChange={e => setImageUrl(e.target.value)} className="w-full rounded border border-slate-300 px-2 py-1 text-sm text-slate-700" />
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-slate-500">Grade bands:</span>
         {GRADE_BANDS.map(b => (
@@ -116,6 +119,7 @@ interface BadgeActions {
   onRevoke: (awardId: string) => Promise<void>
   onAddEvidence: (awardId: string, evidenceId: string) => Promise<void>
   onRemoveEvidence: (awardId: string, linkId: string) => Promise<void>
+  onUpdateProgress: (awardId: string, current: number | null, target: number | null) => Promise<void>
 }
 
 /** Returns the next lifecycle transition (and its label), or null when earned/terminal. */
@@ -127,7 +131,20 @@ function nextTransition(award: BadgeAward): { next: AwardTransition; label: stri
   return null
 }
 
-function BadgeEmblem({ emblemKey, earned }: { emblemKey: string; earned: boolean }) {
+function BadgeEmblem({ emblemKey, earned, imageUrl, title }: { emblemKey: string; earned: boolean; imageUrl?: string | null; title?: string }) {
+  const ringClass = earned
+    ? 'border-forest-400 shadow-md'
+    : 'border-slate-200 grayscale'
+
+  if (imageUrl) {
+    return (
+      <div className={`w-16 h-16 rounded-full overflow-hidden border-2 transition-all ${ringClass}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- custom user-supplied badge art, not a known-dimension local asset */}
+        <img src={imageUrl} alt={title ?? emblemKey} className="w-full h-full object-cover" />
+      </div>
+    )
+  }
+
   // text/lucide fallback — the design target is real SVG art keyed by emblemKey
   return (
     <div
@@ -139,6 +156,66 @@ function BadgeEmblem({ emblemKey, earned }: { emblemKey: string; earned: boolean
       aria-hidden="true"
     >
       <Star className="w-7 h-7" />
+    </div>
+  )
+}
+
+function AwardProgress({ award, onUpdateProgress }: { award: BadgeAward; onUpdateProgress: BadgeActions['onUpdateProgress'] }) {
+  const [current, setCurrent] = useState(String(award.progressCurrent ?? ''))
+  const [target, setTarget] = useState(String(award.progressTarget ?? ''))
+  const [busy, setBusy] = useState(false)
+
+  const hasProgress = award.progressTarget != null && award.progressTarget > 0
+  const pct = hasProgress
+    ? Math.max(0, Math.min(100, Math.round(((award.progressCurrent ?? 0) / award.progressTarget!) * 100)))
+    : 0
+
+  async function handleUpdate() {
+    setBusy(true)
+    try {
+      const c = current.trim() === '' ? null : Number(current)
+      const t = target.trim() === '' ? null : Number(target)
+      await onUpdateProgress(award.id, Number.isNaN(c as number) ? null : c, Number.isNaN(t as number) ? null : t)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-1.5 text-left">
+      {hasProgress && (
+        <div className="space-y-0.5">
+          <p className="text-xs text-slate-500">{award.progressCurrent ?? 0} / {award.progressTarget}</p>
+          <div className="h-1.5 w-full rounded-full bg-slate-100">
+            <div data-testid="award-progress-bar" className="h-1.5 rounded-full bg-forest-500" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+      )}
+      <div className="flex items-center gap-1">
+        <input
+          aria-label="Progress current"
+          type="number"
+          value={current}
+          onChange={e => setCurrent(e.target.value)}
+          className="w-12 rounded border border-slate-300 px-1 py-0.5 text-xs text-slate-700"
+        />
+        <span className="text-xs text-slate-400">/</span>
+        <input
+          aria-label="Progress target"
+          type="number"
+          value={target}
+          onChange={e => setTarget(e.target.value)}
+          className="w-12 rounded border border-slate-300 px-1 py-0.5 text-xs text-slate-700"
+        />
+        <button
+          type="button"
+          disabled={busy}
+          onClick={handleUpdate}
+          className="rounded-lg border border-slate-200 px-2 py-0.5 text-xs text-forest-700 hover:bg-forest-50 disabled:opacity-50"
+        >
+          Update progress
+        </button>
+      </div>
     </div>
   )
 }
@@ -207,6 +284,8 @@ function AwardManagement({ definition, award, actions }: { definition: BadgeDefi
           </button>
         </div>
       </div>
+
+      <AwardProgress award={award} onUpdateProgress={actions.onUpdateProgress} />
 
       {(award.evidence ?? []).length > 0 && (
         <ul className="space-y-0.5">
@@ -285,6 +364,7 @@ function BadgeCard({ item, actions, definitionActions }: { item: BadgeCollection
             description: definition.description,
             criteria: definition.criteria,
             emblemKey: definition.emblemKey,
+            imageUrl: definition.imageUrl,
             gradeBands: definition.gradeBands,
             verificationRequirement: definition.verificationRequirement,
             visibility: definition.visibility,
@@ -305,7 +385,7 @@ function BadgeCard({ item, actions, definitionActions }: { item: BadgeCollection
         isEarned ? '' : 'opacity-75'
       }`}
     >
-      <BadgeEmblem emblemKey={definition.emblemKey} earned={isEarned} />
+      <BadgeEmblem emblemKey={definition.emblemKey} earned={isEarned} imageUrl={definition.imageUrl} title={definition.title} />
 
       <div className="space-y-1">
         <p className={`text-sm font-semibold ${isEarned ? 'text-slate-900' : 'text-slate-500'}`}>
@@ -449,6 +529,11 @@ export function BadgesPage() {
     onRemoveEvidence: async (awardId, linkId) => {
       await badgesApi.removeEvidence(awardId, linkId)
       setSuccess('Evidence unlinked')
+      await reloadCollection()
+    },
+    onUpdateProgress: async (awardId, current, target) => {
+      await badgesApi.updateAwardProgress(awardId, current, target)
+      setSuccess('Progress updated')
       await reloadCollection()
     },
   }
