@@ -217,6 +217,9 @@ export const subjects = pgTable(
     isFormalCourse: boolean('is_formal_course').notNull().default(false),
     creditHours: numeric('credit_hours', { precision: 4, scale: 2 }),
     termModel: text('term_model'),
+    // Wave 3 (part 2): optional recurring per-class weekly schedule.
+    // Shape: { daysOfWeek: DayOfWeek[], startTime: string, endTime: string }[]
+    recurringSchedule: jsonb('recurring_schedule'),
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),
   },

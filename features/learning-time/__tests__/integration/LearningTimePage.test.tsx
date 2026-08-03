@@ -887,6 +887,34 @@ describe('LearningTimePage — quick start by course (G7b)', () => {
     // No intermediate configuration screen should ever have appeared.
     expect(screen.queryByTestId('now-card-config')).not.toBeInTheDocument()
   })
+
+  it('shows a "Next scheduled" line for a course with a recurringSchedule, alongside its duration (Wave 3 part 2)', async () => {
+    const scheduledMath = {
+      ...mathSubject,
+      recurringSchedule: [
+        { daysOfWeek: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], startTime: '09:00', endTime: '09:45' },
+      ],
+    } as SubjectCourse
+    mockUseHousehold.mockImplementation(() => ({
+      householdProfile: { id: 'hh_001' },
+      studentProfiles: mockChildren,
+      allSubjects: [scheduledMath, readingSubject],
+      loading: false,
+      needsSetup: false,
+      familyName: '',
+      error: null,
+      refetch: jest.fn(),
+    }))
+    mockGetLessons.mockResolvedValue([])
+
+    renderPage()
+
+    await waitFor(() => expect(screen.getByTestId('quick-start-course-subj_math')).toBeInTheDocument())
+    // Scheduled every day of the week, so "next scheduled" always resolves regardless of today's date.
+    expect(screen.getByTestId('quick-start-next-scheduled-subj_math')).toHaveTextContent(/next scheduled: .+ \d/i)
+    // Reading has no recurringSchedule — no "next scheduled" line for it.
+    expect(screen.queryByTestId('quick-start-next-scheduled-subj_reading')).not.toBeInTheDocument()
+  })
 })
 
 describe('LearningTimePage — session history', () => {

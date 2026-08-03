@@ -16,6 +16,7 @@ function rowToSubject(r: SubjectRowWithLearners): SubjectCourse {
     name: r.name,
     category: (r.category as SubjectCourseCategory) ?? 'core',
     schoolYearId: r.schoolYearId ?? undefined,
+    recurringSchedule: r.recurringSchedule ?? undefined,
     isActive: r.isActive,
     order: r.sortOrder,
     createdAt: r.createdAt?.toISOString() ?? new Date().toISOString(),
@@ -59,6 +60,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       category,
       learnerIds: allLearnerIds,
       schoolYearId: activeYear?.id,
+      recurringSchedule: body.recurringSchedule ?? undefined,
     })
     return NextResponse.json({ status: 'success', data: rowToSubject(row), message: 'Subject created', timestamp: new Date().toISOString() }, { status: 201 })
   } catch {

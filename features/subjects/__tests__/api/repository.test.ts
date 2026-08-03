@@ -268,6 +268,93 @@ describe('subjects repository — resourceIds via subject_resources join table',
   })
 })
 
+describe('subjects repository — recurringSchedule (Wave 3 part 2)', () => {
+  itDb('createSubjectRow with a recurringSchedule persists and round-trips via getSubjectRow and listSubjectRows', async () => {
+    const { getDb } = await import('@/features/lib/server/db')
+    const { subjects: subjectsTable, subjectLearners } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    const schedule = [
+      { daysOfWeek: ['Monday', 'Wednesday'], startTime: '09:00', endTime: '09:45' },
+    ]
+    let subjectId = ''
+    try {
+      const created = await createSubjectRow(householdId, {
+        name: 'Recurring Science',
+        category: 'Science',
+        learnerId,
+        recurringSchedule: schedule as any,
+      })
+      subjectId = created.id
+      expect(created.recurringSchedule).toEqual(schedule)
+
+      const fetched = await getSubjectRow(subjectId, householdId)
+      expect(fetched?.recurringSchedule).toEqual(schedule)
+
+      const listed = await listSubjectRows(householdId)
+      const found = listed.find((r) => r.id === subjectId)
+      expect(found?.recurringSchedule).toEqual(schedule)
+    } finally {
+      if (subjectId) {
+        await getDb().delete(subjectLearners).where(eq(subjectLearners.subjectId, subjectId))
+        await getDb().delete(subjectsTable).where(eq(subjectsTable.id, subjectId))
+      }
+    }
+  })
+
+  itDb('createSubjectRow without a recurringSchedule leaves it null', async () => {
+    const { getDb } = await import('@/features/lib/server/db')
+    const { subjects: subjectsTable, subjectLearners } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    let subjectId = ''
+    try {
+      const created = await createSubjectRow(householdId, {
+        name: 'No Schedule Course',
+        category: 'Math',
+        learnerId,
+      })
+      subjectId = created.id
+      expect(created.recurringSchedule).toBeNull()
+    } finally {
+      if (subjectId) {
+        await getDb().delete(subjectLearners).where(eq(subjectLearners.subjectId, subjectId))
+        await getDb().delete(subjectsTable).where(eq(subjectsTable.id, subjectId))
+      }
+    }
+  })
+
+  itDb('updateSubjectRow replaces the recurringSchedule when provided', async () => {
+    const { getDb } = await import('@/features/lib/server/db')
+    const { subjects: subjectsTable, subjectLearners } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    let subjectId = ''
+    try {
+      const created = await createSubjectRow(householdId, {
+        name: 'Editable Recurring Course',
+        category: 'Math',
+        learnerId,
+      })
+      subjectId = created.id
+      expect(created.recurringSchedule).toBeNull()
+
+      const nextSchedule = [
+        { daysOfWeek: ['Friday'], startTime: '13:00', endTime: '14:00' },
+      ]
+      const updated = await updateSubjectRow(subjectId, householdId, {
+        recurringSchedule: nextSchedule as any,
+      })
+      expect(updated?.recurringSchedule).toEqual(nextSchedule)
+    } finally {
+      if (subjectId) {
+        await getDb().delete(subjectLearners).where(eq(subjectLearners.subjectId, subjectId))
+        await getDb().delete(subjectsTable).where(eq(subjectsTable.id, subjectId))
+      }
+    }
+  })
+})
+
 describe('archiveSubjectsByLearner', () => {
   itDb('removes archived learner from group course but keeps course active for others', async () => {
     const { createLearner } = await import('@/features/children/server/repository')

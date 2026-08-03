@@ -267,6 +267,13 @@
       "when": 1785771153550,
       "tag": "0037_youthful_wrecker",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1785771981577,
+      "tag": "0038_mean_microchip",
+      "breakpoints": true
     }
   ]
 }

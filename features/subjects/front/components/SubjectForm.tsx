@@ -1,11 +1,28 @@
 'use client'
 
 import { useEffect, useState, FormEvent } from 'react'
-import type { StudentProfile } from '@/features/lib/types'
-import type { SubjectCourseCategory } from '@/features/subjects/types'
+import type { DayOfWeek, StudentProfile } from '@/features/lib/types'
+import type { RecurringScheduleBlock, SubjectCourseCategory } from '@/features/subjects/types'
 import { SUBJECT_COURSE_CATEGORIES, formatCategory } from '@/features/subjects/front/lib/categories'
 import { childrenApi } from '@/features/children/front/services/api'
 import { subjectsApi } from '@/features/subjects/front/services/api'
+
+const ALL_DAYS: DayOfWeek[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+interface ScheduleBlockDraft {
+  daysOfWeek: DayOfWeek[]
+  startTime: string
+  endTime: string
+}
+
+function emptyBlock(): ScheduleBlockDraft {
+  return { daysOfWeek: [], startTime: '', endTime: '' }
+}
+
+/** A block is only submitted once it has at least one day and both times set. */
+function isCompleteBlock(b: ScheduleBlockDraft): b is RecurringScheduleBlock {
+  return b.daysOfWeek.length > 0 && !!b.startTime && !!b.endTime
+}
 
 export interface SubjectFormProps {
   /** Matches `StudentProfile.householdId` (household profile id, not workspace id). */
@@ -29,6 +46,8 @@ export function SubjectForm({ householdId, onSuccess, defaultChildId, hideChildS
   const [customCategory, setCustomCategory] = useState('')
   const [instructorName, setInstructorName] = useState('')
   const [level, setLevel] = useState('')
+  const [recurringEnabled, setRecurringEnabled] = useState(false)
+  const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlockDraft[]>([emptyBlock()])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -70,6 +89,28 @@ export function SubjectForm({ householdId, onSuccess, defaultChildId, hideChildS
     )
   }
 
+  function toggleBlockDay(index: number, day: DayOfWeek) {
+    setScheduleBlocks(prev =>
+      prev.map((b, i) =>
+        i !== index
+          ? b
+          : { ...b, daysOfWeek: b.daysOfWeek.includes(day) ? b.daysOfWeek.filter(d => d !== day) : [...b.daysOfWeek, day] }
+      )
+    )
+  }
+
+  function updateBlockTime(index: number, field: 'startTime' | 'endTime', value: string) {
+    setScheduleBlocks(prev => prev.map((b, i) => (i !== index ? b : { ...b, [field]: value })))
+  }
+
+  function addBlock() {
+    setScheduleBlocks(prev => [...prev, emptyBlock()])
+  }
+
+  function removeBlock(index: number) {
+    setScheduleBlocks(prev => (prev.length <= 1 ? [emptyBlock()] : prev.filter((_, i) => i !== index)))
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
@@ -79,6 +120,7 @@ export function SubjectForm({ householdId, onSuccess, defaultChildId, hideChildS
     }
     setSubmitting(true)
     try {
+      const completeBlocks = recurringEnabled ? scheduleBlocks.filter(isCompleteBlock) : []
       await subjectsApi.createSubject({
         learnerIds: selectedLearnerIds,
         name: name.trim(),
@@ -86,11 +128,14 @@ export function SubjectForm({ householdId, onSuccess, defaultChildId, hideChildS
         ...(category === 'OtherCustom' && customCategory.trim() && { customCategory: customCategory.trim() }),
         ...(instructorName.trim() && { instructorName: instructorName.trim() }),
         ...(level.trim() && { level: level.trim() }),
+        ...(completeBlocks.length > 0 && { recurringSchedule: completeBlocks }),
       })
       setName('')
       setCustomCategory('')
       setInstructorName('')
       setLevel('')
+      setRecurringEnabled(false)
+      setScheduleBlocks([emptyBlock()])
       onSuccess?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create subject')
@@ -230,6 +275,83 @@ export function SubjectForm({ householdId, onSuccess, defaultChildId, hideChildS
           placeholder="e.g. Umm Layth"
           maxLength={80}
         />
+      </div>
+
+      <div>
+        <button
+          type="button"
+          onClick={() => setRecurringEnabled(v => !v)}
+          aria-pressed={recurringEnabled}
+          className="text-xs font-medium text-forest-800 hover:underline"
+          data-testid="recurring-schedule-toggle"
+        >
+          {recurringEnabled ? 'Remove recurring weekly schedule' : '+ Add recurring weekly schedule (optional)'}
+        </button>
+
+        {recurringEnabled && (
+          <div className="mt-2 space-y-3" data-testid="recurring-schedule-editor">
+            {scheduleBlocks.map((block, index) => (
+              <div key={index} className="border border-slate-200 rounded-lg p-3 space-y-2" data-testid={`recurring-block-${index}`}>
+                <div className="flex flex-wrap gap-2">
+                  {ALL_DAYS.map((day) => (
+                    <label key={day} className="flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={block.daysOfWeek.includes(day)}
+                        onChange={() => toggleBlockDay(index, day)}
+                        className="rounded"
+                        data-testid={`recurring-day-${day}-${index}`}
+                      />
+                      <span className="text-xs text-slate-600">{day.slice(0, 3)}</span>
+                    </label>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor={`recurring-start-${index}`} className="block text-xs font-medium text-slate-600 mb-1">
+                      Start time
+                    </label>
+                    <input
+                      id={`recurring-start-${index}`}
+                      type="time"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                      value={block.startTime}
+                      onChange={(e) => updateBlockTime(index, 'startTime', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor={`recurring-end-${index}`} className="block text-xs font-medium text-slate-600 mb-1">
+                      End time
+                    </label>
+                    <input
+                      id={`recurring-end-${index}`}
+                      type="time"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                      value={block.endTime}
+                      onChange={(e) => updateBlockTime(index, 'endTime', e.target.value)}
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeBlock(index)}
+                  className="text-xs text-red-600 hover:underline"
+                  data-testid={`recurring-remove-block-${index}`}
+                >
+                  Remove time block
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addBlock}
+              className="text-xs text-forest-800 hover:underline"
+              data-testid="recurring-add-block"
+            >
+              + Add another time block
+            </button>
+          </div>
+        )}
       </div>
 
       {error && <p className="text-xs text-red-600">{error}</p>}
