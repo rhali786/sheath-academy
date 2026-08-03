@@ -1,7 +1,7 @@
 {
   "plan": "docs/20260802-feedback-batch-prod-pull-plan.md",
   "createdAt": "2026-08-03T00:00:00.000Z",
-  "updatedAt": "2026-08-03T01:00:00.000Z",
+  "updatedAt": "2026-08-03T18:00:00.000Z",
   "branch": "feature/feedback-batch-20260802-open-gaps",
   "phases": [
     {
@@ -110,11 +110,35 @@
       "id": "phase-5-subjects-recurring-schedule",
       "title": "Wave 3 (part 2) — Recurring per-class schedule on SubjectCourse (schema-touching)",
       "gated": true,
-      "status": "pending",
-      "model": null,
-      "startedAt": null,
-      "completedAt": null,
-      "outputs": { "filesChanged": [], "testsRun": [], "notes": "" },
+      "status": "complete",
+      "model": "claude-sonnet-5",
+      "startedAt": "2026-08-03T17:00:00.000Z",
+      "completedAt": "2026-08-03T18:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "db/schema.ts",
+          "db/migrations/0038_mean_microchip.sql",
+          "db/migrations/meta/0038_snapshot.json",
+          "db/migrations/meta/_journal.json",
+          "features/subjects/types.ts",
+          "features/subjects/server/repository.ts",
+          "features/subjects/front/components/SubjectForm.tsx",
+          "features/subjects/__tests__/api/repository.test.ts",
+          "features/subjects/__tests__/integration/SubjectForm.test.tsx",
+          "features/subjects/api/routes/subjects.ts",
+          "features/subjects/api/routes/subject.ts",
+          "features/subjects/front/services/api.ts",
+          "features/learning-time/front/components/QuickStartByCourseList.tsx",
+          "features/learning-time/__tests__/integration/LearningTimePage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/subjects features/learning-time (15 of 19 suites run, 4 skipped, 140 passed, 28 skipped — the 4 skipped suites are DB-integration suites gated on DATABASE_URL, same as prior phases)",
+          "npm test (full suite: 254 of 280 suites, 2265 passed, 210 skipped — no regressions vs. phase-4's baseline)",
+          "npx tsc --noEmit (no new errors from any file this phase touched; pre-existing unrelated errors only — features/plan/__tests__ SubjectCourse.learnerIds fixture gaps and scripts/feedback-steward/** — confirmed identical to phase-4's documented baseline)",
+          "npm run build (compiles/type-checks cleanly; fails only at /(shell)/about static-generation step — the same pre-existing dev-Postgres-unreachable issue documented in phase-1/2/3/4 notes, not a regression)"
+        ],
+        "notes": "OWNERSHIP CONFIRMED: features/subjects/ (SubjectCourse), not features/schedule/. Read features/schedule/server/service.ts in full first — it only builds/reflows a single DAY's timeline (buildDailySchedule/reflow) from an already-ordered LessonTask[] list; it has no concept of a per-course weekly recurrence pattern and no per-course storage at all. SubjectCourse in features/subjects/types.ts is the only existing home for course-level configuration (category, level, instructorName, schoolYearId, etc.), so recurringSchedule was added there, matching the plan's default. SCHEMA: added subjects.recurring_schedule (nullable jsonb) — migration db/migrations/0038_mean_microchip.sql, single additive line: `ALTER TABLE \"subjects\" ADD COLUMN \"recurring_schedule\" jsonb;`. Reviewed by hand before applying — no drops, no non-nullable additions, no unrelated tables. TYPE SHAPE: `RecurringScheduleBlock { daysOfWeek: DayOfWeek[]; startTime: string; endTime: string }` in features/subjects/types.ts (reused the existing `DayOfWeek` type from features/lib/types.ts rather than inventing a new one), `SubjectCourse.recurringSchedule?: RecurringScheduleBlock[]`. startTime/endTime are 24-hour 'HH:MM' strings — same contract as LessonTask.scheduledStartTime/scheduledEndTime (phase-1's TimePicker12h convention), so no new time-format convention was introduced. MIGRATION PROCEDURE MIRRORED FROM PHASE-4: dev Postgres unreachable (per dbMigrationPolicy) → ran `npm run db:backup:prod` before migrating, then `npm run db:migrate:prod` (scripts/migrate-prod.ts / scripts/lib/prod-env.ts DATABASE_URL_PROD→DATABASE_URL remap, reused as-is). GOTCHA FOUND (new, not present in phase-4's notes — flagging for future schema-touching phases): `npm run db:backup:prod` selects columns via db/schema.ts, so running it AFTER editing schema.ts to add a not-yet-migrated column fails to back up the affected table (subjects errored out, 0 rows captured) because prod doesn't have the column yet. Fixed by `git stash push -- db/schema.ts`, re-running the backup (clean run: subjects 48 rows, all 31 tables succeeded, backups/prod-2026-08-03T15-47-12), then `git stash pop` to restore the schema change before generating/applying the migration. Future schema-touching phases should back up BEFORE editing schema.ts, or stash schema.ts for the backup step, to avoid a silently incomplete backup of exactly the table being changed. INVARIANTS CONFIRMED: post-migration `npm run db:generate` reports 'No schema changes, nothing to migrate'; `npm run db:status:prod` confirms repo journal 39 migrations (0000…0038_mean_microchip) = 39 applied on prod, 0 pending, no gap, 31/31 schema tables reachable. APPLIED TO PRODUCTION (dpg-d85140f7f7vs73fvdqhg-a.oregon-postgres.render.com) — not pending. UI: SubjectForm.tsx gained a button toggle (data-testid recurring-schedule-toggle) — deliberately a `<button aria-pressed>`, not a checkbox, because the existing SubjectForm.test.tsx has assertions on exact checkbox counts (`getByRole('checkbox')` singular, `getAllByRole('checkbox')` toHaveLength(2)) that a new checkbox would have broken; the block editor (data-testid recurring-schedule-editor, recurring-block-<i>, recurring-day-<Day>-<i>, recurring-add-block, recurring-remove-block-<i>) only renders once toggled on, so it never affects those pre-existing counts. Only complete blocks (>=1 day + both times set) are included in the submitted payload — partial/empty blocks are silently dropped, per the 'no auto-generation, purely a stored value' scope. QUICK-START WIRING (scope note, same class of necessary pass-through as phase-4's routes/services wiring): the acceptance criterion 'next scheduled line in the quick-start list alongside the existing duration' is rendered by features/learning-time/front/components/QuickStartByCourseList.tsx, which is NOT in this phase's declared fileScope (only LearningTimePage.tsx was listed) but is the actual owner of the quick-start UI (rendered from NowCard, which phase-2's notes identified as owning the course-first/subjectId-prefill behavior — NowCard itself did not need touching since it already forwards the full `allSubjects: SubjectCourse[]` array, which now carries recurringSchedule for free). Added a pure `nextScheduledOccurrence(schedule, now)` helper (soonest upcoming {day,time} across all blocks, today-if-not-yet-passed else next matching day) plus a small local `formatTime12` (mirroring but not importing ScheduleTimeline.tsx's non-exported version, consistent with phase-1's precedent of a self-contained per-file time formatter) directly in QuickStartByCourseList.tsx — no other consumer needed changes. Also touched features/subjects/api/routes/subjects.ts, subject.ts, and features/subjects/front/services/api.ts as thin pass-through wiring (rowToSubject mapping + POST/PUT body field) so recurringSchedule actually flows create/update end-to-end from the UI — same justified out-of-declared-fileScope necessity as phase-4's route/service wiring. FOR FUTURE WORK: lesson-instance auto-generation from recurringSchedule remains explicitly out of scope (would touch features/resources/server/service.ts, per the plan)."
+      },
       "failureReason": null
     }
   ]
