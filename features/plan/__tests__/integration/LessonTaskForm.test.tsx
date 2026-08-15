@@ -472,7 +472,7 @@ describe('LessonTaskForm — completion window (plannedStartDate)', () => {
   })
 })
 
-describe('LessonTaskForm — scheduled start/end time override', () => {
+describe('LessonTaskForm — scheduled start/end time override (12-hour picker)', () => {
   it('includes scheduledStartTime/scheduledEndTime in the update payload when both are set', async () => {
     const onSubmit = jest.fn().mockResolvedValue(undefined)
     render(
@@ -484,8 +484,12 @@ describe('LessonTaskForm — scheduled start/end time override', () => {
         onCancel={jest.fn()}
       />
     )
-    fireEvent.change(screen.getByLabelText(/start time/i), { target: { value: '11:00' } })
-    fireEvent.change(screen.getByLabelText(/end time/i), { target: { value: '11:30' } })
+    fireEvent.change(screen.getByLabelText(/start time hour/i), { target: { value: '11' } })
+    fireEvent.change(screen.getByLabelText(/start time minute/i), { target: { value: '00' } })
+    fireEvent.change(screen.getByLabelText(/start time period/i), { target: { value: 'AM' } })
+    fireEvent.change(screen.getByLabelText(/end time hour/i), { target: { value: '11' } })
+    fireEvent.change(screen.getByLabelText(/end time minute/i), { target: { value: '30' } })
+    fireEvent.change(screen.getByLabelText(/end time period/i), { target: { value: 'AM' } })
 
     fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
 
@@ -497,6 +501,51 @@ describe('LessonTaskForm — scheduled start/end time override', () => {
         })
       )
     })
+  })
+
+  it('setting hour "9", minute "30", period "PM" produces scheduledStartTime "21:30" on submit', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonTaskForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        editingLesson={editingLesson}
+        onSubmit={onSubmit}
+        onCancel={jest.fn()}
+      />
+    )
+    fireEvent.change(screen.getByLabelText(/start time hour/i), { target: { value: '9' } })
+    fireEvent.change(screen.getByLabelText(/start time minute/i), { target: { value: '30' } })
+    fireEvent.change(screen.getByLabelText(/start time period/i), { target: { value: 'PM' } })
+    fireEvent.change(screen.getByLabelText(/end time hour/i), { target: { value: '10' } })
+    fireEvent.change(screen.getByLabelText(/end time minute/i), { target: { value: '30' } })
+    fireEvent.change(screen.getByLabelText(/end time period/i), { target: { value: 'PM' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scheduledStartTime: '21:30',
+        })
+      )
+    })
+  })
+
+  it('pre-fills the control as 9:30 PM when opening an existing lesson with scheduledStartTime="21:30"', () => {
+    const withTime: LessonTask = { ...editingLesson, scheduledStartTime: '21:30', scheduledEndTime: '22:00' }
+    render(
+      <LessonTaskForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        editingLesson={withTime}
+        onSubmit={jest.fn()}
+        onCancel={jest.fn()}
+      />
+    )
+    expect((screen.getByLabelText(/start time hour/i) as HTMLSelectElement).value).toBe('9')
+    expect((screen.getByLabelText(/start time minute/i) as HTMLSelectElement).value).toBe('30')
+    expect((screen.getByLabelText(/start time period/i) as HTMLSelectElement).value).toBe('PM')
   })
 
   it('submits cleared (undefined) times when both previously-set values are cleared', async () => {
@@ -511,8 +560,8 @@ describe('LessonTaskForm — scheduled start/end time override', () => {
         onCancel={jest.fn()}
       />
     )
-    fireEvent.change(screen.getByLabelText(/start time/i), { target: { value: '' } })
-    fireEvent.change(screen.getByLabelText(/end time/i), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText(/start time hour/i), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText(/end time hour/i), { target: { value: '' } })
 
     fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
 
@@ -534,8 +583,12 @@ describe('LessonTaskForm — scheduled start/end time override', () => {
         onCancel={jest.fn()}
       />
     )
-    fireEvent.change(screen.getByLabelText(/start time/i), { target: { value: '11:30' } })
-    fireEvent.change(screen.getByLabelText(/end time/i), { target: { value: '11:00' } })
+    fireEvent.change(screen.getByLabelText(/start time hour/i), { target: { value: '11' } })
+    fireEvent.change(screen.getByLabelText(/start time minute/i), { target: { value: '30' } })
+    fireEvent.change(screen.getByLabelText(/start time period/i), { target: { value: 'AM' } })
+    fireEvent.change(screen.getByLabelText(/end time hour/i), { target: { value: '11' } })
+    fireEvent.change(screen.getByLabelText(/end time minute/i), { target: { value: '00' } })
+    fireEvent.change(screen.getByLabelText(/end time period/i), { target: { value: 'AM' } })
 
     fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
 

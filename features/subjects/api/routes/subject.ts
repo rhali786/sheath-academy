@@ -20,6 +20,7 @@ function rowToSubject(r: SubjectRowWithLearners): SubjectCourse {
     name: r.name,
     category: (r.category as SubjectCourseCategory) ?? 'core',
     schoolYearId: r.schoolYearId ?? undefined,
+    recurringSchedule: r.recurringSchedule ?? undefined,
     isActive: r.isActive,
     order: r.sortOrder,
     createdAt: r.createdAt?.toISOString() ?? new Date().toISOString(),
@@ -51,6 +52,7 @@ export async function PUT(id: string, request: Request): Promise<NextResponse> {
       sortOrder: body.order !== undefined ? Number(body.order) : undefined,
       learnerIds,
       resourceIds: body.resourceIds !== undefined ? (body.resourceIds as string[]) : undefined,
+      recurringSchedule: body.recurringSchedule !== undefined ? (body.recurringSchedule ?? null) : undefined,
       // Gradebook course-config (Phase 6)
       creditHours: body.creditHours !== undefined
         ? (body.creditHours === null ? null : Number(body.creditHours))

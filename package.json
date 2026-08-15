@@ -1,6 +1,6 @@
 {
   "name": "sheath-academy",
-  "version": "2.110.1",
+  "version": "2.114.0",
   "private": true,
   "engines": {
     "node": ">=22.22.2"
@@ -24,6 +24,7 @@
     "db:migrate:prod": "dotenv -e .env.local -- tsx scripts/migrate-prod.ts",
     "db:backup:prod": "dotenv -e .env.local -- tsx scripts/backup-prod-db.ts",
     "db:status:prod": "dotenv -e .env.local -- tsx scripts/prod-migration-status.ts",
+    "feedback:pull:prod": "dotenv -e .env.local -- node scripts/pull-feedback-prod.js",
     "db:studio": "dotenv -e .env.local -- drizzle-kit studio",
     "db:seed:demo": "dotenv -e .env.local -- tsx scripts/seed-demo-households.ts",
     "db:seed:reference": "dotenv -e .env.local -- tsx scripts/seed-reference-data.ts",

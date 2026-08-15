@@ -339,4 +339,88 @@ describe('BadgesPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
     await waitFor(() => expect(mockDeleteDefinition).toHaveBeenCalledWith('badge_fix_003'))
   })
+
+  // ─── Phase 4: custom badge images + award progress tracking ──────────────
+
+  it('BadgeDefinitionForm — filling an image URL and saving shows the custom image in the definition list instead of the emblem icon', async () => {
+    mockCreateDefinition.mockImplementation(() => ok({
+      id: 'badge_fix_new_img',
+      householdId: 'hh_fix_001',
+      title: 'Image Badge',
+      description: 'Has an image',
+      criteria: 'Do the thing',
+      emblemKey: 'image-badge',
+      imageUrl: 'https://example.com/badge-art.png',
+      gradeBands: [],
+      verificationRequirement: 'none',
+      isStarter: false,
+      enabled: true,
+      visibility: 'household',
+    }))
+    mockGetCollection.mockImplementationOnce(() => ok(mockBadgeCollection)).mockImplementation(() => ok([
+      ...mockBadgeCollection,
+      {
+        definition: {
+          id: 'badge_fix_new_img',
+          householdId: 'hh_fix_001',
+          title: 'Image Badge',
+          description: 'Has an image',
+          criteria: 'Do the thing',
+          emblemKey: 'image-badge',
+          imageUrl: 'https://example.com/badge-art.png',
+          gradeBands: [],
+          verificationRequirement: 'none',
+          isStarter: false,
+          enabled: true,
+          visibility: 'household',
+        },
+        award: null,
+        isEarned: false,
+      },
+    ]))
+
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Add badge' })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Add badge' }))
+    await waitFor(() => expect(screen.getByTestId('create-badge-form')).toBeInTheDocument())
+    fireEvent.change(screen.getByLabelText('Badge title'), { target: { value: 'Image Badge' } })
+    fireEvent.change(screen.getByLabelText('Badge description'), { target: { value: 'Has an image' } })
+    fireEvent.change(screen.getByLabelText('Badge criteria'), { target: { value: 'Do the thing' } })
+    fireEvent.change(screen.getByLabelText('Badge emblem key'), { target: { value: 'image-badge' } })
+    fireEvent.change(screen.getByLabelText('Badge image URL'), { target: { value: 'https://example.com/badge-art.png' } })
+    fireEvent.click(within(screen.getByTestId('create-badge-form')).getByRole('button', { name: 'Create badge' }))
+
+    await waitFor(() => expect(mockCreateDefinition).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Image Badge', imageUrl: 'https://example.com/badge-art.png',
+    })))
+    await waitFor(() => {
+      expect(screen.getByTestId('badge-locked-badge_fix_new_img')).toBeInTheDocument()
+    })
+    const img = within(screen.getByTestId('badge-locked-badge_fix_new_img')).getByRole('img', { name: /Image Badge/i })
+    expect(img).toHaveAttribute('src', 'https://example.com/badge-art.png')
+  })
+
+  it('AwardCard — setting progress to 5/10 renders "5 / 10" and a proportional bar, incrementing updates the display', async () => {
+    const mockUpdateAwardProgress = jest.fn(() => ok(null))
+    ;(badgesApi as unknown as { updateAwardProgress: jest.Mock }).updateAwardProgress = mockUpdateAwardProgress
+
+    mockGetCollection.mockImplementation(() => ok([
+      {
+        definition: mockBadgeCollection[1].definition,
+        award: { ...mockBadgeCollection[1].award, progressCurrent: 5, progressTarget: 10 },
+        isEarned: false,
+      },
+    ]))
+
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByTestId('badge-locked-badge_fix_002')).toBeInTheDocument())
+    const card = within(screen.getByTestId('badge-locked-badge_fix_002'))
+    expect(card.getByText('5 / 10')).toBeInTheDocument()
+    const bar = card.getByTestId('award-progress-bar')
+    expect(bar).toHaveStyle({ width: '50%' })
+
+    fireEvent.change(card.getByLabelText('Progress current'), { target: { value: '6' } })
+    fireEvent.click(card.getByRole('button', { name: 'Update progress' }))
+    await waitFor(() => expect(mockUpdateAwardProgress).toHaveBeenCalledWith('award_fix_002', 6, 10))
+  })
 })

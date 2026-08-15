@@ -1,5 +1,5 @@
 import type { ApiResponse } from '@/features/lib/types'
-import type { SubjectCourse, SubjectCourseCategory } from '@/features/subjects/types'
+import type { SubjectCourse, SubjectCourseCategory, RecurringScheduleBlock } from '@/features/subjects/types'
 
 function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
@@ -59,6 +59,7 @@ export const subjectsApi = {
     level?: string
     schoolYearId?: string
     order?: number
+    recurringSchedule?: RecurringScheduleBlock[]
   }): Promise<ApiResponse<SubjectCourse>> => post('/api/subjects', body),
 
   updateSubject: (
@@ -70,6 +71,7 @@ export const subjectsApi = {
       learnerIds?: string[]
       resourceIds?: string[]
       order?: number
+      recurringSchedule?: RecurringScheduleBlock[] | null
     }
   ): Promise<ApiResponse<SubjectCourse>> =>
     put(`/api/subjects/${encodeURIComponent(id)}`, body),

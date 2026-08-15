@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SubjectForm } from '@/features/subjects/front/components/SubjectForm'
 import type { StudentProfile } from '@/features/lib/types'
@@ -176,5 +176,66 @@ describe('SubjectForm', () => {
     expect(callArg.learnerIds).toHaveLength(2)
     expect(callArg.learnerIds).toContain('k1')
     expect(callArg.learnerIds).toContain('k2')
+  })
+})
+
+describe('SubjectForm — recurring weekly schedule (Wave 3 part 2)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    childrenApi.getChildren.mockResolvedValue({ data: oneChild })
+    subjectsApi.createSubject.mockResolvedValue({ data: {}, status: 'success' })
+  })
+
+  it('recurring schedule editor is hidden until the toggle is clicked', async () => {
+    render(<SubjectForm householdId={householdId} />)
+    await waitFor(() => expect(screen.getByTestId('subject-form')).toBeInTheDocument())
+    expect(screen.queryByTestId('recurring-schedule-editor')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByTestId('recurring-schedule-toggle'))
+    expect(screen.getByTestId('recurring-schedule-editor')).toBeInTheDocument()
+  })
+
+  it('submitting without completing a recurring block omits recurringSchedule (regression: no empty/partial blocks sent)', async () => {
+    render(<SubjectForm householdId={householdId} />)
+    await waitFor(() => expect(screen.getByTestId('subject-form')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByTestId('recurring-schedule-toggle'))
+    await userEvent.type(screen.getByPlaceholderText(/Algebra/i), 'Quran Memorization')
+    await userEvent.click(screen.getByRole('button', { name: /Add course/i }))
+
+    await waitFor(() => expect(subjectsApi.createSubject).toHaveBeenCalled())
+    const callArg = subjectsApi.createSubject.mock.calls[0][0]
+    expect(callArg.recurringSchedule).toBeUndefined()
+  })
+
+  it('submitting a completed recurring block sends recurringSchedule with the chosen days and times', async () => {
+    render(<SubjectForm householdId={householdId} />)
+    await waitFor(() => expect(screen.getByTestId('subject-form')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByTestId('recurring-schedule-toggle'))
+    await userEvent.click(screen.getByTestId('recurring-day-Monday-0'))
+    await userEvent.click(screen.getByTestId('recurring-day-Wednesday-0'))
+    fireEvent.change(screen.getByLabelText(/start time/i), { target: { value: '09:00' } })
+    fireEvent.change(screen.getByLabelText(/end time/i), { target: { value: '09:45' } })
+
+    await userEvent.type(screen.getByPlaceholderText(/Algebra/i), 'Quran Memorization')
+    await userEvent.click(screen.getByRole('button', { name: /Add course/i }))
+
+    await waitFor(() => expect(subjectsApi.createSubject).toHaveBeenCalled())
+    const callArg = subjectsApi.createSubject.mock.calls[0][0]
+    expect(callArg.recurringSchedule).toEqual([
+      { daysOfWeek: ['Monday', 'Wednesday'], startTime: '09:00', endTime: '09:45' },
+    ])
+  })
+
+  it('"Add another time block" adds a second independent block', async () => {
+    render(<SubjectForm householdId={householdId} />)
+    await waitFor(() => expect(screen.getByTestId('subject-form')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByTestId('recurring-schedule-toggle'))
+    await userEvent.click(screen.getByTestId('recurring-add-block'))
+
+    expect(screen.getByTestId('recurring-block-0')).toBeInTheDocument()
+    expect(screen.getByTestId('recurring-block-1')).toBeInTheDocument()
   })
 })

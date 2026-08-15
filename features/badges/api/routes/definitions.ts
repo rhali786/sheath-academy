@@ -28,7 +28,7 @@ export async function POST(
   request: Request,
 ): Promise<NextResponse<ApiResponse<BadgeDefinition | null>>> {
   const body = await request.json()
-  const { title, description, criteria, emblemKey, gradeBands, verificationRequirement, visibility, enabled } = body
+  const { title, description, criteria, emblemKey, imageUrl, gradeBands, verificationRequirement, visibility, enabled } = body
 
   if (!title || !description || !criteria || !emblemKey) {
     return NextResponse.json(
@@ -40,7 +40,7 @@ export async function POST(
   try {
     const { householdId } = getRequestAuthCtx()
     const definition = await createBadgeDefinition(householdId, {
-      title, description, criteria, emblemKey,
+      title, description, criteria, emblemKey, imageUrl,
       gradeBands, verificationRequirement, visibility, enabled,
     })
     return NextResponse.json(

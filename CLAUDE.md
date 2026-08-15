@@ -69,6 +69,7 @@ Run these checks before touching any file:
 | `npm run db:migrate` | Apply pending migrations to the database |
 | `npm run db:studio` | Open Drizzle Studio (DB browser) |
 | `npm run db:seed:demo` | Bulk-seed two demo households into an **empty** DB |
+| `npm run feedback:pull:prod` | **Read-only.** Pull all `user_feedback` rows from prod (`DATABASE_URL_PROD`), grouped by status. Saves any attached screenshots to `feedback-screenshots/` (gitignored) as `<id>.<ext>`. `--status=<value>` to filter, `--json` for raw output. See `scripts/pull-feedback-prod.js`. |
 
 **Dev vs production server:** Use `npm run dev` for day-to-day work. Mixing dev and prod on the same `.next` folder causes `/_next/static` 404s — see Troubleshooting.
 
@@ -172,6 +173,15 @@ The default shell here is **PowerShell**, not bash. Automated runs (`steward:exe
 **Database side effects (migrations)**
 
 `db:migrate` / `db:generate` and any plan phase touching `db/schema.ts` mutate whatever **`DATABASE_URL`** points at — there is no local-only sandbox by default. Before approving a gated schema/migration phase, confirm which database is targeted. Running migrations from multiple feature branches against one shared dev database causes journal drift; prefer merging migration PRs in order, or point at a throwaway DB for execution.
+
+**Scripts that read `DATABASE_URL_PROD` directly**
+
+A handful of one-off Node scripts under `scripts/` bypass `DATABASE_URL` and connect straight to production via `DATABASE_URL_PROD` (both are defined in `.env.local`; see comments there). These are **not** run through `dotenv -e .env.local -- tsx ...` against the default `DATABASE_URL` like the rest of the `db:*` commands — they load `.env.local` themselves and pick `DATABASE_URL_PROD` specifically:
+
+- `npm run feedback:pull:prod` (`scripts/pull-feedback-prod.js`) — read-only pull of all `user_feedback` rows from prod, including saving attached screenshots to `feedback-screenshots/` (gitignored, binary user content — never commit). Use this instead of writing a new ad hoc prod-reading script.
+- `scripts/mark-feedback-reviewed.js`, `scripts/mark-feedback-shipped.js` — one-off triage scripts with hardcoded item lists (not registered in `package.json`; edit-and-rerun tools, not reusable commands).
+
+Before adding another script in this family, check this list first — the recurring failure mode is re-deriving the same `DATABASE_URL_PROD` read pattern from scratch each session because it wasn't documented here.
 
 **drizzle-kit migration ordering bug (composite UNIQUEs + FKs)**
 

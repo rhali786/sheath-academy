@@ -18,3 +18,5 @@ features/dashboard/frontend/dist
 auth-debug.log
 logs/
 backups/
+feedback-screenshots/
+feedback-pulls/

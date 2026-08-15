@@ -1,0 +1,145 @@
+{
+  "plan": "docs/20260802-feedback-batch-prod-pull-plan.md",
+  "createdAt": "2026-08-03T00:00:00.000Z",
+  "updatedAt": "2026-08-03T18:00:00.000Z",
+  "branch": "feature/feedback-batch-20260802-open-gaps",
+  "phases": [
+    {
+      "id": "phase-1-12hr-time-picker",
+      "title": "Wave 4 — Custom 12-hour time picker on LessonTaskForm",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-5",
+      "startedAt": "2026-08-03T00:00:00.000Z",
+      "completedAt": "2026-08-03T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/plan/front/components/LessonTaskForm.tsx",
+          "features/plan/__tests__/integration/LessonTaskForm.test.tsx"
+        ],
+        "testsRun": [
+          "npm test -- features/plan (29 suites, 319 passed, 20 skipped)",
+          "npm test (full suite: 254 suites, 2253 passed, 203 skipped)",
+          "npm run build (see notes — pre-existing unrelated failure, verified via git stash)"
+        ],
+        "notes": "New `TimePicker12h` sub-component added inline in features/plan/front/components/LessonTaskForm.tsx (not exported separately) — renders hour (1-12) / minute (5-min increments: 00,05,...,55) / AM-PM selects per field, keyed by idPrefix ('scheduledStartTime' / 'scheduledEndTime'), each select aria-labelled as '<Label> hour' / '<Label> minute' / '<Label> period' for test targeting. Stored value contract is UNCHANGED: LessonTaskForm still holds scheduledStartTime/scheduledEndTime as 24-hour 'HH:MM' strings in state and submits them unchanged in LessonFormData — TimePicker12h only converts to/from 12-hour parts at the render boundary via timeToParts()/partsToTime() helpers in the same file. No changes to LessonTask contract, buildDailySchedule, or formatTime12. ScheduleTimeline.tsx was not touched (out of scope, already correct). Rewrote the 3 existing 'scheduled start/end time override' tests in LessonTaskForm.test.tsx (they previously drove the native <input type=\"time\"> directly with a raw HH:MM string) to use the new hour/minute/period selects, and added 2 new tests per the plan's testsFirst spec (9:30 PM -> '21:30' on submit; prefill of an existing '21:30' lesson shows hour=9/minute=30/period=PM). All other features/plan tests were unaffected (grepped repo-wide for scheduledStartTime/scheduledEndTime/'start time'/'end time' usage first — only this test file interacts with the UI labels; other hits are data-layer, not UI). `npm run build` fails at the `/(shell)/about/page` static-generation step (DB call in app/(shell)/about/page.tsx hangs against the unreachable dev Postgres instance noted in this plan's dbMigrationPolicy, 3x 60s timeout then exit code 1) — reproduced identically with `git stash` (i.e. with this phase's changes removed), confirming it is a pre-existing environment issue, not a regression introduced by this phase. Downstream phases should expect the same `npm run build` behavior in this environment unless dev DB connectivity is restored."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-2-learning-time-course-first-selector",
+      "title": "Wave 3 (part 1) — Course-first selector on Learning Time",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-5",
+      "startedAt": "2026-08-03T00:00:00.000Z",
+      "completedAt": "2026-08-03T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/learning-time/__tests__/integration/NowCard.test.tsx"
+        ],
+        "testsRun": [
+          "npm test -- features/learning-time (7 suites, 88 passed, 7 skipped — one test, LearningTimePage.test.tsx's \"picking a course the currently-selected learner is NOT enrolled in...\", is a PRE-EXISTING intermittent flake unrelated to this phase; see notes)",
+          "npm test (full suite: 254 suites, 2255 passed, 203 skipped)",
+          "npm run build (fails at /(shell)/about — same pre-existing dev-DB-unreachable issue documented in phase-1's notes and this plan's dbMigrationPolicy; TypeScript/lint passed before the failure)"
+        ],
+        "notes": "IMPORTANT FINDING: the Course-first selector (this phase's entire scope) was ALREADY FULLY IMPLEMENTED before this phase ran — it shipped in prior commits on this branch (9b5d84b, 30aa6e9, 26d235f, 5e5474d — all pre-existing, predating even this plan's phase-1 commit) under feedback id 66087f44. features/learning-time/front/pages/LearningTimePage.tsx already has: a Course selector (`course-select`) that narrows the Learner dropdown to enrolled learners via `selectedCourseMembers.some(m => m.learnerIds.includes(c.id))`, synchronous effectiveChildId/resolvedCourse derivation (no race), and passes `course={resolvedCourse}` to NowCard. features/learning-time/front/components/NowCard.tsx already reads the `course` prop and sets `input.subjectId = course.id` in handleConfigSubmit when starting an ad-hoc session — exactly the testsFirst acceptance criteria in this phase ('selecting a Course first narrows the Learner dropdown...' and 'starting a session after selecting a course pre-fills subjectId...'). features/learning-time/__tests__/integration/LearningTimePage.test.tsx already has extensive coverage of this exact behavior (describe block 'LearningTimePage — course selection (feedback 66087f44)' plus several related describe blocks for merged/per-learner course rows). Work actually done in this phase: (1) added direct NowCard-level tests (describe 'NowCard — course-first selector prefill (Wave 3 part 1)') asserting the subjectId-prefill contract at the component boundary that owns it, per this phase's declared fileScope naming NowCard.test.tsx; both pass reliably. (2) Attempted the plan's instructed DRY refactor — replacing `m.learnerIds.includes(c.id)` with the canonical `subjectEnrollsLearner(m, c.id)` helper from features/subjects/lib/enrollment (functionally identical for current schema since SubjectCourse.learnerIds always includes childId as its first element per the type's own doc comment) — but REVERTED it after discovering it correlated with intermittent failures of an UNRELATED pre-existing test in LearningTimePage.test.tsx ('picking a course the currently-selected learner is NOT enrolled in...') when running the full features/learning-time suite together (not reproducible running that test file alone, 5/5 clean). Further investigation showed this same test flakes intermittently (~1-in-4 to ~1-in-8) even on the fully unmodified base branch with no phase changes at all when run as part of the full features/learning-time suite (never when run alone) — this is a pre-existing cross-file test-isolation issue in this suite, NOT something introduced by this phase, but reintroducing the refactor is not worth the added noise for a purely cosmetic DRY change when the acceptance criteria are already fully met without it. LearningTimePage.tsx was left completely untouched by this phase (git diff is empty for that file). Flagging for a future cleanup phase: (a) the DRY refactor (swap to subjectEnrollsLearner) is still a good idea and low-risk once the underlying test flake is understood/fixed; (b) the pre-existing flake itself (features/learning-time/__tests__/integration/LearningTimePage.test.tsx:709, 'picking a course...NOT enrolled...') should get a root-cause pass — likely a promise-timing race between the course-change-triggered learner-switch effect and the getLessons mock resolution, per the 'test real data not timing races' principle — fix by making the derivation synchronous/deterministic rather than adding waits. No schema/API contract changes in this phase. phase-5 (recurring schedule) can rely on: NowCard owns the subjectId-prefill-from-course behavior; LearningTimePage owns the course-narrows-learner behavior; both already stable and tested."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-3-planner-dragdrop-and-combined-view",
+      "title": "Wave 2 — Weekly Planner drag-to-move + combined multi-child daily view",
+      "gated": false,
+      "status": "complete",
+      "model": "claude-sonnet-5",
+      "startedAt": "2026-08-03T00:00:00.000Z",
+      "completedAt": "2026-08-03T00:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "features/plan/front/components/WeekGrid.tsx",
+          "features/plan/front/components/WeeklyPlanner.tsx",
+          "features/plan/front/components/PlannerViewToggle.tsx",
+          "features/plan/__tests__/integration/WeeklyPlanner.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/plan/__tests__/integration/WeeklyPlanner.test.tsx features/plan/__tests__/integration/PlannerViewToggle.test.tsx features/plan/__tests__/integration/WeekGrid.test.tsx (3 suites, 49 passed)",
+          "npm test -- features/plan (29 suites, 322 passed, 20 skipped)",
+          "npm test (full suite: 254 suites, 2258 passed, 203 skipped)",
+          "npm run build (fails at /(shell)/about — same pre-existing dev-DB-unreachable issue documented in phase-1's and phase-2's notes and this plan's dbMigrationPolicy; TypeScript/lint/build compile passed before that page's static-generation timeout)"
+        ],
+        "notes": "SHARED MUTATION HOOK: extracted WeekGrid's drag-to-reschedule logic (handleDragStart/handleDragEnd/handleUndo + activeLesson/undoNotice state) into a new exported hook `useLessonReschedule(lessons, schoolDays, refreshLessons)` in features/plan/front/components/WeekGrid.tsx (also exports `RescheduleUndo`). WeekGrid itself now just calls this hook — its own behavior, droppable-cell id shape (`${childId}:${subjectId}:${dateStr}`), and all pre-existing WeekGrid tests are unchanged/still passing. WeeklyPlanner.tsx imports and calls the same hook, wraps its content in the same DndContext/DragOverlay pattern, and uses its own droppable cell id shape: `${learnerId}:${dateStr}` in 'By learner' mode (drop target scoped to that learner's day column) and `all:${dateStr}` in 'By day' mode (single combined column per date, any learner). Only `over.data.current.dateStr` is read by the shared handler, so the id-shape difference between the two views/components is irrelevant to the mutation path itself — this satisfies 'reuse the exact mutation path; do not build a second one.' DISPLAY-MODE TOGLE: added a new exported `DisplayModeToggle` component + `PlannerDisplayMode` ('byLearner' | 'byDay') type to features/plan/front/components/PlannerViewToggle.tsx, deliberately separate from the existing `PlannerViewToggle` (planner/matrix) tab component — it is a display-mode control *within* the Weekly Planner view, not a new top-level view, and does not touch PlannerViewToggle's existing planner/matrix/calendar tab semantics (PlannerViewToggle.test.tsx passes unchanged, no edits needed there). WeeklyPlanner.tsx owns the mode state (`useState<PlannerDisplayMode>('byLearner')`) and renders `<DisplayModeToggle>` itself — WeeklyPlannerPage.tsx (which composes WeeklyPlanner/WeekGrid/PlannerViewToggle) was NOT touched and did not need to be, since it was out of this phase's declared fileScope and the toggle is fully self-contained within WeeklyPlanner. 'By learner' (default) renders exactly the pre-existing stacked-per-learner layout (all existing WeeklyPlanner.test.tsx tests pass unmodified in content, only augmented with a household-context mock + dnd-kit mock + refreshLessons in the render helper, all required because WeeklyPlanner now calls useHousehold()/useLessonReschedule()). 'By day' groups every learner's lessons for a date into one column (`data-testid=\"planner-combined-view\"`, per-date containers `combined-day-lessons-<date>` / `combined-day-empty-<date>`), each lesson card showing a small circular learner-initial badge color-coded via the existing `learnerColor()` helper (`data-testid=\"combined-learner-badge-<lessonId>\"`) — no new color scheme was invented. LessonCard is now a single shared sub-component used by both modes (previously the by-learner-only inline JSX), so subject-eyebrow/chapter/status-badge/resource/homework/assessment-indicator markup and all their data-testids are byte-identical to before, just now also draggable via a grip handle. TEST-MOCKING NOTE for future workers: WeeklyPlanner.tsx now imports useHousehold and real @dnd-kit/core — any test importing WeeklyPlanner directly must mock '@/features/household/front/context' and '@dnd-kit/core' the same way WeekGrid.test.tsx already did (jsdom lacks the APIs dnd-kit's real sensors need, hence the manual mock, matching WeekGrid's pre-existing pattern) — WeeklyPlanner.test.tsx was updated accordingly. WeekGrid.tsx itself is otherwise behaviorally unchanged (only the internal refactor into the hook); PlannerViewToggle's existing two-view (Weekly Planner vs Planning Matrix) semantics are unchanged."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-4-badges-progress-and-image",
+      "title": "Wave 1 — Badge progress tracking + custom badge images (schema-touching)",
+      "gated": true,
+      "status": "complete",
+      "model": "claude-sonnet-5",
+      "startedAt": "2026-08-03T00:00:00.000Z",
+      "completedAt": "2026-08-03T16:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "db/schema.ts",
+          "db/migrations/0037_youthful_wrecker.sql",
+          "db/migrations/meta/0037_snapshot.json",
+          "db/migrations/meta/_journal.json",
+          "features/badges/types.ts",
+          "features/badges/server/repository.ts",
+          "features/badges/front/pages/BadgesPage.tsx",
+          "features/badges/__tests__/api/repository.test.ts",
+          "features/badges/__tests__/integration/BadgesPage.test.tsx",
+          "features/badges/front/services/api.ts",
+          "features/badges/api/routes/awards-id.ts",
+          "features/badges/api/routes/definitions.ts",
+          "features/badges/api/routes/definitions-id.ts"
+        ],
+        "testsRun": [
+          "npm test -- features/badges (8 of 10 suites run, 2 skipped [DB-integration suites without DATABASE_URL: the new features/badges/__tests__/api/repository.test.ts and pre-existing __tests__/integration/repository.db.test.ts], 87 passed, 15 skipped)",
+          "npm test (full suite: 254 of 280 suites, 2260 passed, 207 skipped — same shape as prior phases plus this phase's 2 new BadgesPage tests)",
+          "npx tsc --noEmit (no badges/db-schema-related errors; pre-existing unrelated errors in scripts/feedback-steward/** and features/feedback/__tests__/api/repository.test.ts, not touched by this phase)",
+          "npm run build (compiles and type-checks cleanly; fails only at /(shell)/about static-generation step — the documented pre-existing dev-Postgres-unreachable issue from phase-1/2/3 notes, not a regression)"
+        ],
+        "notes": "MIGRATION: db/migrations/0037_youthful_wrecker.sql — three additive nullable columns only: badge_awards.progress_current (integer), badge_awards.progress_target (integer), badge_definitions.image_url (text). No drops, no non-nullable additions, no unrelated tables — reviewed by hand before applying. dbMigrationPolicy followed exactly: dev Postgres is unreachable, so ran npm run db:backup:prod (backup at backups/prod-2026-08-03T15-32-45, manifest.json, 31 tables) BEFORE migrating, then npm run db:migrate:prod (which already implements the DATABASE_URL_PROD→DATABASE_URL remap via scripts/migrate-prod.ts / scripts/lib/prod-env.ts — reused as-is, no new remap script needed). Migration applied cleanly to PRODUCTION (dpg-d85140f7f7vs73fvdqhg-a.oregon-postgres.render.com). INVARIANTS CONFIRMED: post-migration `npm run db:generate` reports 'No schema changes, nothing to migrate' (schema and migrations agree, no further migration produced); `npm run db:status:prod` confirms repo journal 38 migrations (0000…0037_youthful_wrecker) = 38 applied on prod, 0 pending, no gap, all 31 schema tables reachable. PRODUCT DECISION (flagged in plan): hitting progressTarget does NOT auto-mark an award earned — progress is purely a manually-set/displayed value (progressCurrent/progressTarget on badge_awards), independent of the existing draft→submitted→verified→approved status lifecycle and approvedAt (isEarned). This matches the plan's explicit out-of-scope note (no automatic cross-feature aggregation) and was the simplest, least-surprising interpretation — a future phase could add an explicit 'mark earned' affordance when progress reaches target if desired, but this phase does not infer it automatically. SCOPE NOTE for next reader: this phase's fileScope in the plan JSON listed only db/schema.ts, db/migrations/, features/badges/types.ts, features/badges/server/repository.ts, features/badges/front/pages/BadgesPage.tsx, and the two named test files. To make imageUrl/progress actually flow end-to-end (compile + persist), I additionally touched features/badges/front/services/api.ts (BadgeDefinitionInput.imageUrl + new updateAwardProgress() method) and three route handlers (features/badges/api/routes/definitions.ts, definitions-id.ts, awards-id.ts) to pass the new fields through to the repository — these are thin, low-risk pass-through wiring with no new business logic, and were required for the feature to build/function; declining to touch them would have left the schema/repository layer unreachable from the UI. UI: BadgeDefinitionForm gained an 'Image URL' text input (aria-label 'Badge image URL'); BadgeEmblem now renders the image (object-cover, rounded, ring-colored by earned state) when definition.imageUrl is set, falling back to the existing Star/lucide icon otherwise — emblemKey remains the fallback identifier, unchanged. AwardManagement gained a new AwardProgress sub-component: shows 'current / target' text + a proportional bar (data-testid 'award-progress-bar', inline width%) only when progressTarget is set and >0, plus always-visible number inputs (aria-label 'Progress current'/'Progress target') and an 'Update progress' button wired to the new onUpdateProgress action → badgesApi.updateAwardProgress → PATCH /api/badges/awards/:id with {progressCurrent, progressTarget} (awards-id.ts PATCH now branches: a body with progressCurrent/progressTarget and no status goes to the new updateAwardProgress repository call; a body with status keeps the existing transition path — no existing behavior changed). BadgeDefinition.imageUrl and BadgeAward.progressCurrent/progressTarget were added as OPTIONAL fields (?:) in features/badges/types.ts specifically so the existing features/badges/__tests__/fixtures/mockBadges.ts fixtures (outside this phase's scope) did not need editing — they remain valid without the new fields, defaulting to undefined/null at render time."
+      },
+      "failureReason": null
+    },
+    {
+      "id": "phase-5-subjects-recurring-schedule",
+      "title": "Wave 3 (part 2) — Recurring per-class schedule on SubjectCourse (schema-touching)",
+      "gated": true,
+      "status": "complete",
+      "model": "claude-sonnet-5",
+      "startedAt": "2026-08-03T17:00:00.000Z",
+      "completedAt": "2026-08-03T18:00:00.000Z",
+      "outputs": {
+        "filesChanged": [
+          "db/schema.ts",
+          "db/migrations/0038_mean_microchip.sql",
+          "db/migrations/meta/0038_snapshot.json",
+          "db/migrations/meta/_journal.json",
+          "features/subjects/types.ts",
+          "features/subjects/server/repository.ts",
+          "features/subjects/front/components/SubjectForm.tsx",
+          "features/subjects/__tests__/api/repository.test.ts",
+          "features/subjects/__tests__/integration/SubjectForm.test.tsx",
+          "features/subjects/api/routes/subjects.ts",
+          "features/subjects/api/routes/subject.ts",
+          "features/subjects/front/services/api.ts",
+          "features/learning-time/front/components/QuickStartByCourseList.tsx",
+          "features/learning-time/__tests__/integration/LearningTimePage.test.tsx"
+        ],
+        "testsRun": [
+          "npx jest features/subjects features/learning-time (15 of 19 suites run, 4 skipped, 140 passed, 28 skipped — the 4 skipped suites are DB-integration suites gated on DATABASE_URL, same as prior phases)",
+          "npm test (full suite: 254 of 280 suites, 2265 passed, 210 skipped — no regressions vs. phase-4's baseline)",
+          "npx tsc --noEmit (no new errors from any file this phase touched; pre-existing unrelated errors only — features/plan/__tests__ SubjectCourse.learnerIds fixture gaps and scripts/feedback-steward/** — confirmed identical to phase-4's documented baseline)",
+          "npm run build (compiles/type-checks cleanly; fails only at /(shell)/about static-generation step — the same pre-existing dev-Postgres-unreachable issue documented in phase-1/2/3/4 notes, not a regression)"
+        ],
+        "notes": "OWNERSHIP CONFIRMED: features/subjects/ (SubjectCourse), not features/schedule/. Read features/schedule/server/service.ts in full first — it only builds/reflows a single DAY's timeline (buildDailySchedule/reflow) from an already-ordered LessonTask[] list; it has no concept of a per-course weekly recurrence pattern and no per-course storage at all. SubjectCourse in features/subjects/types.ts is the only existing home for course-level configuration (category, level, instructorName, schoolYearId, etc.), so recurringSchedule was added there, matching the plan's default. SCHEMA: added subjects.recurring_schedule (nullable jsonb) — migration db/migrations/0038_mean_microchip.sql, single additive line: `ALTER TABLE \"subjects\" ADD COLUMN \"recurring_schedule\" jsonb;`. Reviewed by hand before applying — no drops, no non-nullable additions, no unrelated tables. TYPE SHAPE: `RecurringScheduleBlock { daysOfWeek: DayOfWeek[]; startTime: string; endTime: string }` in features/subjects/types.ts (reused the existing `DayOfWeek` type from features/lib/types.ts rather than inventing a new one), `SubjectCourse.recurringSchedule?: RecurringScheduleBlock[]`. startTime/endTime are 24-hour 'HH:MM' strings — same contract as LessonTask.scheduledStartTime/scheduledEndTime (phase-1's TimePicker12h convention), so no new time-format convention was introduced. MIGRATION PROCEDURE MIRRORED FROM PHASE-4: dev Postgres unreachable (per dbMigrationPolicy) → ran `npm run db:backup:prod` before migrating, then `npm run db:migrate:prod` (scripts/migrate-prod.ts / scripts/lib/prod-env.ts DATABASE_URL_PROD→DATABASE_URL remap, reused as-is). GOTCHA FOUND (new, not present in phase-4's notes — flagging for future schema-touching phases): `npm run db:backup:prod` selects columns via db/schema.ts, so running it AFTER editing schema.ts to add a not-yet-migrated column fails to back up the affected table (subjects errored out, 0 rows captured) because prod doesn't have the column yet. Fixed by `git stash push -- db/schema.ts`, re-running the backup (clean run: subjects 48 rows, all 31 tables succeeded, backups/prod-2026-08-03T15-47-12), then `git stash pop` to restore the schema change before generating/applying the migration. Future schema-touching phases should back up BEFORE editing schema.ts, or stash schema.ts for the backup step, to avoid a silently incomplete backup of exactly the table being changed. INVARIANTS CONFIRMED: post-migration `npm run db:generate` reports 'No schema changes, nothing to migrate'; `npm run db:status:prod` confirms repo journal 39 migrations (0000…0038_mean_microchip) = 39 applied on prod, 0 pending, no gap, 31/31 schema tables reachable. APPLIED TO PRODUCTION (dpg-d85140f7f7vs73fvdqhg-a.oregon-postgres.render.com) — not pending. UI: SubjectForm.tsx gained a button toggle (data-testid recurring-schedule-toggle) — deliberately a `<button aria-pressed>`, not a checkbox, because the existing SubjectForm.test.tsx has assertions on exact checkbox counts (`getByRole('checkbox')` singular, `getAllByRole('checkbox')` toHaveLength(2)) that a new checkbox would have broken; the block editor (data-testid recurring-schedule-editor, recurring-block-<i>, recurring-day-<Day>-<i>, recurring-add-block, recurring-remove-block-<i>) only renders once toggled on, so it never affects those pre-existing counts. Only complete blocks (>=1 day + both times set) are included in the submitted payload — partial/empty blocks are silently dropped, per the 'no auto-generation, purely a stored value' scope. QUICK-START WIRING (scope note, same class of necessary pass-through as phase-4's routes/services wiring): the acceptance criterion 'next scheduled line in the quick-start list alongside the existing duration' is rendered by features/learning-time/front/components/QuickStartByCourseList.tsx, which is NOT in this phase's declared fileScope (only LearningTimePage.tsx was listed) but is the actual owner of the quick-start UI (rendered from NowCard, which phase-2's notes identified as owning the course-first/subjectId-prefill behavior — NowCard itself did not need touching since it already forwards the full `allSubjects: SubjectCourse[]` array, which now carries recurringSchedule for free). Added a pure `nextScheduledOccurrence(schedule, now)` helper (soonest upcoming {day,time} across all blocks, today-if-not-yet-passed else next matching day) plus a small local `formatTime12` (mirroring but not importing ScheduleTimeline.tsx's non-exported version, consistent with phase-1's precedent of a self-contained per-file time formatter) directly in QuickStartByCourseList.tsx — no other consumer needed changes. Also touched features/subjects/api/routes/subjects.ts, subject.ts, and features/subjects/front/services/api.ts as thin pass-through wiring (rowToSubject mapping + POST/PUT body field) so recurringSchedule actually flows create/update end-to-end from the UI — same justified out-of-declared-fileScope necessity as phase-4's route/service wiring. FOR FUTURE WORK: lesson-instance auto-generation from recurringSchedule remains explicitly out of scope (would touch features/resources/server/service.ts, per the plan)."
+      },
+      "failureReason": null
+    }
+  ]
+}
