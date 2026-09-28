@@ -210,6 +210,28 @@ describe('NAV_MODULES (module config)', () => {
   })
 })
 
+describe('Learning Time nav entry (item 1 — orphaned feature)', () => {
+  test('NAV_ITEMS includes a learning-time entry pointing at /learning-time', () => {
+    const item = NAV_ITEMS.find((i) => i.id === 'learning-time')
+    expect(item).toBeDefined()
+    expect(item?.href).toBe('/learning-time')
+    expect(item?.module).toBe('Planbook')
+  })
+
+  test('/learning-time resolves as active for the learning-time nav item', () => {
+    const item = NAV_ITEMS.find((i) => i.id === 'learning-time')!
+    expect(isNavItemActive('/learning-time', item)).toBe(true)
+    expect(isNavItemActive('/plan', item)).toBe(false)
+  })
+
+  test('planbook module includes learning-time so the sidebar actually renders it', () => {
+    const planbook = NAV_MODULES.find((m) => m.id === 'planbook')!
+    expect(planbook.itemIds).toContain('learning-time')
+    const ids = getModuleItems(planbook).map((i) => i.id)
+    expect(ids).toContain('learning-time')
+  })
+})
+
 describe('Grade-discoverability nav label', () => {
   test('grades-progress item is now labeled Portfolio', () => {
     const item = NAV_ITEMS.find(i => i.id === 'grades-progress')!
