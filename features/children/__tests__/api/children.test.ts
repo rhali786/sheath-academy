@@ -16,11 +16,16 @@ jest.mock('@/features/household/server/repository', () => ({
   getUserById: jest.fn(),
   getMembership: jest.fn(),
   addMember: jest.fn(),
+  reactivateMember: jest.fn(),
 }))
 
 jest.mock('@/features/auth/server/repository', () => ({
   createLearnerCredentialUser: jest.fn(),
   getUserByIdentifier: jest.fn(),
+  getUserByEmail: jest.fn(),
+  updateUserUsername: jest.fn(),
+  updateUserPassword: jest.fn(),
+  deactivateUserCredentials: jest.fn(),
 }))
 
 jest.mock('@/features/auth/server/password', () => ({
@@ -34,7 +39,7 @@ jest.mock('@/features/admin-metrics/server/instrument', () => ({
 import { GET, POST } from '@/features/children/api/routes/children'
 import { listLearners, createLearner, updateLearner } from '@/features/children/server/repository'
 import { getUserById, getMembership, addMember } from '@/features/household/server/repository'
-import { createLearnerCredentialUser, getUserByIdentifier } from '@/features/auth/server/repository'
+import { createLearnerCredentialUser, getUserByIdentifier, getUserByEmail, deactivateUserCredentials } from '@/features/auth/server/repository'
 import { hashPassword } from '@/features/auth/server/password'
 
 const mockListLearners = jest.mocked(listLearners)
@@ -45,6 +50,8 @@ const mockGetMembership = jest.mocked(getMembership)
 const mockAddMember = jest.mocked(addMember)
 const mockCreateLearnerCredentialUser = jest.mocked(createLearnerCredentialUser)
 const mockGetUserByIdentifier = jest.mocked(getUserByIdentifier)
+const mockGetUserByEmail = jest.mocked(getUserByEmail)
+const mockDeactivateUserCredentials = jest.mocked(deactivateUserCredentials)
 const mockHashPassword = jest.mocked(hashPassword)
 
 const NEW_LEARNER_ROW = {
@@ -75,6 +82,12 @@ function jsonReq(body: unknown) {
 beforeEach(() => {
   jest.clearAllMocks()
   mockHashPassword.mockResolvedValue('hashed_pw')
+  // Explicit defaults — clearAllMocks() clears calls but keeps implementations,
+  // so without these a previous test's mockResolvedValue leaks into the next.
+  mockGetUserByIdentifier.mockResolvedValue(null)
+  mockGetUserByEmail.mockResolvedValue(null)
+  mockDeactivateUserCredentials.mockResolvedValue(undefined)
+  mockAddMember.mockResolvedValue({} as never)
 })
 
 describe('GET /api/children/children', () => {
@@ -136,5 +149,38 @@ describe('POST /api/children/children', () => {
     const res = await POST(jsonReq({ name: 'Sara Yusuf', gradeLabel: 'Grade 3', learnerLoginEnabled: true }))
     expect(res.status).toBe(400)
     expect(mockCreateLearner).not.toHaveBeenCalled()
+  })
+
+  // Item 5 — the create path could claim a username and then silently fail to
+  // link it (`row = (await updateLearner(...)) ?? row` swallowed the failure and
+  // still returned 201). That left the learner showing "Not enabled" with its
+  // username permanently taken by an unreachable user row.
+  it('archives the created credential user when linking it to the new learner fails, instead of reporting success', async () => {
+    mockCreateLearner.mockResolvedValue(NEW_LEARNER_ROW as never)
+    mockCreateLearnerCredentialUser.mockResolvedValue({ id: 'user_sara' } as never)
+    mockUpdateLearner.mockResolvedValue(null) // link write matched no row
+
+    const res = await POST(jsonReq({
+      name: 'Sara Yusuf', gradeLabel: 'Grade 3',
+      learnerLoginEnabled: true, username: 'sara.student', password: 'pw12345',
+    }))
+
+    expect(res.status).not.toBe(201)
+    expect(res.status).toBeGreaterThanOrEqual(400)
+    expect(mockDeactivateUserCredentials).toHaveBeenCalledWith('user_sara')
+  })
+
+  it('archives the created credential user when addMember fails', async () => {
+    mockCreateLearner.mockResolvedValue(NEW_LEARNER_ROW as never)
+    mockCreateLearnerCredentialUser.mockResolvedValue({ id: 'user_sara' } as never)
+    mockAddMember.mockRejectedValue(new Error('membership insert failed'))
+
+    const res = await POST(jsonReq({
+      name: 'Sara Yusuf', gradeLabel: 'Grade 3',
+      learnerLoginEnabled: true, username: 'sara.student', password: 'pw12345',
+    }))
+
+    expect(res.status).toBeGreaterThanOrEqual(400)
+    expect(mockDeactivateUserCredentials).toHaveBeenCalledWith('user_sara')
   })
 })

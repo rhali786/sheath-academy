@@ -80,6 +80,14 @@ export const NAV_ITEMS: NavItem[] = [
     activePrefixes: ['/people'],
   },
   { id: 'resources', label: 'Resources', href: '/resources', section: 'main', module: 'Planbook' },
+  {
+    id: 'learning-time',
+    label: 'Learning Time',
+    href: '/learning-time',
+    section: 'main',
+    module: 'Planbook',
+    activePrefixes: ['/learning-time'],
+  },
   { id: 'quran', label: 'Quran', href: '/quran', section: 'main', module: 'Planbook' },
   {
     id: 'messages',
@@ -124,7 +132,7 @@ export const NAV_MODULES: NavModuleConfig[] = [
     id: 'planbook',
     label: 'Planbook',
     defaultHref: '/plan/schedule',
-    itemIds: ['calendar', 'lesson-planner', 'courses', 'quran', 'resources'],
+    itemIds: ['calendar', 'lesson-planner', 'courses', 'quran', 'resources', 'learning-time'],
     section: 'main',
   },
   {

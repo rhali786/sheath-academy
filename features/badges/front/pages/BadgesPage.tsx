@@ -543,6 +543,7 @@ export function BadgesPage() {
     setPlatformBadgesEnabled(next)
     await badgesApi.setSettings(next)
     setSuccess('Settings updated')
+    await reloadCollection()
   }
 
   const definitionActions: DefinitionActions = {

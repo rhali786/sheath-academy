@@ -5,12 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { plannerApi } from '@/features/plan/front/services/api'
 import { LessonTaskForm, type LessonFormData } from '@/features/plan/front/components/LessonTaskForm'
 import { LessonTaskList } from '@/features/plan/front/components/LessonTaskList'
-import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
+import type { LessonTask } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { useHousehold } from '@/features/household/front/context'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { TodayLessonCard } from '@/features/plan/front/components/TodayLessonCard'
+import { matchesStatusFilter, type LessonStatusFilter } from '@/features/plan/utils/lessonStatusFilter'
 
 function todayLocal(): string {
   const d = new Date()
@@ -32,7 +33,7 @@ export function LessonsPage() {
 
   // Filters
   const [filterChildId, setFilterChildId] = useState<string>('')
-  const [filterStatus, setFilterStatus] = useState<LessonTaskStatus | ''>('')
+  const [filterStatus, setFilterStatus] = useState<LessonStatusFilter>('')
   const [dateSort, setDateSort] = useState<DateSort>('desc')
   const [showForm, setShowForm] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
@@ -84,9 +85,10 @@ export function LessonsPage() {
   }, [])
 
   const filteredLessons = useMemo(() => {
+    const today = todayLocal()
     let list = lessons
     if (filterChildId) list = list.filter(l => l.childId === filterChildId)
-    if (filterStatus)  list = list.filter(l => l.status === filterStatus)
+    list = list.filter(l => matchesStatusFilter(l, filterStatus, today))
     list = [...list].sort((a, b) => {
       const cmp = a.dueDate.localeCompare(b.dueDate)
       return dateSort === 'asc' ? cmp : -cmp
@@ -176,11 +178,12 @@ export function LessonsPage() {
             {/* Status filter */}
             <select
               value={filterStatus}
-              onChange={e => setFilterStatus(e.target.value as LessonTaskStatus | '')}
+              onChange={e => setFilterStatus(e.target.value as LessonStatusFilter)}
               className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
             >
               <option value="">All statuses</option>
               <option value="not_started">Not started</option>
+              <option value="overdue">Overdue</option>
               <option value="completed">Completed</option>
               <option value="skipped">Skipped</option>
             </select>

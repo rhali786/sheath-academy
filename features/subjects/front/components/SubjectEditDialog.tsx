@@ -111,79 +111,87 @@ export function SubjectEditDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="subject-edit-title"
-        className="w-full max-w-md rounded-xl bg-white shadow-lg border border-slate-200 p-6"
+        className="w-full max-w-md max-h-[90vh] flex flex-col rounded-xl bg-white shadow-lg border border-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="subject-edit-title" className="text-lg font-semibold text-slate-900 mb-4">
+        <h2 id="subject-edit-title" className="shrink-0 text-lg font-semibold text-slate-900 px-6 pt-6 pb-4">
           Edit course
         </h2>
-        <form onSubmit={handleSubmit} className="space-y-3" data-testid="subject-edit-form">
-          <div>
-            <label htmlFor="edit-subject-name" className="block text-xs font-medium text-slate-600 mb-1">
-              Course name
-            </label>
-            <input
-              id="edit-subject-name"
-              type="text"
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={120}
-            />
-          </div>
-          <div>
-            <p className="block text-xs font-medium text-slate-600 mb-1.5">Learner(s)</p>
-            <div className="flex flex-wrap gap-2" data-testid="edit-subject-learners">
-              {childrenList.map((c) => (
-                <label key={c.id} className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedLearnerIds.includes(c.id)}
-                    onChange={() => toggleLearner(c.id)}
-                    className="rounded"
-                  />
-                  <span className="text-sm text-slate-700">{c.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label htmlFor="edit-subject-category" className="block text-xs font-medium text-slate-600 mb-1">
-              Category
-            </label>
-            <select
-              id="edit-subject-category"
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
-              value={category}
-              onChange={(e) => setCategory(e.target.value as SubjectCourseCategory)}
-            >
-              {SUBJECT_COURSE_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {formatCategory(c)}
-                </option>
-              ))}
-            </select>
-          </div>
-          {resources.length > 0 && (
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0" data-testid="subject-edit-form">
+          <div
+            className="overflow-y-auto flex-1 min-h-0 px-6 space-y-3"
+            data-testid="subject-edit-scroll-body"
+          >
             <div>
-              <p className="block text-xs font-medium text-slate-600 mb-1.5">Linked resources</p>
-              <div className="flex flex-col gap-2" data-testid="edit-subject-resources">
-                {resources.map((r) => (
-                  <label key={r.id} className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+              <label htmlFor="edit-subject-name" className="block text-xs font-medium text-slate-600 mb-1">
+                Course name
+              </label>
+              <input
+                id="edit-subject-name"
+                type="text"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={120}
+              />
+            </div>
+            <div>
+              <p className="block text-xs font-medium text-slate-600 mb-1.5">Learner(s)</p>
+              <div className="flex flex-wrap gap-2" data-testid="edit-subject-learners">
+                {childrenList.map((c) => (
+                  <label key={c.id} className="flex items-center gap-1.5 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={selectedResourceIds.includes(r.id)}
-                      onChange={() => toggleResource(r.id)}
+                      checked={selectedLearnerIds.includes(c.id)}
+                      onChange={() => toggleLearner(c.id)}
                       className="rounded"
                     />
-                    <span className="text-sm text-slate-700">{r.title}</span>
+                    <span className="text-sm text-slate-700">{c.name}</span>
                   </label>
                 ))}
               </div>
             </div>
-          )}
-          {error && <p className="text-xs text-red-600">{error}</p>}
-          <div className="flex justify-end gap-2 pt-2">
+            <div>
+              <label htmlFor="edit-subject-category" className="block text-xs font-medium text-slate-600 mb-1">
+                Category
+              </label>
+              <select
+                id="edit-subject-category"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                value={category}
+                onChange={(e) => setCategory(e.target.value as SubjectCourseCategory)}
+              >
+                {SUBJECT_COURSE_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {formatCategory(c)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {resources.length > 0 && (
+              <div>
+                <p className="block text-xs font-medium text-slate-600 mb-1.5">Linked resources</p>
+                <div className="flex flex-col gap-2 pb-3" data-testid="edit-subject-resources">
+                  {resources.map((r) => (
+                    <label key={r.id} className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+                      <input
+                        type="checkbox"
+                        checked={selectedResourceIds.includes(r.id)}
+                        onChange={() => toggleResource(r.id)}
+                        className="rounded"
+                      />
+                      <span className="text-sm text-slate-700">{r.title}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            {error && <p className="text-xs text-red-600 pb-3">{error}</p>}
+          </div>
+          <div
+            className="shrink-0 flex justify-end gap-2 px-6 py-4 border-t border-slate-200"
+            data-testid="subject-edit-footer"
+          >
             <button
               type="button"
               className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"
