@@ -15,23 +15,20 @@ export function ChildList() {
   const [archiveConfirm, setArchiveConfirm] = useState<{ id: string; name: string } | null>(null)
   const [archiveSuccess, setArchiveSuccess] = useState<{ id: string; name: string } | null>(null)
 
+  // These deliberately do NOT swallow errors. Swallowing them made ChildForm's
+  // `await onSubmit(...)` look successful, so it wiped the form and flipped the
+  // "Allow learner to sign in" checkbox back off with no message shown —
+  // feedback item 5's "clicked enable, saved, still shows disabled". Re-throwing
+  // lets ChildForm's own catch render the server's reason.
   async function handleCreateChild(data: Parameters<typeof createChild>[0]) {
-    try {
-      await createChild(data)
-      setIsFormOpen(false)
-    } catch (err) {
-      console.error('Failed to create child:', err)
-    }
+    await createChild(data)
+    setIsFormOpen(false)
   }
 
   async function handleUpdateChild(data: Parameters<typeof updateChild>[1]) {
     if (!editingChild) return
-    try {
-      await updateChild(editingChild.id, data)
-      setEditingChild(null)
-    } catch (err) {
-      console.error('Failed to update child:', err)
-    }
+    await updateChild(editingChild.id, data)
+    setEditingChild(null)
   }
 
   function handleArchiveChild(child: StudentProfile) {

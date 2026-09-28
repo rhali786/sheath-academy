@@ -3,14 +3,10 @@ import { NextResponse } from 'next/server'
 import type { ApiResponse, StudentProfile } from '@/features/lib/types'
 import { listLearners, listAllLearners, createLearner } from '@/features/children/server/repository'
 import type { LearnerRow } from '@/features/children/server/repository'
-import { getUserById, getMembership, addMember } from '@/features/household/server/repository'
-import { createLearnerCredentialUser, getUserByIdentifier } from '@/features/auth/server/repository'
-import { hashPassword } from '@/features/auth/server/password'
-
-/** Synthesized email for username-only learner logins — see child.ts for rationale. */
-function placeholderLearnerEmail(learnerId: string): string {
-  return `learner.${learnerId}@no-email.local`
-}
+import { getUserById, getMembership } from '@/features/household/server/repository'
+import { getUserByIdentifier, deleteUser } from '@/features/auth/server/repository'
+import { provisionLearnerLogin } from '@/features/children/server/learnerLogin'
+import { logger } from '@/features/lib/logger'
 
 async function learnerRowToStudentProfile(row: LearnerRow): Promise<StudentProfile> {
   let username = ''
@@ -102,16 +98,38 @@ export async function POST(request: Request): Promise<NextResponse> {
     })
 
     if (learnerLoginEnabled && trimmedUsername && password) {
-      const passwordHash = await hashPassword(password.trim())
-      const credUser = await createLearnerCredentialUser({
-        name: name.trim(),
-        email: placeholderLearnerEmail(row.id),
+      const provisioned = await provisionLearnerLogin({
+        householdId,
+        learnerId: row.id,
+        learnerName: name.trim(),
         username: trimmedUsername,
-        passwordHash,
+        password,
+        existingUserId: null,
       })
-      await addMember(householdId, credUser.id, 'learner')
+
+      if (!provisioned.ok) {
+        return NextResponse.json(
+          { status: 'error', data: null, message: provisioned.message, timestamp: new Date().toISOString() },
+          { status: provisioned.status },
+        )
+      }
+
       const { updateLearner } = await import('@/features/children/server/repository')
-      row = (await updateLearner(row.id, householdId, { userId: credUser.id })) ?? row
+      const linked = await updateLearner(row.id, householdId, { userId: provisioned.userId })
+      if (!linked) {
+        // Previously this fell back to `?? row` and still returned 201 — the
+        // learner showed "Not enabled" while its username stayed claimed by an
+        // unreachable user row, permanently 409-ing every retry. Undo the
+        // credential user and report the failure; the learner profile itself is
+        // kept so the parent can enable login from Edit.
+        if (provisioned.createdUserId) await deleteUser(provisioned.createdUserId)
+        logger.error({ householdId, learnerId: row.id }, 'POST children: link write matched no row — rolled back credential user')
+        return NextResponse.json(
+          { status: 'error', data: null, message: 'Learner was created, but sign-in could not be set up. Edit the learner to try again.', timestamp: new Date().toISOString() },
+          { status: 500 },
+        )
+      }
+      row = linked
     }
 
     const { trackLearnerCreated } = await import('@/features/admin-metrics/server/instrument')

@@ -147,6 +147,18 @@ export async function deactivateUserCredentials(userId: string): Promise<void> {
     .where(eq(users.id, userId))
 }
 
+/**
+ * Hard-deletes a user row. Narrow purpose: compensating a *failed* learner-login
+ * provision (see features/children/server/learnerLogin.ts). Creating the
+ * credential user claims its username and its UNIQUE placeholder email, so if a
+ * later step of the same enable fails we must remove the row — otherwise the
+ * username stays claimed by a user nothing links to, and every later attempt
+ * 409s forever. Do not use this to remove real accounts.
+ */
+export async function deleteUser(userId: string): Promise<void> {
+  await getDb().delete(users).where(eq(users.id, userId))
+}
+
 /** Stamps lastLoginAt for the given email. No-op if the user doesn't exist yet. */
 export async function updateUserLastLogin(email: string): Promise<void> {
   await getDb()
