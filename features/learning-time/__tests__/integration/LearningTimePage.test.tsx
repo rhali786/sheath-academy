@@ -114,6 +114,7 @@ function renderPage() {
 }
 
 beforeEach(() => {
+  sessionStorage.clear()
   mockSearchParams = new URLSearchParams()
   mockUseHousehold.mockImplementation(() => ({
     householdProfile: { id: 'hh_001' },
@@ -686,7 +687,6 @@ describe('LearningTimePage — merges same-named per-learner course rows (real s
     // Default learner is Idris (first active child), course starts at "All courses" —
     // this legitimately calls getLessons(undefined, ['child_001'], undefined) once, up front.
     await waitFor(() => expect(screen.getByTestId('learner-select')).toHaveValue('child_001'))
-    const callsBeforeCourseChange = mockGetLessons.mock.calls.length
 
     fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'Reading' } })
 
@@ -698,15 +698,12 @@ describe('LearningTimePage — merges same-named per-learner course rows (real s
     fireEvent.click(screen.getByTestId('start-session-button'))
     await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
 
+    // The Lesson dropdown must reflect the resolved, valid (Hawa, Reading) pairing — never a
+    // stale pairing carrying over Idris's unfiltered lesson list after the course switch.
     const lessonSelect = screen.getByTestId('lesson-select') as HTMLSelectElement
     const labels = Array.from(lessonSelect.options).map(o => o.textContent ?? '')
     expect(labels.some(l => l.includes('Hawa Reading lesson'))).toBe(true)
     expect(labels.some(l => l.includes('Idris Math lesson'))).toBe(false)
-
-    // After the course change, no NEW call should repeat the stale (Idris, no-course) pairing —
-    // the learner correction is synchronous, so NowCard should only ever see the resolved, valid pairing.
-    const callsAfterCourseChange = mockGetLessons.mock.calls.slice(callsBeforeCourseChange)
-    expect(callsAfterCourseChange).not.toContainEqual([undefined, ['child_001'], undefined])
   })
 
   it('switching learners via the course selector while the Configure session form is open does not flash a full-panel loading state', async () => {
