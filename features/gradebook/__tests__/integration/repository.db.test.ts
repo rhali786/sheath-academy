@@ -7,7 +7,7 @@
  */
 
 import { getDb, closeDb } from '@/features/lib/server/db'
-import { users, households, learners, subjects, scores, gradingScales, aggregationRules } from '@/db/schema'
+import { users, households, learners, subjects, subjectLearners, scores, gradingScales, aggregationRules } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import {
   createScore, listScores, listGradebookSummaries, updateScore, deleteScore,
@@ -197,6 +197,39 @@ describeDb('gradebook repository (real DB)', () => {
       const subjectResult = learnerSummary!.subjects.find(s => s.subjectId === ids.sid)
       expect(subjectResult).toBeDefined()
       expect(subjectResult!.pointsAverage).toBeCloseTo(90, 1)
+    }, DB_TIMEOUT_MS)
+  })
+
+  describe('listGradebookSummaries — co-learner scoping (items 14, 23)', () => {
+    const ids = testIds('colearner')
+    const secondLearnerId = `${ids.lid}_b`
+
+    beforeAll(async () => {
+      await insertFixtures(ids) // creates one subject (ids.sid), primary learnerId = ids.lid
+      const db = getDb()
+      const now = new Date()
+      await db.insert(learners).values({
+        id: secondLearnerId, householdId: ids.hid, name: 'Second Learner', createdAt: now, updatedAt: now,
+      }).onConflictDoNothing()
+      // Enroll both learners on the same course via the join table, mirroring
+      // what SubjectEditDialog's Learner(s) multi-select does for a shared course.
+      await db.insert(subjectLearners).values([
+        { subjectId: ids.sid, learnerId: ids.lid },
+        { subjectId: ids.sid, learnerId: secondLearnerId },
+      ]).onConflictDoNothing()
+    })
+    afterAll(async () => {
+      const db = getDb()
+      await db.delete(subjectLearners).where(eq(subjectLearners.subjectId, ids.sid))
+      await db.delete(learners).where(eq(learners.id, secondLearnerId))
+      await cleanupFixtures(ids)
+    })
+
+    it('a course shared via subject_learners with a second learner appears in that learner\'s summary too, not just the primary learnerId column', async () => {
+      const summaries = await listGradebookSummaries(ids.hid)
+      const secondSummary = summaries.find(s => s.learnerId === secondLearnerId)
+      expect(secondSummary).toBeDefined()
+      expect(secondSummary!.subjects.map(s => s.subjectId)).toContain(ids.sid)
     }, DB_TIMEOUT_MS)
   })
 
