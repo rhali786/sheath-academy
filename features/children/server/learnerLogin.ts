@@ -5,7 +5,7 @@ import {
   updateUserPassword,
   getUserByIdentifier,
   getUserByEmail,
-  deleteUser,
+  deactivateUserCredentials,
 } from '@/features/auth/server/repository'
 import { hashPassword } from '@/features/auth/server/password'
 import { logger } from '@/features/lib/logger'
@@ -39,9 +39,9 @@ export type ProvisionLearnerLoginResult =
       /** The credential user the learner should be linked to. */
       userId: string
       /**
-       * Non-null only when this call *created* the user. The caller must
-       * `deleteUser(createdUserId)` if it then fails to link it to the learner —
-       * see the compensation note below.
+       * Non-null only when this call *created* the user. The caller must archive
+       * it (clear its credentials, deactivate its membership) if it then fails to
+       * link it to the learner — see the compensation note below.
        */
       createdUserId: string | null
     }
@@ -66,10 +66,15 @@ export type ProvisionLearnerLoginResult =
  *      membership reactivated) instead of colliding with it. This unsticks
  *      households already trapped, and works whether the parent retries with the
  *      same username or a different one.
- *   2. **Compensated.** If `addMember` fails right after creating the user, the
- *      user row is deleted before rethrowing, so a fresh orphan is never left
- *      behind. The caller owns the same duty for the final link step and is told
- *      what to clean up via `createdUserId`.
+ *   2. **Compensated, non-destructively.** If `addMember` fails right after the
+ *      user is created, the half-provisioned credential is *archived* — its
+ *      password hash is cleared via `deactivateUserCredentials`, the same
+ *      mechanism the "disable learner login" path uses — rather than deleted. No
+ *      row is ever destroyed. The archived row cannot sign in, and property (1)
+ *      is what makes it reclaimable: the next attempt finds it by placeholder
+ *      email and adopts it, so archiving does not re-create the 409 trap. The
+ *      caller owns the same duty for the final link step and is told what to
+ *      stand down via `createdUserId`.
  */
 export async function provisionLearnerLogin(
   input: ProvisionLearnerLoginInput,
@@ -125,11 +130,13 @@ export async function provisionLearnerLogin(
   try {
     await addMember(householdId, credUser.id, 'learner')
   } catch (err) {
-    // Undo the user we just created rather than leaving its username claimed.
-    await deleteUser(credUser.id)
+    // Stand the half-provisioned credential down instead of deleting it: clearing
+    // the hash blocks sign-in, the row survives for audit, and the next attempt
+    // adopts it by placeholder email.
+    await deactivateUserCredentials(credUser.id)
     logger.error(
       { householdId, learnerId, userId: credUser.id, err },
-      'provisionLearnerLogin: addMember failed — rolled back the new credential user',
+      'provisionLearnerLogin: addMember failed — archived the new credential user',
     )
     throw err
   }

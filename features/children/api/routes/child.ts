@@ -13,7 +13,7 @@ import { archiveSubjectsByLearner } from '@/features/subjects/server/repository'
 import { guardOwnership } from '@/features/auth/server/routeOwnership'
 import { notFoundResponse } from '@/features/auth/server/context'
 import { getUserById, getMembership, deactivateMember } from '@/features/household/server/repository'
-import { deactivateUserCredentials, deleteUser } from '@/features/auth/server/repository'
+import { deactivateUserCredentials } from '@/features/auth/server/repository'
 import { provisionLearnerLogin } from '@/features/children/server/learnerLogin'
 import { logger } from '@/features/lib/logger'
 
@@ -127,12 +127,22 @@ export async function PUT(id: string, request: Request): Promise<NextResponse> {
       }
     }
 
+    // Stands a credential user created by this request back down when the link
+    // never landed. Non-destructive: clearing the hash + deactivating the
+    // membership is the same thing "disable learner login" does, so no row is
+    // destroyed and the next attempt can adopt it (see learnerLogin.ts).
+    async function archiveUnlinkedCredential() {
+      if (!createdUserId) return
+      await deactivateUserCredentials(createdUserId)
+      await deactivateMember(householdId, createdUserId)
+    }
+
     let updated
     try {
       updated = await updateLearner(id, householdId, patch)
     } catch (err) {
-      if (createdUserId) await deleteUser(createdUserId)
-      logger.error({ householdId, learnerId: id, err }, 'PUT child: link write failed — rolled back new credential user')
+      await archiveUnlinkedCredential()
+      logger.error({ householdId, learnerId: id, err }, 'PUT child: link write failed — archived new credential user')
       return NextResponse.json(
         { status: 'error', data: null, message: 'Could not save changes. Please try again.', timestamp: new Date().toISOString() },
         { status: 500 },
@@ -140,9 +150,7 @@ export async function PUT(id: string, request: Request): Promise<NextResponse> {
     }
 
     if (!updated) {
-      // The credential user exists but nothing links to it — remove it so the
-      // username is not permanently claimed by an unreachable row.
-      if (createdUserId) await deleteUser(createdUserId)
+      await archiveUnlinkedCredential()
       return notFoundResponse('Student profile not found')
     }
 

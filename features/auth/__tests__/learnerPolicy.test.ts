@@ -112,87 +112,143 @@ describe('isLearnerReadAllowed — deny-by-default', () => {
 describe('enforceLearnerPolicy', () => {
   it('leaves non-learner roles completely untouched', async () => {
     for (const role of ['owner', 'member', 'teacher', undefined]) {
-      const res = await enforceLearnerPolicy(
+      const outcome = await enforceLearnerPolicy(
         learnerCtx({ role }),
         ['gradebook', 'summaries'],
         req('/api/gradebook/summaries'),
       )
-      expect(res).toBeNull()
+      expect(outcome.allowed).toBe(true)
     }
     expect(mockGetLearnerByUserId).not.toHaveBeenCalled()
   })
 
   it('403s a learner reading household-wide gradebook summaries', async () => {
-    const res = await enforceLearnerPolicy(learnerCtx(), ['gradebook', 'summaries'], req('/api/gradebook/summaries'))
-    expect(res).not.toBeNull()
-    expect(res!.status).toBe(403)
+    const outcome = await enforceLearnerPolicy(learnerCtx(), ['gradebook', 'summaries'], req('/api/gradebook/summaries'))
+    expect(outcome.allowed).toBe(false)
+    expect(outcome.response!.status).toBe(403)
   })
 
   it('403s a learner trying to add a course', async () => {
-    const res = await enforceLearnerPolicy(
+    const outcome = await enforceLearnerPolicy(
       learnerCtx(),
       ['subjects'],
       req('/api/subjects', 'POST', { name: 'Math', category: 'Math', childId: OWN_LEARNER_ID }),
     )
-    expect(res!.status).toBe(403)
+    expect(outcome.response!.status).toBe(403)
   })
 
   it('allows a learner to log their own Qur\'an session', async () => {
-    const res = await enforceLearnerPolicy(
+    const outcome = await enforceLearnerPolicy(
       learnerCtx(),
       ['quran', 'sessions'],
       req('/api/quran/sessions', 'POST', { learnerId: OWN_LEARNER_ID, sessionType: 'memorization' }),
     )
-    expect(res).toBeNull()
+    expect(outcome.allowed).toBe(true)
   })
 
   it('403s a learner logging a Qur\'an session against a sibling (body learnerId)', async () => {
-    const res = await enforceLearnerPolicy(
+    const outcome = await enforceLearnerPolicy(
       learnerCtx(),
       ['quran', 'sessions'],
       req('/api/quran/sessions', 'POST', { learnerId: SIBLING_LEARNER_ID, sessionType: 'memorization' }),
     )
-    expect(res).not.toBeNull()
-    expect(res!.status).toBe(403)
+    expect(outcome.allowed).toBe(false)
+    expect(outcome.response!.status).toBe(403)
   })
 
   it('403s a learner reading a sibling\'s badge collection (query learnerId)', async () => {
-    const res = await enforceLearnerPolicy(
+    const outcome = await enforceLearnerPolicy(
       learnerCtx(),
       ['badges', 'collection'],
       req(`/api/badges/collection?learnerId=${SIBLING_LEARNER_ID}`),
     )
-    expect(res!.status).toBe(403)
+    expect(outcome.response!.status).toBe(403)
   })
 
   it('allows a learner reading their own badge collection', async () => {
-    const res = await enforceLearnerPolicy(
+    const outcome = await enforceLearnerPolicy(
       learnerCtx(),
       ['badges', 'collection'],
       req(`/api/badges/collection?learnerId=${OWN_LEARNER_ID}`),
     )
-    expect(res).toBeNull()
+    expect(outcome.allowed).toBe(true)
   })
 
   it('403s a learner using childId to reach a sibling', async () => {
-    const res = await enforceLearnerPolicy(
+    const outcome = await enforceLearnerPolicy(
       learnerCtx(),
       ['subjects'],
       req(`/api/subjects?childId=${SIBLING_LEARNER_ID}`),
     )
-    expect(res!.status).toBe(403)
+    expect(outcome.response!.status).toBe(403)
   })
 
   it('fails closed when the learner user has no linked learner row', async () => {
     mockGetLearnerByUserId.mockResolvedValue(null)
-    const res = await enforceLearnerPolicy(learnerCtx(), ['todos'], req('/api/todos'))
-    expect(res).not.toBeNull()
-    expect(res!.status).toBe(403)
+    const outcome = await enforceLearnerPolicy(learnerCtx(), ['todos'], req('/api/todos'))
+    expect(outcome.allowed).toBe(false)
+    expect(outcome.response!.status).toBe(403)
   })
 
   it('does not consume the request body (downstream handlers can still read it)', async () => {
     const request = req('/api/quran/sessions', 'POST', { learnerId: OWN_LEARNER_ID })
     await enforceLearnerPolicy(learnerCtx(), ['quran', 'sessions'], request)
     await expect(request.json()).resolves.toEqual({ learnerId: OWN_LEARNER_ID })
+  })
+})
+
+/**
+ * Both of these routes already support learner filtering (plan/lessons reads
+ * `childIds`, subjects reads `childId`), so rather than let a learner read the
+ * whole household's lessons and courses, the gate pins the filter to their own id.
+ * Injecting it — rather than requiring the caller to send it — keeps the existing
+ * pages working while scoping what they return.
+ */
+describe('enforceLearnerPolicy — forced self-scoping on household-wide reads', () => {
+  it('injects the learner\'s own id into plan/lessons when no filter was supplied', async () => {
+    const outcome = await enforceLearnerPolicy(learnerCtx(), ['plan', 'lessons'], req('/api/plan/lessons'))
+    expect(outcome.allowed).toBe(true)
+    const url = new URL(outcome.request!.url)
+    expect(url.searchParams.get('childIds')).toBe(OWN_LEARNER_ID)
+  })
+
+  it('injects the learner\'s own id into subjects when no filter was supplied', async () => {
+    const outcome = await enforceLearnerPolicy(learnerCtx(), ['subjects'], req('/api/subjects'))
+    expect(outcome.allowed).toBe(true)
+    const url = new URL(outcome.request!.url)
+    expect(url.searchParams.get('childId')).toBe(OWN_LEARNER_ID)
+  })
+
+  it('preserves other query parameters while injecting the scope', async () => {
+    const outcome = await enforceLearnerPolicy(
+      learnerCtx(),
+      ['plan', 'lessons'],
+      req('/api/plan/lessons?week=2026-09-28'),
+    )
+    const url = new URL(outcome.request!.url)
+    expect(url.searchParams.get('week')).toBe('2026-09-28')
+    expect(url.searchParams.get('childIds')).toBe(OWN_LEARNER_ID)
+  })
+
+  it('leaves a self-scoped filter the learner already supplied untouched', async () => {
+    const outcome = await enforceLearnerPolicy(
+      learnerCtx(),
+      ['subjects'],
+      req(`/api/subjects?childId=${OWN_LEARNER_ID}`),
+    )
+    const url = new URL(outcome.request!.url)
+    expect(url.searchParams.get('childId')).toBe(OWN_LEARNER_ID)
+  })
+
+  it('does not rewrite requests for non-learner roles', async () => {
+    const outcome = await enforceLearnerPolicy(learnerCtx({ role: 'owner' }), ['plan', 'lessons'], req('/api/plan/lessons'))
+    expect(outcome.allowed).toBe(true)
+    expect(new URL(outcome.request!.url).searchParams.get('childIds')).toBeNull()
+  })
+
+  it('does not inject anything into routes that are not scopable', async () => {
+    const outcome = await enforceLearnerPolicy(learnerCtx(), ['todos'], req('/api/todos'))
+    expect(outcome.allowed).toBe(true)
+    expect(new URL(outcome.request!.url).searchParams.get('childId')).toBeNull()
   })
 })

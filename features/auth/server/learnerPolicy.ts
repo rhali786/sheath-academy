@@ -63,6 +63,9 @@ const LEARNER_WRITE_ALLOWLIST: { pattern: SlugPattern; methods: Method[] }[] = [
  * Everything omitted is denied — most importantly `gradebook`, `records`,
  * `attendance`, `portfolio` and `compliance`, which return household-wide data
  * covering every learner and are the actual item 11 data exposure.
+ *
+ * Two entries here (`plan` and `subjects`) would otherwise answer for the whole
+ * household; `LEARNER_SCOPED_READS` below pins them to the caller's own learner.
  */
 const LEARNER_READ_ALLOWLIST: SlugPattern[] = [
   ['household', 'profile'],
@@ -74,6 +77,20 @@ const LEARNER_READ_ALLOWLIST: SlugPattern[] = [
   ['todos', '**'],
   ['plan', '**'],
   ['badges', '**'],
+]
+
+/**
+ * Reads that return the whole household by default but already support filtering
+ * by learner. For a learner we *inject* their own id into the filter rather than
+ * letting the route answer for everyone — so a learner's Lessons and Courses lists
+ * show only their own work. Injecting (instead of requiring the caller to send it)
+ * keeps the existing pages working unchanged.
+ */
+const LEARNER_SCOPED_READS: { pattern: SlugPattern; param: string }[] = [
+  // plan/lessons filters by learner when childIds names exactly one.
+  { pattern: ['plan', 'lessons'], param: 'childIds' },
+  // subjects GET passes childId straight through to listSubjectRows.
+  { pattern: ['subjects'], param: 'childId' },
 ]
 
 /** Query/body keys that name a learner, used to block cross-learner access. */
@@ -134,15 +151,36 @@ async function referencedLearnerIds(request: Request): Promise<string[]> {
 }
 
 /**
- * Returns a 403 `Response` to short-circuit the request, or `null` to let it
- * through. No-op for every role except `learner`.
+ * Pins a household-wide read to a single learner by forcing the route's own
+ * filter parameter. Returns the original request when nothing needs changing.
+ */
+function scopeReadToLearner(request: Request, slug: string[], ownLearnerId: string): Request {
+  if (request.method !== 'GET' && request.method !== 'HEAD') return request
+  const entry = LEARNER_SCOPED_READS.find(e => matchesPattern(slug, e.pattern))
+  if (!entry) return request
+
+  const url = new URL(request.url)
+  if (url.searchParams.get(entry.param) === ownLearnerId) return request
+  url.searchParams.set(entry.param, ownLearnerId)
+  // GET/HEAD carry no body, so re-wrapping is safe.
+  return new Request(url.toString(), request)
+}
+
+export type LearnerPolicyOutcome =
+  | { allowed: false; response: Response; request?: undefined }
+  | { allowed: true; response?: undefined; request: Request }
+
+/**
+ * Decides whether a request may proceed for this role, and returns the request
+ * the handler should actually receive (which may have learner scoping forced onto
+ * it). A no-op passthrough for every role except `learner`.
  */
 export async function enforceLearnerPolicy(
   ctx: AuthCtx,
   slug: string[],
   request: Request,
-): Promise<Response | null> {
-  if (ctx.role !== LEARNER_ROLE) return null
+): Promise<LearnerPolicyOutcome> {
+  if (ctx.role !== LEARNER_ROLE) return { allowed: true, request }
 
   const { getLearnerByUserId } = await import('@/features/children/server/repository')
   const own = await getLearnerByUserId(ctx.householdId, ctx.userId)
@@ -153,7 +191,7 @@ export async function enforceLearnerPolicy(
       { userId: ctx.userId, householdId: ctx.householdId },
       'learnerPolicy: learner-role member has no linked learner profile — denying',
     )
-    return forbidden('This account is not linked to a learner profile.')
+    return { allowed: false, response: forbidden('This account is not linked to a learner profile.') }
   }
 
   // Never let a learner name someone else, on any verb.
@@ -164,22 +202,25 @@ export async function enforceLearnerPolicy(
       { userId: ctx.userId, householdId: ctx.householdId, ownLearnerId: own.id, foreign, slug: slug.join('/') },
       'learnerPolicy: learner referenced another learner — denying',
     )
-    return forbidden('Learners can only access their own information.')
+    return { allowed: false, response: forbidden('Learners can only access their own information.') }
   }
 
   const isRead = request.method === 'GET' || request.method === 'HEAD'
-  const allowed = isRead ? isLearnerReadAllowed(slug) : isLearnerWriteAllowed(slug, request.method)
-  if (!allowed) {
+  const permitted = isRead ? isLearnerReadAllowed(slug) : isLearnerWriteAllowed(slug, request.method)
+  if (!permitted) {
     logger.warn(
       { userId: ctx.userId, householdId: ctx.householdId, method: request.method, slug: slug.join('/') },
       'learnerPolicy: route not permitted for learner role — denying',
     )
-    return forbidden(
-      isRead
-        ? 'Learners do not have access to this information.'
-        : 'Learners are not allowed to make this change.',
-    )
+    return {
+      allowed: false,
+      response: forbidden(
+        isRead
+          ? 'Learners do not have access to this information.'
+          : 'Learners are not allowed to make this change.',
+      ),
+    }
   }
 
-  return null
+  return { allowed: true, request: scopeReadToLearner(request, slug, own.id) }
 }

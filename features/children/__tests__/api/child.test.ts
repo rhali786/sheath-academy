@@ -31,7 +31,6 @@ jest.mock('@/features/auth/server/repository', () => ({
   deactivateUserCredentials: jest.fn(),
   getUserByIdentifier: jest.fn(),
   getUserByEmail: jest.fn(),
-  deleteUser: jest.fn(),
 }))
 
 jest.mock('@/features/auth/server/password', () => ({
@@ -41,7 +40,7 @@ jest.mock('@/features/auth/server/password', () => ({
 import { GET, PUT } from '@/features/children/api/routes/child'
 import { getLearner, updateLearner } from '@/features/children/server/repository'
 import { getUserById, getMembership, addMember, deactivateMember, reactivateMember } from '@/features/household/server/repository'
-import { createLearnerCredentialUser, updateUserUsername, updateUserPassword, deactivateUserCredentials, getUserByIdentifier, getUserByEmail, deleteUser } from '@/features/auth/server/repository'
+import { createLearnerCredentialUser, updateUserUsername, updateUserPassword, deactivateUserCredentials, getUserByIdentifier, getUserByEmail } from '@/features/auth/server/repository'
 import { hashPassword } from '@/features/auth/server/password'
 
 const mockGetLearner = jest.mocked(getLearner)
@@ -57,7 +56,6 @@ const mockUpdateUserPassword = jest.mocked(updateUserPassword)
 const mockDeactivateUserCredentials = jest.mocked(deactivateUserCredentials)
 const mockGetUserByIdentifier = jest.mocked(getUserByIdentifier)
 const mockGetUserByEmail = jest.mocked(getUserByEmail)
-const mockDeleteUser = jest.mocked(deleteUser)
 const mockHashPassword = jest.mocked(hashPassword)
 
 const LEARNER_ROW = {
@@ -93,7 +91,6 @@ beforeEach(() => {
   // would leak into the next one.
   mockGetUserByIdentifier.mockResolvedValue(null)
   mockGetUserByEmail.mockResolvedValue(null)
-  mockDeleteUser.mockResolvedValue(undefined)
   mockAddMember.mockResolvedValue({} as never)
 })
 
@@ -273,7 +270,7 @@ describe('PUT enable — orphaned credential recovery + compensation (item 5)', 
     expect(mockCreateLearnerCredentialUser).not.toHaveBeenCalled()
   })
 
-  it('deletes the freshly created credential user when addMember fails, so the username is not left orphaned', async () => {
+  it('archives (does not delete) the half-provisioned credential user when addMember fails', async () => {
     mockGetLearner.mockResolvedValue({ ...LEARNER_ROW, userId: null })
     mockCreateLearnerCredentialUser.mockResolvedValue({ id: 'user_new_1' } as never)
     mockAddMember.mockRejectedValue(new Error('membership insert failed'))
@@ -281,10 +278,12 @@ describe('PUT enable — orphaned credential recovery + compensation (item 5)', 
     const res = await PUT('learner_1', jsonReq({ learnerLoginEnabled: true, username: 'adam.student', password: 'pw12345' }))
 
     expect(res.status).toBeGreaterThanOrEqual(400)
-    expect(mockDeleteUser).toHaveBeenCalledWith('user_new_1')
+    // Clearing the password hash is the established "cannot sign in, row kept"
+    // mechanism (same call the disable path uses) — no destructive delete.
+    expect(mockDeactivateUserCredentials).toHaveBeenCalledWith('user_new_1')
   })
 
-  it('deletes the freshly created credential user when linking it to the learner fails', async () => {
+  it('archives the credential user and its membership when linking it to the learner fails', async () => {
     mockGetLearner.mockResolvedValue({ ...LEARNER_ROW, userId: null })
     mockCreateLearnerCredentialUser.mockResolvedValue({ id: 'user_new_1' } as never)
     mockUpdateLearner.mockResolvedValue(null) // link write matched no row
@@ -292,16 +291,35 @@ describe('PUT enable — orphaned credential recovery + compensation (item 5)', 
     const res = await PUT('learner_1', jsonReq({ learnerLoginEnabled: true, username: 'adam.student', password: 'pw12345' }))
 
     expect(res.status).toBeGreaterThanOrEqual(400)
-    expect(mockDeleteUser).toHaveBeenCalledWith('user_new_1')
+    expect(mockDeactivateUserCredentials).toHaveBeenCalledWith('user_new_1')
+    // addMember succeeded here, so the membership must be stood down too.
+    expect(mockDeactivateMember).toHaveBeenCalledWith('hh_a', 'user_new_1')
   })
 
-  it('does NOT delete a pre-existing credential user when the update fails (only compensates what it created)', async () => {
+  it('does NOT archive a pre-existing credential user when the update fails (only compensates what it created)', async () => {
     mockGetLearner.mockResolvedValue({ ...LEARNER_ROW, userId: 'user_existing' })
     mockGetUserById.mockResolvedValue({ id: 'user_existing', username: 'adam.student', passwordHash: 'hash' } as never)
     mockUpdateLearner.mockResolvedValue(null)
 
     await PUT('learner_1', jsonReq({ learnerLoginEnabled: true, username: 'adam.student' }))
 
-    expect(mockDeleteUser).not.toHaveBeenCalled()
+    expect(mockDeactivateUserCredentials).not.toHaveBeenCalled()
+    expect(mockDeactivateMember).not.toHaveBeenCalled()
+  })
+
+  it('an archived orphan is still adoptable on the next attempt (archiving does not re-create the trap)', async () => {
+    // Archive clears the hash but keeps the row, so the username stays claimed.
+    // Adoption by placeholder email is what makes the retry succeed.
+    mockGetLearner.mockResolvedValue({ ...LEARNER_ROW, userId: null })
+    mockGetUserByIdentifier.mockResolvedValue({ id: 'user_orphan', email: 'learner.learner_1@no-email.local', username: 'adam.student', passwordHash: null } as never)
+    mockGetUserByEmail.mockResolvedValue({ id: 'user_orphan', email: 'learner.learner_1@no-email.local', username: 'adam.student', passwordHash: null } as never)
+    mockUpdateLearner.mockResolvedValue({ ...LEARNER_ROW, userId: 'user_orphan' })
+
+    const res = await PUT('learner_1', jsonReq({ learnerLoginEnabled: true, username: 'adam.student', password: 'pw12345' }))
+
+    expect(res.status).toBe(200)
+    expect(mockCreateLearnerCredentialUser).not.toHaveBeenCalled()
+    expect(mockUpdateUserPassword).toHaveBeenCalledWith('user_orphan', 'hashed_pw')
+    expect(mockReactivateMember).toHaveBeenCalledWith('hh_a', 'user_orphan')
   })
 })

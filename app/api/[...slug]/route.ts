@@ -142,12 +142,15 @@ async function dispatch(
 
   // Role gate for learner accounts. Enforced here — the one place every feature
   // router and every verb passes through — so it fails closed: a route added
-  // later is denied to learners until it is explicitly allow-listed. No-op for
-  // owner/member/teacher. See features/auth/server/learnerPolicy.ts.
-  const denied = await enforceLearnerPolicy(authResult, slug, request)
-  if (denied) return denied
+  // later is denied to learners until it is explicitly allow-listed. It also
+  // returns the request the handler should see, which for a learner may have
+  // self-scoping forced onto household-wide reads. No-op for owner/member/teacher.
+  // See features/auth/server/learnerPolicy.ts.
+  const policy = await enforceLearnerPolicy(authResult, slug, request)
+  if (!policy.allowed) return policy.response
+  const scopedRequest = policy.request
 
-  const response = await runWithAuthCtx(authResult, () => handleRoute(slug, request))
+  const response = await runWithAuthCtx(authResult, () => handleRoute(slug, scopedRequest))
   if (response) return response
 
   return NextResponse.json(

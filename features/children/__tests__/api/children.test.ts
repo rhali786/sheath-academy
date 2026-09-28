@@ -25,7 +25,7 @@ jest.mock('@/features/auth/server/repository', () => ({
   getUserByEmail: jest.fn(),
   updateUserUsername: jest.fn(),
   updateUserPassword: jest.fn(),
-  deleteUser: jest.fn(),
+  deactivateUserCredentials: jest.fn(),
 }))
 
 jest.mock('@/features/auth/server/password', () => ({
@@ -39,7 +39,7 @@ jest.mock('@/features/admin-metrics/server/instrument', () => ({
 import { GET, POST } from '@/features/children/api/routes/children'
 import { listLearners, createLearner, updateLearner } from '@/features/children/server/repository'
 import { getUserById, getMembership, addMember } from '@/features/household/server/repository'
-import { createLearnerCredentialUser, getUserByIdentifier, getUserByEmail, deleteUser } from '@/features/auth/server/repository'
+import { createLearnerCredentialUser, getUserByIdentifier, getUserByEmail, deactivateUserCredentials } from '@/features/auth/server/repository'
 import { hashPassword } from '@/features/auth/server/password'
 
 const mockListLearners = jest.mocked(listLearners)
@@ -51,7 +51,7 @@ const mockAddMember = jest.mocked(addMember)
 const mockCreateLearnerCredentialUser = jest.mocked(createLearnerCredentialUser)
 const mockGetUserByIdentifier = jest.mocked(getUserByIdentifier)
 const mockGetUserByEmail = jest.mocked(getUserByEmail)
-const mockDeleteUser = jest.mocked(deleteUser)
+const mockDeactivateUserCredentials = jest.mocked(deactivateUserCredentials)
 const mockHashPassword = jest.mocked(hashPassword)
 
 const NEW_LEARNER_ROW = {
@@ -86,7 +86,7 @@ beforeEach(() => {
   // so without these a previous test's mockResolvedValue leaks into the next.
   mockGetUserByIdentifier.mockResolvedValue(null)
   mockGetUserByEmail.mockResolvedValue(null)
-  mockDeleteUser.mockResolvedValue(undefined)
+  mockDeactivateUserCredentials.mockResolvedValue(undefined)
   mockAddMember.mockResolvedValue({} as never)
 })
 
@@ -155,7 +155,7 @@ describe('POST /api/children/children', () => {
   // link it (`row = (await updateLearner(...)) ?? row` swallowed the failure and
   // still returned 201). That left the learner showing "Not enabled" with its
   // username permanently taken by an unreachable user row.
-  it('removes the created credential user when linking it to the new learner fails, instead of reporting success', async () => {
+  it('archives the created credential user when linking it to the new learner fails, instead of reporting success', async () => {
     mockCreateLearner.mockResolvedValue(NEW_LEARNER_ROW as never)
     mockCreateLearnerCredentialUser.mockResolvedValue({ id: 'user_sara' } as never)
     mockUpdateLearner.mockResolvedValue(null) // link write matched no row
@@ -167,10 +167,10 @@ describe('POST /api/children/children', () => {
 
     expect(res.status).not.toBe(201)
     expect(res.status).toBeGreaterThanOrEqual(400)
-    expect(mockDeleteUser).toHaveBeenCalledWith('user_sara')
+    expect(mockDeactivateUserCredentials).toHaveBeenCalledWith('user_sara')
   })
 
-  it('removes the created credential user when addMember fails', async () => {
+  it('archives the created credential user when addMember fails', async () => {
     mockCreateLearner.mockResolvedValue(NEW_LEARNER_ROW as never)
     mockCreateLearnerCredentialUser.mockResolvedValue({ id: 'user_sara' } as never)
     mockAddMember.mockRejectedValue(new Error('membership insert failed'))
@@ -181,6 +181,6 @@ describe('POST /api/children/children', () => {
     }))
 
     expect(res.status).toBeGreaterThanOrEqual(400)
-    expect(mockDeleteUser).toHaveBeenCalledWith('user_sara')
+    expect(mockDeactivateUserCredentials).toHaveBeenCalledWith('user_sara')
   })
 })

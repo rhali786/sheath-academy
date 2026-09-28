@@ -4,7 +4,7 @@ import type { ApiResponse, StudentProfile } from '@/features/lib/types'
 import { listLearners, listAllLearners, createLearner } from '@/features/children/server/repository'
 import type { LearnerRow } from '@/features/children/server/repository'
 import { getUserById, getMembership } from '@/features/household/server/repository'
-import { getUserByIdentifier, deleteUser } from '@/features/auth/server/repository'
+import { getUserByIdentifier, deactivateUserCredentials } from '@/features/auth/server/repository'
 import { provisionLearnerLogin } from '@/features/children/server/learnerLogin'
 import { logger } from '@/features/lib/logger'
 
@@ -119,11 +119,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       if (!linked) {
         // Previously this fell back to `?? row` and still returned 201 — the
         // learner showed "Not enabled" while its username stayed claimed by an
-        // unreachable user row, permanently 409-ing every retry. Undo the
-        // credential user and report the failure; the learner profile itself is
-        // kept so the parent can enable login from Edit.
-        if (provisioned.createdUserId) await deleteUser(provisioned.createdUserId)
-        logger.error({ householdId, learnerId: row.id }, 'POST children: link write matched no row — rolled back credential user')
+        // unreachable user row, permanently 409-ing every retry. Archive the
+        // credential user (clear the hash — no row destroyed; the next attempt
+        // adopts it) and report the failure. The learner profile itself is kept
+        // so the parent can enable login from Edit.
+        if (provisioned.createdUserId) await deactivateUserCredentials(provisioned.createdUserId)
+        logger.error({ householdId, learnerId: row.id }, 'POST children: link write matched no row — archived credential user')
         return NextResponse.json(
           { status: 'error', data: null, message: 'Learner was created, but sign-in could not be set up. Edit the learner to try again.', timestamp: new Date().toISOString() },
           { status: 500 },
