@@ -101,6 +101,27 @@ export async function createSchoolYear(
   return mapSchoolYearRow(row)
 }
 
+function isIsoDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const [y, m, d] = value.split('-').map(Number)
+  const parsed = new Date(y, m - 1, d)
+  return parsed.getFullYear() === y && parsed.getMonth() === m - 1 && parsed.getDate() === d
+}
+
+/** Breaks drive lesson rescheduling (plan/lessons/shift), so reject anything malformed. */
+function validateBreaks(breaks: unknown, yearStart: string, yearEnd: string): void {
+  if (!Array.isArray(breaks)) throw new Error('breaks must be a list')
+  for (const b of breaks as Partial<SchoolBreak>[]) {
+    if (!b || typeof b.id !== 'string' || !b.id) throw new Error('Each break needs an id')
+    if (typeof b.name !== 'string' || !b.name.trim()) throw new Error('Each break needs a name')
+    if (!isIsoDate(b.startDate) || !isIsoDate(b.endDate)) throw new Error(`${b.name}: dates must be valid dates`)
+    if (b.endDate < b.startDate) throw new Error(`${b.name}: the end date must be on or after its start date`)
+    if (b.startDate < yearStart || b.endDate > yearEnd) {
+      throw new Error(`${b.name}: the break must be within the school year (${yearStart} to ${yearEnd})`)
+    }
+  }
+}
+
 export async function updateSchoolYear(
   householdId: string,
   id: string,
@@ -114,6 +135,8 @@ export async function updateSchoolYear(
   if (startDate >= endDate) {
     throw new Error('endDate must be after startDate')
   }
+
+  if (patch.breaks !== undefined) validateBreaks(patch.breaks, startDate, endDate)
 
   const allowedPatch: SchoolYearPatch = {}
   if (patch.name !== undefined) allowedPatch.name = patch.name.trim()

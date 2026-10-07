@@ -31,7 +31,11 @@ async function put<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  if (!res.ok) {
+    // Surface validation messages (e.g. a break outside the school year) to the form.
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message ?? `Request failed: ${res.status}`)
+  }
   return res.json()
 }
 

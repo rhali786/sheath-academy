@@ -14,6 +14,7 @@ import { ChildList } from '@/features/children/front/components/ChildList'
 import { SubjectForm } from '@/features/subjects/front/components/SubjectForm'
 import { SubjectsAllTable } from '@/features/subjects/front/components/SubjectsAllTable'
 import { SchoolYearForm } from '@/features/school-year/front/components/SchoolYearForm'
+import { SchoolBreaksPanel } from '@/features/school-year/front/components/SchoolBreaksPanel'
 import { RolloverCoursesPanel } from '@/features/subjects/front/components/RolloverCoursesPanel'
 import { schoolYearApi } from '@/features/school-year/front/services/api'
 import { childrenApi } from '@/features/children/front/services/api'
@@ -298,6 +299,8 @@ export function SettingsPage() {
               No active school year yet. Create one below.
             </p>
           )}
+
+          {activeYear && <SchoolBreaksPanel year={activeYear} onYearUpdated={setActiveYear} />}
 
           <SchoolYearForm
             embedded

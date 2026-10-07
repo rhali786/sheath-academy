@@ -225,6 +225,35 @@ describe('SettingsPage', () => {
     expect(within(activeYearHeading.closest('div')!).getByText(/2025–2026/)).toBeInTheDocument()
   })
 
+  it('school year tab shows the breaks editor for the active year', async () => {
+    mockSearchParams = new URLSearchParams('tab=school-year')
+    schoolYearApi.getActiveSchoolYear.mockResolvedValueOnce({
+      data: {
+        id: 'sy1',
+        workspaceId: 'household_001',
+        name: '2026-2027',
+        startDate: '2026-08-01',
+        endDate: '2027-05-31',
+        isActive: true,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        breaks: [{ id: 'br_tg', name: 'Thanksgiving', startDate: '2026-11-25', endDate: '2026-11-27' }],
+      },
+      status: 'success',
+      message: 'ok',
+      timestamp: '',
+    })
+    renderSettings()
+    const panel = await screen.findByTestId('school-breaks-panel')
+    expect(within(panel).getByText('Thanksgiving')).toBeInTheDocument()
+  })
+
+  it('school year tab does not show the breaks editor without an active year', async () => {
+    mockSearchParams = new URLSearchParams('tab=school-year')
+    renderSettings()
+    expect(await screen.findByText(/no active school year yet/i)).toBeInTheDocument()
+    expect(screen.queryByTestId('school-breaks-panel')).not.toBeInTheDocument()
+  })
+
   it('school year tab renders rollover entry point when active year and a target year exist', async () => {
     mockSearchParams = new URLSearchParams('tab=school-year')
     schoolYearApi.getActiveSchoolYear.mockResolvedValue({
