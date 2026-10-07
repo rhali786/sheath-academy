@@ -1,4 +1,5 @@
 import type { LessonTask, LessonDuration } from '@/features/plan/types'
+import type { DayOfWeek } from '@/features/lib/types'
 import type {
   ScheduleBlock,
   DaySchedule,
@@ -21,6 +22,14 @@ function fromMinutes(total: number): string {
   const h = Math.floor(total / 60)
   const m = total % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+const WEEKDAYS: DayOfWeek[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+/** Weekday of a YYYY-MM-DD date, read as a local calendar date (never UTC). */
+function weekdayOf(date: string): DayOfWeek {
+  const [y, m, d] = date.split('-').map(Number)
+  return WEEKDAYS[new Date(y, m - 1, d).getDay()]
 }
 
 function parseDurationMinutes(duration: LessonDuration | undefined, fallback: number): number {
@@ -78,20 +87,28 @@ export function buildDailySchedule(
   settings: ScheduleSettings,
 ): DaySchedule {
   const { startTime, transitionMinutes, defaultDurationMinutes = 30, includeSyntheticBreaks = false } = settings
+  const weekday = settings.date ? weekdayOf(settings.date) : null
   let cursor = toMinutes(startTime)
   const blocks: ScheduleBlock[] = []
 
   for (const lesson of lessons) {
-    if (lesson.scheduledStartTime && lesson.scheduledEndTime) {
-      const overrideStart = toMinutes(lesson.scheduledStartTime)
-      const overrideEnd = toMinutes(lesson.scheduledEndTime)
+    // An explicit lesson time wins; otherwise the course's recurring time for this weekday.
+    const fixed = lesson.scheduledStartTime && lesson.scheduledEndTime
+      ? { startTime: lesson.scheduledStartTime, endTime: lesson.scheduledEndTime }
+      : weekday
+        ? settings.courseTimes?.[lesson.subjectId]?.find(b => b.daysOfWeek.includes(weekday)) ?? null
+        : null
+
+    if (fixed) {
+      const overrideStart = toMinutes(fixed.startTime)
+      const overrideEnd = toMinutes(fixed.endTime)
       const durationMinutes = overrideEnd - overrideStart
 
       blocks.push({
         id: `block_${lesson.id}`,
         lesson,
-        startTime: lesson.scheduledStartTime,
-        endTime: lesson.scheduledEndTime,
+        startTime: fixed.startTime,
+        endTime: fixed.endTime,
         durationMinutes,
         flexibilityState: 'locked',
       })
@@ -119,7 +136,7 @@ export function buildDailySchedule(
   const entries = mergeTimelineEntries(lessonEntries, includeSyntheticBreaks)
 
   return {
-    date: new Date().toISOString().slice(0, 10),
+    date: settings.date ?? new Date().toISOString().slice(0, 10),
     entries,
     blocks,
     isPaused: false,
