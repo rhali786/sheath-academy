@@ -23,6 +23,9 @@ jest.mock('@/features/children/server/repository', () => ({
 jest.mock('@/features/alerts/server/service', () => ({
   getAlerts: jest.fn(),
 }))
+jest.mock('@/features/subjects/server/repository', () => ({
+  listSubjectRows: jest.fn(() => Promise.resolve([])),
+}))
 
 import { GET } from '@/features/dashboard/api/routes/summary'
 import { listAttendanceEvents } from '@/features/attendance/server/repository'

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { learningTimeApi } from '@/features/learning-time/front/services/api'
 import { plannerApi } from '@/features/plan/front/services/api'
 import type { CreateSessionInput, LearningTimeSession } from '@/features/learning-time/types'
@@ -68,6 +69,10 @@ function nextScheduledOccurrence(
 
 const secondaryButtonClass = 'px-4 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50'
 
+function errorMessage(err: unknown): string {
+  return err instanceof Error && err.message ? err.message : 'Failed to start session. Please try again.'
+}
+
 interface QuickStartByCourseListProps {
   learnerId: string
   /** Current-school-year courses; only courses enrolling learnerId are shown. */
@@ -84,6 +89,7 @@ interface QuickStartByCourseListProps {
  */
 export function QuickStartByCourseList({ learnerId, allSubjects, onStarted, className }: QuickStartByCourseListProps) {
   const [lessons, setLessons] = useState<LessonTask[]>([])
+  const [activeSession, setActiveSession] = useState<LearningTimeSession | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -95,6 +101,15 @@ export function QuickStartByCourseList({ learnerId, allSubjects, onStarted, clas
       })
       .catch(() => {
         if (!cancelled) setLessons([])
+      })
+    // The server refuses a new session while one is still open (any non-finalized status),
+    // so surface the open one instead of offering Start buttons that can only fail.
+    learningTimeApi.getActive(learnerId)
+      .then(result => {
+        if (!cancelled) setActiveSession(result.data ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setActiveSession(null)
       })
     return () => { cancelled = true }
   }, [learnerId])
@@ -120,9 +135,46 @@ export function QuickStartByCourseList({ learnerId, allSubjects, onStarted, clas
       const created = await learningTimeApi.createSession(input)
       const started = await learningTimeApi.transition(created.data.id, { action: 'start' })
       onStarted(started.data)
-    } catch {
-      setError('Failed to start session. Please try again.')
+    } catch (err) {
+      setError(errorMessage(err))
     }
+  }
+
+  async function handleResume(session: LearningTimeSession) {
+    setError(null)
+    try {
+      const resumed = await learningTimeApi.transition(session.id, { action: 'resume' })
+      onStarted(resumed.data)
+    } catch (err) {
+      setError(errorMessage(err))
+    }
+  }
+
+  if (activeSession) {
+    const courseName = allSubjects.find(s => s.id === activeSession.subjectId)?.name
+    const label = courseName ? `${courseName} session` : 'A session'
+    const isOpen = activeSession.status === 'running' || activeSession.status === 'paused'
+    const statusText = activeSession.status === 'paused'
+      ? 'is paused'
+      : activeSession.status === 'running' ? 'is in progress' : 'needs to be finished'
+
+    return (
+      <div className={className} data-testid="quick-start-active">
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Quick start by course</p>
+        <p className="text-sm font-medium text-slate-700 mb-2">{label} {statusText}</p>
+        <div className="flex flex-wrap items-center gap-3">
+          {activeSession.status === 'paused' && (
+            <button type="button" onClick={() => handleResume(activeSession)} className={secondaryButtonClass}>
+              Resume
+            </button>
+          )}
+          <Link href="/learning-time" className="text-sm font-medium text-forest-900 hover:underline">
+            {isOpen ? 'Open Learning Time' : 'Finish it on Learning Time'}
+          </Link>
+        </div>
+        {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
+      </div>
+    )
   }
 
   if (courses.length === 0) return null

@@ -200,4 +200,34 @@ describe('WeeklyPlannerPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
     expect(screen.getByRole('heading', { name: /add lesson/i })).toBeInTheDocument()
   })
+
+  it('Shift lessons panel is closed by default and toggles open with learners and courses', async () => {
+    renderWithPlanner()
+    await waitFor(() => {
+      expect(screen.queryByText(/loading planner/i)).not.toBeInTheDocument()
+    })
+
+    expect(screen.queryByTestId('shift-lessons-panel')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Shift lessons' }))
+    expect(screen.getByRole('heading', { name: /shift lessons/i })).toBeInTheDocument()
+    const panel = screen.getByTestId('shift-lessons-panel')
+    expect(panel).toHaveTextContent('Adam')
+    expect(panel).toHaveTextContent('Math')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel shift' }))
+    expect(screen.queryByTestId('shift-lessons-panel')).not.toBeInTheDocument()
+  })
+
+  it('opening Shift lessons closes the Add lesson form and vice versa', async () => {
+    renderWithPlanner()
+    await waitFor(() => {
+      expect(screen.queryByText(/loading planner/i)).not.toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
+    expect(screen.getByRole('heading', { name: /add lesson/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Shift lessons' }))
+    expect(screen.queryByRole('heading', { name: /add lesson/i })).not.toBeInTheDocument()
+    expect(screen.getByTestId('shift-lessons-panel')).toBeInTheDocument()
+  })
 })

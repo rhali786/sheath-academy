@@ -76,6 +76,17 @@ describe('isLearnerWriteAllowed — deny-by-default', () => {
     expect(isLearnerWriteAllowed(['plan', 'lessons'], 'POST')).toBe(false)
   })
 
+  it('denies the bulk lesson shift (preview and apply) — rescheduling is an owner action', async () => {
+    expect(isLearnerWriteAllowed(['plan', 'lessons', 'shift', 'preview'], 'POST')).toBe(false)
+    expect(isLearnerWriteAllowed(['plan', 'lessons', 'shift', 'apply'], 'POST')).toBe(false)
+    const outcome = await enforceLearnerPolicy(
+      learnerCtx(),
+      ['plan', 'lessons', 'shift', 'apply'],
+      req('/api/plan/lessons/shift/apply', 'POST', { moves: [] }),
+    )
+    expect(outcome.response!.status).toBe(403)
+  })
+
   it('does not allow DELETE on learning-time (only create/update a session)', () => {
     expect(isLearnerWriteAllowed(['learning-time', 'sessions', 'lt_1'], 'DELETE')).toBe(false)
   })

@@ -24,6 +24,15 @@ jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: { getLessons: (...args: unknown[]) => mockGetLessons(...args) },
 }))
 
+const mockGetActive = jest.fn()
+jest.mock('@/features/learning-time/front/services/api', () => ({
+  learningTimeApi: {
+    getActive: (...args: unknown[]) => mockGetActive(...args),
+    createSession: jest.fn(),
+    transition: jest.fn(),
+  },
+}))
+
 const schedule: DaySchedule = {
   date: '2026-05-24',
   blocks: [],
@@ -37,6 +46,8 @@ beforeEach(() => {
   capturedOnEditLesson = undefined
   mockGetLessons.mockReset()
   mockGetLessons.mockResolvedValue([])
+  mockGetActive.mockReset()
+  mockGetActive.mockResolvedValue({ status: 'success', data: null, message: '', timestamp: '' })
 })
 
 describe('TodaySchedulePanel', () => {
@@ -91,5 +102,20 @@ describe('TodaySchedulePanel', () => {
   test('falls back to the "Start learning time" link when no learnerId is provided', () => {
     render(<TodaySchedulePanel schedule={schedule} currentTime="10:00" />)
     expect(screen.getByTestId('start-learning-time')).toHaveAttribute('href', '/learning-time')
+  })
+
+  test('offers to resume an open session instead of course Start buttons', async () => {
+    mockGetActive.mockResolvedValue({
+      status: 'success',
+      data: { id: 'lts_open', learnerId: 'child_001', subjectId: 'subj_math', status: 'paused' },
+      message: '',
+      timestamp: '',
+    })
+    render(
+      <TodaySchedulePanel schedule={schedule} currentTime="10:00" subjects={[mathSubject]} learnerId="child_001" />,
+    )
+    await waitFor(() => expect(screen.getByTestId('quick-start-active')).toHaveTextContent('Math session is paused'))
+    expect(screen.getByRole('button', { name: /resume/i })).toBeInTheDocument()
+    expect(screen.queryByTestId('quick-start-course-subj_math')).not.toBeInTheDocument()
   })
 })

@@ -1,4 +1,4 @@
-import { and, eq, gte, lte, sql } from 'drizzle-orm'
+import { and, eq, gte, isNull, lte, sql } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
 import { lessonTasks, lessonSteps } from '@/db/schema'
 
@@ -278,6 +278,50 @@ export async function updateLessonTaskRow(
     .where(and(eq(lessonTasks.id, id), eq(lessonTasks.householdId, householdId)))
     .returning()
   return result[0] ?? null
+}
+
+export interface LessonDatesChange {
+  id: string
+  from: { dueDate: string; plannedStartDate: string | null }
+  to: { dueDate: string; plannedStartDate: string | null }
+}
+
+/**
+ * Bulk date move for the lesson shift. In one transaction, each row is updated only if it is
+ * still not_started and its dates still equal `from` — anything edited since the preview is
+ * reported in `skipped` instead of being overwritten. Undo is the same call with from/to swapped.
+ */
+export async function updateLessonDatesIfUnchanged(
+  householdId: string,
+  changes: LessonDatesChange[],
+): Promise<{ applied: number; skipped: string[] }> {
+  if (changes.length === 0) return { applied: 0, skipped: [] }
+  const db = getDb()
+  const now = new Date()
+  const skipped: string[] = []
+  let applied = 0
+
+  await db.transaction(async (tx) => {
+    for (const change of changes) {
+      const updated = await tx
+        .update(lessonTasks)
+        .set({ dueDate: change.to.dueDate, plannedStartDate: change.to.plannedStartDate, updatedAt: now })
+        .where(and(
+          eq(lessonTasks.id, change.id),
+          eq(lessonTasks.householdId, householdId),
+          eq(lessonTasks.status, 'not_started'),
+          eq(lessonTasks.dueDate, change.from.dueDate),
+          change.from.plannedStartDate === null
+            ? isNull(lessonTasks.plannedStartDate)
+            : eq(lessonTasks.plannedStartDate, change.from.plannedStartDate),
+        ))
+        .returning({ id: lessonTasks.id })
+      if (updated.length > 0) applied++
+      else skipped.push(change.id)
+    }
+  })
+
+  return { applied, skipped }
 }
 
 export async function completeLessonTaskRow(

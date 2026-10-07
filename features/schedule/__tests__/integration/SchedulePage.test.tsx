@@ -194,6 +194,31 @@ describe('SchedulePage', () => {
     })
   })
 
+  it('places an untimed lesson at its course\'s recurring time for the selected weekday', async () => {
+    mockUseSearchParams.mockReturnValue(new URLSearchParams('date=2026-10-13')) // a Tuesday
+    try {
+      mockUseHousehold.mockImplementation(() => ({
+        allSubjects: [{
+          id: 's_math', name: 'Math', isActive: true,
+          recurringSchedule: [{ daysOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], startTime: '10:15', endTime: '11:00' }],
+        }],
+        householdProfile: null,
+      }))
+      mockGetLessons.mockResolvedValue([
+        { id: 'l1', childId: 'c1', subjectId: 's_math', householdId: 'h1', title: 'Math lesson', dueDate: '2026-10-13', status: 'not_started', order: 1, estimatedDuration: '30min', createdAt: '', updatedAt: '' },
+        { id: 'l2', childId: 'c1', subjectId: 's_other', householdId: 'h1', title: 'Reading lesson', dueDate: '2026-10-13', status: 'not_started', order: 2, estimatedDuration: '30min', createdAt: '', updatedAt: '' },
+      ])
+      renderSchedulePage()
+      const mathRow = (await screen.findByText('Math lesson')).parentElement!
+      expect(mathRow).toHaveTextContent('10:15')
+      // Untimed lessons keep the existing cursor rule: they continue after a fixed block
+      // (10:15–11:00 + 10 min transition), exactly as with an explicit lesson time.
+      expect(screen.getByText('Reading lesson').parentElement!).toHaveTextContent('11:10')
+    } finally {
+      mockUseSearchParams.mockReturnValue(new URLSearchParams())
+    }
+  })
+
   it('day mode: fetch uses [selectedDate, selectedDate] as the window', async () => {
     renderSchedulePage()
     await waitFor(() => expect(mockGetLessons).toHaveBeenCalled())
