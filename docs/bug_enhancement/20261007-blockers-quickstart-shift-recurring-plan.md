@@ -89,7 +89,7 @@ Recommended answers. Phase 2b builds exactly these unless amended.
 5. With no active session, behavior is unchanged.
 
 **Phase 2b — engine + API**
-6. With school days Mon–Fri and a break Nov 25–27, shifting 1 school day from Fri Nov 21 moves Fri → Mon Nov 24, and Mon Nov 24 → Fri Nov 28 (skips the break and the weekend).
+6. With school days Mon–Fri and a break Wed Nov 25–Fri Nov 27 2026, shifting 1 school day from Fri Nov 20 moves Fri Nov 20 → Mon Nov 23, and Tue Nov 24 → Mon Nov 30 (skips the break and the weekend). Adding that break with lessons already on it moves Wed Nov 25 → Mon Nov 30 and Tue Dec 1 → Fri Dec 4.
 7. Completed/skipped lessons and lessons before `fromDate` keep their dates.
 8. Two learners' copies of a grouped lesson (same `groupId`) land on the same new date.
 9. A learner account gets 403 from both shift endpoints.
