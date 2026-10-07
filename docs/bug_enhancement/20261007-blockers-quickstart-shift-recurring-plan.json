@@ -1,0 +1,270 @@
+{
+  "version": 1,
+  "planMarkdownPath": "docs/bug_enhancement/20261007-blockers-quickstart-shift-recurring-plan.md",
+  "branch": "fix/blockers-20261007",
+  "dbMigrationPolicy": "NO schema changes in any phase. school_years.breaks and subjects.recurring_schedule are existing jsonb columns. No phase may run db:generate or db:migrate; if a phase believes it needs a migration, stop and report instead. Never write to prod data (DATABASE_URL_PROD) from any phase.",
+  "phases": [
+    {
+      "id": "phase-1-quickstart-active-session",
+      "title": "Quick Start: resume/finish an active session instead of failing",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [],
+      "fileScope": [
+        "features/learning-time/front/components/QuickStartByCourseList.tsx",
+        "features/learning-time/__tests__/integration/QuickStartByCourseList.test.tsx",
+        "features/dashboard/front/components/TodaySchedulePanel.tsx",
+        "features/dashboard/__tests__/integration/components/TodaySchedulePanel.test.tsx"
+      ],
+      "testsFirst": [
+        "features/learning-time/__tests__/integration/QuickStartByCourseList.test.tsx: when learningTimeApi.getActive resolves a 'paused' session for subject Math, the list renders 'Math session is paused' with Resume and 'Open Learning Time' and does NOT render quick-start-course-* Start buttons",
+        "features/learning-time/__tests__/integration/QuickStartByCourseList.test.tsx: clicking Resume calls learningTimeApi.transition(id, { action: 'resume' }) and calls onStarted with the returned session",
+        "features/learning-time/__tests__/integration/QuickStartByCourseList.test.tsx: when getActive resolves an 'ended' (or 'draft') session, renders 'needs to be finished' with a link to /learning-time and no Start buttons",
+        "features/learning-time/__tests__/integration/QuickStartByCourseList.test.tsx: when getActive resolves null and createSession rejects with Error('Learner already has an active learning time session'), that exact message is shown (not the generic 'Failed to start session')",
+        "features/learning-time/__tests__/integration/QuickStartByCourseList.test.tsx: when getActive resolves null the existing course list renders unchanged (regression)",
+        "features/dashboard/__tests__/integration/components/TodaySchedulePanel.test.tsx: with learnerId set and an active paused session mocked, the panel shows the resume row instead of course Start buttons"
+      ],
+      "implementationSteps": [
+        "Read QuickStartByCourseList.tsx, NowCard.tsx (lines ~120-130 and ~480-500) and TodaySchedulePanel.tsx before editing. NowCard only mounts the list when there is no session; keep that true and do not change NowCard.",
+        "In QuickStartByCourseList, fetch learningTimeApi.getActive(learnerId) alongside the lessons fetch (cancel-safe like the existing effect). Treat 'running'|'paused' as resumable, 'ended'|'draft' as needs-finishing.",
+        "Resumable: render '<Course name or Session> session is paused/in progress' + Resume (only when paused; uses transition 'resume') + Link 'Open Learning Time' (/learning-time). Needs-finishing: render message + Link to /learning-time. Resolve the course name from allSubjects by session.subjectId.",
+        "In handleStart and Resume catch blocks, show err.message when it is an Error with a non-empty message, else the existing generic text.",
+        "TodaySchedulePanel: no structural change expected; only adjust if the started-state copy needs to cover Resume. Keep all dashboard data coming from learning-time's component."
+      ],
+      "doneWhen": [
+        "npx jest features/learning-time features/dashboard --testPathIgnorePatterns=/node_modules/",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Record the final copy strings for the paused/ended rows and confirm NowCard was not modified."
+    },
+    {
+      "id": "phase-2a-shift-design-signoff",
+      "title": "GATE: approve shift design decisions D1-D7",
+      "gated": true,
+      "modelTier": "strong",
+      "preconditions": [
+        "User has read the 'Phase 2a design decisions' table in the plan markdown"
+      ],
+      "fileScope": [
+        "docs/bug_enhancement/20261007-blockers-quickstart-shift-recurring-plan.md"
+      ],
+      "testsFirst": [
+        "No code tests: this phase records approved decisions. Verification is that the markdown D1-D7 table reflects the user's answers exactly."
+      ],
+      "implementationSteps": [
+        "Present D1-D7 to the user. Record any amendments in the markdown table (mark each row 'Approved 2026-MM-DD' or the amended text).",
+        "If D2 (ordinal remap) or D5 (preview/apply/undo, no new table) is amended in a way that needs persistence, STOP: that becomes a schema change and the plan must be re-scoped."
+      ],
+      "doneWhen": [
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "List each decision as approved or amended (with the amended text) so phases 2b-2d build exactly that."
+    },
+    {
+      "id": "phase-2b-calendar-engine-shift-api",
+      "title": "School-day calendar remap + lesson shift preview/apply API",
+      "gated": false,
+      "modelTier": "strong",
+      "preconditions": [
+        "phase-2a-shift-design-signoff"
+      ],
+      "fileScope": [
+        "features/plan/utils/schoolCalendar.ts",
+        "features/plan/__tests__/unit/schoolCalendar.test.ts",
+        "features/plan/types.ts",
+        "features/plan/server/shiftService.ts",
+        "features/plan/server/repository.ts",
+        "features/plan/api/routes/lesson-shift.ts",
+        "features/plan/api/router.ts",
+        "features/plan/front/services/api.ts",
+        "features/plan/__tests__/api/lesson-shift.test.ts",
+        "features/plan/__tests__/api/repository.test.ts",
+        "features/auth/__tests__/learnerPolicy.test.ts"
+      ],
+      "testsFirst": [
+        "features/plan/__tests__/unit/schoolCalendar.test.ts: buildSchoolDaySequence skips days not in schoolDays and every date inside breaks; remapDate with schoolDays Mon-Fri, break 2026-11-25..2026-11-27, offset 1: '2026-11-21' -> '2026-11-24' and '2026-11-24' -> '2026-11-28'; a Saturday date snaps to the next school day ordinal; break mode (offset 0, before=no break, after=with break) moves '2026-11-25' -> '2026-11-28' and '2026-12-01' -> '2026-12-04'; offsets that run past the year end extend the sequence instead of throwing; DST week (2026-11-02) and month-end cases are stable",
+        "features/plan/__tests__/api/lesson-shift.test.ts: preview returns moves only for status 'not_started' with dueDate >= fromDate; learnerIds/subjectIds filters apply; rows sharing a groupId get identical new dates; plannedStartDate is remapped independently and null stays null; pastYearEndCount counts moves landing after the active year endDate; 400 on invalid fromDate, schoolDays < 0, or mode 'break' with unknown breakId",
+        "features/plan/__tests__/api/lesson-shift.test.ts: apply returns { applied, skipped } where a move whose row no longer matches 'from' (or is no longer not_started) is skipped, not written",
+        "features/plan/__tests__/api/repository.test.ts: updateLessonDatesIfUnchanged updates only rows whose current due_date/planned_start_date equal 'from', within a single transaction, scoped to householdId",
+        "features/auth/__tests__/learnerPolicy.test.ts: a learner POST to plan/lessons/shift/preview and plan/lessons/shift/apply is denied (403)"
+      ],
+      "implementationSteps": [
+        "Read features/plan/server/repository.ts, features/plan/api/router.ts, features/plan/utils/schoolDays.ts, features/school-year/front/lib/calculateDays.ts (date parsing approach), features/school-year/server/service.ts#getActiveSchoolYear and features/settings/server/repository.ts#getHouseholdSetting before writing code.",
+        "Write features/plan/utils/schoolCalendar.ts as pure functions over 'YYYY-MM-DD' strings using local-date parsing (no UTC Date math). School days use features/lib/types DayOfWeek ('Monday'...) with DEFAULT_SCHOOL_DAYS fallback from plan/utils/schoolDays.ts. Breaks use SchoolBreak from school-year/types.",
+        "Add ShiftLessonsRequest, LessonDateMove, ShiftPreview, ShiftApplyResult types to features/plan/types.ts.",
+        "Write features/plan/server/shiftService.ts: previewShift(householdId, req) loads schoolDays via getHouseholdSetting(householdId, 'schoolDays') and breaks via getActiveSchoolYear(householdId), lists candidates via listLessonTaskRows (status 'not_started', startDate fromDate) and filters by learnerIds/subjectIds, computes moves (excluding no-op moves). For mode 'break', 'before' calendar excludes breakId and 'after' includes it, offset 0, fromDate = break.startDate. applyMoves(householdId, moves) delegates to repository.",
+        "Add updateLessonDatesIfUnchanged(householdId, moves) to plan/server/repository.ts using db.transaction; WHERE id, household_id, status='not_started', due_date IS NOT DISTINCT FROM from.dueDate, planned_start_date IS NOT DISTINCT FROM from.plannedStartDate.",
+        "Add features/plan/api/routes/lesson-shift.ts (PREVIEW, APPLY handlers, standard ApiResponse shape, getRequestAuthCtx for householdId) and register them in features/plan/api/router.ts BEFORE the lessons/:id matchers: slug.length === 3 && slug[0]==='lessons' && slug[1]==='shift' && slug[2] in ('preview','apply') && POST. Confirm GET/PUT/DELETE lessons/:id still route correctly.",
+        "Add plannerApi.previewShift(req) and plannerApi.applyShift(moves) to features/plan/front/services/api.ts.",
+        "Do NOT modify features/auth/server/learnerPolicy.ts — it is deny-by-default; only add the test proving it."
+      ],
+      "doneWhen": [
+        "npx jest features/plan features/auth --testPathIgnorePatterns=/node_modules/",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [
+        "No changes under db/ (schema or migrations)"
+      ],
+      "writeBack": "Record exported function names/signatures from schoolCalendar.ts and shiftService.ts, the exact route paths, and the plannerApi method names so 2c/2d call them without re-reading."
+    },
+    {
+      "id": "phase-2c-breaks-ui-and-prompt",
+      "title": "Edit school breaks in Settings and offer to move lessons out of them",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase-2b-calendar-engine-shift-api"
+      ],
+      "fileScope": [
+        "features/school-year/front/components/SchoolBreaksPanel.tsx",
+        "features/school-year/front/services/api.ts",
+        "features/school-year/__tests__/integration/SchoolBreaksPanel.test.tsx",
+        "features/settings/front/pages/SettingsPage.tsx",
+        "features/settings/__tests__/integration/SettingsPage.test.tsx"
+      ],
+      "testsFirst": [
+        "features/school-year/__tests__/integration/SchoolBreaksPanel.test.tsx: renders empty state 'No breaks yet' for a year with no breaks; renders one record card per break (name + date range) when populated",
+        "features/school-year/__tests__/integration/SchoolBreaksPanel.test.tsx: Add break form (collapsible) saves via schoolYearApi update with the full breaks array including the new break; endDate before startDate and dates outside the school year show inline errors and do not call the API",
+        "features/school-year/__tests__/integration/SchoolBreaksPanel.test.tsx: pencil (aria-label 'Edit <name>') expands inline edit; Cancel restores read-only without an API call; Save persists and returns to read-only",
+        "features/school-year/__tests__/integration/SchoolBreaksPanel.test.tsx: trash (aria-label 'Remove <name>') shows InlineConfirm; cancel path makes no API call; confirm path saves without that break and shows InlineSuccess '<name> removed'",
+        "features/school-year/__tests__/integration/SchoolBreaksPanel.test.tsx: after saving a break, plannerApi.previewShift is called with mode 'break' and the breakId; when moves.length > 0 the prompt '<N> lessons fall in <name>. Move them after the break?' is shown; when 0, no prompt; 'Not now' dismisses without apply; Confirm calls plannerApi.applyShift with the preview moves and shows '<N> lessons moved'",
+        "features/school-year/__tests__/integration/SchoolBreaksPanel.test.tsx: API error on save shows an inline error and keeps the edit open",
+        "features/settings/__tests__/integration/SettingsPage.test.tsx: school-year tab renders SchoolBreaksPanel when an active year exists and does not when there is none"
+      ],
+      "implementationSteps": [
+        "Read features/settings/front/pages/SettingsPage.tsx (school-year tab ~line 277), features/school-year/front/services/api.ts, features/lib/front/components/InlineConfirm.tsx and InlineSuccess.tsx, and one existing editable record card (e.g. compliance deadlines in features/compliance/front/pages/CompliancePage.tsx ~line 326-410) to match the approved inline-edit pattern.",
+        "Add an updateSchoolYear (PUT /api/school-years/:id) method to schoolYearApi if not present.",
+        "Build SchoolBreaksPanel({ year, onYearUpdated }) following ui-style-guide §1 (inline edit), §2 (icons with aria-labels), §3 (InlineConfirm), §5 (collapsible add-form, default open only when there are no breaks), §9 (InlineSuccess). Break ids: 'break_<Date.now()>'.",
+        "Post-save prompt calls plannerApi.previewShift / applyShift from phase 2b writeBack. Importing the plan feature's front service from school-year is a cross-feature UI composition; keep it to those two calls.",
+        "Mount the panel in SettingsPage under the active-year summary, passing activeYear and loadActiveYear as onYearUpdated. Do not mount or revive the unused SchoolYearCard."
+      ],
+      "doneWhen": [
+        "npx jest features/school-year features/settings --testPathIgnorePatterns=/node_modules/",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [
+        "No changes under db/ (schema or migrations)"
+      ],
+      "writeBack": "Record the panel's props, where it is mounted, and the prompt copy."
+    },
+    {
+      "id": "phase-2d-planner-shift-panel",
+      "title": "Lesson Planner 'Shift lessons' panel with preview, confirm and undo",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase-2b-calendar-engine-shift-api"
+      ],
+      "fileScope": [
+        "features/plan/front/components/ShiftLessonsPanel.tsx",
+        "features/plan/front/components/WeekNavigator.tsx",
+        "features/plan/front/components/WeeklyPlannerPage.tsx",
+        "features/plan/__tests__/integration/ShiftLessonsPanel.test.tsx",
+        "features/plan/__tests__/integration/WeekNavigator.test.tsx",
+        "features/plan/__tests__/integration/WeeklyPlannerPage.test.tsx"
+      ],
+      "testsFirst": [
+        "features/plan/__tests__/integration/ShiftLessonsPanel.test.tsx: defaults to fromDate = today, 1 school day, all learners and all courses selected",
+        "features/plan/__tests__/integration/ShiftLessonsPanel.test.tsx: '1 week' preset sets N to the household's school-days count (5 for Mon-Fri default, 6 when schoolDays has 6 entries)",
+        "features/plan/__tests__/integration/ShiftLessonsPanel.test.tsx: Preview calls plannerApi.previewShift with the form values and renders '<N> lessons for <M> learners move <K> school days later'; renders the past-year-end warning when pastYearEndCount > 0; renders the empty message and disables Confirm when moves is empty",
+        "features/plan/__tests__/integration/ShiftLessonsPanel.test.tsx: Confirm calls applyShift(moves), then refreshLessons, then shows InlineSuccess '<applied> lessons moved' with Undo; if skipped.length > 0 also shows '<n> skipped because they changed'",
+        "features/plan/__tests__/integration/ShiftLessonsPanel.test.tsx: Undo calls applyShift with from/to swapped for the applied moves and refreshes; API errors show inline and do not close the panel; Cancel closes without any API call",
+        "features/plan/__tests__/integration/WeekNavigator.test.tsx: renders a 'Shift lessons' toggle that calls its handler and switches label to 'Cancel' when open",
+        "features/plan/__tests__/integration/WeeklyPlannerPage.test.tsx: toggling Shift lessons shows/hides ShiftLessonsPanel and it is closed by default"
+      ],
+      "implementationSteps": [
+        "Read WeeklyPlannerPage.tsx, WeekNavigator.tsx, PlannerContext (refreshLessons, studentProfiles, allSubjects), and the add-lesson toggle wiring before editing.",
+        "Add an onToggleShift / showShift prop pair to WeekNavigator mirroring onToggleAddLesson/showAddForm. Opening one panel closes the other.",
+        "Build ShiftLessonsPanel inside 'form-section-heading' + 'add-form-card' (ui-style-guide §4/§5). Default closed is a documented deviation (rare, consequential action). Learner/course pickers reuse checkbox styling already used by LessonTaskForm. Steps: form -> preview summary -> Confirm -> InlineSuccess + Undo. Fields stack on mobile.",
+        "Use plannerApi.previewShift/applyShift from phase 2b writeBack. Call refreshLessons after apply and after undo."
+      ],
+      "doneWhen": [
+        "npx jest features/plan --testPathIgnorePatterns=/node_modules/",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Record copy strings and the WeekNavigator prop names added."
+    },
+    {
+      "id": "phase-3-course-times-on-schedule",
+      "title": "Place untimed lessons at their course's recurring time on the schedule",
+      "gated": false,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase-2d-planner-shift-panel"
+      ],
+      "fileScope": [
+        "features/schedule/types.ts",
+        "features/schedule/server/service.ts",
+        "features/schedule/__tests__/unit/buildDailySchedule.test.ts",
+        "features/schedule/front/pages/SchedulePage.tsx",
+        "features/schedule/__tests__/integration/SchedulePage.test.tsx",
+        "features/schedule/api/routes/schedule.ts",
+        "features/schedule/__tests__/api/schedule.test.ts",
+        "features/dashboard/front/pages/Dashboard.tsx",
+        "features/dashboard/server/taskMetrics.ts",
+        "features/dashboard/__tests__/integration/components/TodaySchedulePanel.test.tsx"
+      ],
+      "testsFirst": [
+        "features/schedule/__tests__/unit/buildDailySchedule.test.ts: with settings.date='2026-10-13' (Tuesday) and courseTimes { math: [{ daysOfWeek:['Monday'..'Friday'], startTime:'10:15', endTime:'11:00' }] }, an untimed Math lesson becomes a locked block 10:15-11:00",
+        "features/schedule/__tests__/unit/buildDailySchedule.test.ts: a Math lesson with its own scheduledStartTime/EndTime keeps its own time; a course with no block for that weekday (or no courseTimes) stacks from startTime exactly as before; omitting date/courseTimes produces output identical to the current implementation (regression)",
+        "features/schedule/__tests__/unit/buildDailySchedule.test.ts: two courses with overlapping blocks both render at their times (no auto-resolution) and untimed lessons without a course block continue the stacking cursor after them",
+        "features/schedule/__tests__/integration/SchedulePage.test.tsx: an untimed lesson for a course with a recurring block shows its course time on the selected date",
+        "features/schedule/__tests__/api/schedule.test.ts: GET schedule/today places an untimed lesson at its course block for today"
+      ],
+      "implementationSteps": [
+        "Read all four buildDailySchedule callers (Dashboard.tsx ~68, SchedulePage.tsx ~94, schedule/api/routes/schedule.ts ~51, dashboard/server/taskMetrics.ts ~30) and features/subjects/types.ts RecurringScheduleBlock first.",
+        "Add optional date?: string and courseTimes?: Record<string, RecurringScheduleBlock[]> to ScheduleSettings. In buildDailySchedule, when a lesson lacks explicit times and courseTimes[lesson.subjectId] has a block whose daysOfWeek includes the weekday of settings.date (local parse of YYYY-MM-DD), treat it like the explicit-time branch (locked). Set the returned date to settings.date when provided.",
+        "Client callers: pass date: selectedDate and courseTimes built from the subjects they already load (find how Dashboard/SchedulePage get subjects; if SchedulePage has none, use the existing subjects front service rather than a new endpoint). Server callers: load subjects through the subjects feature service/repository already used elsewhere server-side, not the table directly.",
+        "Do not write scheduledStartTime/EndTime onto lesson rows — this is a read-time fallback."
+      ],
+      "doneWhen": [
+        "npx jest features/schedule features/dashboard --testPathIgnorePatterns=/node_modules/",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [
+        "No changes under db/ (schema or migrations)"
+      ],
+      "writeBack": "Record how each of the four callers obtains courseTimes."
+    },
+    {
+      "id": "phase-4-release-and-feedback-closeout",
+      "title": "GATE: PR to dev, UAT on dev, promote, mark feedback shipped",
+      "gated": true,
+      "modelTier": "standard",
+      "preconditions": [
+        "phase-1-quickstart-active-session",
+        "phase-2c-breaks-ui-and-prompt",
+        "phase-2d-planner-shift-panel",
+        "phase-3-course-times-on-schedule"
+      ],
+      "fileScope": [
+        "scripts/mark-feedback-shipped.js",
+        "CHANGELOG.md"
+      ],
+      "testsFirst": [
+        "Full suite including integration: npx jest --testPathIgnorePatterns=/node_modules/ passes before opening the PR"
+      ],
+      "implementationSteps": [
+        "Open PR fix/blockers-20261007 -> dev using --body-file (PowerShell, no heredocs); check for an existing PR first.",
+        "After merge and dev deploy, run the plan's Manual QA list on dev.sheathacademy.com and npm run uat:dev.",
+        "With user approval, promote dev -> master. After the prod deploy, add rows 5dd1dafd, 03a84383, ef9163fd, b8be399a, 5116ae4f, 4ee15e76, b01b66f0 to KNOWN_ITEMS in scripts/mark-feedback-shipped.js with the release version and PR number, dry-run, then --apply with --pr=<n>."
+      ],
+      "doneWhen": [
+        "npx jest --testPathIgnorePatterns=/node_modules/",
+        "npm run build",
+        "npm test"
+      ],
+      "invariants": [],
+      "writeBack": "Record PR numbers, deployed version, and which feedback rows were marked shipped."
+    }
+  ]
+}
