@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { plannerApi } from '@/features/plan/front/services/api'
 import { LessonTaskForm, type LessonFormData } from '@/features/plan/front/components/LessonTaskForm'
 import { LessonTaskList } from '@/features/plan/front/components/LessonTaskList'
-import type { LessonTask } from '@/features/plan/types'
+import type { LessonTask, LessonTaskPatch } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { useHousehold } from '@/features/household/front/context'
@@ -104,7 +104,7 @@ export function LessonsPage() {
     setSuccessMsg('Lesson added!')
   }
 
-  async function handleUpdate(id: string, patch: Partial<LessonTask>) {
+  async function handleUpdate(id: string, patch: LessonTaskPatch) {
     await plannerApi.updateLesson(id, patch)
     await fetchLessons()
   }

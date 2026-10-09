@@ -1,6 +1,6 @@
 import type { ApiResponse } from '@/features/lib/types'
 import { LessonTask } from '../../types'
-import type { LessonStep, LessonDateMove, ShiftApplyResult, ShiftLessonsRequest, ShiftPreview } from '../../types'
+import type { LessonTaskPatch, LessonStep, LessonDateMove, ShiftApplyResult, ShiftLessonsRequest, ShiftPreview } from '../../types'
 import type { SubjectProgressSummary } from '@/features/plan/utils/progressBySubject'
 import type { LessonHistoryOptions } from '@/features/plan/utils/completedLessonHistory'
 
@@ -98,7 +98,10 @@ export const plannerApi = {
     }
   },
 
-  createLesson: async (data: Omit<LessonTask, 'id' | 'createdAt' | 'updatedAt'> & {
+  createLesson: async (data: Omit<LessonTask, 'id' | 'createdAt' | 'updatedAt' | 'scheduledStartTime' | 'scheduledEndTime'> & {
+    // The create route treats null like blank (no time of its own).
+    scheduledStartTime?: string | null
+    scheduledEndTime?: string | null
     childIds?: string[]
     assignments?: { childId: string; subjectId: string }[]
   }): Promise<LessonTask> => {
@@ -106,7 +109,7 @@ export const plannerApi = {
     return response.data
   },
 
-  updateLesson: async (id: string, patch: Partial<LessonTask> & { applyToGroup?: boolean }): Promise<LessonTask> => {
+  updateLesson: async (id: string, patch: LessonTaskPatch): Promise<LessonTask> => {
     const response = await put<LessonTask>(`/api/plan/lessons/${id}`, patch)
     return response.data
   },

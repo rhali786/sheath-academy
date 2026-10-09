@@ -1,6 +1,6 @@
 'use client'
 
-import type { LessonTask } from '@/features/plan/types'
+import type { LessonTask, LessonTaskPatch } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { LessonCard } from './LessonCard'
@@ -10,7 +10,7 @@ interface LessonTaskListProps {
   children: StudentProfile[]
   subjects: SubjectCourse[]
   error?: string | null
-  onUpdate?: (id: string, patch: Partial<LessonTask>) => Promise<void>
+  onUpdate?: (id: string, patch: LessonTaskPatch) => Promise<void>
   /** Legacy: passed through to LessonCard when onUpdate is not available */
   onEdit?: (lesson: LessonTask) => void
   onDelete?: (id: string) => void

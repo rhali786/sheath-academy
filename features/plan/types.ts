@@ -45,6 +45,16 @@ export interface LessonTask {
   updatedAt: string
 }
 
+/**
+ * An update to one lesson (PUT /api/plan/lessons/:id). `null` clears the lesson's
+ * own time — `undefined` cannot, because it is dropped from the JSON body.
+ */
+export type LessonTaskPatch = Omit<Partial<LessonTask>, 'scheduledStartTime' | 'scheduledEndTime'> & {
+  scheduledStartTime?: string | null
+  scheduledEndTime?: string | null
+  applyToGroup?: boolean
+}
+
 // ─── Lesson shift (move not-started lessons along the school-day calendar) ────
 
 export type ShiftMode = 'shift' | 'break'
