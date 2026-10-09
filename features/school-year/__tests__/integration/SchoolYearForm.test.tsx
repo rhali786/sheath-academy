@@ -145,8 +145,23 @@ describe('SchoolYearForm component', () => {
     })
   })
 
-  it('shows error message on API failure', async () => {
+  it('shows the server message on API failure', async () => {
     mockCreateSchoolYear.mockRejectedValueOnce(new Error('Server error'))
+
+    render(<SchoolYearForm />)
+
+    fireEvent.change(screen.getByLabelText(/School year name/i), {
+      target: { value: 'Test Year' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Server error')).toBeInTheDocument()
+    })
+  })
+
+  it('falls back to a generic message when the failure carries no message', async () => {
+    mockCreateSchoolYear.mockRejectedValueOnce('boom')
 
     render(<SchoolYearForm />)
 

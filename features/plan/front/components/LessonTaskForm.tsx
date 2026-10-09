@@ -9,6 +9,7 @@ import {
   subjectEnrollsLearner,
 } from '@/features/subjects/lib/enrollment'
 import { isOffDay } from '@/features/plan/utils/schoolDays'
+import { LessonTimeFields, validateLessonTimes } from '@/features/plan/front/components/LessonTimeFields'
 
 const GENERAL_LESSON_TYPES = ['Lesson', 'Assignment', 'Reading', 'Practice', 'Review', 'Project', 'Assessment', 'Other']
 const QURAN_LESSON_TYPES   = ['Memorisation', 'Revision', 'Recitation', 'Tajweed', 'Listening']
@@ -20,91 +21,6 @@ const DURATION_OPTIONS: { value: LessonDuration; label: string }[] = [
   { value: '1hr',   label: '1 hour' },
   { value: 'custom', label: 'Custom' },
 ]
-
-const HOURS_12 = Array.from({ length: 12 }, (_, i) => String(i + 1))
-const MINUTES_5 = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'))
-
-/** Splits a 24-hour "HH:MM" string into 12-hour parts. Empty/undefined input yields a blank hour. */
-function timeToParts(time: string): { hour: string; minute: string; period: 'AM' | 'PM' } {
-  if (!time) return { hour: '', minute: '00', period: 'AM' }
-  const [hStr, mStr] = time.split(':')
-  const h24 = parseInt(hStr, 10)
-  const period: 'AM' | 'PM' = h24 >= 12 ? 'PM' : 'AM'
-  let h12 = h24 % 12
-  if (h12 === 0) h12 = 12
-  return { hour: String(h12), minute: mStr ?? '00', period }
-}
-
-/** Combines 12-hour parts back into the 24-hour "HH:MM" string the rest of the app expects. An empty hour yields ''. */
-function partsToTime(hour: string, minute: string, period: 'AM' | 'PM'): string {
-  if (!hour) return ''
-  let h = parseInt(hour, 10) % 12
-  if (period === 'PM') h += 12
-  return `${String(h).padStart(2, '0')}:${minute}`
-}
-
-interface TimePicker12hProps {
-  idPrefix: string
-  label: string
-  value: string
-  onChange: (value: string) => void
-}
-
-/** Custom 12-hour time control (hour/minute/period selects) that stores/reads the same 24-hour "HH:MM" string the rest of the system expects. */
-function TimePicker12h({ idPrefix, label, value, onChange }: TimePicker12hProps) {
-  const parts = timeToParts(value)
-
-  function update(next: Partial<{ hour: string; minute: string; period: 'AM' | 'PM' }>) {
-    const hour = next.hour ?? parts.hour
-    const minute = next.minute ?? parts.minute
-    const period = next.period ?? parts.period
-    onChange(partsToTime(hour, minute, period))
-  }
-
-  return (
-    <div>
-      <span className="block text-sm font-medium text-slate-700 mb-1">
-        {label} <span className="text-slate-400 font-normal">(optional)</span>
-      </span>
-      <div className="flex items-center gap-1">
-        <select
-          id={`${idPrefix}-hour`}
-          aria-label={`${label} hour`}
-          value={parts.hour}
-          onChange={e => update({ hour: e.target.value })}
-          className="rounded-lg border border-slate-200 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
-        >
-          <option value="">--</option>
-          {HOURS_12.map(h => (
-            <option key={h} value={h}>{h}</option>
-          ))}
-        </select>
-        <span className="text-slate-400" aria-hidden="true">:</span>
-        <select
-          id={`${idPrefix}-minute`}
-          aria-label={`${label} minute`}
-          value={parts.minute}
-          onChange={e => update({ minute: e.target.value })}
-          className="rounded-lg border border-slate-200 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
-        >
-          {MINUTES_5.map(m => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
-        <select
-          id={`${idPrefix}-period`}
-          aria-label={`${label} period`}
-          value={parts.period}
-          onChange={e => update({ period: e.target.value as 'AM' | 'PM' })}
-          className="rounded-lg border border-slate-200 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
-        >
-          <option value="AM">AM</option>
-          <option value="PM">PM</option>
-        </select>
-      </div>
-    </div>
-  )
-}
 
 function todayLocal(): string {
   const d = new Date()
@@ -151,8 +67,9 @@ export interface LessonFormData {
   status: LessonTaskStatus
   order: number
   estimatedDuration?: LessonDuration
-  scheduledStartTime?: string
-  scheduledEndTime?: string
+  /** `null` (edit only) clears the lesson's own time so it falls back to its course time. */
+  scheduledStartTime?: string | null
+  scheduledEndTime?: string | null
   lessonType?: string
   curriculum?: string
   chapter?: string
@@ -290,14 +207,14 @@ export function LessonTaskForm({
 
     const trimmedStartTime = scheduledStartTime.trim()
     const trimmedEndTime = scheduledEndTime.trim()
-    if (Boolean(trimmedStartTime) !== Boolean(trimmedEndTime)) {
-      setTimeError('Enter both a start and end time, or leave both blank')
+    const timeProblem = validateLessonTimes(trimmedStartTime, trimmedEndTime)
+    if (timeProblem) {
+      setTimeError(timeProblem)
       return
     }
-    if (trimmedStartTime && trimmedEndTime && trimmedEndTime <= trimmedStartTime) {
-      setTimeError('End time must be after start time')
-      return
-    }
+    // On edit, blank must reach the server as null — `undefined` is dropped from the
+    // JSON body and the route would keep the old time.
+    const clearedTime = isEdit ? null : undefined
 
     setIsSubmitting(true)
     try {
@@ -315,8 +232,8 @@ export function LessonTaskForm({
         status,
         order: editingLesson?.order ?? 0,
         estimatedDuration: estimatedDuration || undefined,
-        scheduledStartTime: trimmedStartTime || undefined,
-        scheduledEndTime: trimmedEndTime || undefined,
+        scheduledStartTime: trimmedStartTime || clearedTime,
+        scheduledEndTime: trimmedEndTime || clearedTime,
         lessonType: lessonType || undefined,
         curriculum: curriculum.trim() || undefined,
         chapter: chapter.trim() || undefined,
@@ -500,22 +417,14 @@ export function LessonTaskForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <TimePicker12h
-          idPrefix="scheduledStartTime"
-          label="Start time"
-          value={scheduledStartTime}
-          onChange={setScheduledStartTime}
-        />
-
-        <TimePicker12h
-          idPrefix="scheduledEndTime"
-          label="End time"
-          value={scheduledEndTime}
-          onChange={setScheduledEndTime}
-        />
-        {timeError && <p className="text-xs text-red-600 -mt-2 sm:col-span-2">{timeError}</p>}
-      </div>
+      <LessonTimeFields
+        idPrefix={isEdit ? `lesson-form-${editingLesson!.id}` : 'lesson-form-new'}
+        start={scheduledStartTime}
+        end={scheduledEndTime}
+        onStartChange={setScheduledStartTime}
+        onEndChange={setScheduledEndTime}
+        error={timeError}
+      />
 
       <div>
         <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-1">

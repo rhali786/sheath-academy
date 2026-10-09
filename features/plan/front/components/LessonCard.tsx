@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react'
 import { Pencil, Trash2, Check, X, ListChecks } from 'lucide-react'
 import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import { LessonSteps } from '@/features/plan/front/components/LessonSteps'
-import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
+import type { LessonTask, LessonTaskPatch, LessonTaskStatus } from '@/features/plan/types'
 import { formatCompletionWindow } from '@/features/plan/utils/lessonCompletionWindow'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { filterSubjectsForLearner } from '@/features/subjects/lib/enrollment'
+import { LessonTimeFields, validateLessonTimes } from '@/features/plan/front/components/LessonTimeFields'
 
 const STATUS_LABELS: Record<LessonTaskStatus, string> = {
   not_started: 'Not started',
@@ -39,7 +40,7 @@ interface LessonCardProps {
   /** If provided, list of all subjects (for edit form selects) */
   subjects?: SubjectCourse[]
   /** Called with the updated patch when save is pressed */
-  onUpdate?: (id: string, patch: Partial<LessonTask> & { applyToGroup?: boolean }) => Promise<void>
+  onUpdate?: (id: string, patch: LessonTaskPatch) => Promise<void>
   /** Legacy: called when Edit button is clicked (top-form pattern) — kept for backward compatibility */
   onEdit?: (lesson: LessonTask) => void
   onDelete?: (id: string) => void
@@ -65,6 +66,9 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
   const [editStatus, setEditStatus] = useState<LessonTaskStatus>(lesson.status)
   const [editDescription, setEditDescription] = useState(lesson.description ?? '')
   const [editResourceLink, setEditResourceLink] = useState(lesson.resourceLink ?? '')
+  const [editStartTime, setEditStartTime] = useState(lesson.scheduledStartTime ?? '')
+  const [editEndTime, setEditEndTime] = useState(lesson.scheduledEndTime ?? '')
+  const [timeError, setTimeError] = useState('')
   const [applyToGroup, setApplyToGroup] = useState(false)
   const [titleError, setTitleError] = useState('')
 
@@ -110,8 +114,11 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     setEditStatus(lesson.status)
     setEditDescription(lesson.description ?? '')
     setEditResourceLink(lesson.resourceLink ?? '')
+    setEditStartTime(lesson.scheduledStartTime ?? '')
+    setEditEndTime(lesson.scheduledEndTime ?? '')
     setApplyToGroup(false)
     setTitleError('')
+    setTimeError('')
     // If inline edit is available (onUpdate provided), use it; otherwise fall back to legacy onEdit
     if (onUpdate) {
       setIsEditing(true)
@@ -131,6 +138,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
   function cancelEdit() {
     setIsEditing(false)
     setTitleError('')
+    setTimeError('')
   }
 
   async function saveEdit() {
@@ -139,6 +147,12 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
       setTitleError('Title is required')
       return
     }
+    const timeProblem = validateLessonTimes(editStartTime, editEndTime)
+    if (timeProblem) {
+      setTimeError(timeProblem)
+      return
+    }
+    setTimeError('')
     if (!onUpdate) return
     setSaving(true)
     try {
@@ -151,6 +165,9 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
         status: editStatus,
         description: editDescription.trim() || undefined,
         resourceLink: editResourceLink.trim() || undefined,
+        // null, not undefined: blank must clear the lesson's own time on the server.
+        scheduledStartTime: editStartTime.trim() || null,
+        scheduledEndTime: editEndTime.trim() || null,
         ...(lesson.groupId && applyToGroup ? { applyToGroup: true } : {}),
       })
       setIsEditing(false)
@@ -250,6 +267,14 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
               </select>
             </div>
           </div>
+          <LessonTimeFields
+            idPrefix={`lesson-card-${lesson.id}`}
+            start={editStartTime}
+            end={editEndTime}
+            onStartChange={setEditStartTime}
+            onEndChange={setEditEndTime}
+            error={timeError}
+          />
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Description <span className="font-normal text-slate-400">(optional)</span></label>
             <textarea

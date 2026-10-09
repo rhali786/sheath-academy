@@ -548,7 +548,9 @@ describe('LessonTaskForm — scheduled start/end time override (12-hour picker)'
     expect((screen.getByLabelText(/start time period/i) as HTMLSelectElement).value).toBe('PM')
   })
 
-  it('submits cleared (undefined) times when both previously-set values are cleared', async () => {
+  // null, not undefined: undefined is dropped from the JSON body and the server
+  // would keep the old time (UAT 4.5 follow-up).
+  it('submits cleared (null) times when both previously-set values are cleared', async () => {
     const onSubmit = jest.fn().mockResolvedValue(undefined)
     const withTimes: LessonTask = { ...editingLesson, scheduledStartTime: '11:00', scheduledEndTime: '11:30' }
     render(
@@ -568,8 +570,8 @@ describe('LessonTaskForm — scheduled start/end time override (12-hour picker)'
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalled()
     })
-    expect(onSubmit.mock.calls[0][0].scheduledStartTime).toBeUndefined()
-    expect(onSubmit.mock.calls[0][0].scheduledEndTime).toBeUndefined()
+    expect(onSubmit.mock.calls[0][0].scheduledStartTime).toBeNull()
+    expect(onSubmit.mock.calls[0][0].scheduledEndTime).toBeNull()
   })
 
   it('shows an inline validation error and does not submit when end time is at or before start time', async () => {

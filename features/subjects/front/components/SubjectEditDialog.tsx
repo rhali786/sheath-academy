@@ -6,6 +6,13 @@ import type { Resource } from '@/features/resources/types'
 import { SUBJECT_COURSE_CATEGORIES, formatCategory } from '@/features/subjects/front/lib/categories'
 import { subjectsApi } from '@/features/subjects/front/services/api'
 import { resourcesApi } from '@/features/resources/front/services/api'
+import {
+  RecurringScheduleEditor,
+  draftFromSchedule,
+  emptyBlock,
+  isCompleteBlock,
+  type ScheduleBlockDraft,
+} from '@/features/subjects/front/components/RecurringScheduleEditor'
 
 export interface SubjectChildOption {
   id: string
@@ -32,6 +39,8 @@ export function SubjectEditDialog({
   const [category, setCategory] = useState<SubjectCourseCategory>('Math')
   const [resources, setResources] = useState<Resource[]>([])
   const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>([])
+  const [recurringEnabled, setRecurringEnabled] = useState(false)
+  const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlockDraft[]>([emptyBlock()])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -41,6 +50,9 @@ export function SubjectEditDialog({
     setSelectedLearnerIds(subject.learnerIds?.length ? [...subject.learnerIds] : subject.childId ? [subject.childId] : [])
     setCategory(subject.category)
     setSelectedResourceIds(subject.resourceIds ? [...subject.resourceIds] : [])
+    const draft = draftFromSchedule(subject.recurringSchedule)
+    setRecurringEnabled(draft.enabled)
+    setScheduleBlocks(draft.blocks)
     setError(null)
   }, [open, subject])
 
@@ -82,6 +94,15 @@ export function SubjectEditDialog({
       setError('Name and at least one learner are required.')
       return
     }
+    const touched = (b: ScheduleBlockDraft) => b.daysOfWeek.length > 0 || !!b.startTime || !!b.endTime
+    if (recurringEnabled && scheduleBlocks.some(b => touched(b) && !isCompleteBlock(b))) {
+      setError('Each weekly time needs at least one day plus a start and end time.')
+      return
+    }
+    const completeBlocks = recurringEnabled ? scheduleBlocks.filter(isCompleteBlock) : []
+    const nextSchedule = completeBlocks.length > 0 ? completeBlocks : null
+    // Only send the schedule when it changed; null clears it.
+    const scheduleChanged = JSON.stringify(nextSchedule) !== JSON.stringify(subject.recurringSchedule?.length ? subject.recurringSchedule : null)
     setSaving(true)
     try {
       await subjectsApi.updateSubject(subject.id, {
@@ -89,6 +110,7 @@ export function SubjectEditDialog({
         learnerIds: selectedLearnerIds,
         category,
         resourceIds: selectedResourceIds,
+        ...(scheduleChanged ? { recurringSchedule: nextSchedule } : {}),
       })
       onSaved()
       onClose()
@@ -186,6 +208,15 @@ export function SubjectEditDialog({
                 </div>
               </div>
             )}
+            <div className="pb-3">
+              <RecurringScheduleEditor
+                idPrefix={`edit-course-${subject.id}`}
+                enabled={recurringEnabled}
+                onEnabledChange={setRecurringEnabled}
+                blocks={scheduleBlocks}
+                onBlocksChange={setScheduleBlocks}
+              />
+            </div>
             {error && <p className="text-xs text-red-600 pb-3">{error}</p>}
           </div>
           <div
