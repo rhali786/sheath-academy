@@ -1,6 +1,6 @@
 import type { ApiResponse } from '@/features/lib/types'
 import { LessonTask } from '../../types'
-import type { LessonStep } from '../../types'
+import type { LessonTaskPatch, LessonStep, LessonDateMove, ShiftApplyResult, ShiftLessonsRequest, ShiftPreview } from '../../types'
 import type { SubjectProgressSummary } from '@/features/plan/utils/progressBySubject'
 import type { LessonHistoryOptions } from '@/features/plan/utils/completedLessonHistory'
 
@@ -33,6 +33,20 @@ async function post<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
     body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  return res.json()
+}
+
+/** Like post(), but surfaces the server's message (used where the user must see why it failed). */
+async function postWithMessage<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
+  const res = await fetch(`${getApiBaseUrl()}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message ?? `Request failed: ${res.status}`)
+  }
   return res.json()
 }
 
@@ -84,7 +98,10 @@ export const plannerApi = {
     }
   },
 
-  createLesson: async (data: Omit<LessonTask, 'id' | 'createdAt' | 'updatedAt'> & {
+  createLesson: async (data: Omit<LessonTask, 'id' | 'createdAt' | 'updatedAt' | 'scheduledStartTime' | 'scheduledEndTime'> & {
+    // The create route treats null like blank (no time of its own).
+    scheduledStartTime?: string | null
+    scheduledEndTime?: string | null
     childIds?: string[]
     assignments?: { childId: string; subjectId: string }[]
   }): Promise<LessonTask> => {
@@ -92,7 +109,7 @@ export const plannerApi = {
     return response.data
   },
 
-  updateLesson: async (id: string, patch: Partial<LessonTask> & { applyToGroup?: boolean }): Promise<LessonTask> => {
+  updateLesson: async (id: string, patch: LessonTaskPatch): Promise<LessonTask> => {
     const response = await put<LessonTask>(`/api/plan/lessons/${id}`, patch)
     return response.data
   },
@@ -149,6 +166,17 @@ export const plannerApi = {
     if (options.showAll) params.set('showAll', 'true')
     if (options.showPending) params.set('showPending', 'true')
     const response = await get<LessonTask[]>(`/api/plan/history?${params}`)
+    return response.data
+  },
+
+  previewShift: async (request: ShiftLessonsRequest): Promise<ShiftPreview> => {
+    const response = await postWithMessage<ShiftPreview>('/api/plan/lessons/shift/preview', request)
+    return response.data
+  },
+
+  /** Applies previewed moves. Undo = the same call with each move's from/to swapped. */
+  applyShift: async (moves: Pick<LessonDateMove, 'id' | 'from' | 'to'>[]): Promise<ShiftApplyResult> => {
+    const response = await postWithMessage<ShiftApplyResult>('/api/plan/lessons/shift/apply', { moves })
     return response.data
   },
 }

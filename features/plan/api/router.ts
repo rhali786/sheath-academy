@@ -4,6 +4,7 @@ import * as lessonHandler from './routes/lesson'
 import * as lessonStepsHandler from './routes/lesson-steps'
 import * as progressHandler from './routes/progress'
 import * as historyHandler from './routes/history'
+import * as lessonShiftHandler from './routes/lesson-shift'
 
 export async function handlePlanRoute(
   slug: string[],
@@ -19,6 +20,13 @@ export async function handlePlanRoute(
   // POST /lessons — create lesson
   if (slug.length === 1 && slug[0] === 'lessons' && method === 'POST') {
     return lessonsHandler.POST(request)
+  }
+
+  // POST /lessons/shift/preview | /lessons/shift/apply — bulk move along the school calendar.
+  // Matched before any lessons/:id route so 'shift' is never read as a lesson id.
+  if (slug.length === 3 && slug[0] === 'lessons' && slug[1] === 'shift' && method === 'POST') {
+    if (slug[2] === 'preview') return lessonShiftHandler.PREVIEW(request)
+    if (slug[2] === 'apply') return lessonShiftHandler.APPLY(request)
   }
 
   // GET /lessons/:id — get single lesson

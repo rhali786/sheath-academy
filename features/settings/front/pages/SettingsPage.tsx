@@ -14,6 +14,7 @@ import { ChildList } from '@/features/children/front/components/ChildList'
 import { SubjectForm } from '@/features/subjects/front/components/SubjectForm'
 import { SubjectsAllTable } from '@/features/subjects/front/components/SubjectsAllTable'
 import { SchoolYearForm } from '@/features/school-year/front/components/SchoolYearForm'
+import { SchoolBreaksPanel } from '@/features/school-year/front/components/SchoolBreaksPanel'
 import { RolloverCoursesPanel } from '@/features/subjects/front/components/RolloverCoursesPanel'
 import { schoolYearApi } from '@/features/school-year/front/services/api'
 import { childrenApi } from '@/features/children/front/services/api'
@@ -78,6 +79,8 @@ export function SettingsPage() {
 
   const [activeYear, setActiveYear] = useState<SchoolYear | null>(null)
   const [activeYearLoading, setActiveYearLoading] = useState(false)
+  // A failed load is not "no school year" — e.g. learners may not read it (UAT 5.2).
+  const [activeYearError, setActiveYearError] = useState<string | null>(null)
 
   const [subjectChildren, setSubjectChildren] = useState<StudentProfile[]>([])
   const [subjectChildrenLoading, setSubjectChildrenLoading] = useState(false)
@@ -89,10 +92,14 @@ export function SettingsPage() {
 
   const loadActiveYear = useCallback(() => {
     setActiveYearLoading(true)
+    setActiveYearError(null)
     schoolYearApi
       .getActiveSchoolYear()
       .then((r) => setActiveYear(r.data ?? null))
-      .catch(() => setActiveYear(null))
+      .catch((err) => {
+        setActiveYear(null)
+        setActiveYearError(err instanceof Error ? err.message : 'Could not load the school year.')
+      })
       .finally(() => setActiveYearLoading(false))
   }, [])
 
@@ -283,6 +290,10 @@ export function SettingsPage() {
 
           {activeYearLoading ? (
             <p className="text-sm text-slate-500 mb-4">Loading school year…</p>
+          ) : activeYearError ? (
+            <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-4 py-3 mb-4">
+              {activeYearError}
+            </p>
           ) : activeYear ? (
             <div className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
               <p className="font-medium text-slate-900">Active school year</p>
@@ -299,12 +310,17 @@ export function SettingsPage() {
             </p>
           )}
 
-          <SchoolYearForm
-            embedded
-            onSuccess={() => {
-              loadActiveYear()
-            }}
-          />
+          {activeYear && <SchoolBreaksPanel year={activeYear} onYearUpdated={setActiveYear} />}
+
+          {/* Offering to create a year we could not read would invite duplicates (or a refusal). */}
+          {!activeYearLoading && !activeYearError && (
+            <SchoolYearForm
+              embedded
+              onSuccess={() => {
+                loadActiveYear()
+              }}
+            />
+          )}
 
           {activeYear && householdId ? (
             <RolloverCoursesPanel householdId={householdId} activeYear={activeYear} />

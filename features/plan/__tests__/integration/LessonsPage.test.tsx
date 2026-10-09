@@ -269,6 +269,34 @@ describe('LessonsPage', () => {
     })
   })
 
+  // ─── Phase 4: "Overdue" status filter (item 25) ───────────────────────────
+
+  it('status filter dropdown includes an Overdue option', async () => {
+    mockGetLessons.mockResolvedValue([])
+    render(<LessonsPage />)
+    await waitFor(() => expect(screen.getByText(/all lessons/i)).toBeInTheDocument())
+    expect(screen.getByRole('option', { name: 'Overdue' })).toBeInTheDocument()
+  })
+
+  it('Overdue filter shows a past-due not_started lesson but not a completed one due the same day', async () => {
+    const overdueLesson = makeLesson({ id: 'lesson_overdue', title: 'Overdue Lesson', status: 'not_started', dueDate: '2020-01-01' })
+    const completedPastLesson = makeLesson({ id: 'lesson_done', title: 'Completed Past Lesson', status: 'completed', dueDate: '2020-01-01' })
+    const futureLesson = makeLesson({ id: 'lesson_future', title: 'Future Lesson', status: 'not_started', dueDate: '2099-12-31' })
+    mockGetLessons.mockResolvedValue([overdueLesson, completedPastLesson, futureLesson])
+
+    render(<LessonsPage />)
+    await waitFor(() => expect(screen.getByText('Overdue Lesson')).toBeInTheDocument())
+
+    const statusSelect = screen.getByRole('option', { name: 'Overdue' }).closest('select')!
+    fireEvent.change(statusSelect, { target: { value: 'overdue' } })
+
+    await waitFor(() => {
+      expect(screen.getByText('Overdue Lesson')).toBeInTheDocument()
+      expect(screen.queryByText('Completed Past Lesson')).not.toBeInTheDocument()
+      expect(screen.queryByText('Future Lesson')).not.toBeInTheDocument()
+    })
+  })
+
   it('collapses form and shows Lesson added confirmation after successful submit', async () => {
     const mockCreate = plannerApi.createLesson as jest.Mock
     mockCreate.mockResolvedValue(ok(makeLesson()))

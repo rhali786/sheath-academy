@@ -102,6 +102,24 @@ describe('School Year - Single Item Operations', () => {
         }),
       ).rejects.toThrow(/endDate must be after startDate/i)
     })
+
+    it('saves valid breaks inside the school year', async () => {
+      const breaks = [{ id: 'br_1', name: 'Thanksgiving', startDate: '2025-11-26', endDate: '2025-11-28' }]
+      await updateSchoolYear(HOUSEHOLD_ID, SEED_IDS.schoolYear, { breaks })
+      expect(mockUpdateSchoolYearRow).toHaveBeenCalledWith(SEED_IDS.schoolYear, HOUSEHOLD_ID, { breaks })
+    })
+
+    it.each([
+      [[{ id: 'br_1', name: 'Backwards', startDate: '2025-11-28', endDate: '2025-11-26' }], /end.*before.*start|after its start/i],
+      [[{ id: 'br_1', name: 'Too early', startDate: '2025-07-20', endDate: '2025-07-25' }], /within the school year/i],
+      [[{ id: 'br_1', name: 'Too late', startDate: '2026-05-30', endDate: '2026-06-02' }], /within the school year/i],
+      [[{ id: 'br_1', name: '', startDate: '2025-11-26', endDate: '2025-11-28' }], /name/i],
+      [[{ id: 'br_1', name: 'Bad date', startDate: '2025-13-01', endDate: '2025-11-28' }], /valid date/i],
+      [[{ id: '', name: 'No id', startDate: '2025-11-26', endDate: '2025-11-28' }], /id/i],
+    ])('rejects an invalid break %#', async (breaks, message) => {
+      await expect(updateSchoolYear(HOUSEHOLD_ID, SEED_IDS.schoolYear, { breaks })).rejects.toThrow(message)
+      expect(mockUpdateSchoolYearRow).not.toHaveBeenCalled()
+    })
   })
 
   describe('activateSchoolYear()', () => {

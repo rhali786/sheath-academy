@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { requireAuthCtx } from '@/features/auth/server/context'
 import { runWithAuthCtx } from '@/features/auth/server/requestAuth'
+import { enforceLearnerPolicy } from '@/features/auth/server/learnerPolicy'
 import { handleDashboardRoute } from '@/features/dashboard/api/router'
 import { handleHouseholdRoute } from '@/features/household/api/router'
 import { handleChildrenRoute } from '@/features/children/api/router'
@@ -138,7 +139,18 @@ async function dispatch(
   if (authResult instanceof Response) return authResult
 
   const { slug } = await params
-  const response = await runWithAuthCtx(authResult, () => handleRoute(slug, request))
+
+  // Role gate for learner accounts. Enforced here — the one place every feature
+  // router and every verb passes through — so it fails closed: a route added
+  // later is denied to learners until it is explicitly allow-listed. It also
+  // returns the request the handler should see, which for a learner may have
+  // self-scoping forced onto household-wide reads. No-op for owner/member/teacher.
+  // See features/auth/server/learnerPolicy.ts.
+  const policy = await enforceLearnerPolicy(authResult, slug, request)
+  if (!policy.allowed) return policy.response
+  const scopedRequest = policy.request
+
+  const response = await runWithAuthCtx(authResult, () => handleRoute(slug, scopedRequest))
   if (response) return response
 
   return NextResponse.json(

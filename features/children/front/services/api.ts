@@ -8,9 +8,27 @@ function getApiBaseUrl(): string {
   return `http://127.0.0.1:${port}`
 }
 
+/**
+ * Turns a non-OK response into an Error carrying the API's own `message` (e.g.
+ * "Username is already taken") rather than a bare "Request failed: 409". That
+ * message is what ChildForm renders, so this is the difference between the user
+ * seeing the actual reason a save failed and seeing a status code — see item 5.
+ */
+async function toRequestError(res: Response): Promise<Error> {
+  try {
+    const body = await res.json()
+    if (body && typeof body.message === 'string' && body.message.trim()) {
+      return new Error(body.message)
+    }
+  } catch {
+    // Non-JSON or empty body — fall through to the status-based message.
+  }
+  return new Error(`Request failed: ${res.status}`)
+}
+
 async function get<T>(path: string): Promise<ApiResponse<T>> {
   const res = await fetch(`${getApiBaseUrl()}${path}`)
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  if (!res.ok) throw await toRequestError(res)
   return res.json()
 }
 
@@ -20,7 +38,7 @@ async function post<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  if (!res.ok) throw await toRequestError(res)
   return res.json()
 }
 
@@ -30,7 +48,7 @@ async function put<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  if (!res.ok) throw await toRequestError(res)
   return res.json()
 }
 
@@ -40,7 +58,7 @@ async function patch<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
   })
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  if (!res.ok) throw await toRequestError(res)
   return res.json()
 }
 

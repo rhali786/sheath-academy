@@ -6,6 +6,13 @@ import type { Resource } from '@/features/resources/types'
 import { SUBJECT_COURSE_CATEGORIES, formatCategory } from '@/features/subjects/front/lib/categories'
 import { subjectsApi } from '@/features/subjects/front/services/api'
 import { resourcesApi } from '@/features/resources/front/services/api'
+import {
+  RecurringScheduleEditor,
+  draftFromSchedule,
+  emptyBlock,
+  isCompleteBlock,
+  type ScheduleBlockDraft,
+} from '@/features/subjects/front/components/RecurringScheduleEditor'
 
 export interface SubjectChildOption {
   id: string
@@ -32,6 +39,8 @@ export function SubjectEditDialog({
   const [category, setCategory] = useState<SubjectCourseCategory>('Math')
   const [resources, setResources] = useState<Resource[]>([])
   const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>([])
+  const [recurringEnabled, setRecurringEnabled] = useState(false)
+  const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlockDraft[]>([emptyBlock()])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -41,6 +50,9 @@ export function SubjectEditDialog({
     setSelectedLearnerIds(subject.learnerIds?.length ? [...subject.learnerIds] : subject.childId ? [subject.childId] : [])
     setCategory(subject.category)
     setSelectedResourceIds(subject.resourceIds ? [...subject.resourceIds] : [])
+    const draft = draftFromSchedule(subject.recurringSchedule)
+    setRecurringEnabled(draft.enabled)
+    setScheduleBlocks(draft.blocks)
     setError(null)
   }, [open, subject])
 
@@ -82,6 +94,15 @@ export function SubjectEditDialog({
       setError('Name and at least one learner are required.')
       return
     }
+    const touched = (b: ScheduleBlockDraft) => b.daysOfWeek.length > 0 || !!b.startTime || !!b.endTime
+    if (recurringEnabled && scheduleBlocks.some(b => touched(b) && !isCompleteBlock(b))) {
+      setError('Each weekly time needs at least one day plus a start and end time.')
+      return
+    }
+    const completeBlocks = recurringEnabled ? scheduleBlocks.filter(isCompleteBlock) : []
+    const nextSchedule = completeBlocks.length > 0 ? completeBlocks : null
+    // Only send the schedule when it changed; null clears it.
+    const scheduleChanged = JSON.stringify(nextSchedule) !== JSON.stringify(subject.recurringSchedule?.length ? subject.recurringSchedule : null)
     setSaving(true)
     try {
       await subjectsApi.updateSubject(subject.id, {
@@ -89,6 +110,7 @@ export function SubjectEditDialog({
         learnerIds: selectedLearnerIds,
         category,
         resourceIds: selectedResourceIds,
+        ...(scheduleChanged ? { recurringSchedule: nextSchedule } : {}),
       })
       onSaved()
       onClose()
@@ -111,79 +133,96 @@ export function SubjectEditDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="subject-edit-title"
-        className="w-full max-w-md rounded-xl bg-white shadow-lg border border-slate-200 p-6"
+        className="w-full max-w-md max-h-[90vh] flex flex-col rounded-xl bg-white shadow-lg border border-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="subject-edit-title" className="text-lg font-semibold text-slate-900 mb-4">
+        <h2 id="subject-edit-title" className="shrink-0 text-lg font-semibold text-slate-900 px-6 pt-6 pb-4">
           Edit course
         </h2>
-        <form onSubmit={handleSubmit} className="space-y-3" data-testid="subject-edit-form">
-          <div>
-            <label htmlFor="edit-subject-name" className="block text-xs font-medium text-slate-600 mb-1">
-              Course name
-            </label>
-            <input
-              id="edit-subject-name"
-              type="text"
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={120}
-            />
-          </div>
-          <div>
-            <p className="block text-xs font-medium text-slate-600 mb-1.5">Learner(s)</p>
-            <div className="flex flex-wrap gap-2" data-testid="edit-subject-learners">
-              {childrenList.map((c) => (
-                <label key={c.id} className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedLearnerIds.includes(c.id)}
-                    onChange={() => toggleLearner(c.id)}
-                    className="rounded"
-                  />
-                  <span className="text-sm text-slate-700">{c.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label htmlFor="edit-subject-category" className="block text-xs font-medium text-slate-600 mb-1">
-              Category
-            </label>
-            <select
-              id="edit-subject-category"
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
-              value={category}
-              onChange={(e) => setCategory(e.target.value as SubjectCourseCategory)}
-            >
-              {SUBJECT_COURSE_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {formatCategory(c)}
-                </option>
-              ))}
-            </select>
-          </div>
-          {resources.length > 0 && (
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0" data-testid="subject-edit-form">
+          <div
+            className="overflow-y-auto flex-1 min-h-0 px-6 space-y-3"
+            data-testid="subject-edit-scroll-body"
+          >
             <div>
-              <p className="block text-xs font-medium text-slate-600 mb-1.5">Linked resources</p>
-              <div className="flex flex-col gap-2" data-testid="edit-subject-resources">
-                {resources.map((r) => (
-                  <label key={r.id} className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+              <label htmlFor="edit-subject-name" className="block text-xs font-medium text-slate-600 mb-1">
+                Course name
+              </label>
+              <input
+                id="edit-subject-name"
+                type="text"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={120}
+              />
+            </div>
+            <div>
+              <p className="block text-xs font-medium text-slate-600 mb-1.5">Learner(s)</p>
+              <div className="flex flex-wrap gap-2" data-testid="edit-subject-learners">
+                {childrenList.map((c) => (
+                  <label key={c.id} className="flex items-center gap-1.5 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={selectedResourceIds.includes(r.id)}
-                      onChange={() => toggleResource(r.id)}
+                      checked={selectedLearnerIds.includes(c.id)}
+                      onChange={() => toggleLearner(c.id)}
                       className="rounded"
                     />
-                    <span className="text-sm text-slate-700">{r.title}</span>
+                    <span className="text-sm text-slate-700">{c.name}</span>
                   </label>
                 ))}
               </div>
             </div>
-          )}
-          {error && <p className="text-xs text-red-600">{error}</p>}
-          <div className="flex justify-end gap-2 pt-2">
+            <div>
+              <label htmlFor="edit-subject-category" className="block text-xs font-medium text-slate-600 mb-1">
+                Category
+              </label>
+              <select
+                id="edit-subject-category"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                value={category}
+                onChange={(e) => setCategory(e.target.value as SubjectCourseCategory)}
+              >
+                {SUBJECT_COURSE_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {formatCategory(c)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {resources.length > 0 && (
+              <div>
+                <p className="block text-xs font-medium text-slate-600 mb-1.5">Linked resources</p>
+                <div className="flex flex-col gap-2 pb-3" data-testid="edit-subject-resources">
+                  {resources.map((r) => (
+                    <label key={r.id} className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+                      <input
+                        type="checkbox"
+                        checked={selectedResourceIds.includes(r.id)}
+                        onChange={() => toggleResource(r.id)}
+                        className="rounded"
+                      />
+                      <span className="text-sm text-slate-700">{r.title}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="pb-3">
+              <RecurringScheduleEditor
+                idPrefix={`edit-course-${subject.id}`}
+                enabled={recurringEnabled}
+                onEnabledChange={setRecurringEnabled}
+                blocks={scheduleBlocks}
+                onBlocksChange={setScheduleBlocks}
+              />
+            </div>
+            {error && <p className="text-xs text-red-600 pb-3">{error}</p>}
+          </div>
+          <div
+            className="shrink-0 flex justify-end gap-2 px-6 py-4 border-t border-slate-200"
+            data-testid="subject-edit-footer"
+          >
             <button
               type="button"
               className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"

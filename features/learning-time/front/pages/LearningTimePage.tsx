@@ -15,11 +15,13 @@ export function LearningTimePage() {
   const { selectedChildId, setSelectedChildId } = useLearner()
   const [selectedCourseName, setSelectedCourseName] = useState('')
   const [activeSchoolYearId, setActiveSchoolYearId] = useState<string | null>(null)
+  const [schoolYearLoaded, setSchoolYearLoaded] = useState(false)
 
   useEffect(() => {
     schoolYearApi.getActiveSchoolYear()
       .then(res => setActiveSchoolYearId(res.data?.id ?? null))
       .catch(() => setActiveSchoolYearId(null))
+      .finally(() => setSchoolYearLoaded(true))
   }, [])
 
   const activeChildren = children.filter(c => c.isActive)
@@ -46,7 +48,13 @@ export function LearningTimePage() {
   const courseNames = useMemo(() => Array.from(courseGroups.keys()), [courseGroups])
   const selectedCourseMembers = selectedCourseName ? courseGroups.get(selectedCourseName) ?? [] : []
 
-  const filteredChildren = selectedCourseName
+  // Only narrow by course once activeSchoolYearId has actually resolved. Until then,
+  // activeSubjects is permissive (includes every year's rows — see the comment above), so a
+  // stale prior-year row could make an ineligible learner look temporarily "enrolled." Holding
+  // off avoids ever deriving a wrong-then-corrected learner from that half-loaded state — the
+  // narrowing becomes correct in a single step the moment schoolYearLoaded flips true, instead
+  // of a first (wrong) pass followed by a second (right) one.
+  const filteredChildren = selectedCourseName && schoolYearLoaded
     ? activeChildren.filter(c => selectedCourseMembers.some(m => m.learnerIds.includes(c.id)))
     : activeChildren
 

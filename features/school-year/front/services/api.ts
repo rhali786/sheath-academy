@@ -9,9 +9,15 @@ function getApiBaseUrl(): string {
   return `http://127.0.0.1:${port}`
 }
 
+/** Surfaces the server's message (validation, learner-policy refusals) instead of a bare status. */
+async function failure(res: Response): Promise<Error> {
+  const err = await res.json().catch(() => ({}))
+  return new Error(err.message ?? `Request failed: ${res.status}`)
+}
+
 async function get<T>(path: string): Promise<ApiResponse<T>> {
   const res = await fetch(`${getApiBaseUrl()}${path}`)
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  if (!res.ok) throw await failure(res)
   return res.json()
 }
 
@@ -21,7 +27,7 @@ async function post<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  if (!res.ok) throw await failure(res)
   return res.json()
 }
 
@@ -31,7 +37,7 @@ async function put<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  if (!res.ok) throw await failure(res)
   return res.json()
 }
 
@@ -41,7 +47,7 @@ async function patch<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
   })
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  if (!res.ok) throw await failure(res)
   return res.json()
 }
 

@@ -232,3 +232,35 @@ describe('lesson tasks repository', () => {
     await deleteLessonTaskRow(rows[0].id, householdId)
   })
 })
+
+describe('updateLessonDatesIfUnchanged', () => {
+  itDb('moves only rows whose dates and status still match the preview, scoped to the household', async () => {
+    const { updateLessonDatesIfUnchanged } = await import('../../server/repository')
+    const same = await createLessonTaskRow(householdId, { learnerId, title: 'Shift me', dueDate: '2026-11-20', plannedStartDate: '2026-11-19' })
+    const edited = await createLessonTaskRow(householdId, { learnerId, title: 'Edited since preview', dueDate: '2026-11-21' })
+    const done = await createLessonTaskRow(householdId, { learnerId, title: 'Done since preview', dueDate: '2026-11-20' })
+    await completeLessonTaskRow(done.id, householdId, 'completed')
+
+    const result = await updateLessonDatesIfUnchanged(householdId, [
+      { id: same.id, from: { dueDate: '2026-11-20', plannedStartDate: '2026-11-19' }, to: { dueDate: '2026-11-23', plannedStartDate: '2026-11-20' } },
+      { id: edited.id, from: { dueDate: '2026-11-20', plannedStartDate: null }, to: { dueDate: '2026-11-23', plannedStartDate: null } },
+      { id: done.id, from: { dueDate: '2026-11-20', plannedStartDate: null }, to: { dueDate: '2026-11-23', plannedStartDate: null } },
+    ])
+
+    expect(result.applied).toBe(1)
+    expect(result.skipped.sort()).toEqual([edited.id, done.id].sort())
+    const rows = await listLessonTaskRows(householdId)
+    const byId = Object.fromEntries(rows.map(r => [r.id, r]))
+    expect(byId[same.id].dueDate).toBe('2026-11-23')
+    expect(byId[same.id].plannedStartDate).toBe('2026-11-20')
+    expect(byId[edited.id].dueDate).toBe('2026-11-21')
+    expect(byId[done.id].dueDate).toBe('2026-11-20')
+
+    const otherHousehold = await updateLessonDatesIfUnchanged('hh_someone_else', [
+      { id: same.id, from: { dueDate: '2026-11-23', plannedStartDate: '2026-11-20' }, to: { dueDate: '2026-12-01', plannedStartDate: null } },
+    ])
+    expect(otherHousehold).toEqual({ applied: 0, skipped: [same.id] })
+
+    for (const r of [same, edited, done]) await deleteLessonTaskRow(r.id, householdId)
+  })
+})

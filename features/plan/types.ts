@@ -44,3 +44,58 @@ export interface LessonTask {
   createdAt: string
   updatedAt: string
 }
+
+/**
+ * An update to one lesson (PUT /api/plan/lessons/:id). `null` clears the lesson's
+ * own time — `undefined` cannot, because it is dropped from the JSON body.
+ */
+export type LessonTaskPatch = Omit<Partial<LessonTask>, 'scheduledStartTime' | 'scheduledEndTime'> & {
+  scheduledStartTime?: string | null
+  scheduledEndTime?: string | null
+  applyToGroup?: boolean
+}
+
+// ─── Lesson shift (move not-started lessons along the school-day calendar) ────
+
+export type ShiftMode = 'shift' | 'break'
+
+export interface ShiftLessonsRequest {
+  mode: ShiftMode
+  /** 'shift' only: lessons due on or after this date move. 'break' uses the break's start. */
+  fromDate?: string
+  /** 'shift' only: how many school days later. */
+  schoolDays?: number
+  /** 'break' only: id of a break on the active school year whose dates lessons must leave. */
+  breakId?: string
+  /** Omit for all learners / all courses. */
+  learnerIds?: string[]
+  subjectIds?: string[]
+}
+
+export interface LessonDates {
+  dueDate: string
+  plannedStartDate: string | null
+}
+
+export interface LessonDateMove {
+  id: string
+  learnerId: string
+  subjectId: string | null
+  title: string
+  from: LessonDates
+  to: LessonDates
+}
+
+export interface ShiftPreview {
+  moves: LessonDateMove[]
+  countsByLearner: Record<string, number>
+  /** How many moves land after the active school year's end date (still allowed). */
+  pastYearEndCount: number
+  schoolYearEnd: string | null
+}
+
+export interface ShiftApplyResult {
+  applied: number
+  /** Ids not moved because the lesson changed (dates or status) since the preview. */
+  skipped: string[]
+}

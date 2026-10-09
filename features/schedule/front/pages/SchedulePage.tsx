@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { plannerApi } from '@/features/plan/front/services/api'
 import { buildDailySchedule } from '@/features/schedule/server/service'
+import { courseTimesFromSubjects } from '@/features/schedule/lib/courseTimes'
 import { ScheduleTimeline } from '@/features/schedule/front/components/ScheduleTimeline'
 import { useHousehold } from '@/features/household/front/context'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
@@ -90,15 +91,19 @@ export function SchedulePage() {
 
   const lessonsByDate = useMemo(() => groupByDate(lessons), [lessons])
 
+  const courseTimes = useMemo(() => courseTimesFromSubjects(allSubjects ?? []), [allSubjects])
+
   const schedule: DaySchedule = useMemo(() => ({
     ...buildDailySchedule(lessonsByDate.get(selectedDate) ?? [], {
       startTime: '08:30',
       transitionMinutes: 10,
       defaultDurationMinutes: 30,
       includeSyntheticBreaks: true,
+      date: selectedDate,
+      courseTimes,
     }),
     date: selectedDate,
-  }), [lessonsByDate, selectedDate])
+  }), [lessonsByDate, selectedDate, courseTimes])
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8" data-testid="schedule-page">

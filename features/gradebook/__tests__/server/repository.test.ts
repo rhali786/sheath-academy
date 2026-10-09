@@ -91,10 +91,15 @@ function schoolYearRow(overrides: Partial<SchoolYearRow> = {}): SchoolYearRow {
   return { id: 'year_b', householdId: 'hh_1', isActive: true, ...overrides }
 }
 
+interface SubjectLearnerRow {
+  subjectId: string
+  learnerId: string
+}
+
 /**
- * listGradebookSummaries issues 6 sequential db.select().from().where() calls
+ * listGradebookSummaries issues 7 sequential db.select().from().where() calls
  * inside a Promise.all: learners, subjects, scores, gradingScales,
- * aggregationRules, activeSchoolYear.
+ * aggregationRules, activeSchoolYear, subjectLearners (enrollment join).
  */
 function buildMockDb(sequence: unknown[][]) {
   let call = 0
@@ -209,5 +214,72 @@ describe('listGradebookSummaries — active-school-year scoping (G2 course rollo
     const summaries = await listGradebookSummaries('hh_1')
 
     expect(summaries[0].subjects).toHaveLength(2)
+  })
+})
+
+describe('listGradebookSummaries — co-learner scoping (items 14, 23)', () => {
+  // A course shared with multiple learners (via SubjectEditDialog's
+  // Learner(s) multi-select) stores every enrolled learner in the
+  // subject_learners join table; subjects.learnerId is just the primary
+  // learner. Settings (features/subjects/server/repository.ts's
+  // listSubjectRows) already scopes by the full join-table membership.
+  // listGradebookSummaries must do the same, or a secondary co-learner's
+  // shared courses silently disappear from their Gradebook while still
+  // showing in Settings — exactly what items 14/23 reported.
+
+  it('a shared course (primary learnerId = A, also enrolled via subject_learners as B) appears in both A and B\'s summaries', async () => {
+    const learnerA = learner({ id: 'learner_a', name: 'Learner A' })
+    const learnerB = learner({ id: 'learner_b', name: 'Learner B' })
+    const sharedCourse = subject({ id: 'sub_shared', learnerId: 'learner_a', name: 'Shared Course' })
+    const enrollmentRows: SubjectLearnerRow[] = [
+      { subjectId: 'sub_shared', learnerId: 'learner_a' },
+      { subjectId: 'sub_shared', learnerId: 'learner_b' },
+    ]
+
+    mockGetDb.mockReturnValue(
+      buildMockDb([
+        [learnerA, learnerB],
+        [sharedCourse],
+        [],
+        [],
+        [],
+        [],
+        enrollmentRows,
+      ]),
+    )
+
+    const { listGradebookSummaries } = await import('@/features/gradebook/server/repository')
+    const summaries = await listGradebookSummaries('hh_1')
+
+    const summaryA = summaries.find(s => s.learnerId === 'learner_a')!
+    const summaryB = summaries.find(s => s.learnerId === 'learner_b')!
+    expect(summaryA.subjects.map(s => s.subjectId)).toContain('sub_shared')
+    expect(summaryB.subjects.map(s => s.subjectId)).toContain('sub_shared')
+  })
+
+  it('a course with no subject_learners rows falls back to the primary learnerId column only (legacy rows, unchanged behavior)', async () => {
+    const learnerA = learner({ id: 'learner_a', name: 'Learner A' })
+    const learnerB = learner({ id: 'learner_b', name: 'Learner B' })
+    const soloCourse = subject({ id: 'sub_solo', learnerId: 'learner_a', name: 'Solo Course' })
+
+    mockGetDb.mockReturnValue(
+      buildMockDb([
+        [learnerA, learnerB],
+        [soloCourse],
+        [],
+        [],
+        [],
+        [],
+        [], // no subject_learners rows — legacy row, falls back to learnerId
+      ]),
+    )
+
+    const { listGradebookSummaries } = await import('@/features/gradebook/server/repository')
+    const summaries = await listGradebookSummaries('hh_1')
+
+    const summaryA = summaries.find(s => s.learnerId === 'learner_a')!
+    const summaryB = summaries.find(s => s.learnerId === 'learner_b')!
+    expect(summaryA.subjects.map(s => s.subjectId)).toContain('sub_solo')
+    expect(summaryB.subjects.map(s => s.subjectId)).not.toContain('sub_solo')
   })
 })

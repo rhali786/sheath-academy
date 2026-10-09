@@ -22,6 +22,7 @@ import {
   listBadgeCollection,
   listBadgeAwards,
   getBadgeSettings,
+  setBadgeSettings,
   createAward,
   addEvidenceToAward,
   deleteAward,
@@ -258,6 +259,76 @@ describeDb('badges repository (real DB)', () => {
       const settings = await getBadgeSettings('hh_dbtest_badges_unknown_hh')
       expect(settings.platformBadgesEnabled).toBe(true)
       expect(settings.householdId).toBe('hh_dbtest_badges_unknown_hh')
+    }, DB_TIMEOUT_MS)
+  })
+
+  // ─── listBadgeCollection respects platformBadgesEnabled (item 15) ────────────
+
+  describe('listBadgeCollection excludes platform badges when disabled', () => {
+    const ids = testIds('lbc3')
+    const platformDefId = 'badge_dbtest_badges_lbc3_platform'
+    const householdDefId = 'badge_dbtest_badges_lbc3_household'
+
+    beforeAll(async () => {
+      await insertBaseFixtures(ids)
+      const db = getDb()
+      const now = new Date()
+      await db.insert(badgeDefinitions).values([
+        {
+          id: platformDefId,
+          householdId: null,
+          title: 'DB Test Platform Badge',
+          description: 'A platform-wide starter badge',
+          criteria: 'Test criteria',
+          emblemKey: 'test_platform',
+          gradeBands: [],
+          verificationRequirement: 'none',
+          isStarter: true,
+          enabled: true,
+          visibility: 'platform',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: householdDefId,
+          householdId: ids.hid,
+          title: 'DB Test Household Badge',
+          description: 'A household custom badge',
+          criteria: 'Test criteria',
+          emblemKey: 'test_household',
+          gradeBands: [],
+          verificationRequirement: 'none',
+          isStarter: false,
+          enabled: true,
+          visibility: 'household',
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]).onConflictDoNothing()
+    })
+    afterAll(async () => {
+      await cleanupBaseFixtures(ids)
+      const db = getDb()
+      await db.delete(badgeDefinitions).where(eq(badgeDefinitions.id, platformDefId))
+      await db.delete(badgeDefinitions).where(eq(badgeDefinitions.id, householdDefId))
+    })
+
+    it('includes the platform badge when platformBadgesEnabled is true (default)', async () => {
+      const collection = await listBadgeCollection(ids.hid, ids.lid)
+      expect(collection.some(c => c.definition.id === platformDefId)).toBe(true)
+      expect(collection.some(c => c.definition.id === householdDefId)).toBe(true)
+    }, DB_TIMEOUT_MS)
+
+    it('excludes the platform badge — and keeps the household badge — once platformBadgesEnabled is set false', async () => {
+      await setBadgeSettings(ids.hid, { platformBadgesEnabled: false })
+      try {
+        const collection = await listBadgeCollection(ids.hid, ids.lid)
+        expect(collection.some(c => c.definition.id === platformDefId)).toBe(false)
+        expect(collection.some(c => c.definition.id === householdDefId)).toBe(true)
+      } finally {
+        // Restore so this suite doesn't leak state into other tests sharing ids.hid.
+        await setBadgeSettings(ids.hid, { platformBadgesEnabled: true })
+      }
     }, DB_TIMEOUT_MS)
   })
 
