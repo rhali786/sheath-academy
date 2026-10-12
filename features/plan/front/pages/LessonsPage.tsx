@@ -34,8 +34,12 @@ export function LessonsPage() {
   const { householdProfile, studentProfiles: children, allSubjects: subjects } = useHousehold()
   const { selectedChildId } = useLearner()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [lessons, setLessons] = useState<LessonTask[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  // Only the first load shows "Loading…". Later refreshes keep the list mounted, so an
+  // open editor isn't torn down and a deep-linked one doesn't reopen after Save.
+  const [hasLoaded, setHasLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Filters — learners and date range are applied by the server, so the page never
@@ -95,7 +99,7 @@ export function LessonsPage() {
       setIsLoading(true)
       setError(null)
       const list = await plannerApi.getLessons(undefined, childKey ? childKey.split(',') : undefined, undefined, startDate)
-      if (request === latestRequest.current) setLessons(list)
+      if (request === latestRequest.current) { setLessons(list); setHasLoaded(true) }
     } catch {
       if (request === latestRequest.current) setError('Failed to load lessons')
     } finally {
@@ -106,6 +110,16 @@ export function LessonsPage() {
   useEffect(() => {
     fetchLessons()
   }, [fetchLessons])
+
+  // The deep-linked editor closed (saved or cancelled): drop editId so it stays closed,
+  // including on reload. Other params (e.g. ?add=1) are kept.
+  function clearEditId() {
+    if (!editingLessonId) return
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('editId')
+    const rest = params.toString()
+    router.replace(rest ? `/lessons?${rest}` : '/lessons')
+  }
 
   function toggleChild(childId: string) {
     setFilterChildIds(prev => {
@@ -262,7 +276,7 @@ export function LessonsPage() {
           <p className="text-xs text-slate-500 -mt-2 mb-4">Overdue shows every date, not just the selected range.</p>
         )}
 
-        {isLoading ? (
+        {isLoading && !hasLoaded ? (
           <p className="text-sm text-slate-400 py-4">Loading…</p>
         ) : (
           <LessonTaskList
@@ -274,6 +288,7 @@ export function LessonsPage() {
             onDelete={handleDelete}
             onComplete={handleComplete}
             editingLessonId={editingLessonId}
+            onEditEnd={clearEditId}
             emptyMessage={filtersNarrow ? 'No lessons match these filters. Try another learner or a wider date range.' : undefined}
           />
         )}

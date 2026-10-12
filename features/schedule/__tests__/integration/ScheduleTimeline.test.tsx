@@ -77,3 +77,31 @@ describe('ScheduleTimeline', () => {
     expect(mockPush).not.toHaveBeenCalled()
   })
 })
+
+// UAT 3.8 (reproduced on dev 2026-10-12): after the Dashboard's Edit lesson window saved a
+// new time, the parent refetched and passed a new schedule, but the timeline kept drawing
+// the one it was first given until a page reload.
+describe('ScheduleTimeline — takes a new schedule from its parent', () => {
+  function timed(id: string, title: string, start?: [string, string]): LessonTask {
+    return { ...makeLesson(id, title), ...(start ? { scheduledStartTime: start[0], scheduledEndTime: start[1] } : {}) }
+  }
+
+  test('shows the new time when the parent passes an updated schedule', () => {
+    const before = buildDailySchedule([timed('l1', 'Mathematics')], { startTime: '09:00', transitionMinutes: 10 })
+    const { rerender } = render(<ScheduleTimeline schedule={before} currentTime="08:00" showAdjustDay={false} />)
+    expect(screen.getByTestId('timeline-entry-block_l1')).toHaveTextContent('9:00 AM')
+
+    const after = buildDailySchedule([timed('l1', 'Mathematics', ['13:00', '13:30'])], { startTime: '09:00', transitionMinutes: 10 })
+    rerender(<ScheduleTimeline schedule={after} currentTime="08:00" showAdjustDay={false} />)
+    expect(screen.getByTestId('timeline-entry-block_l1')).toHaveTextContent('1:00 PM')
+  })
+
+  test('shows a renamed lesson and drops a deleted one', () => {
+    const before = buildDailySchedule([timed('l1', 'Mathematics'), timed('l2', 'Science')], { startTime: '09:00', transitionMinutes: 10 })
+    const { rerender } = render(<ScheduleTimeline schedule={before} currentTime="08:00" showAdjustDay={false} />)
+    const after = buildDailySchedule([timed('l1', 'Fractions review')], { startTime: '09:00', transitionMinutes: 10 })
+    rerender(<ScheduleTimeline schedule={after} currentTime="08:00" showAdjustDay={false} />)
+    expect(screen.getByText('Fractions review')).toBeInTheDocument()
+    expect(screen.queryByText('Science')).not.toBeInTheDocument()
+  })
+})

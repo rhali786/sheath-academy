@@ -421,3 +421,61 @@ describe('LessonsPage — learner and date-range filters', () => {
     await waitFor(() => expect(screen.getByText(/could not load lessons/i)).toBeInTheDocument())
   })
 })
+
+// Reproduced on dev 2026-10-12: Calendar/Planner pencil → /lessons?editId= → Save, and the
+// editor opened again (the list unmounted while refetching and the card remounted in edit
+// mode); editId also stayed in the URL, so a reload reopened it.
+describe('LessonsPage — deep-linked editor closes for good', () => {
+  const lesson = makeLesson({ id: 'lesson_deep', title: 'Deep linked', dueDate: '2099-01-05' })
+
+  beforeEach(() => {
+    mockSearchParams = new URLSearchParams('editId=lesson_deep')
+    mockGetLesson.mockResolvedValue(lesson)
+    mockGetLessons.mockResolvedValue([lesson])
+    ;(plannerApi.updateLesson as jest.Mock).mockResolvedValue({ ...lesson, title: 'Renamed' })
+  })
+
+  function editor() { return document.querySelector('[data-lesson-id="lesson_deep"]') as HTMLElement }
+
+  it('Save closes the editor, it stays closed after the list refreshes, and editId leaves the URL', async () => {
+    render(<LessonsPage />)
+    await waitFor(() => expect(within(editor()).getByRole('button', { name: /save lesson/i })).toBeInTheDocument())
+    mockGetLessons.mockResolvedValue([{ ...lesson, title: 'Renamed' }])
+
+    fireEvent.change(within(editor()).getByDisplayValue('Deep linked'), { target: { value: 'Renamed' } })
+    fireEvent.click(within(editor()).getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => expect(screen.getByText('Renamed')).toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: /save lesson/i })).not.toBeInTheDocument()
+    expect(mockReplace).toHaveBeenCalledWith('/lessons')
+  })
+
+  it('Cancel closes the editor and clears editId', async () => {
+    render(<LessonsPage />)
+    await waitFor(() => expect(within(editor()).getByRole('button', { name: /cancel edit/i })).toBeInTheDocument())
+    fireEvent.click(within(editor()).getByRole('button', { name: /cancel edit/i }))
+    expect(screen.queryByRole('button', { name: /save lesson/i })).not.toBeInTheDocument()
+    expect(mockReplace).toHaveBeenCalledWith('/lessons')
+  })
+
+  it('keeps other query params when clearing editId', async () => {
+    mockSearchParams = new URLSearchParams('editId=lesson_deep&add=1')
+    render(<LessonsPage />)
+    await waitFor(() => expect(within(editor()).getByRole('button', { name: /cancel edit/i })).toBeInTheDocument())
+    fireEvent.click(within(editor()).getByRole('button', { name: /cancel edit/i }))
+    expect(mockReplace).toHaveBeenCalledWith('/lessons?add=1')
+  })
+
+  it('keeps showing the list (no "Loading…") while it refreshes after a save', async () => {
+    let resolveRefetch: (v: LessonTask[]) => void = () => {}
+    render(<LessonsPage />)
+    await waitFor(() => expect(within(editor()).getByRole('button', { name: /save lesson/i })).toBeInTheDocument())
+    mockGetLessons.mockImplementation(() => new Promise(r => { resolveRefetch = r }))
+
+    fireEvent.click(within(editor()).getByRole('button', { name: /save lesson/i }))
+    await waitFor(() => expect(mockGetLessons).toHaveBeenCalledTimes(2))
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    expect(editor()).not.toBeNull()
+    await act(async () => { resolveRefetch([lesson]) })
+  })
+})

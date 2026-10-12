@@ -18,9 +18,10 @@ interface LessonTaskListProps {
   editingLessonId?: string | null
   /** Replaces the "No lessons yet" copy, e.g. when filters hide everything. */
   emptyMessage?: string
+  onEditEnd?: () => void
 }
 
-export function LessonTaskList({ lessons, children, subjects, error, onUpdate, onEdit, onDelete, onComplete, editingLessonId = null, emptyMessage }: LessonTaskListProps) {
+export function LessonTaskList({ lessons, children, subjects, error, onUpdate, onEdit, onDelete, onComplete, editingLessonId = null, emptyMessage, onEditEnd }: LessonTaskListProps) {
   if (error) {
     return <p className="text-sm text-red-600 py-4">Could not load lessons. Please refresh.</p>
   }
@@ -52,6 +53,7 @@ export function LessonTaskList({ lessons, children, subjects, error, onUpdate, o
           onDelete={onDelete}
           onComplete={onComplete}
           defaultEditing={lesson.id === editingLessonId}
+          onEditEnd={onEditEnd}
         />
       ))}
     </div>

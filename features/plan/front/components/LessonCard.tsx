@@ -48,9 +48,11 @@ interface LessonCardProps {
   onComplete?: (id: string, status: 'completed') => Promise<void>
   /** Open inline edit on mount (e.g. deep-linked from /plan). */
   defaultEditing?: boolean
+  /** Called when the inline editor closes (saved or cancelled), e.g. to clear a deep link. */
+  onEditEnd?: () => void
 }
 
-export function LessonCard({ lesson, childName, subjectName, children, subjects, onUpdate, onEdit, onDelete, onComplete, defaultEditing = false }: LessonCardProps) {
+export function LessonCard({ lesson, childName, subjectName, children, subjects, onUpdate, onEdit, onDelete, onComplete, defaultEditing = false, onEditEnd }: LessonCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -145,6 +147,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
 
   function cancelEdit() {
     setIsEditing(false)
+    onEditEnd?.()
     setTitleError('')
     setTimeError('')
     setCourseError('')
@@ -192,6 +195,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
       })
       setIsEditing(false)
       setTitleError('')
+      onEditEnd?.()
     } catch (err) {
       // Keep the form open and say why, e.g. the course is not one of this learner's.
       setSaveError(err instanceof Error && err.message ? err.message : 'Could not save changes')
