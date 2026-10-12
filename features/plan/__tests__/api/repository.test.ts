@@ -220,6 +220,34 @@ describe('lesson tasks repository', () => {
     expect(afterDelete.some(r => r.groupId === rows[0].groupId)).toBe(false)
   })
 
+  // A sick child's lesson moves alone: details follow the group, date/time/status do not.
+  itDb('group edit renames every copy but moves the date and status of one copy only', async () => {
+    const { createLessonTasksFanOut } = await import('../../server/repository')
+    const rows = await createLessonTasksFanOut(
+      householdId,
+      { title: 'Shared reading', dueDate: '2026-07-01' },
+      [{ learnerId }, { learnerId }],
+    )
+    await updateLessonTaskRow(
+      rows[0].id, householdId,
+      { title: 'Shared reading ch. 2', dueDate: '2026-07-02', status: 'completed' },
+      { applyToGroup: true },
+    )
+    const after = (await listLessonTaskRows(householdId)).filter(r => r.groupId === rows[0].groupId)
+    expect(after.every(r => r.title === 'Shared reading ch. 2')).toBe(true)
+    const byId = Object.fromEntries(after.map(r => [r.id, r]))
+    expect(byId[rows[0].id].dueDate).toBe('2026-07-02')
+    expect(byId[rows[0].id].status).toBe('completed')
+    expect(byId[rows[1].id].dueDate).toBe('2026-07-01')
+    expect(byId[rows[1].id].status).toBe('not_started')
+
+    await updateLessonTaskRow(rows[1].id, householdId, { dueDate: '2026-07-03' }, { applyToGroup: true, applyScheduleToGroup: true })
+    const moved = (await listLessonTaskRows(householdId)).filter(r => r.groupId === rows[0].groupId)
+    expect(moved.every(r => r.dueDate === '2026-07-03')).toBe(true)
+
+    await deleteLessonTaskRow(rows[0].id, householdId, { deleteGroup: true })
+  })
+
   itDb('createLessonTasksFanOut with one learner leaves group_id NULL', async () => {
     const { createLessonTasksFanOut } = await import('../../server/repository')
     const rows = await createLessonTasksFanOut(

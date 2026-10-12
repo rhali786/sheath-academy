@@ -513,3 +513,123 @@ describe('LessonCard — grouped lessons', () => {
     expect(onUpdate.mock.calls[0][1].plannedStartDate).toBeNull()
   })
 })
+
+// ─── Group edits: details follow the group, date/time stay with this learner ───
+// A parent moving one sick child's lesson must not move four other children.
+
+describe('LessonCard — group edit keeps date and time per learner', () => {
+  function openGroupEditor(onUpdate = jest.fn().mockResolvedValue(undefined)) {
+    render(
+      <LessonCard
+        lesson={makeLesson({ groupId: 'group_001', title: 'Shared task', dueDate: '2026-05-12' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    return onUpdate
+  }
+
+  it('says date and time change for this learner only, with an unticked "move for everyone" box', () => {
+    openGroupEditor()
+    expect(screen.getByRole('checkbox', { name: /move the date and time for every learner/i })).not.toBeChecked()
+    expect(screen.getByText(/date and time change for adam only/i)).toBeInTheDocument()
+  })
+
+  it('saving a new date with the default boxes does not ask to move everyone', async () => {
+    const onUpdate = openGroupEditor()
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-13' } })
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled())
+    const patch = onUpdate.mock.calls[0][1]
+    expect(patch).toMatchObject({ dueDate: '2026-05-13', applyToGroup: true })
+    expect(patch.applyScheduleToGroup).toBeUndefined()
+  })
+
+  it('ticking "move for everyone" sends applyScheduleToGroup', async () => {
+    const onUpdate = openGroupEditor()
+    fireEvent.click(screen.getByRole('checkbox', { name: /move the date and time for every learner/i }))
+    expect(screen.queryByText(/date and time change for adam only/i)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled())
+    expect(onUpdate.mock.calls[0][1]).toMatchObject({ applyToGroup: true, applyScheduleToGroup: true })
+  })
+
+  it('unticking the group box hides "move for everyone" and sends neither flag', async () => {
+    const onUpdate = openGroupEditor()
+    fireEvent.click(screen.getByRole('checkbox', { name: /apply to all learners in group/i }))
+    expect(screen.queryByRole('checkbox', { name: /move the date and time for every learner/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled())
+    expect(onUpdate.mock.calls[0][1].applyToGroup).toBeUndefined()
+    expect(onUpdate.mock.calls[0][1].applyScheduleToGroup).toBeUndefined()
+  })
+
+  it('no group boxes on a lesson that is not shared', () => {
+    render(<LessonCard lesson={makeLesson()} childName="Adam" subjectName="Math" onUpdate={jest.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(screen.queryByRole('checkbox', { name: /apply to all learners in group/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: /move the date and time/i })).not.toBeInTheDocument()
+  })
+})
+
+// ─── Moving a lesson to another learner or course ───
+
+describe('LessonCard — changing the learner or course', () => {
+  const kids = [
+    { id: 'child_001', householdId: 'hh_001', name: 'Adam', gradeLabel: '5th', isActive: true, username: 'a', password: 'pw', createdAt: '2026-01-01T00:00:00Z' },
+    { id: 'child_002', householdId: 'hh_001', name: 'Khadijah', gradeLabel: '3rd', isActive: true, username: 'k', password: 'pw', createdAt: '2026-01-01T00:00:00Z' },
+  ]
+  const courses = [
+    { id: 'subj_001', childId: 'child_001', learnerIds: ['child_001'], name: 'Math 5', category: 'Math' as const, isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
+    { id: 'subj_002', childId: 'child_002', learnerIds: ['child_002'], name: 'Math 3', category: 'Math' as const, isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
+  ]
+
+  function openEditor(onUpdate = jest.fn().mockResolvedValue(undefined)) {
+    render(
+      <LessonCard lesson={makeLesson()} childName="Adam" subjectName="Math 5"
+        children={kids} subjects={courses} onUpdate={onUpdate} />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    return onUpdate
+  }
+
+  it('moves the lesson to another learner and one of their courses', async () => {
+    const onUpdate = openEditor()
+    fireEvent.change(screen.getByLabelText(/^child$/i), { target: { value: 'child_002' } })
+    fireEvent.change(screen.getByLabelText(/^course$/i), { target: { value: 'subj_002' } })
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled())
+    expect(onUpdate.mock.calls[0][1]).toMatchObject({ childId: 'child_002', subjectId: 'subj_002' })
+  })
+
+  it("only offers the new learner's courses", () => {
+    openEditor()
+    fireEvent.change(screen.getByLabelText(/^child$/i), { target: { value: 'child_002' } })
+    const course = screen.getByLabelText(/^course$/i)
+    expect(Array.from((course as HTMLSelectElement).options).map(o => o.value)).toEqual(['', 'subj_002'])
+  })
+
+  it('asks for a course after switching learner, and saves nothing until one is chosen', async () => {
+    const onUpdate = openEditor()
+    fireEvent.change(screen.getByLabelText(/^child$/i), { target: { value: 'child_002' } })
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    expect(await screen.findByText(/choose a course for khadijah/i)).toBeInTheDocument()
+    expect(onUpdate).not.toHaveBeenCalled()
+  })
+
+  it("shows the server's reason when a save is rejected, and keeps the editor open", async () => {
+    const onUpdate = jest.fn().mockRejectedValue(new Error("Math 3 is not one of Adam's courses."))
+    openEditor(onUpdate)
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    expect(await screen.findByText(/math 3 is not one of adam's courses/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /save lesson/i })).toBeInTheDocument()
+  })
+})

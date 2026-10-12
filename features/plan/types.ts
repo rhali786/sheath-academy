@@ -54,7 +54,10 @@ export type LessonTaskPatch = Omit<Partial<LessonTask>, 'scheduledStartTime' | '
   plannedStartDate?: string | null
   scheduledStartTime?: string | null
   scheduledEndTime?: string | null
+  /** Shared lesson: title and details go to every learner's copy. */
   applyToGroup?: boolean
+  /** With applyToGroup: also move date/time for every learner (otherwise this learner only). */
+  applyScheduleToGroup?: boolean
 }
 
 // ─── Lesson shift (move not-started lessons along the school-day calendar) ────
