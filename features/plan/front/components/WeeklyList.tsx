@@ -2,8 +2,8 @@
 
 import { Pencil } from 'lucide-react'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { usePlanner } from '../context/PlannerContext'
+import { EditLessonModal } from '@/features/plan/front/components/EditLessonModal'
 import type { LessonTaskStatus } from '@/features/plan/types'
 import { formatCompletionWindow, lessonSpansDate } from '@/features/plan/utils/lessonCompletionWindow'
 import { isOffDay } from '@/features/plan/utils/schoolDays'
@@ -45,10 +45,11 @@ interface DaySection {
 }
 
 export function WeeklyList() {
-  const { lessons, selectedWeek, weekStartDay, children, subjects } = usePlanner()
+  const { lessons, selectedWeek, weekStartDay, children, subjects, refreshLessons } = usePlanner()
+  // Edit in place: the parent keeps their place in the week (was a jump to /lessons?editId=).
+  const [editingLessonId, setEditingLessonId] = useState<string | null>(null)
   const { householdProfile } = useHousehold()
   const schoolDays = householdProfile?.schoolDays
-  const router = useRouter()
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set())
 
   // Calculate week start date using local date methods to avoid UTC shift
@@ -135,7 +136,13 @@ export function WeeklyList() {
               <div className={`border-t px-4 py-4 space-y-3 ${day.isWeekend ? 'bg-slate-50' : 'bg-slate-50'}`}>
                 {dayLessons.length > 0 ? (
                   dayLessons.map(lesson => (
-                    <div key={lesson.id} onClick={() => router.push(`/lessons?editId=${lesson.id}`)} className="p-4 bg-white rounded-lg border border-forest-200 hover:shadow-md transition-shadow cursor-pointer">
+                    <div
+                      key={lesson.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setEditingLessonId(lesson.id)}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingLessonId(lesson.id) } }}
+                      className="p-4 bg-white rounded-lg border border-forest-200 hover:shadow-md transition-shadow cursor-pointer">
                       <div className="flex items-start justify-between gap-2">
                         <div className="font-semibold text-forest-900">{lesson.title}</div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -165,6 +172,13 @@ export function WeeklyList() {
           </div>
         )
       })}
+      {editingLessonId && (
+        <EditLessonModal
+          lessonId={editingLessonId}
+          onClose={() => setEditingLessonId(null)}
+          onSaved={() => refreshLessons?.()}
+        />
+      )}
     </div>
   )
 }

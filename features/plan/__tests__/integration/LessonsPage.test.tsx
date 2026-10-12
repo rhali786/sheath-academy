@@ -230,7 +230,7 @@ describe('LessonsPage', () => {
 
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'New Lesson' } })
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
-    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_001' } })
+    fireEvent.change(screen.getByLabelText(/^course$/i), { target: { value: 'subj_001' } })
 
     fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
 

@@ -703,3 +703,17 @@ describe('LessonCard — delete', () => {
     expect(screen.queryByRole('button', { name: /delete this lesson/i })).not.toBeInTheDocument()
   })
 })
+
+// undefined is dropped from the request body, so a cleared field used to be silently kept.
+describe('LessonCard — clearing details', () => {
+  it('a cleared description and resource link are sent as empty, not left out', async () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(<LessonCard lesson={makeLesson({ description: 'Pages 10-12', resourceLink: 'https://example.com' })} childName="Adam" subjectName="Math" onUpdate={onUpdate} />)
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    fireEvent.change(screen.getByDisplayValue('Pages 10-12'), { target: { value: '' } })
+    fireEvent.change(screen.getByDisplayValue('https://example.com'), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled())
+    expect(onUpdate.mock.calls[0][1]).toMatchObject({ description: '', resourceLink: '' })
+  })
+})

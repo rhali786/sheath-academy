@@ -10,6 +10,8 @@ import {
 } from '@/features/subjects/lib/enrollment'
 import { isOffDay } from '@/features/plan/utils/schoolDays'
 import { LessonTimeFields, validateLessonTimes } from '@/features/plan/front/components/LessonTimeFields'
+import { GroupEditOptions } from '@/features/plan/front/components/GroupEditOptions'
+import { Trash2 } from 'lucide-react'
 
 const GENERAL_LESSON_TYPES = ['Lesson', 'Assignment', 'Reading', 'Practice', 'Review', 'Project', 'Assessment', 'Other']
 const QURAN_LESSON_TYPES   = ['Memorisation', 'Revision', 'Recitation', 'Tajweed', 'Listening']
@@ -72,6 +74,10 @@ export interface LessonFormData {
   scheduledStartTime?: string | null
   scheduledEndTime?: string | null
   lessonType?: string
+  /** Edit of a shared lesson: title and details go to every learner's copy. */
+  applyToGroup?: boolean
+  /** With applyToGroup: also move date/time for every learner. */
+  applyScheduleToGroup?: boolean
   curriculum?: string
   chapter?: string
   hasHomework?: boolean
@@ -87,6 +93,10 @@ interface LessonTaskFormProps {
   schoolDays?: DayOfWeek[]
   onSubmit: (data: LessonFormData) => Promise<void>
   onCancel?: () => void
+  /** Edit mode: shows a Delete button (the caller confirms and deletes). */
+  onDelete?: () => void
+  /** Focus the title when the form appears (the Edit lesson window). */
+  autoFocusTitle?: boolean
 }
 
 function dateStrDayOfWeek(dateStr: string): number {
@@ -124,6 +134,8 @@ export function LessonTaskForm({
   schoolDays,
   onSubmit,
   onCancel,
+  onDelete,
+  autoFocusTitle = false,
 }: LessonTaskFormProps) {
   const isEdit = Boolean(editingLesson)
 
@@ -149,6 +161,10 @@ export function LessonTaskForm({
   const [titleError, setTitleError] = useState('')
   const [timeError, setTimeError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [courseError, setCourseError] = useState('')
+  // Shared lesson (edit only): details follow the group by default, date/time do not.
+  const [applyToGroup, setApplyToGroup] = useState(true)
+  const [applyScheduleToGroup, setApplyScheduleToGroup] = useState(false)
   const [offDayWarningDismissed, setOffDayWarningDismissed] = useState(false)
 
   // Reset subject when selected learners change (except on initial load in edit mode)
@@ -205,6 +221,13 @@ export function LessonTaskForm({
       setTitleError('Select at least one learner')
       return
     }
+    // Edit: switching learner clears the course; the new learner needs one of their own.
+    if (isEdit && !subjectId) {
+      const name = children.find(c => c.id === childId)?.name ?? 'this learner'
+      setCourseError(`Choose a course for ${name}`)
+      return
+    }
+    setCourseError('')
 
     const trimmedStartTime = scheduledStartTime.trim()
     const trimmedEndTime = scheduledEndTime.trim()
@@ -226,8 +249,10 @@ export function LessonTaskForm({
         assignments: selectedChildIds.length > 1 ? assignments : undefined,
         subjectId,
         title: trimmedTitle,
-        description: description.trim() || undefined,
-        resourceLink: resourceLink.trim() || undefined,
+        // Edit sends '' / false so a cleared field or unticked box is saved; undefined is
+        // dropped from the request body and the server would keep the old value.
+        description: isEdit ? description.trim() : (description.trim() || undefined),
+        resourceLink: isEdit ? resourceLink.trim() : (resourceLink.trim() || undefined),
         plannedStartDate: plannedStartDate.trim() || clearedTime,
         dueDate,
         status,
@@ -236,10 +261,12 @@ export function LessonTaskForm({
         scheduledStartTime: trimmedStartTime || clearedTime,
         scheduledEndTime: trimmedEndTime || clearedTime,
         lessonType: lessonType || undefined,
-        curriculum: curriculum.trim() || undefined,
-        chapter: chapter.trim() || undefined,
-        hasHomework: hasHomework || undefined,
-        hasAssessment: hasAssessment || undefined,
+        curriculum: isEdit ? curriculum.trim() : (curriculum.trim() || undefined),
+        chapter: isEdit ? chapter.trim() : (chapter.trim() || undefined),
+        hasHomework: isEdit ? hasHomework : (hasHomework || undefined),
+        hasAssessment: isEdit ? hasAssessment : (hasAssessment || undefined),
+        ...(editingLesson?.groupId && applyToGroup ? { applyToGroup: true } : {}),
+        ...(editingLesson?.groupId && applyToGroup && applyScheduleToGroup ? { applyScheduleToGroup: true } : {}),
       })
     } finally {
       setIsSubmitting(false)
@@ -254,9 +281,17 @@ export function LessonTaskForm({
             Learner(s)
           </span>
           {isEdit ? (
-            <p className="text-sm text-slate-900 py-2">
-              {children.find(c => c.id === childId)?.name ?? childId}
-            </p>
+            <select
+              id="learnerId"
+              aria-label="Learner"
+              value={childId}
+              onChange={e => { setSelectedChildIds([e.target.value]); setCourseError('') }}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+            >
+              {children.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           ) : (
             <div className="space-y-2 rounded-lg border border-slate-200 px-3 py-2">
               {children.map(c => (
@@ -277,20 +312,21 @@ export function LessonTaskForm({
 
         <div>
           <label htmlFor="subjectId" className="block text-sm font-medium text-slate-700 mb-1">
-            Course/Subject
+            Course
           </label>
           <select
             id="subjectId"
             value={subjectId}
-            onChange={e => { setSubjectId(e.target.value); setLessonType('') }}
+            onChange={e => { setSubjectId(e.target.value); setLessonType(''); setCourseError('') }}
             disabled={selectedChildIds.length === 0}
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 disabled:opacity-50"
           >
-            <option value="">{selectedChildIds.length === 0 ? 'Choose a learner first to see active courses.' : 'Select course/subject'}</option>
+            <option value="">{selectedChildIds.length === 0 ? 'Choose a learner first to see active courses.' : 'Select course'}</option>
             {filteredSubjects.map(s => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
+          {courseError && <p className="text-xs text-red-600 mt-1">{courseError}</p>}
         </div>
       </div>
 
@@ -301,6 +337,7 @@ export function LessonTaskForm({
         <input
           id="title"
           type="text"
+          autoFocus={autoFocusTitle}
           value={title}
           onChange={e => setTitle(e.target.value)}
           maxLength={120}
@@ -506,6 +543,16 @@ export function LessonTaskForm({
         </label>
       </div>
 
+      {isEdit && editingLesson?.groupId && (
+        <GroupEditOptions
+          childName={children.find(c => c.id === editingLesson.childId)?.name ?? 'this learner'}
+          applyToGroup={applyToGroup}
+          applyScheduleToGroup={applyScheduleToGroup}
+          onApplyToGroupChange={setApplyToGroup}
+          onApplyScheduleToGroupChange={setApplyScheduleToGroup}
+        />
+      )}
+
       <div className="flex items-center gap-3 pt-2">
         <button
           type="submit"
@@ -521,6 +568,16 @@ export function LessonTaskForm({
             className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
           >
             Cancel
+          </button>
+        )}
+        {isEdit && onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            aria-label="Delete this lesson"
+            className="ml-auto flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" /> Delete
           </button>
         )}
       </div>

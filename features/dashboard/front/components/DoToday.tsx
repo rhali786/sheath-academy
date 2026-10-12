@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useContext_Dashboard } from '../context/DashboardProvider'
 import { TodayLessonCard } from '@/features/plan/front/components/TodayLessonCard'
-import { EditLessonModal } from './EditLessonModal'
+import { EditLessonModal } from '@/features/plan/front/components/EditLessonModal'
 
 function todayLocal(): string {
   const d = new Date()
