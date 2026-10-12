@@ -62,7 +62,8 @@ export interface LessonFormData {
   title: string
   description?: string
   resourceLink?: string
-  plannedStartDate?: string
+  /** `null` (edit only) clears "Available from". */
+  plannedStartDate?: string | null
   dueDate: string
   status: LessonTaskStatus
   order: number
@@ -213,7 +214,7 @@ export function LessonTaskForm({
       return
     }
     // On edit, blank must reach the server as null — `undefined` is dropped from the
-    // JSON body and the route would keep the old time.
+    // JSON body and the route would keep the old time / "Available from" date.
     const clearedTime = isEdit ? null : undefined
 
     setIsSubmitting(true)
@@ -227,7 +228,7 @@ export function LessonTaskForm({
         title: trimmedTitle,
         description: description.trim() || undefined,
         resourceLink: resourceLink.trim() || undefined,
-        plannedStartDate: plannedStartDate.trim() || undefined,
+        plannedStartDate: plannedStartDate.trim() || clearedTime,
         dueDate,
         status,
         order: editingLesson?.order ?? 0,

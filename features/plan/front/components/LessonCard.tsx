@@ -69,8 +69,13 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
   const [editStartTime, setEditStartTime] = useState(lesson.scheduledStartTime ?? '')
   const [editEndTime, setEditEndTime] = useState(lesson.scheduledEndTime ?? '')
   const [timeError, setTimeError] = useState('')
-  const [applyToGroup, setApplyToGroup] = useState(false)
+  // Ticked by default: editing a shared lesson edits every learner's copy unless unticked.
+  const [applyToGroup, setApplyToGroup] = useState(true)
+  // Date/time stay with this learner unless the parent asks to move everyone.
+  const [applyScheduleToGroup, setApplyScheduleToGroup] = useState(false)
   const [titleError, setTitleError] = useState('')
+  const [courseError, setCourseError] = useState('')
+  const [saveError, setSaveError] = useState('')
 
   // Sync local status when lesson.status updates from parent (e.g., after refetch)
   useEffect(() => {
@@ -116,9 +121,12 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     setEditResourceLink(lesson.resourceLink ?? '')
     setEditStartTime(lesson.scheduledStartTime ?? '')
     setEditEndTime(lesson.scheduledEndTime ?? '')
-    setApplyToGroup(false)
+    setApplyToGroup(true)
+    setApplyScheduleToGroup(false)
     setTitleError('')
     setTimeError('')
+    setCourseError('')
+    setSaveError('')
     // If inline edit is available (onUpdate provided), use it; otherwise fall back to legacy onEdit
     if (onUpdate) {
       setIsEditing(true)
@@ -139,6 +147,8 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     setIsEditing(false)
     setTitleError('')
     setTimeError('')
+    setCourseError('')
+    setSaveError('')
   }
 
   async function saveEdit() {
@@ -153,14 +163,23 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
       return
     }
     setTimeError('')
+    // Switching learner clears the course; the new learner needs one of their own.
+    if (subjects && subjects.length > 0 && !editSubjectId) {
+      const name = children?.find(c => c.id === editChildId)?.name ?? childName
+      setCourseError(`Choose a course for ${name}`)
+      return
+    }
+    setCourseError('')
     if (!onUpdate) return
     setSaving(true)
+    setSaveError('')
     try {
       await onUpdate(lesson.id, {
         title: trimmed,
         childId: editChildId,
         subjectId: editSubjectId,
-        plannedStartDate: editPlannedStartDate || undefined,
+        // null, not undefined: the route only touches plannedStartDate when it is sent.
+        plannedStartDate: editPlannedStartDate || null,
         dueDate: editDueDate,
         status: editStatus,
         description: editDescription.trim() || undefined,
@@ -169,11 +188,13 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
         scheduledStartTime: editStartTime.trim() || null,
         scheduledEndTime: editEndTime.trim() || null,
         ...(lesson.groupId && applyToGroup ? { applyToGroup: true } : {}),
+        ...(lesson.groupId && applyToGroup && applyScheduleToGroup ? { applyScheduleToGroup: true } : {}),
       })
       setIsEditing(false)
       setTitleError('')
-    } catch {
-      // keep form open on error
+    } catch (err) {
+      // Keep the form open and say why, e.g. the course is not one of this learner's.
+      setSaveError(err instanceof Error && err.message ? err.message : 'Could not save changes')
     } finally {
       setSaving(false)
     }
@@ -190,8 +211,9 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {children && children.length > 0 && (
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Child</label>
+                <label htmlFor={`edit-child-${lesson.id}`} className="block text-xs font-medium text-slate-500 mb-1">Child</label>
                 <select
+                  id={`edit-child-${lesson.id}`}
                   value={editChildId}
                   onChange={e => { setEditChildId(e.target.value); setEditSubjectId('') }}
                   className="w-full text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-forest-500"
@@ -205,18 +227,20 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
             )}
             {subjects && (
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Subject</label>
+                <label htmlFor={`edit-course-${lesson.id}`} className="block text-xs font-medium text-slate-500 mb-1">Course</label>
                 <select
+                  id={`edit-course-${lesson.id}`}
                   value={editSubjectId}
-                  onChange={e => setEditSubjectId(e.target.value)}
+                  onChange={e => { setEditSubjectId(e.target.value); setCourseError('') }}
                   disabled={!editChildId}
                   className="w-full text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-forest-500 disabled:opacity-50"
                 >
-                  <option value="">Select subject</option>
+                  <option value="">Select course</option>
                   {filteredSubjects.map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
+                {courseError && <p className="text-xs text-red-600 mt-1">{courseError}</p>}
               </div>
             )}
           </div>
@@ -294,17 +318,37 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
             />
           </div>
           {lesson.groupId && (
-            <label className="flex items-center gap-2 text-xs text-slate-600">
-              <input
-                type="checkbox"
-                checked={applyToGroup}
-                onChange={e => setApplyToGroup(e.target.checked)}
-                aria-label="Apply to all learners in group"
-                className="rounded border-slate-300 text-forest-900 focus:ring-forest-500"
-              />
-              Apply changes to all learners in this group
-            </label>
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-2 text-xs text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={applyToGroup}
+                  onChange={e => setApplyToGroup(e.target.checked)}
+                  aria-label="Apply to all learners in group"
+                  className="rounded border-slate-300 text-forest-900 focus:ring-forest-500"
+                />
+                Apply title and details to all learners in this group
+              </label>
+              {applyToGroup && (
+                <div className="pl-6 space-y-1">
+                  <label className="flex items-center gap-2 text-xs text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={applyScheduleToGroup}
+                      onChange={e => setApplyScheduleToGroup(e.target.checked)}
+                      aria-label="Also move the date and time for every learner"
+                      className="rounded border-slate-300 text-forest-900 focus:ring-forest-500"
+                    />
+                    Also move the date and time for every learner
+                  </label>
+                  {!applyScheduleToGroup && (
+                    <p className="text-xs text-slate-500">Date and time change for {childName} only.</p>
+                  )}
+                </div>
+              )}
+            </div>
           )}
+          {saveError && <p role="alert" className="text-xs text-red-600">{saveError}</p>}
           <div className="flex gap-2 justify-end">
             <button
               onClick={cancelEdit}

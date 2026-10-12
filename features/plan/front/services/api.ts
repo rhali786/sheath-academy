@@ -50,13 +50,17 @@ async function postWithMessage<T>(path: string, body: unknown): Promise<ApiRespo
   return res.json()
 }
 
+/** Surfaces the server's message on failure — editors show why a save was refused. */
 async function put<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
   const res = await fetch(`${getApiBaseUrl()}${path}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message ?? `Request failed: ${res.status}`)
+  }
   return res.json()
 }
 
@@ -98,8 +102,9 @@ export const plannerApi = {
     }
   },
 
-  createLesson: async (data: Omit<LessonTask, 'id' | 'createdAt' | 'updatedAt' | 'scheduledStartTime' | 'scheduledEndTime'> & {
-    // The create route treats null like blank (no time of its own).
+  createLesson: async (data: Omit<LessonTask, 'id' | 'createdAt' | 'updatedAt' | 'scheduledStartTime' | 'scheduledEndTime' | 'plannedStartDate'> & {
+    // The create route treats null like blank (no time / "Available from" of its own).
+    plannedStartDate?: string | null
     scheduledStartTime?: string | null
     scheduledEndTime?: string | null
     childIds?: string[]

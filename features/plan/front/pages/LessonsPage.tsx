@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { plannerApi } from '@/features/plan/front/services/api'
 import { LessonTaskForm, type LessonFormData } from '@/features/plan/front/components/LessonTaskForm'
@@ -12,6 +12,7 @@ import { useHousehold } from '@/features/household/front/context'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { TodayLessonCard } from '@/features/plan/front/components/TodayLessonCard'
 import { matchesStatusFilter, type LessonStatusFilter } from '@/features/plan/utils/lessonStatusFilter'
+import { LESSON_LIST_RANGES, lessonRangeStart, type LessonListRange } from '@/features/plan/utils/lessonListRange'
 
 function todayLocal(): string {
   const d = new Date()
@@ -23,6 +24,12 @@ function todayLocal(): string {
 
 type DateSort = 'asc' | 'desc'
 
+function chipClass(active: boolean): string {
+  return `px-3 py-1.5 text-sm font-medium rounded-full border focus:outline-none focus:ring-2 focus:ring-forest-900 ${
+    active ? 'bg-forest-900 border-forest-900 text-white' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+  }`
+}
+
 export function LessonsPage() {
   const { householdProfile, studentProfiles: children, allSubjects: subjects } = useHousehold()
   const { selectedChildId } = useLearner()
@@ -31,8 +38,10 @@ export function LessonsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Filters
-  const [filterChildId, setFilterChildId] = useState<string>('')
+  // Filters — learners and date range are applied by the server, so the page never
+  // loads every lesson ever created. No learners selected = all children.
+  const [filterChildIds, setFilterChildIds] = useState<string[]>(selectedChildId ? [selectedChildId] : [])
+  const [range, setRange] = useState<LessonListRange>('week')
   const [filterStatus, setFilterStatus] = useState<LessonStatusFilter>('')
   const [dateSort, setDateSort] = useState<DateSort>('desc')
   const [showForm, setShowForm] = useState(false)
@@ -40,7 +49,7 @@ export function LessonsPage() {
 
   // Keep page filter in sync with header learner (null = All children)
   useEffect(() => {
-    setFilterChildId(selectedChildId ?? '')
+    setFilterChildIds(selectedChildId ? [selectedChildId] : [])
   }, [selectedChildId])
 
   useEffect(() => {
@@ -51,14 +60,20 @@ export function LessonsPage() {
 
   const editingLessonId = searchParams.get('editId')
 
-  // Ensure deep-linked lesson is visible in the list
+  // Make a deep-linked lesson visible: select its learner and widen the range if it is older.
   useEffect(() => {
-    if (!editingLessonId || lessons.length === 0) return
-    const lesson = lessons.find(l => l.id === editingLessonId)
-    if (lesson) {
-      setFilterChildId(lesson.childId)
-    }
-  }, [editingLessonId, lessons])
+    if (!editingLessonId) return
+    let cancelled = false
+    plannerApi.getLesson(editingLessonId).then(lesson => {
+      if (cancelled || !lesson) return
+      setFilterChildIds([lesson.childId])
+      setRange(r => {
+        const start = lessonRangeStart(r, todayLocal())
+        return start && lesson.dueDate < start ? 'all' : r
+      })
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [editingLessonId])
 
   // Scroll to the lesson card when opened from /plan
   useEffect(() => {
@@ -67,34 +82,51 @@ export function LessonsPage() {
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [editingLessonId, isLoading, lessons])
 
-  async function fetchLessons() {
+  // Overdue means "anything past due", so it ignores the date range.
+  const showsEveryDate = filterStatus === 'overdue'
+  const startDate = showsEveryDate ? undefined : lessonRangeStart(range, todayLocal())
+  const childKey = filterChildIds.join(',')
+
+  // Filters change faster than responses arrive; only the latest request may set state.
+  const latestRequest = useRef(0)
+  const fetchLessons = useCallback(async () => {
+    const request = ++latestRequest.current
     try {
       setIsLoading(true)
       setError(null)
-      const all = await plannerApi.getLessons()
-      setLessons(all)
+      const list = await plannerApi.getLessons(undefined, childKey ? childKey.split(',') : undefined, undefined, startDate)
+      if (request === latestRequest.current) setLessons(list)
     } catch {
-      setError('Failed to load lessons')
+      if (request === latestRequest.current) setError('Failed to load lessons')
     } finally {
-      setIsLoading(false)
+      if (request === latestRequest.current) setIsLoading(false)
     }
-  }
+  }, [childKey, startDate])
 
   useEffect(() => {
     fetchLessons()
-  }, [])
+  }, [fetchLessons])
+
+  function toggleChild(childId: string) {
+    setFilterChildIds(prev => {
+      const next = prev.includes(childId) ? prev.filter(id => id !== childId) : [...prev, childId]
+      return children.map(c => c.id).filter(id => next.includes(id))
+    })
+  }
+
+  const filtersNarrow = filterChildIds.length > 0 || filterStatus !== '' || startDate !== undefined
 
   const filteredLessons = useMemo(() => {
     const today = todayLocal()
     let list = lessons
-    if (filterChildId) list = list.filter(l => l.childId === filterChildId)
+    if (childKey) list = list.filter(l => childKey.split(',').includes(l.childId))
     list = list.filter(l => matchesStatusFilter(l, filterStatus, today))
     list = [...list].sort((a, b) => {
       const cmp = a.dueDate.localeCompare(b.dueDate)
       return dateSort === 'asc' ? cmp : -cmp
     })
     return list
-  }, [lessons, filterChildId, filterStatus, dateSort])
+  }, [lessons, childKey, filterStatus, dateSort])
 
   async function handleSubmit(data: LessonFormData) {
     const householdId = householdProfile?.id ?? ''
@@ -163,15 +195,16 @@ export function LessonsPage() {
           <h2 className="text-lg font-bold text-slate-900">All lessons</h2>
 
           <div className="flex flex-wrap gap-2">
-            {/* Child filter */}
+            {/* Date range */}
             <select
-              value={filterChildId}
-              onChange={e => setFilterChildId(e.target.value)}
-              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
+              aria-label="Date range"
+              value={range}
+              onChange={e => setRange(e.target.value as LessonListRange)}
+              disabled={showsEveryDate}
+              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900 disabled:opacity-50"
             >
-              <option value="">All children</option>
-              {children.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+              {LESSON_LIST_RANGES.map(r => (
+                <option key={r.value} value={r.value}>{r.label}</option>
               ))}
             </select>
 
@@ -200,6 +233,35 @@ export function LessonsPage() {
           </div>
         </div>
 
+        {/* Learner filter — pick any number; none picked = all children */}
+        {children.length > 1 && (
+          <div role="group" aria-label="Filter by learner" className="flex flex-wrap gap-2 mb-4">
+            <button
+              type="button"
+              aria-pressed={filterChildIds.length === 0}
+              onClick={() => setFilterChildIds([])}
+              className={chipClass(filterChildIds.length === 0)}
+            >
+              All children
+            </button>
+            {children.map(c => (
+              <button
+                key={c.id}
+                type="button"
+                aria-pressed={filterChildIds.includes(c.id)}
+                onClick={() => toggleChild(c.id)}
+                className={chipClass(filterChildIds.includes(c.id))}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {showsEveryDate && (
+          <p className="text-xs text-slate-500 -mt-2 mb-4">Overdue shows every date, not just the selected range.</p>
+        )}
+
         {isLoading ? (
           <p className="text-sm text-slate-400 py-4">Loading…</p>
         ) : (
@@ -212,6 +274,7 @@ export function LessonsPage() {
             onDelete={handleDelete}
             onComplete={handleComplete}
             editingLessonId={editingLessonId}
+            emptyMessage={filtersNarrow ? 'No lessons match these filters. Try another learner or a wider date range.' : undefined}
           />
         )}
       </div>

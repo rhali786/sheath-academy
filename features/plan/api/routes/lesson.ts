@@ -2,10 +2,41 @@ import { getRequestAuthCtx } from '@/features/auth/server/requestAuth'
 import { NextResponse } from 'next/server'
 import type { ApiResponse } from '@/features/lib/types'
 import type { LessonTask } from '@/features/plan/types'
-import { getLessonTaskRow, updateLessonTaskRow, completeLessonTaskRow, deleteLessonTaskRow } from '@/features/plan/server/repository'
+import { getLessonTaskRow, updateLessonTaskRow, completeLessonTaskRow, deleteLessonTaskRow, type LessonTaskRow } from '@/features/plan/server/repository'
+import { getSubjectRow } from '@/features/subjects/server/repository'
+import { assertSessionOwnership } from '@/features/auth/server/routeOwnership'
 import { mapLessonTaskRow } from '@/features/plan/api/mapLessonTaskRow'
 import { notFoundResponse } from '@/features/auth/server/context'
 import { validateLessonWindow, validateScheduleTimeWindow } from '@/features/plan/server/validation'
+
+/**
+ * The editor's Child and Course fields. Returns only what actually changed, or the reason
+ * the move is not allowed: the course must belong to the household and enrol the learner.
+ */
+async function resolveReassignment(
+  existing: LessonTaskRow,
+  body: { childId?: unknown; subjectId?: unknown },
+  householdId: string,
+): Promise<{ learnerId?: string; subjectId?: string } | { error: string }> {
+  const targetLearner = typeof body.childId === 'string' && body.childId ? body.childId : existing.learnerId
+  const sentSubject = 'subjectId' in body ? ((body.subjectId as string | null) || null) : undefined
+  const learnerChanged = targetLearner !== existing.learnerId
+  const subjectChanged = sentSubject !== undefined && sentSubject !== existing.subjectId
+  if (!learnerChanged && !subjectChanged) return {}
+
+  if (learnerChanged) await assertSessionOwnership('learner', targetLearner)
+  const targetSubject = sentSubject !== undefined ? sentSubject : existing.subjectId
+  if (!targetSubject) return { error: 'Choose a course for this learner.' }
+  const course = await getSubjectRow(targetSubject, householdId)
+  if (!course) return { error: 'That course could not be found.' }
+  if (!course.learnerIds.includes(targetLearner)) {
+    return { error: `${course.name} is not one of this learner's courses. Choose one of their courses.` }
+  }
+  return {
+    learnerId: learnerChanged ? targetLearner : undefined,
+    subjectId: subjectChanged ? targetSubject : undefined,
+  }
+}
 
 function rowToLesson(r: Parameters<typeof mapLessonTaskRow>[0]): LessonTask {
   return mapLessonTaskRow(r)
@@ -45,7 +76,14 @@ export async function PUT(id: string, request: Request): Promise<NextResponse<Ap
 
   try {
     const { householdId } = getRequestAuthCtx()
+    const existing = await getLessonTaskRow(id, householdId)
+    if (!existing) return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 })
+    const reassignment = await resolveReassignment(existing, body, householdId)
+    if ('error' in reassignment) {
+      return NextResponse.json({ status: 'error', data: null, message: reassignment.error, timestamp: new Date().toISOString() }, { status: 400 })
+    }
     const updated = await updateLessonTaskRow(id, householdId, {
+      ...reassignment,
       title: body.title?.trim(),
       description: body.description?.trim(),
       resourceLink: body.resourceLink?.trim(),
@@ -53,7 +91,8 @@ export async function PUT(id: string, request: Request): Promise<NextResponse<Ap
       estimatedDuration: body.estimatedDuration,
       scheduledStartTime: 'scheduledStartTime' in body ? (body.scheduledStartTime ?? null) : undefined,
       scheduledEndTime: 'scheduledEndTime' in body ? (body.scheduledEndTime ?? null) : undefined,
-      plannedStartDate: body.plannedStartDate ?? null,
+      // Only when sent: a title-only edit (or a group edit) must not wipe "Available from".
+      plannedStartDate: 'plannedStartDate' in body ? (body.plannedStartDate ?? null) : undefined,
       dueDate: body.dueDate,
       status: body.status,
       sortOrder: body.order,
@@ -61,7 +100,7 @@ export async function PUT(id: string, request: Request): Promise<NextResponse<Ap
       chapter: 'chapter' in body ? (body.chapter?.trim() || null) : undefined,
       hasHomework: 'hasHomework' in body ? body.hasHomework === true : undefined,
       hasAssessment: 'hasAssessment' in body ? body.hasAssessment === true : undefined,
-    }, { applyToGroup: body.applyToGroup === true })
+    }, { applyToGroup: body.applyToGroup === true, applyScheduleToGroup: body.applyScheduleToGroup === true })
     if (!updated) return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 })
     return NextResponse.json({ status: 'success', data: rowToLesson(updated), message: 'Lesson updated', timestamp: new Date().toISOString() })
   } catch { return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 }) }

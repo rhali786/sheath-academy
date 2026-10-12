@@ -16,15 +16,17 @@ interface LessonTaskListProps {
   onDelete?: (id: string) => void
   onComplete?: (id: string, status: 'completed') => Promise<void>
   editingLessonId?: string | null
+  /** Replaces the "No lessons yet" copy, e.g. when filters hide everything. */
+  emptyMessage?: string
 }
 
-export function LessonTaskList({ lessons, children, subjects, error, onUpdate, onEdit, onDelete, onComplete, editingLessonId = null }: LessonTaskListProps) {
+export function LessonTaskList({ lessons, children, subjects, error, onUpdate, onEdit, onDelete, onComplete, editingLessonId = null, emptyMessage }: LessonTaskListProps) {
   if (error) {
     return <p className="text-sm text-red-600 py-4">Could not load lessons. Please refresh.</p>
   }
 
   if (lessons.length === 0) {
-    return <p className="text-sm text-slate-500 py-4">No lessons yet. Add your first one above.</p>
+    return <p className="text-sm text-slate-500 py-4">{emptyMessage ?? 'No lessons yet. Add your first one above.'}</p>
   }
 
   function resolveChildName(childId: string): string {
