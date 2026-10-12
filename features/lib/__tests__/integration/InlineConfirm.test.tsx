@@ -98,3 +98,62 @@ describe('InlineConfirm', () => {
     expect(screen.getByRole('button', { name: 'Archive' }).className).toMatch(/bg-amber-600/)
   })
 })
+
+// Shared lessons: "Just Hawa" or "All learners in this group" — two destructive choices.
+describe('InlineConfirm — second choice', () => {
+  function renderTwo(onConfirm = jest.fn(), onSecondary = jest.fn(), onCancel = jest.fn()) {
+    render(
+      <InlineConfirm
+        message="Delete this lesson?"
+        confirmLabel="All learners in this group"
+        secondaryAction={{ label: 'Just Hawa', onConfirm: onSecondary }}
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+      />
+    )
+    return { onConfirm, onSecondary, onCancel }
+  }
+
+  it('shows both choices and Cancel', () => {
+    renderTwo()
+    expect(screen.getByRole('button', { name: 'Just Hawa' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'All learners in this group' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+  })
+
+  it('the second choice calls its own handler, not onConfirm', async () => {
+    const { onConfirm, onSecondary } = renderTwo()
+    fireEvent.click(screen.getByRole('button', { name: 'Just Hawa' }))
+    await waitFor(() => expect(onSecondary).toHaveBeenCalled())
+    expect(onConfirm).not.toHaveBeenCalled()
+  })
+
+  it('Cancel calls neither choice', () => {
+    const { onConfirm, onSecondary, onCancel } = renderTwo()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(onCancel).toHaveBeenCalled()
+    expect(onConfirm).not.toHaveBeenCalled()
+    expect(onSecondary).not.toHaveBeenCalled()
+  })
+
+  it('disables every button while either choice is pending', async () => {
+    let resolve: () => void = () => {}
+    renderTwo(jest.fn(), jest.fn(() => new Promise<void>(r => { resolve = r })))
+    fireEvent.click(screen.getByRole('button', { name: 'Just Hawa' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'All learners in this group' })).toBeDisabled())
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
+    resolve()
+  })
+
+  it('shows an error from the second choice and stays open', async () => {
+    renderTwo(jest.fn(), jest.fn().mockRejectedValue(new Error('Could not delete')))
+    fireEvent.click(screen.getByRole('button', { name: 'Just Hawa' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not delete')
+    expect(screen.getByRole('button', { name: 'Just Hawa' })).toBeInTheDocument()
+  })
+
+  it('no second button unless one is given', () => {
+    render(<InlineConfirm message="Delete?" onConfirm={jest.fn()} onCancel={jest.fn()} />)
+    expect(screen.getAllByRole('button')).toHaveLength(2)
+  })
+})

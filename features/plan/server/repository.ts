@@ -338,24 +338,24 @@ export async function deleteLessonTaskRow(
   id: string,
   householdId: string,
   options: DeleteLessonTaskOptions = {},
-): Promise<boolean> {
+): Promise<number> {
   const db = getDb()
   const existing = await getLessonTaskRow(id, householdId)
-  if (!existing) return false
+  if (!existing) return 0
 
   if (options.deleteGroup && existing.groupId) {
     const result = await db
       .delete(lessonTasks)
       .where(and(eq(lessonTasks.householdId, householdId), eq(lessonTasks.groupId, existing.groupId)))
-      .returning()
-    return result.length > 0
+      .returning({ id: lessonTasks.id })
+    return result.length
   }
 
   const result = await db
     .delete(lessonTasks)
     .where(and(eq(lessonTasks.id, id), eq(lessonTasks.householdId, householdId)))
-    .returning()
-  return result.length > 0
+    .returning({ id: lessonTasks.id })
+  return result.length
 }
 
 // ─── Lesson Steps ─────────────────────────────────────────────────────────────

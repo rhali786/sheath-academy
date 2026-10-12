@@ -633,3 +633,73 @@ describe('LessonCard — changing the learner or course', () => {
     expect(screen.getByRole('button', { name: /save lesson/i })).toBeInTheDocument()
   })
 })
+
+// ─── Deleting: one learner's copy or the whole shared lesson ───
+// A 5-learner lesson used to take 5 deletes; there was no Delete inside the editor.
+
+describe('LessonCard — delete', () => {
+  function renderCard(lesson = makeLesson(), onDelete = jest.fn().mockResolvedValue(undefined)) {
+    render(<LessonCard lesson={lesson} childName="Adam" subjectName="Math" onDelete={onDelete} onUpdate={jest.fn().mockResolvedValue(undefined)} />)
+    return onDelete
+  }
+
+  it('a lesson for one learner asks once and deletes just it', async () => {
+    const onDelete = renderCard()
+    fireEvent.click(screen.getByRole('button', { name: /delete lesson/i }))
+    expect(screen.queryByRole('button', { name: /just adam/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith('lesson_001', { deleteGroup: false }))
+  })
+
+  it('a shared lesson offers "Just Adam" and "All learners in this group"', () => {
+    renderCard(makeLesson({ groupId: 'group_001' }))
+    fireEvent.click(screen.getByRole('button', { name: /delete lesson/i }))
+    expect(screen.getByText(/shared with other learners/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Just Adam' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'All learners in this group' })).toBeInTheDocument()
+  })
+
+  it('"Just Adam" deletes only this copy', async () => {
+    const onDelete = renderCard(makeLesson({ groupId: 'group_001' }))
+    fireEvent.click(screen.getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Just Adam' }))
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith('lesson_001', { deleteGroup: false }))
+  })
+
+  it('"All learners in this group" deletes every copy', async () => {
+    const onDelete = renderCard(makeLesson({ groupId: 'group_001' }))
+    fireEvent.click(screen.getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'All learners in this group' }))
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith('lesson_001', { deleteGroup: true }))
+  })
+
+  it('Cancel deletes nothing and returns to the card', () => {
+    const onDelete = renderCard(makeLesson({ groupId: 'group_001' }))
+    fireEvent.click(screen.getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(onDelete).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: /delete lesson/i })).toBeInTheDocument()
+  })
+
+  it('a failed delete shows why and keeps the choices open', async () => {
+    renderCard(makeLesson(), jest.fn().mockRejectedValue(new Error('Lesson not found')))
+    fireEvent.click(screen.getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Lesson not found')
+  })
+
+  it('the editor has a Delete button that opens the same choices', async () => {
+    const onDelete = renderCard(makeLesson({ groupId: 'group_001' }))
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: /delete this lesson/i }))
+    expect(screen.queryByRole('button', { name: /save lesson/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Just Adam' }))
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith('lesson_001', { deleteGroup: false }))
+  })
+
+  it('no Delete in the editor when the card cannot delete', () => {
+    render(<LessonCard lesson={makeLesson()} childName="Adam" subjectName="Math" onUpdate={jest.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(screen.queryByRole('button', { name: /delete this lesson/i })).not.toBeInTheDocument()
+  })
+})

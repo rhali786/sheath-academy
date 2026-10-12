@@ -13,7 +13,7 @@ interface LessonTaskListProps {
   onUpdate?: (id: string, patch: LessonTaskPatch) => Promise<void>
   /** Legacy: passed through to LessonCard when onUpdate is not available */
   onEdit?: (lesson: LessonTask) => void
-  onDelete?: (id: string) => void
+  onDelete?: (id: string, options: { deleteGroup: boolean }) => void | Promise<void>
   onComplete?: (id: string, status: 'completed') => Promise<void>
   editingLessonId?: string | null
   /** Replaces the "No lessons yet" copy, e.g. when filters hide everything. */

@@ -21,8 +21,8 @@ jest.mock('@/features/plan/server/repository', () => ({
   deleteLessonTaskRow: jest.fn(),
 }))
 
-import { getLessonTaskRow, updateLessonTaskRow } from '@/features/plan/server/repository'
-import { GET, PUT } from '@/features/plan/api/routes/lesson'
+import { getLessonTaskRow, updateLessonTaskRow, deleteLessonTaskRow } from '@/features/plan/server/repository'
+import { GET, PUT, DELETE } from '@/features/plan/api/routes/lesson'
 import { assertSessionOwnership } from '@/features/auth/server/routeOwnership'
 import { getSubjectRow } from '@/features/subjects/server/repository'
 
@@ -283,5 +283,32 @@ describe('PUT /api/plan/lessons/:id', () => {
     }), { applyToGroup: false, applyScheduleToGroup: false })
     expect(body.data.scheduledStartTime).toBeUndefined()
     expect(body.data.scheduledEndTime).toBeUndefined()
+  })
+})
+
+describe('DELETE /api/plan/lessons/:id', () => {
+  const mockDelete = deleteLessonTaskRow as jest.Mock
+  beforeEach(() => mockDelete.mockReset())
+  const del = (q = '') => DELETE('lt_1', new Request(`http://localhost/api/plan/lessons/lt_1${q}`, { method: 'DELETE' }))
+
+  it('deletes one copy by default and says how many were removed', async () => {
+    mockDelete.mockResolvedValue(1)
+    const res = await del()
+    expect(mockDelete).toHaveBeenCalledWith('lt_1', 'hh_test', { deleteGroup: false })
+    expect(res.status).toBe(200)
+    expect((await res.json()).data).toEqual({ deleted: 1 })
+  })
+
+  it('deleteGroup=true removes every copy and reports the count', async () => {
+    mockDelete.mockResolvedValue(5)
+    const res = await del('?deleteGroup=true')
+    expect(mockDelete).toHaveBeenCalledWith('lt_1', 'hh_test', { deleteGroup: true })
+    expect((await res.json()).data).toEqual({ deleted: 5 })
+  })
+
+  it('404 when nothing was deleted', async () => {
+    mockDelete.mockResolvedValue(0)
+    const res = await del()
+    expect(res.status).toBe(404)
   })
 })

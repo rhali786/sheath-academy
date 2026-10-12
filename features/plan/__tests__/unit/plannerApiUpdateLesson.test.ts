@@ -21,3 +21,27 @@ describe('plannerApi.updateLesson', () => {
     await expect(plannerApi.updateLesson('l1', {})).rejects.toThrow('Request failed: 500')
   })
 })
+
+describe('plannerApi.deleteLesson', () => {
+  const realFetch = global.fetch
+  afterEach(() => { global.fetch = realFetch })
+
+  it('deletes one copy by default and returns how many were removed', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'success', data: { deleted: 1 } }) })
+    global.fetch = fetchMock as unknown as typeof fetch
+    await expect(plannerApi.deleteLesson('l1')).resolves.toBe(1)
+    expect(String(fetchMock.mock.calls[0][0]).endsWith('/api/plan/lessons/l1')).toBe(true)
+  })
+
+  it('asks for the whole group with deleteGroup', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'success', data: { deleted: 5 } }) })
+    global.fetch = fetchMock as unknown as typeof fetch
+    await expect(plannerApi.deleteLesson('l1', { deleteGroup: true })).resolves.toBe(5)
+    expect(String(fetchMock.mock.calls[0][0]).endsWith('/api/plan/lessons/l1?deleteGroup=true')).toBe(true)
+  })
+
+  it("rejects with the server's message", async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 404, json: async () => ({ message: 'Lesson not found' }) }) as unknown as typeof fetch
+    await expect(plannerApi.deleteLesson('l1')).rejects.toThrow('Lesson not found')
+  })
+})

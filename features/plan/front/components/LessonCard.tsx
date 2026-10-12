@@ -43,7 +43,8 @@ interface LessonCardProps {
   onUpdate?: (id: string, patch: LessonTaskPatch) => Promise<void>
   /** Legacy: called when Edit button is clicked (top-form pattern) — kept for backward compatibility */
   onEdit?: (lesson: LessonTask) => void
-  onDelete?: (id: string) => void
+  /** deleteGroup: remove every learner's copy of a shared lesson, not just this one. */
+  onDelete?: (id: string, options: { deleteGroup: boolean }) => void | Promise<void>
   /** When provided and lesson is not_started, shows a Check icon button to mark the lesson done. */
   onComplete?: (id: string, status: 'completed') => Promise<void>
   /** Open inline edit on mount (e.g. deep-linked from /plan). */
@@ -354,6 +355,16 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
           )}
           {saveError && <p role="alert" className="text-xs text-red-600">{saveError}</p>}
           <div className="flex gap-2 justify-end">
+            {onDelete && (
+              <button
+                type="button"
+                onClick={() => { setIsEditing(false); setConfirmDelete(true); onEditEnd?.() }}
+                aria-label="Delete this lesson"
+                className="mr-auto flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-3 h-3" /> Delete
+              </button>
+            )}
             <button
               onClick={cancelEdit}
               aria-label="Cancel edit"
@@ -379,8 +390,14 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     return (
       <InlineConfirm
         message="Delete this lesson?"
-        detail={lesson.title}
-        onConfirm={() => { if (onDelete) onDelete(lesson.id) }}
+        detail={lesson.groupId ? `“${lesson.title}” is shared with other learners.` : lesson.title}
+        {...(lesson.groupId
+          ? {
+              confirmLabel: 'All learners in this group',
+              secondaryAction: { label: `Just ${childName}`, onConfirm: () => onDelete?.(lesson.id, { deleteGroup: false }) },
+            }
+          : {})}
+        onConfirm={() => onDelete?.(lesson.id, { deleteGroup: Boolean(lesson.groupId) })}
         onCancel={() => setConfirmDelete(false)}
       />
     )

@@ -131,7 +131,7 @@ describe('lesson tasks repository', () => {
 
   itDb('deleteLessonTaskRow removes the row', async () => {
     const deleted = await deleteLessonTaskRow(taskId, householdId)
-    expect(deleted).toBe(true)
+    expect(deleted).toBe(1)
     const rows = await listLessonTaskRows(householdId)
     expect(rows.some(r => r.id === taskId)).toBe(false)
   })
@@ -245,7 +245,7 @@ describe('lesson tasks repository', () => {
     const moved = (await listLessonTaskRows(householdId)).filter(r => r.groupId === rows[0].groupId)
     expect(moved.every(r => r.dueDate === '2026-07-03')).toBe(true)
 
-    await deleteLessonTaskRow(rows[0].id, householdId, { deleteGroup: true })
+    expect(await deleteLessonTaskRow(rows[0].id, householdId, { deleteGroup: true })).toBe(2)
   })
 
   itDb('createLessonTasksFanOut with one learner leaves group_id NULL', async () => {

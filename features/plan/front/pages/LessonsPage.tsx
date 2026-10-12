@@ -11,6 +11,7 @@ import type { SubjectCourse } from '@/features/subjects/types'
 import { useHousehold } from '@/features/household/front/context'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { TodayLessonCard } from '@/features/plan/front/components/TodayLessonCard'
+import { InlineSuccess } from '@/features/lib/front/components/InlineSuccess'
 import { matchesStatusFilter, type LessonStatusFilter } from '@/features/plan/utils/lessonStatusFilter'
 import { LESSON_LIST_RANGES, lessonRangeStart, type LessonListRange } from '@/features/plan/utils/lessonListRange'
 
@@ -50,6 +51,7 @@ export function LessonsPage() {
   const [dateSort, setDateSort] = useState<DateSort>('desc')
   const [showForm, setShowForm] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [deleteNotice, setDeleteNotice] = useState<string | null>(null)
 
   // Keep page filter in sync with header learner (null = All children)
   useEffect(() => {
@@ -155,8 +157,17 @@ export function LessonsPage() {
     await fetchLessons()
   }
 
-  async function handleDelete(id: string) {
-    await plannerApi.deleteLesson(id)
+  // Errors propagate to the delete confirmation, which shows them and stays open.
+  async function handleDelete(id: string, options: { deleteGroup: boolean }) {
+    const lesson = lessons.find(l => l.id === id)
+    const deleted = await plannerApi.deleteLesson(id, options)
+    if (lesson) {
+      const name = children.find(c => c.id === lesson.childId)?.name
+      const who = options.deleteGroup
+        ? (deleted > 1 ? ` for ${deleted} learners` : '')
+        : (lesson.groupId && name ? ` for ${name}` : '')
+      setDeleteNotice(`“${lesson.title}” deleted${who}`)
+    }
     await fetchLessons()
   }
 
@@ -246,6 +257,12 @@ export function LessonsPage() {
             </select>
           </div>
         </div>
+
+        {deleteNotice && (
+          <div className="mb-4">
+            <InlineSuccess message={deleteNotice} onDismiss={() => setDeleteNotice(null)} />
+          </div>
+        )}
 
         {/* Learner filter — pick any number; none picked = all children */}
         {children.length > 1 && (

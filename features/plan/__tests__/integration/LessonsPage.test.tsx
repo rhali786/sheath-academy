@@ -479,3 +479,59 @@ describe('LessonsPage — deep-linked editor closes for good', () => {
     await act(async () => { resolveRefetch([lesson]) })
   })
 })
+
+describe('LessonsPage — delete', () => {
+  const mockDeleteLesson = plannerApi.deleteLesson as jest.Mock
+  const shared = makeLesson({ id: 'lesson_s', title: 'Fractions', groupId: 'group_1', dueDate: '2099-01-05' })
+  const solo = makeLesson({ id: 'lesson_solo', title: 'Spelling', dueDate: '2099-01-06' })
+
+  beforeEach(() => {
+    mockGetLessons.mockResolvedValue([shared, solo])
+  })
+
+  function cardFor(id: string) { return document.querySelector(`[data-lesson-id="${id}"]`) as HTMLElement }
+
+  it('deleting a whole shared lesson asks the server for the group, refreshes, and says how many', async () => {
+    mockDeleteLesson.mockResolvedValue(5)
+    render(<LessonsPage />)
+    await waitFor(() => expect(cardFor('lesson_s')).not.toBeNull())
+    mockGetLessons.mockResolvedValue([solo])
+
+    fireEvent.click(within(cardFor('lesson_s')).getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'All learners in this group' }))
+
+    await waitFor(() => expect(mockDeleteLesson).toHaveBeenCalledWith('lesson_s', { deleteGroup: true }))
+    expect(await screen.findByText('“Fractions” deleted for 5 learners')).toBeInTheDocument()
+    await waitFor(() => expect(cardFor('lesson_s')).toBeNull())
+  })
+
+  it("deleting one learner's copy names that learner", async () => {
+    mockDeleteLesson.mockResolvedValue(1)
+    render(<LessonsPage />)
+    await waitFor(() => expect(cardFor('lesson_s')).not.toBeNull())
+    fireEvent.click(within(cardFor('lesson_s')).getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Just Adam' }))
+    await waitFor(() => expect(mockDeleteLesson).toHaveBeenCalledWith('lesson_s', { deleteGroup: false }))
+    expect(await screen.findByText('“Fractions” deleted for Adam')).toBeInTheDocument()
+  })
+
+  it('a lesson for one learner is deleted with a plain confirmation', async () => {
+    mockDeleteLesson.mockResolvedValue(1)
+    render(<LessonsPage />)
+    await waitFor(() => expect(cardFor('lesson_solo')).not.toBeNull())
+    fireEvent.click(within(cardFor('lesson_solo')).getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+    await waitFor(() => expect(mockDeleteLesson).toHaveBeenCalledWith('lesson_solo', { deleteGroup: false }))
+    expect(await screen.findByText('“Spelling” deleted')).toBeInTheDocument()
+  })
+
+  it('a failed delete keeps the lesson and shows the reason', async () => {
+    mockDeleteLesson.mockRejectedValue(new Error('Lesson not found'))
+    render(<LessonsPage />)
+    await waitFor(() => expect(cardFor('lesson_solo')).not.toBeNull())
+    fireEvent.click(within(cardFor('lesson_solo')).getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Lesson not found')
+    expect(screen.getByText('Spelling')).toBeInTheDocument()
+  })
+})

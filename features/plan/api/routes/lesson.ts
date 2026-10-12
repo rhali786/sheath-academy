@@ -123,7 +123,8 @@ export async function COMPLETE(id: string, request?: Request): Promise<NextRespo
   } catch { return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 }) }
 }
 
-export async function DELETE(id: string, request?: Request): Promise<NextResponse<ApiResponse<null>>> {
+/** Deletes one learner's copy, or with ?deleteGroup=true every copy of a shared lesson. */
+export async function DELETE(id: string, request?: Request): Promise<NextResponse<ApiResponse<{ deleted: number } | null>>> {
   try {
     const { householdId } = getRequestAuthCtx()
     const deleteGroup = request
@@ -131,6 +132,6 @@ export async function DELETE(id: string, request?: Request): Promise<NextRespons
       : false
     const deleted = await deleteLessonTaskRow(id, householdId, { deleteGroup })
     if (!deleted) return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 })
-    return NextResponse.json({ status: 'success', data: null, message: 'Lesson deleted', timestamp: new Date().toISOString() })
+    return NextResponse.json({ status: 'success', data: { deleted }, message: 'Lesson deleted', timestamp: new Date().toISOString() })
   } catch { return NextResponse.json({ status: 'error', data: null, message: 'Lesson not found', timestamp: new Date().toISOString() }, { status: 404 }) }
 }
