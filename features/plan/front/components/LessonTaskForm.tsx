@@ -11,6 +11,7 @@ import {
 import { isOffDay } from '@/features/plan/utils/schoolDays'
 import { LessonTimeFields, validateLessonTimes } from '@/features/plan/front/components/LessonTimeFields'
 import { GroupEditOptions } from '@/features/plan/front/components/GroupEditOptions'
+import { describeLessonTime } from '@/features/schedule/lib/courseTimes'
 import { Trash2 } from 'lucide-react'
 
 const GENERAL_LESSON_TYPES = ['Lesson', 'Assignment', 'Reading', 'Practice', 'Review', 'Project', 'Assessment', 'Other']
@@ -202,6 +203,9 @@ export function LessonTaskForm({
     : filterSubjectsForLearners(subjects, selectedChildIds)
   const selectedSubject = filteredSubjects.find(s => s.id === subjectId)
   const lessonTypes = selectedSubject?.category === 'Quran' ? QURAN_LESSON_TYPES : GENERAL_LESSON_TYPES
+  const timeHint = selectedSubject
+    ? describeLessonTime({ courseName: selectedSubject.name, blocks: selectedSubject.recurringSchedule, date: dueDate, ownStart: scheduledStartTime, ownEnd: scheduledEndTime })
+    : null
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -462,6 +466,7 @@ export function LessonTaskForm({
         onStartChange={setScheduledStartTime}
         onEndChange={setScheduledEndTime}
         error={timeError}
+        hint={timeHint}
       />
 
       <div>

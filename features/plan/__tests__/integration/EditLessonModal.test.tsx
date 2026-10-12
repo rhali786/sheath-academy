@@ -254,3 +254,15 @@ describe('EditLessonModal — delete', () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 })
+
+// UAT 2.5 / 3.7: a lesson sat at 8:30 with nothing saying why. Math 5 in this file has no
+// weekly time, so the hint explains the day's order; it goes away once the lesson has its own time.
+describe('EditLessonModal — why this time', () => {
+  test("explains a course with no weekly time, and hides the note once the lesson has its own time", async () => {
+    const dialog = await openWindow()
+    expect(within(dialog).getByText(/math 5 has no weekly time/i)).toBeInTheDocument()
+    fireEvent.change(within(dialog).getByLabelText(/start time hour/i), { target: { value: '1' } })
+    fireEvent.change(within(dialog).getByLabelText(/end time hour/i), { target: { value: '2' } })
+    expect(within(dialog).queryByText(/has no weekly time/i)).not.toBeInTheDocument()
+  })
+})

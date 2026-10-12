@@ -111,14 +111,17 @@ interface LessonTimeFieldsProps {
   onStartChange: (value: string) => void
   onEndChange: (value: string) => void
   error?: string
+  /** Why a lesson without its own time sits where it does (see describeLessonTime). */
+  hint?: string | null
 }
 
-export function LessonTimeFields({ idPrefix, start, end, onStartChange, onEndChange, error }: LessonTimeFieldsProps) {
+export function LessonTimeFields({ idPrefix, start, end, onStartChange, onEndChange, error, hint }: LessonTimeFieldsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <TimePicker12h idPrefix={`${idPrefix}-start`} label="Start time" value={start} onChange={onStartChange} />
       <TimePicker12h idPrefix={`${idPrefix}-end`} label="End time" value={end} onChange={onEndChange} />
       {error && <p className="text-xs text-red-600 -mt-2 sm:col-span-2">{error}</p>}
+      {hint && <p className="text-xs text-slate-500 -mt-2 sm:col-span-2" data-testid="lesson-time-hint">{hint}</p>}
     </div>
   )
 }

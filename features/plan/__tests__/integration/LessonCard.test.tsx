@@ -717,3 +717,32 @@ describe('LessonCard — clearing details', () => {
     expect(onUpdate.mock.calls[0][1]).toMatchObject({ description: '', resourceLink: '' })
   })
 })
+
+describe('LessonCard — why this time', () => {
+  const kids = [{ id: 'child_001', householdId: 'hh_001', name: 'Adam', gradeLabel: '5th', isActive: true, username: 'a', password: 'pw', createdAt: '2026-01-01T00:00:00Z' }]
+  const math = {
+    id: 'subj_001', childId: 'child_001', learnerIds: ['child_001'], name: 'Math', category: 'Math' as const, isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z',
+    recurringSchedule: [{ daysOfWeek: ['Monday' as const], startTime: '10:15', endTime: '11:00' }],
+  }
+
+  function openOn(dueDate: string) {
+    render(<LessonCard lesson={makeLesson({ dueDate })} childName="Adam" subjectName="Math" children={kids} subjects={[math]} onUpdate={jest.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+  }
+
+  it("on a day the course has a time, says the lesson uses it", () => {
+    openOn('2026-10-12') // Monday
+    expect(screen.getByText("Uses Math's time on Mondays: 10:15 AM.")).toBeInTheDocument()
+  })
+
+  it('on a day the course has no time, explains the day order', () => {
+    openOn('2026-10-17') // Saturday
+    expect(screen.getByText(/math has no set time on saturdays/i)).toBeInTheDocument()
+  })
+
+  it('updates when the due date changes', () => {
+    openOn('2026-10-17')
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-10-19' } }) // Monday
+    expect(screen.getByText("Uses Math's time on Mondays: 10:15 AM.")).toBeInTheDocument()
+  })
+})

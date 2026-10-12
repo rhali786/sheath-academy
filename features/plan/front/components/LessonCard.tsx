@@ -11,6 +11,7 @@ import type { SubjectCourse } from '@/features/subjects/types'
 import { filterSubjectsForLearner } from '@/features/subjects/lib/enrollment'
 import { LessonTimeFields, validateLessonTimes } from '@/features/plan/front/components/LessonTimeFields'
 import { GroupEditOptions } from '@/features/plan/front/components/GroupEditOptions'
+import { describeLessonTime } from '@/features/schedule/lib/courseTimes'
 
 const STATUS_LABELS: Record<LessonTaskStatus, string> = {
   not_started: 'Not started',
@@ -207,6 +208,11 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     }
   }
 
+  const editCourse = subjects?.find(s => s.id === editSubjectId)
+  const timeHint = editCourse
+    ? describeLessonTime({ courseName: editCourse.name, blocks: editCourse.recurringSchedule, date: editDueDate, ownStart: editStartTime, ownEnd: editEndTime })
+    : null
+
   const filteredSubjects = subjects && editChildId
     ? filterSubjectsForLearner(subjects, editChildId)
     : []
@@ -305,6 +311,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
             onStartChange={setEditStartTime}
             onEndChange={setEditEndTime}
             error={timeError}
+            hint={timeHint}
           />
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Description <span className="font-normal text-slate-400">(optional)</span></label>

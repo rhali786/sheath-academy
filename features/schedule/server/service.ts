@@ -1,5 +1,5 @@
 import type { LessonTask, LessonDuration } from '@/features/plan/types'
-import type { DayOfWeek } from '@/features/lib/types'
+import { courseTimeFor } from '@/features/schedule/lib/courseTimes'
 import type {
   ScheduleBlock,
   DaySchedule,
@@ -24,13 +24,6 @@ function fromMinutes(total: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
-const WEEKDAYS: DayOfWeek[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-
-/** Weekday of a YYYY-MM-DD date, read as a local calendar date (never UTC). */
-function weekdayOf(date: string): DayOfWeek {
-  const [y, m, d] = date.split('-').map(Number)
-  return WEEKDAYS[new Date(y, m - 1, d).getDay()]
-}
 
 function parseDurationMinutes(duration: LessonDuration | undefined, fallback: number): number {
   switch (duration) {
@@ -87,7 +80,6 @@ export function buildDailySchedule(
   settings: ScheduleSettings,
 ): DaySchedule {
   const { startTime, transitionMinutes, defaultDurationMinutes = 30, includeSyntheticBreaks = false } = settings
-  const weekday = settings.date ? weekdayOf(settings.date) : null
   let cursor = toMinutes(startTime)
   const blocks: ScheduleBlock[] = []
 
@@ -95,9 +87,7 @@ export function buildDailySchedule(
     // An explicit lesson time wins; otherwise the course's recurring time for this weekday.
     const fixed = lesson.scheduledStartTime && lesson.scheduledEndTime
       ? { startTime: lesson.scheduledStartTime, endTime: lesson.scheduledEndTime }
-      : weekday
-        ? settings.courseTimes?.[lesson.subjectId]?.find(b => b.daysOfWeek.includes(weekday)) ?? null
-        : null
+      : courseTimeFor(settings.courseTimes, lesson.subjectId, settings.date ?? '')
 
     if (fixed) {
       const overrideStart = toMinutes(fixed.startTime)
