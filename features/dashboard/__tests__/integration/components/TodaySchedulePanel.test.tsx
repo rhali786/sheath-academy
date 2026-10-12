@@ -11,7 +11,7 @@ jest.mock('@/features/schedule/front/components/ScheduleTimeline', () => ({
   },
 }))
 
-jest.mock('@/features/dashboard/front/components/EditLessonModal', () => ({
+jest.mock('@/features/plan/front/components/EditLessonModal', () => ({
   EditLessonModal: ({ lessonId, onClose }: { lessonId: string; onClose: () => void }) => (
     <div data-testid="edit-lesson-modal" data-lesson-id={lessonId}>
       <button type="button" onClick={onClose}>Close</button>

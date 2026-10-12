@@ -46,7 +46,7 @@ import { useHousehold } from '@/features/household/front/context'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { LessonsPage } from '@/features/plan/front/pages/LessonsPage'
 import { LessonCard } from '@/features/plan/front/components/LessonCard'
-import { EditLessonModal } from '@/features/dashboard/front/components/EditLessonModal'
+import { EditLessonModal } from '@/features/plan/front/components/EditLessonModal'
 import { ScheduleTimeline } from '@/features/schedule/front/components/ScheduleTimeline'
 
 const mockGetLessons = plannerApi.getLessons as jest.Mock

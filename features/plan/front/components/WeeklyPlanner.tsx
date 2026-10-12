@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { DndContext, DragOverlay, useDraggable, useDroppable } from '@dnd-kit/core'
 import { GripVertical } from 'lucide-react'
 import { usePlanner } from '../context/PlannerContext'
+import { EditLessonModal } from '@/features/plan/front/components/EditLessonModal'
 import { useHousehold } from '@/features/household/front/context'
 import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
@@ -222,7 +222,6 @@ export function WeeklyPlanner() {
   const { lessons, selectedWeek, weekStartDay, children, subjects, selectedChildIds, selectedSubjectIds, refreshLessons } = usePlanner()
   const { householdProfile } = useHousehold()
   const schoolDays = householdProfile?.schoolDays
-  const router = useRouter()
   const [collapsedLearnerIds, setCollapsedLearnerIds] = useState<Set<string>>(new Set())
   const [displayMode, setDisplayMode] = useState<PlannerDisplayMode>('byLearner')
 
@@ -279,8 +278,10 @@ export function WeeklyPlanner() {
     )
   }
 
+  // Edit in place: the parent keeps their place in the week (was a jump to /lessons?editId=).
+  const [editingLessonId, setEditingLessonId] = useState<string | null>(null)
   function handleEdit(lessonId: string) {
-    router.push(`/lessons?editId=${lessonId}`)
+    setEditingLessonId(lessonId)
   }
 
   return (
@@ -429,6 +430,13 @@ export function WeeklyPlanner() {
           )}
         </DragOverlay>
       </DndContext>
+      {editingLessonId && (
+        <EditLessonModal
+          lessonId={editingLessonId}
+          onClose={() => setEditingLessonId(null)}
+          onSaved={() => refreshLessons?.()}
+        />
+      )}
     </div>
   )
 }

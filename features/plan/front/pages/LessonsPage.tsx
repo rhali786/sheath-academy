@@ -11,6 +11,7 @@ import type { SubjectCourse } from '@/features/subjects/types'
 import { useHousehold } from '@/features/household/front/context'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { TodayLessonCard } from '@/features/plan/front/components/TodayLessonCard'
+import { InlineSuccess } from '@/features/lib/front/components/InlineSuccess'
 import { matchesStatusFilter, type LessonStatusFilter } from '@/features/plan/utils/lessonStatusFilter'
 import { LESSON_LIST_RANGES, lessonRangeStart, type LessonListRange } from '@/features/plan/utils/lessonListRange'
 
@@ -34,8 +35,12 @@ export function LessonsPage() {
   const { householdProfile, studentProfiles: children, allSubjects: subjects } = useHousehold()
   const { selectedChildId } = useLearner()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [lessons, setLessons] = useState<LessonTask[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  // Only the first load shows "Loading…". Later refreshes keep the list mounted, so an
+  // open editor isn't torn down and a deep-linked one doesn't reopen after Save.
+  const [hasLoaded, setHasLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Filters — learners and date range are applied by the server, so the page never
@@ -46,6 +51,7 @@ export function LessonsPage() {
   const [dateSort, setDateSort] = useState<DateSort>('desc')
   const [showForm, setShowForm] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [deleteNotice, setDeleteNotice] = useState<string | null>(null)
 
   // Keep page filter in sync with header learner (null = All children)
   useEffect(() => {
@@ -95,7 +101,7 @@ export function LessonsPage() {
       setIsLoading(true)
       setError(null)
       const list = await plannerApi.getLessons(undefined, childKey ? childKey.split(',') : undefined, undefined, startDate)
-      if (request === latestRequest.current) setLessons(list)
+      if (request === latestRequest.current) { setLessons(list); setHasLoaded(true) }
     } catch {
       if (request === latestRequest.current) setError('Failed to load lessons')
     } finally {
@@ -106,6 +112,16 @@ export function LessonsPage() {
   useEffect(() => {
     fetchLessons()
   }, [fetchLessons])
+
+  // The deep-linked editor closed (saved or cancelled): drop editId so it stays closed,
+  // including on reload. Other params (e.g. ?add=1) are kept.
+  function clearEditId() {
+    if (!editingLessonId) return
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('editId')
+    const rest = params.toString()
+    router.replace(rest ? `/lessons?${rest}` : '/lessons')
+  }
 
   function toggleChild(childId: string) {
     setFilterChildIds(prev => {
@@ -141,8 +157,17 @@ export function LessonsPage() {
     await fetchLessons()
   }
 
-  async function handleDelete(id: string) {
-    await plannerApi.deleteLesson(id)
+  // Errors propagate to the delete confirmation, which shows them and stays open.
+  async function handleDelete(id: string, options: { deleteGroup: boolean }) {
+    const lesson = lessons.find(l => l.id === id)
+    const deleted = await plannerApi.deleteLesson(id, options)
+    if (lesson) {
+      const name = children.find(c => c.id === lesson.childId)?.name
+      const who = options.deleteGroup
+        ? (deleted > 1 ? ` for ${deleted} learners` : '')
+        : (lesson.groupId && name ? ` for ${name}` : '')
+      setDeleteNotice(`“${lesson.title}” deleted${who}`)
+    }
     await fetchLessons()
   }
 
@@ -233,6 +258,12 @@ export function LessonsPage() {
           </div>
         </div>
 
+        {deleteNotice && (
+          <div className="mb-4">
+            <InlineSuccess message={deleteNotice} onDismiss={() => setDeleteNotice(null)} />
+          </div>
+        )}
+
         {/* Learner filter — pick any number; none picked = all children */}
         {children.length > 1 && (
           <div role="group" aria-label="Filter by learner" className="flex flex-wrap gap-2 mb-4">
@@ -262,7 +293,7 @@ export function LessonsPage() {
           <p className="text-xs text-slate-500 -mt-2 mb-4">Overdue shows every date, not just the selected range.</p>
         )}
 
-        {isLoading ? (
+        {isLoading && !hasLoaded ? (
           <p className="text-sm text-slate-400 py-4">Loading…</p>
         ) : (
           <LessonTaskList
@@ -274,6 +305,7 @@ export function LessonsPage() {
             onDelete={handleDelete}
             onComplete={handleComplete}
             editingLessonId={editingLessonId}
+            onEditEnd={clearEditId}
             emptyMessage={filtersNarrow ? 'No lessons match these filters. Try another learner or a wider date range.' : undefined}
           />
         )}

@@ -6,7 +6,7 @@ import type { DaySchedule } from '@/features/schedule/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { getScheduleFooterCounts } from '@/features/schedule/lib/scheduleFooterCounts'
 import { ScheduleTimeline } from '@/features/schedule/front/components/ScheduleTimeline'
-import { EditLessonModal } from '@/features/dashboard/front/components/EditLessonModal'
+import { EditLessonModal } from '@/features/plan/front/components/EditLessonModal'
 import { QuickStartByCourseList } from '@/features/learning-time/front/components/QuickStartByCourseList'
 
 interface TodaySchedulePanelProps {

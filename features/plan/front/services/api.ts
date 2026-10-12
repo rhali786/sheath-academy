@@ -124,9 +124,16 @@ export const plannerApi = {
     return response.data
   },
 
-  deleteLesson: async (id: string): Promise<void> => {
-    const res = await fetch(`${getApiBaseUrl()}/api/plan/lessons/${id}`, { method: 'DELETE' })
-    if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  /** Deletes one learner's copy, or every copy of a shared lesson. Resolves to how many were removed. */
+  deleteLesson: async (id: string, options: { deleteGroup?: boolean } = {}): Promise<number> => {
+    const query = options.deleteGroup ? '?deleteGroup=true' : ''
+    const res = await fetch(`${getApiBaseUrl()}/api/plan/lessons/${id}${query}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message ?? `Request failed: ${res.status}`)
+    }
+    const body = await res.json().catch(() => ({}))
+    return body?.data?.deleted ?? 1
   },
 
   getProgress: async (

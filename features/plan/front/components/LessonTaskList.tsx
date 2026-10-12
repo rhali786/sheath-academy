@@ -4,6 +4,8 @@ import type { LessonTask, LessonTaskPatch } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { LessonCard } from './LessonCard'
+import { SharedLessonCard } from './SharedLessonCard'
+import { groupSharedLessons } from '@/features/plan/utils/groupSharedLessons'
 
 interface LessonTaskListProps {
   lessons: LessonTask[]
@@ -13,14 +15,15 @@ interface LessonTaskListProps {
   onUpdate?: (id: string, patch: LessonTaskPatch) => Promise<void>
   /** Legacy: passed through to LessonCard when onUpdate is not available */
   onEdit?: (lesson: LessonTask) => void
-  onDelete?: (id: string) => void
+  onDelete?: (id: string, options: { deleteGroup: boolean }) => void | Promise<void>
   onComplete?: (id: string, status: 'completed') => Promise<void>
   editingLessonId?: string | null
   /** Replaces the "No lessons yet" copy, e.g. when filters hide everything. */
   emptyMessage?: string
+  onEditEnd?: () => void
 }
 
-export function LessonTaskList({ lessons, children, subjects, error, onUpdate, onEdit, onDelete, onComplete, editingLessonId = null, emptyMessage }: LessonTaskListProps) {
+export function LessonTaskList({ lessons, children, subjects, error, onUpdate, onEdit, onDelete, onComplete, editingLessonId = null, emptyMessage, onEditEnd }: LessonTaskListProps) {
   if (error) {
     return <p className="text-sm text-red-600 py-4">Could not load lessons. Please refresh.</p>
   }
@@ -39,19 +42,32 @@ export function LessonTaskList({ lessons, children, subjects, error, onUpdate, o
 
   return (
     <div className="space-y-3">
-      {lessons.map(lesson => (
+      {groupSharedLessons(lessons).map(item => item.kind === 'shared' ? (
+        <SharedLessonCard
+          key={item.groupId}
+          copies={item.copies}
+          children={children}
+          subjects={subjects}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          onComplete={onComplete}
+          editingLessonId={editingLessonId}
+          onEditEnd={onEditEnd}
+        />
+      ) : (
         <LessonCard
-          key={lesson.id}
-          lesson={lesson}
-          childName={resolveChildName(lesson.childId)}
-          subjectName={resolveSubjectName(lesson.subjectId)}
+          key={item.lesson.id}
+          lesson={item.lesson}
+          childName={resolveChildName(item.lesson.childId)}
+          subjectName={resolveSubjectName(item.lesson.subjectId)}
           children={children}
           subjects={subjects}
           onUpdate={onUpdate}
           onEdit={onEdit}
           onDelete={onDelete}
           onComplete={onComplete}
-          defaultEditing={lesson.id === editingLessonId}
+          defaultEditing={item.lesson.id === editingLessonId}
+          onEditEnd={onEditEnd}
         />
       ))}
     </div>

@@ -118,7 +118,7 @@ describe('LessonTaskForm — create mode', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /khadijah/i }))
 
     const subjectOptions = Array.from(
-      (screen.getByLabelText(/course\/subject/i) as HTMLSelectElement).options,
+      (screen.getByLabelText(/^course$/i) as HTMLSelectElement).options,
     ).map((o) => o.text)
     expect(subjectOptions).toContain('Algebra')
   })
@@ -135,7 +135,7 @@ describe('LessonTaskForm — create mode', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
 
     // Adam's subjects should appear in the subject select
-    const subjectSelect = screen.getByLabelText(/course\/subject/i) as HTMLSelectElement
+    const subjectSelect = screen.getByLabelText(/^course$/i) as HTMLSelectElement
     const subjectOptions = Array.from(subjectSelect.options).map(o => o.text)
     expect(subjectOptions).toContain('Mathematics')
     expect(subjectOptions).toContain('Quran')
@@ -153,13 +153,13 @@ describe('LessonTaskForm — create mode', () => {
     )
     // Select Adam and choose a subject
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
-    const subjectSelect = screen.getByLabelText(/course\/subject/i) as HTMLSelectElement
+    const subjectSelect = screen.getByLabelText(/^course$/i) as HTMLSelectElement
     fireEvent.change(subjectSelect, { target: { value: 'subj_adam_math' } })
     expect(subjectSelect.value).toBe('subj_adam_math')
 
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
     fireEvent.click(screen.getByRole('checkbox', { name: /khadijah/i }))
-    expect((screen.getByLabelText(/course\/subject/i) as HTMLSelectElement).value).toBe('')
+    expect((screen.getByLabelText(/^course$/i) as HTMLSelectElement).value).toBe('')
   })
 
   it('shows validation error when title is empty on submit', async () => {
@@ -188,7 +188,7 @@ describe('LessonTaskForm — create mode', () => {
       />
     )
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
-    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/^course$/i), { target: { value: 'subj_adam_math' } })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'New Lesson' } })
 
     fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
@@ -215,7 +215,7 @@ describe('LessonTaskForm — create mode', () => {
       />
     )
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
-    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/^course$/i), { target: { value: 'subj_adam_math' } })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'New Lesson' } })
     fireEvent.change(screen.getByLabelText(/curriculum/i), { target: { value: 'Saxon Math 5/4' } })
     fireEvent.change(screen.getByLabelText(/chapter/i), { target: { value: 'Lesson 12' } })
@@ -246,7 +246,7 @@ describe('LessonTaskForm — create mode', () => {
       />
     )
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
-    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/^course$/i), { target: { value: 'subj_adam_math' } })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'New Lesson' } })
 
     fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
@@ -317,11 +317,11 @@ describe('LessonTaskForm — FB-011 label renames', () => {
     expect(screen.queryByLabelText(/^child$/i)).not.toBeInTheDocument()
   })
 
-  it('uses "Course/Subject" label not "Subject"', () => {
+  it('uses "Course" label not "Subject"', () => {
     render(
       <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={jest.fn()} />
     )
-    expect(screen.getByLabelText(/course\/subject/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^course$/i)).toBeInTheDocument()
   })
 
   it('uses "Due date" label (not "Planned date") for dueDate field', () => {
@@ -356,7 +356,7 @@ describe('LessonTaskForm — FB-011 label renames', () => {
       <LessonTaskForm children={mockChildren} subjects={quranSubjects} onSubmit={jest.fn()} />
     )
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
-    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_quran' } })
+    fireEvent.change(screen.getByLabelText(/^course$/i), { target: { value: 'subj_quran' } })
     expect(screen.getByText('Memorisation')).toBeInTheDocument()
     expect(screen.getByText('Tajweed')).toBeInTheDocument()
     expect(screen.queryByText('Assignment')).not.toBeInTheDocument()
@@ -400,7 +400,7 @@ describe('LessonTaskForm — phase-1 date terminology', () => {
       <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={onSubmit} />
     )
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
-    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/^course$/i), { target: { value: 'subj_adam_math' } })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Terminology test' } })
     fireEvent.change(screen.getByLabelText(/available from/i), { target: { value: '2026-06-01' } })
     fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-06-15' } })
@@ -432,7 +432,7 @@ describe('LessonTaskForm — completion window (plannedStartDate)', () => {
       <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={onSubmit} />
     )
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
-    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/^course$/i), { target: { value: 'subj_adam_math' } })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Window lesson' } })
     fireEvent.change(screen.getByLabelText(/available from/i), { target: { value: '2026-05-10' } })
     fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-15' } })
@@ -455,7 +455,7 @@ describe('LessonTaskForm — completion window (plannedStartDate)', () => {
       <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={onSubmit} />
     )
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
-    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/^course$/i), { target: { value: 'subj_adam_math' } })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Single-day lesson' } })
     fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-15' } })
 
@@ -667,7 +667,7 @@ describe('LessonTaskForm — off-day (household schoolDays) awareness', () => {
       <LessonTaskForm children={mockChildren} subjects={mockSubjects} onSubmit={onSubmit} />
     )
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
-    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/^course$/i), { target: { value: 'subj_adam_math' } })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Off-day lesson' } })
     fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-16' } })
 
@@ -731,7 +731,7 @@ describe('LessonTaskForm — multi-learner group assignment', () => {
     )
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
     fireEvent.click(screen.getByRole('checkbox', { name: /khadijah/i }))
-    fireEvent.change(screen.getByLabelText(/course\/subject/i), {
+    fireEvent.change(screen.getByLabelText(/^course$/i), {
       target: { value: 'subj_algebra_shared' },
     })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Shared algebra' } })
@@ -759,7 +759,7 @@ describe('LessonTaskForm — multi-learner group assignment', () => {
     )
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
     fireEvent.click(screen.getByRole('checkbox', { name: /khadijah/i }))
-    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_adam_math' } })
+    fireEvent.change(screen.getByLabelText(/^course$/i), { target: { value: 'subj_adam_math' } })
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Shared lesson' } })
     fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-15' } })
 

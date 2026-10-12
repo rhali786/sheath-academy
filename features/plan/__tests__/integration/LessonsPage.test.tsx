@@ -230,7 +230,7 @@ describe('LessonsPage', () => {
 
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'New Lesson' } })
     fireEvent.click(screen.getByRole('checkbox', { name: /adam/i }))
-    fireEvent.change(screen.getByLabelText(/course\/subject/i), { target: { value: 'subj_001' } })
+    fireEvent.change(screen.getByLabelText(/^course$/i), { target: { value: 'subj_001' } })
 
     fireEvent.click(screen.getByRole('button', { name: /add lesson/i }))
 
@@ -419,5 +419,183 @@ describe('LessonsPage — learner and date-range filters', () => {
     mockGetLessons.mockRejectedValue(new Error('boom'))
     render(<LessonsPage />)
     await waitFor(() => expect(screen.getByText(/could not load lessons/i)).toBeInTheDocument())
+  })
+})
+
+// Reproduced on dev 2026-10-12: Calendar/Planner pencil → /lessons?editId= → Save, and the
+// editor opened again (the list unmounted while refetching and the card remounted in edit
+// mode); editId also stayed in the URL, so a reload reopened it.
+describe('LessonsPage — deep-linked editor closes for good', () => {
+  const lesson = makeLesson({ id: 'lesson_deep', title: 'Deep linked', dueDate: '2099-01-05' })
+
+  beforeEach(() => {
+    mockSearchParams = new URLSearchParams('editId=lesson_deep')
+    mockGetLesson.mockResolvedValue(lesson)
+    mockGetLessons.mockResolvedValue([lesson])
+    ;(plannerApi.updateLesson as jest.Mock).mockResolvedValue({ ...lesson, title: 'Renamed' })
+  })
+
+  function editor() { return document.querySelector('[data-lesson-id="lesson_deep"]') as HTMLElement }
+
+  it('Save closes the editor, it stays closed after the list refreshes, and editId leaves the URL', async () => {
+    render(<LessonsPage />)
+    await waitFor(() => expect(within(editor()).getByRole('button', { name: /save lesson/i })).toBeInTheDocument())
+    mockGetLessons.mockResolvedValue([{ ...lesson, title: 'Renamed' }])
+
+    fireEvent.change(within(editor()).getByDisplayValue('Deep linked'), { target: { value: 'Renamed' } })
+    fireEvent.click(within(editor()).getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => expect(screen.getByText('Renamed')).toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: /save lesson/i })).not.toBeInTheDocument()
+    expect(mockReplace).toHaveBeenCalledWith('/lessons')
+  })
+
+  it('Cancel closes the editor and clears editId', async () => {
+    render(<LessonsPage />)
+    await waitFor(() => expect(within(editor()).getByRole('button', { name: /cancel edit/i })).toBeInTheDocument())
+    fireEvent.click(within(editor()).getByRole('button', { name: /cancel edit/i }))
+    expect(screen.queryByRole('button', { name: /save lesson/i })).not.toBeInTheDocument()
+    expect(mockReplace).toHaveBeenCalledWith('/lessons')
+  })
+
+  it('keeps other query params when clearing editId', async () => {
+    mockSearchParams = new URLSearchParams('editId=lesson_deep&add=1')
+    render(<LessonsPage />)
+    await waitFor(() => expect(within(editor()).getByRole('button', { name: /cancel edit/i })).toBeInTheDocument())
+    fireEvent.click(within(editor()).getByRole('button', { name: /cancel edit/i }))
+    expect(mockReplace).toHaveBeenCalledWith('/lessons?add=1')
+  })
+
+  it('keeps showing the list (no "Loading…") while it refreshes after a save', async () => {
+    let resolveRefetch: (v: LessonTask[]) => void = () => {}
+    render(<LessonsPage />)
+    await waitFor(() => expect(within(editor()).getByRole('button', { name: /save lesson/i })).toBeInTheDocument())
+    mockGetLessons.mockImplementation(() => new Promise(r => { resolveRefetch = r }))
+
+    fireEvent.click(within(editor()).getByRole('button', { name: /save lesson/i }))
+    await waitFor(() => expect(mockGetLessons).toHaveBeenCalledTimes(2))
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    expect(editor()).not.toBeNull()
+    await act(async () => { resolveRefetch([lesson]) })
+  })
+})
+
+describe('LessonsPage — delete', () => {
+  const mockDeleteLesson = plannerApi.deleteLesson as jest.Mock
+  const shared = makeLesson({ id: 'lesson_s', title: 'Fractions', groupId: 'group_1', dueDate: '2099-01-05' })
+  const solo = makeLesson({ id: 'lesson_solo', title: 'Spelling', dueDate: '2099-01-06' })
+
+  beforeEach(() => {
+    mockGetLessons.mockResolvedValue([shared, solo])
+  })
+
+  function cardFor(id: string) { return document.querySelector(`[data-lesson-id="${id}"]`) as HTMLElement }
+
+  it('deleting a whole shared lesson asks the server for the group, refreshes, and says how many', async () => {
+    mockDeleteLesson.mockResolvedValue(5)
+    render(<LessonsPage />)
+    await waitFor(() => expect(cardFor('lesson_s')).not.toBeNull())
+    mockGetLessons.mockResolvedValue([solo])
+
+    fireEvent.click(within(cardFor('lesson_s')).getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'All learners in this group' }))
+
+    await waitFor(() => expect(mockDeleteLesson).toHaveBeenCalledWith('lesson_s', { deleteGroup: true }))
+    expect(await screen.findByText('“Fractions” deleted for 5 learners')).toBeInTheDocument()
+    await waitFor(() => expect(cardFor('lesson_s')).toBeNull())
+  })
+
+  it("deleting one learner's copy names that learner", async () => {
+    mockDeleteLesson.mockResolvedValue(1)
+    render(<LessonsPage />)
+    await waitFor(() => expect(cardFor('lesson_s')).not.toBeNull())
+    fireEvent.click(within(cardFor('lesson_s')).getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Just Adam' }))
+    await waitFor(() => expect(mockDeleteLesson).toHaveBeenCalledWith('lesson_s', { deleteGroup: false }))
+    expect(await screen.findByText('“Fractions” deleted for Adam')).toBeInTheDocument()
+  })
+
+  it('a lesson for one learner is deleted with a plain confirmation', async () => {
+    mockDeleteLesson.mockResolvedValue(1)
+    render(<LessonsPage />)
+    await waitFor(() => expect(cardFor('lesson_solo')).not.toBeNull())
+    fireEvent.click(within(cardFor('lesson_solo')).getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+    await waitFor(() => expect(mockDeleteLesson).toHaveBeenCalledWith('lesson_solo', { deleteGroup: false }))
+    expect(await screen.findByText('“Spelling” deleted')).toBeInTheDocument()
+  })
+
+  it('a failed delete keeps the lesson and shows the reason', async () => {
+    mockDeleteLesson.mockRejectedValue(new Error('Lesson not found'))
+    render(<LessonsPage />)
+    await waitFor(() => expect(cardFor('lesson_solo')).not.toBeNull())
+    fireEvent.click(within(cardFor('lesson_solo')).getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Lesson not found')
+    expect(screen.getByText('Spelling')).toBeInTheDocument()
+  })
+})
+
+// "Show me what I planned this week": a 3-learner lesson was 3 near-identical cards.
+describe('LessonsPage — a shared lesson appears once', () => {
+  const kids = [
+    mockChildren[0],
+    { id: 'child_002', householdId: 'hh_001', name: 'Khadijah', gradeLabel: '3rd', isActive: true, username: 'k', password: 'pw', createdAt: '2026-01-01T00:00:00Z' },
+    { id: 'child_003', householdId: 'hh_001', name: 'Yusuf', gradeLabel: '1st', isActive: true, username: 'y', password: 'pw', createdAt: '2026-01-01T00:00:00Z' },
+  ]
+  const copies = ['child_001', 'child_002', 'child_003'].map((childId, i) =>
+    makeLesson({ id: `copy_${i}`, childId, groupId: 'g1', title: 'Fractions', dueDate: '2099-01-05' }))
+  const solo = makeLesson({ id: 'solo', title: 'Spelling', dueDate: '2099-01-06' })
+
+  beforeEach(() => {
+    mockUseHousehold.mockImplementation(() => ({
+      householdProfile: { id: 'hh_001' }, studentProfiles: kids, allSubjects: mockSubjects,
+      loading: false, needsSetup: false, familyName: '', error: null, refetch: jest.fn(),
+    }))
+    mockGetLessons.mockImplementation(async (_w: unknown, childIds?: string[]) => {
+      const all = [...copies, solo]
+      return childIds ? all.filter(l => childIds.includes(l.childId)) : all
+    })
+  })
+
+  it('with All children, the shared lesson is one card with a chip per learner', async () => {
+    render(<LessonsPage />)
+    await waitFor(() => expect(document.querySelector('[data-shared-group="g1"]')).not.toBeNull())
+    expect(document.querySelectorAll('[data-shared-group="g1"]')).toHaveLength(1)
+    for (const c of copies) expect(document.querySelector(`[data-lesson-id="${c.id}"]`)).toBeNull()
+    const chips = within(document.querySelector('[data-shared-group="g1"]') as HTMLElement).getByRole('list', { name: /learners/i })
+    expect(within(chips).getAllByRole('listitem')).toHaveLength(3)
+    expect(document.querySelector('[data-lesson-id="solo"]')).not.toBeNull()
+  })
+
+  it('with two learners selected it is one card with their two chips', async () => {
+    render(<LessonsPage />)
+    await waitFor(() => expect(document.querySelector('[data-shared-group="g1"]')).not.toBeNull())
+    const filter = within(screen.getByRole('group', { name: /filter by learner/i }))
+    fireEvent.click(filter.getByRole('button', { name: 'Adam' }))
+    fireEvent.click(filter.getByRole('button', { name: 'Yusuf' }))
+    await waitFor(() => {
+      const chips = within(document.querySelector('[data-shared-group="g1"]') as HTMLElement).getByRole('list', { name: /learners/i })
+      expect(within(chips).getAllByRole('listitem')).toHaveLength(2)
+    })
+  })
+
+  it("with one learner selected it is that learner's ordinary card", async () => {
+    render(<LessonsPage />)
+    await waitFor(() => expect(document.querySelector('[data-shared-group="g1"]')).not.toBeNull())
+    fireEvent.click(within(screen.getByRole('group', { name: /filter by learner/i })).getByRole('button', { name: 'Khadijah' }))
+    await waitFor(() => expect(document.querySelector('[data-lesson-id="copy_1"]')).not.toBeNull())
+    expect(document.querySelector('[data-shared-group="g1"]')).toBeNull()
+  })
+
+  it('a deep link to one copy opens that copy\'s editor inside the shared card', async () => {
+    mockSearchParams = new URLSearchParams('editId=copy_1')
+    mockGetLesson.mockResolvedValue(copies[1])
+    render(<LessonsPage />)
+    await waitFor(() => {
+      const editor = document.querySelector('[data-lesson-id="copy_1"]') as HTMLElement
+      expect(editor).not.toBeNull()
+      expect(within(editor).getByRole('button', { name: /save lesson/i })).toBeInTheDocument()
+    })
   })
 })

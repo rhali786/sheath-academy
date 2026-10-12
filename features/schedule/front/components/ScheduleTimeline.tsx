@@ -132,6 +132,14 @@ export function ScheduleTimeline({
   onEditLesson,
 }: ScheduleTimelineProps) {
   const [schedule, setSchedule] = useState(initialSchedule)
+  // A new schedule from the parent (e.g. refetched after an edit) replaces any local
+  // "adjust day" changes. Without this the timeline kept drawing its first schedule
+  // until a page reload (UAT 3.8).
+  const [prevInitialSchedule, setPrevInitialSchedule] = useState(initialSchedule)
+  if (initialSchedule !== prevInitialSchedule) {
+    setPrevInitialSchedule(initialSchedule)
+    setSchedule(initialSchedule)
+  }
   const router = useRouter()
   const handleEditLesson = onEditLesson ?? (id => router.push('/lessons?editId=' + id))
 

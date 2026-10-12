@@ -183,7 +183,7 @@ describe('LessonTaskList', () => {
     expect(onDelete).not.toHaveBeenCalled()
     expect(screen.getByRole('group', { name: /delete this lesson/i })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
-    expect(onDelete).toHaveBeenCalledWith('lesson_001')
+    expect(onDelete).toHaveBeenCalledWith('lesson_001', { deleteGroup: false })
   })
 
   it('forwards onComplete prop to each LessonCard (mark-done icon appears)', () => {
