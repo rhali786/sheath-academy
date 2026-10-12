@@ -300,7 +300,8 @@ describe('LessonCard — phase-2 Available-from field in inline edit', () => {
     })
   })
 
-  it('saving without Available from passes plannedStartDate as undefined when field is empty', async () => {
+  // null, not undefined: the update route leaves plannedStartDate alone unless it is sent.
+  it('saving without Available from passes plannedStartDate as null when field is empty', async () => {
     const onUpdate = jest.fn().mockResolvedValue(undefined)
     render(
       <LessonCard
@@ -318,7 +319,7 @@ describe('LessonCard — phase-2 Available-from field in inline edit', () => {
 
     await waitFor(() => {
       const patch = onUpdate.mock.calls[0][1]
-      expect(patch.plannedStartDate).toBeUndefined()
+      expect(patch.plannedStartDate).toBeNull()
     })
   })
 
@@ -431,7 +432,22 @@ describe('LessonCard — grouped lessons', () => {
     expect(screen.getByRole('checkbox', { name: /apply to all learners in group/i })).toBeInTheDocument()
   })
 
-  it('passes applyToGroup when saving with checkbox checked', async () => {
+  // UAT 4.5 (Oct 10): a title edit on a shared lesson changed only one learner's copy
+  // because this box started unticked. Editing a shared lesson now edits the group.
+  it('starts with apply-to-group ticked for a grouped lesson', () => {
+    render(
+      <LessonCard
+        lesson={makeLesson({ groupId: 'group_001', title: 'Shared task' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={jest.fn().mockResolvedValue(undefined)}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(screen.getByRole('checkbox', { name: /apply to all learners in group/i })).toBeChecked()
+  })
+
+  it('passes applyToGroup by default when saving a grouped lesson', async () => {
     const onUpdate = jest.fn().mockResolvedValue(undefined)
     render(
       <LessonCard
@@ -442,7 +458,6 @@ describe('LessonCard — grouped lessons', () => {
       />
     )
     fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
-    fireEvent.click(screen.getByRole('checkbox', { name: /apply to all learners in group/i }))
     fireEvent.change(screen.getByDisplayValue('Shared task'), { target: { value: 'Updated title' } })
     fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
 
@@ -454,7 +469,7 @@ describe('LessonCard — grouped lessons', () => {
     })
   })
 
-  it('does not pass applyToGroup when saving without checkbox', async () => {
+  it('does not pass applyToGroup when the box is unticked', async () => {
     const onUpdate = jest.fn().mockResolvedValue(undefined)
     render(
       <LessonCard
@@ -465,6 +480,7 @@ describe('LessonCard — grouped lessons', () => {
       />
     )
     fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /apply to all learners in group/i }))
     fireEvent.change(screen.getByDisplayValue('Shared task'), { target: { value: 'Solo edit' } })
     fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
 
@@ -475,5 +491,25 @@ describe('LessonCard — grouped lessons', () => {
       )
       expect(onUpdate.mock.calls[0][1].applyToGroup).toBeUndefined()
     })
+  })
+
+  it('sends a cleared "Available from" date as null so the server clears it', async () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ plannedStartDate: '2026-05-01' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    fireEvent.change(screen.getByDisplayValue('2026-05-01'), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => {
+      expect(onUpdate).toHaveBeenCalled()
+    })
+    expect(onUpdate.mock.calls[0][1].plannedStartDate).toBeNull()
   })
 })

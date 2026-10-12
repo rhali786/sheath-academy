@@ -574,6 +574,29 @@ describe('LessonTaskForm — scheduled start/end time override (12-hour picker)'
     expect(onSubmit.mock.calls[0][0].scheduledEndTime).toBeNull()
   })
 
+  // The update route only touches plannedStartDate when the body carries it, so a
+  // blanked "Available from" must be sent as null to clear it.
+  it('submits a cleared (null) "Available from" date on edit', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    const withStart: LessonTask = { ...editingLesson, plannedStartDate: '2026-05-01' }
+    render(
+      <LessonTaskForm
+        children={mockChildren}
+        subjects={mockSubjects}
+        editingLesson={withStart}
+        onSubmit={onSubmit}
+        onCancel={jest.fn()}
+      />
+    )
+    fireEvent.change(screen.getByLabelText(/available from/i), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalled()
+    })
+    expect(onSubmit.mock.calls[0][0].plannedStartDate).toBeNull()
+  })
+
   it('shows an inline validation error and does not submit when end time is at or before start time', async () => {
     const onSubmit = jest.fn().mockResolvedValue(undefined)
     render(

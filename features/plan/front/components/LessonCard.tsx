@@ -69,7 +69,8 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
   const [editStartTime, setEditStartTime] = useState(lesson.scheduledStartTime ?? '')
   const [editEndTime, setEditEndTime] = useState(lesson.scheduledEndTime ?? '')
   const [timeError, setTimeError] = useState('')
-  const [applyToGroup, setApplyToGroup] = useState(false)
+  // Ticked by default: editing a shared lesson edits every learner's copy unless unticked.
+  const [applyToGroup, setApplyToGroup] = useState(true)
   const [titleError, setTitleError] = useState('')
 
   // Sync local status when lesson.status updates from parent (e.g., after refetch)
@@ -116,7 +117,7 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     setEditResourceLink(lesson.resourceLink ?? '')
     setEditStartTime(lesson.scheduledStartTime ?? '')
     setEditEndTime(lesson.scheduledEndTime ?? '')
-    setApplyToGroup(false)
+    setApplyToGroup(true)
     setTitleError('')
     setTimeError('')
     // If inline edit is available (onUpdate provided), use it; otherwise fall back to legacy onEdit
@@ -160,7 +161,8 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
         title: trimmed,
         childId: editChildId,
         subjectId: editSubjectId,
-        plannedStartDate: editPlannedStartDate || undefined,
+        // null, not undefined: the route only touches plannedStartDate when it is sent.
+        plannedStartDate: editPlannedStartDate || null,
         dueDate: editDueDate,
         status: editStatus,
         description: editDescription.trim() || undefined,

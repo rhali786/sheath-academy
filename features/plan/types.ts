@@ -49,7 +49,9 @@ export interface LessonTask {
  * An update to one lesson (PUT /api/plan/lessons/:id). `null` clears the lesson's
  * own time — `undefined` cannot, because it is dropped from the JSON body.
  */
-export type LessonTaskPatch = Omit<Partial<LessonTask>, 'scheduledStartTime' | 'scheduledEndTime'> & {
+export type LessonTaskPatch = Omit<Partial<LessonTask>, 'scheduledStartTime' | 'scheduledEndTime' | 'plannedStartDate'> & {
+  /** `null` clears "Available from"; omitted leaves it unchanged. */
+  plannedStartDate?: string | null
   scheduledStartTime?: string | null
   scheduledEndTime?: string | null
   applyToGroup?: boolean

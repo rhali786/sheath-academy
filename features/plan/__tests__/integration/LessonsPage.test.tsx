@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, act, fireEvent, within } from '@testing-library/react'
 import { LessonsPage } from '@/features/plan/front/pages/LessonsPage'
 
 const mockReplace = jest.fn()
@@ -15,6 +15,7 @@ import type { SubjectCourse } from '@/features/subjects/types'
 jest.mock('@/features/plan/front/services/api', () => ({
   plannerApi: {
     getLessons: jest.fn(),
+    getLesson: jest.fn(),
     createLesson: jest.fn(),
     updateLesson: jest.fn(),
     deleteLesson: jest.fn(),
@@ -36,6 +37,7 @@ import { useLearner } from '@/features/layout/front/context/LearnerContext'
 
 const mockGetLessons = plannerApi.getLessons as jest.Mock
 const mockCompleteLesson = plannerApi.completeLesson as jest.Mock
+const mockGetLesson = plannerApi.getLesson as jest.Mock
 const mockUseHousehold = useHousehold as jest.Mock
 const mockUseLearner = useLearner as jest.Mock
 
@@ -166,83 +168,6 @@ describe('LessonsPage', () => {
     expect(screen.queryByRole('heading', { name: /edit lesson/i })).not.toBeInTheDocument()
   })
 
-  it('sets child filter from the header learner selection after children load', async () => {
-    const child002 = { id: 'child_002', householdId: 'hh_001', name: 'Khadijah', gradeLabel: '3rd', isActive: true, username: 'k', password: 'pw', createdAt: '2026-01-01T00:00:00Z' }
-    mockUseHousehold.mockImplementation(() => ({
-      householdProfile: { id: 'hh_001' },
-      studentProfiles: [mockChildren[0], child002],
-      allSubjects: mockSubjects,
-      loading: false,
-      needsSetup: false,
-      familyName: '',
-      error: null,
-      refetch: jest.fn(),
-    }))
-    const laythLesson  = makeLesson({ id: 'l1', title: 'Layth lesson',  childId: 'child_001' })
-    const khadijahLesson = makeLesson({ id: 'l2', title: 'Khadijah lesson', childId: 'child_002' })
-    mockGetLessons.mockResolvedValue([laythLesson, khadijahLesson])
-    mockUseLearner.mockImplementation(() => ({ selectedChildId: 'child_002', setSelectedChildId: jest.fn() }))
-
-    render(<LessonsPage />)
-
-    await waitFor(() => {
-      // Find the "All lessons" child filter by the "All children" option
-      const allChildrenSelect = screen.getAllByRole('combobox').find(s =>
-        Array.from((s as HTMLSelectElement).options || []).some(o => o.text === 'All children')
-      ) as HTMLSelectElement
-      expect(allChildrenSelect).toHaveValue('child_002')
-    })
-  })
-
-  it('falls back to All Children filter when ?childId is invalid', async () => {
-    mockSearchParams = new URLSearchParams('childId=nonexistent_child')
-
-    render(<LessonsPage />)
-
-    await waitFor(() => {
-      const allChildrenSelect = screen.getAllByRole('combobox').find(s =>
-        Array.from((s as HTMLSelectElement).options || []).some(o => o.text === 'All children')
-      ) as HTMLSelectElement
-      expect(allChildrenSelect).toHaveValue('')
-    })
-  })
-
-  it('updates child filter when the header learner changes while component stays mounted', async () => {
-    const child002 = { id: 'child_002', householdId: 'hh_001', name: 'Khadijah', gradeLabel: '3rd', isActive: true, username: 'k', password: 'pw', createdAt: '2026-01-01T00:00:00Z' }
-    mockUseHousehold.mockImplementation(() => ({
-      householdProfile: { id: 'hh_001' },
-      studentProfiles: [mockChildren[0], child002],
-      allSubjects: mockSubjects,
-      loading: false,
-      needsSetup: false,
-      familyName: '',
-      error: null,
-      refetch: jest.fn(),
-    }))
-    mockUseLearner.mockImplementation(() => ({ selectedChildId: null, setSelectedChildId: jest.fn() }))
-
-    const { rerender } = render(<LessonsPage />)
-
-    // Wait for children to load — filter starts empty (All children)
-    await waitFor(() => {
-      const sel = screen.getAllByRole('combobox').find(s =>
-        Array.from((s as HTMLSelectElement).options ?? []).some(o => o.text === 'All children')
-      ) as HTMLSelectElement
-      expect(sel).toHaveValue('')
-    })
-
-    // Simulate the header learner switching while the component stays mounted
-    act(() => { mockUseLearner.mockImplementation(() => ({ selectedChildId: 'child_002', setSelectedChildId: jest.fn() })) })
-    rerender(<LessonsPage />)
-
-    await waitFor(() => {
-      const sel = screen.getAllByRole('combobox').find(s =>
-        Array.from((s as HTMLSelectElement).options ?? []).some(o => o.text === 'All children')
-      ) as HTMLSelectElement
-      expect(sel).toHaveValue('child_002')
-    })
-  })
-
   it('handleComplete calls plannerApi.completeLesson then refetches lessons', async () => {
     const notStartedLesson = makeLesson({ id: 'lesson_001', status: 'not_started', dueDate: '2099-12-31' })
     mockGetLessons.mockResolvedValue([notStartedLesson])
@@ -313,5 +238,186 @@ describe('LessonsPage', () => {
       expect(screen.queryByRole('heading', { name: /add lesson/i })).not.toBeInTheDocument()
       expect(screen.getByText(/lesson added/i)).toBeInTheDocument()
     })
+  })
+})
+
+// ─── UAT 4.5 (Oct 10): pick several learners; don't load every lesson ever created ───
+
+describe('LessonsPage — learner and date-range filters', () => {
+  const child002: StudentProfile = { id: 'child_002', householdId: 'hh_001', name: 'Khadijah', gradeLabel: '3rd', isActive: true, username: 'k', password: 'pw', createdAt: '2026-01-01T00:00:00Z' }
+  const child003: StudentProfile = { id: 'child_003', householdId: 'hh_001', name: 'Yusuf', gradeLabel: '1st', isActive: true, username: 'y', password: 'pw', createdAt: '2026-01-01T00:00:00Z' }
+
+  function localDate(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+  function thisMonday(): string {
+    const d = new Date()
+    d.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1))
+    return localDate(d)
+  }
+
+  beforeEach(() => {
+    mockUseHousehold.mockImplementation(() => ({
+      householdProfile: { id: 'hh_001' },
+      studentProfiles: [mockChildren[0], child002, child003],
+      allSubjects: mockSubjects,
+      loading: false,
+      needsSetup: false,
+      familyName: '',
+      error: null,
+      refetch: jest.fn(),
+    }))
+  })
+
+  function learnerChips() {
+    return within(screen.getByRole('group', { name: /filter by learner/i }))
+  }
+
+  it('loads only this week onward for all learners by default', async () => {
+    render(<LessonsPage />)
+    await waitFor(() => expect(mockGetLessons).toHaveBeenCalled())
+    expect(mockGetLessons).toHaveBeenLastCalledWith(undefined, undefined, undefined, thisMonday())
+    expect(screen.getByRole('combobox', { name: /date range/i })).toHaveValue('week')
+    expect(learnerChips().getByRole('button', { name: 'All children' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('selects several learners and asks the server for just those', async () => {
+    render(<LessonsPage />)
+    await waitFor(() => expect(mockGetLessons).toHaveBeenCalled())
+
+    fireEvent.click(learnerChips().getByRole('button', { name: 'Adam' }))
+    fireEvent.click(learnerChips().getByRole('button', { name: 'Yusuf' }))
+
+    await waitFor(() => {
+      expect(mockGetLessons).toHaveBeenLastCalledWith(undefined, ['child_001', 'child_003'], undefined, thisMonday())
+    })
+    expect(learnerChips().getByRole('button', { name: 'Adam' })).toHaveAttribute('aria-pressed', 'true')
+    expect(learnerChips().getByRole('button', { name: 'Khadijah' })).toHaveAttribute('aria-pressed', 'false')
+    expect(learnerChips().getByRole('button', { name: 'Yusuf' })).toHaveAttribute('aria-pressed', 'true')
+    expect(learnerChips().getByRole('button', { name: 'All children' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('shows only the selected learners\' lessons', async () => {
+    mockGetLessons.mockImplementation(async (_w: unknown, childIds?: string[]) => {
+      const all = [
+        makeLesson({ id: 'a', title: 'Adam fractions', childId: 'child_001', dueDate: '2099-01-01' }),
+        makeLesson({ id: 'k', title: 'Khadijah reading', childId: 'child_002', dueDate: '2099-01-01' }),
+        makeLesson({ id: 'y', title: 'Yusuf phonics', childId: 'child_003', dueDate: '2099-01-01' }),
+      ]
+      return childIds ? all.filter(l => childIds.includes(l.childId)) : all
+    })
+    render(<LessonsPage />)
+    await waitFor(() => expect(screen.getByText('Khadijah reading')).toBeInTheDocument())
+
+    fireEvent.click(learnerChips().getByRole('button', { name: 'Adam' }))
+    fireEvent.click(learnerChips().getByRole('button', { name: 'Yusuf' }))
+
+    await waitFor(() => expect(screen.queryByText('Khadijah reading')).not.toBeInTheDocument())
+    expect(screen.getByText('Adam fractions')).toBeInTheDocument()
+    expect(screen.getByText('Yusuf phonics')).toBeInTheDocument()
+  })
+
+  it('clicking a selected learner again, or All children, clears the selection', async () => {
+    render(<LessonsPage />)
+    await waitFor(() => expect(mockGetLessons).toHaveBeenCalled())
+
+    fireEvent.click(learnerChips().getByRole('button', { name: 'Adam' }))
+    fireEvent.click(learnerChips().getByRole('button', { name: 'Yusuf' }))
+    fireEvent.click(learnerChips().getByRole('button', { name: 'Yusuf' }))
+    await waitFor(() => {
+      expect(mockGetLessons).toHaveBeenLastCalledWith(undefined, ['child_001'], undefined, thisMonday())
+    })
+
+    fireEvent.click(learnerChips().getByRole('button', { name: 'All children' }))
+    await waitFor(() => {
+      expect(mockGetLessons).toHaveBeenLastCalledWith(undefined, undefined, undefined, thisMonday())
+    })
+  })
+
+  it('starts with the header learner selected', async () => {
+    mockUseLearner.mockImplementation(() => ({ selectedChildId: 'child_002', setSelectedChildId: jest.fn() }))
+    render(<LessonsPage />)
+    await waitFor(() => {
+      expect(mockGetLessons).toHaveBeenLastCalledWith(undefined, ['child_002'], undefined, thisMonday())
+    })
+    expect(learnerChips().getByRole('button', { name: 'Khadijah' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('follows the header learner when it changes while the page stays mounted', async () => {
+    const { rerender } = render(<LessonsPage />)
+    await waitFor(() => {
+      expect(learnerChips().getByRole('button', { name: 'All children' })).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    act(() => { mockUseLearner.mockImplementation(() => ({ selectedChildId: 'child_002', setSelectedChildId: jest.fn() })) })
+    rerender(<LessonsPage />)
+
+    await waitFor(() => {
+      expect(learnerChips().getByRole('button', { name: 'Khadijah' })).toHaveAttribute('aria-pressed', 'true')
+    })
+    expect(mockGetLessons).toHaveBeenLastCalledWith(undefined, ['child_002'], undefined, thisMonday())
+  })
+
+  it('"All dates" drops the start date; "Past 30 days" starts 30 days back', async () => {
+    render(<LessonsPage />)
+    await waitFor(() => expect(mockGetLessons).toHaveBeenCalled())
+    const range = screen.getByRole('combobox', { name: /date range/i })
+
+    fireEvent.change(range, { target: { value: 'all' } })
+    await waitFor(() => {
+      expect(mockGetLessons).toHaveBeenLastCalledWith(undefined, undefined, undefined, undefined)
+    })
+
+    fireEvent.change(range, { target: { value: 'month' } })
+    const monthAgo = new Date()
+    monthAgo.setDate(monthAgo.getDate() - 30)
+    await waitFor(() => {
+      expect(mockGetLessons).toHaveBeenLastCalledWith(undefined, undefined, undefined, localDate(monthAgo))
+    })
+  })
+
+  it('Overdue looks across every date and says so, so old overdue lessons are not hidden', async () => {
+    render(<LessonsPage />)
+    await waitFor(() => expect(mockGetLessons).toHaveBeenCalled())
+
+    const statusSelect = screen.getByRole('option', { name: 'Overdue' }).closest('select')!
+    fireEvent.change(statusSelect, { target: { value: 'overdue' } })
+
+    await waitFor(() => {
+      expect(mockGetLessons).toHaveBeenLastCalledWith(undefined, undefined, undefined, undefined)
+    })
+    expect(screen.getByRole('combobox', { name: /date range/i })).toBeDisabled()
+    expect(screen.getByText(/overdue shows every date/i)).toBeInTheDocument()
+  })
+
+  it('a deep link to an older lesson widens the range and selects that lesson\'s learner', async () => {
+    const old = makeLesson({ id: 'lesson_old', title: 'Old shared lesson', childId: 'child_003', dueDate: '2020-01-06' })
+    mockSearchParams = new URLSearchParams('editId=lesson_old')
+    mockGetLesson.mockResolvedValue(old)
+    mockGetLessons.mockImplementation(async (_w: unknown, _c: unknown, _s: unknown, startDate?: string) =>
+      (!startDate || old.dueDate >= startDate ? [old] : []))
+
+    render(<LessonsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /date range/i })).toHaveValue('all')
+    })
+    expect(learnerChips().getByRole('button', { name: 'Yusuf' })).toHaveAttribute('aria-pressed', 'true')
+    await waitFor(() => {
+      expect(document.querySelector('[data-lesson-id="lesson_old"]')).not.toBeNull()
+    })
+    expect(screen.getByDisplayValue('Old shared lesson')).toBeInTheDocument()
+  })
+
+  it('says no lessons match when the filters leave nothing', async () => {
+    mockGetLessons.mockResolvedValue([])
+    render(<LessonsPage />)
+    await waitFor(() => expect(screen.getByText(/no lessons match these filters/i)).toBeInTheDocument())
+  })
+
+  it('shows the load error when the lessons request fails', async () => {
+    mockGetLessons.mockRejectedValue(new Error('boom'))
+    render(<LessonsPage />)
+    await waitFor(() => expect(screen.getByText(/could not load lessons/i)).toBeInTheDocument())
   })
 })

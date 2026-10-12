@@ -98,8 +98,9 @@ export const plannerApi = {
     }
   },
 
-  createLesson: async (data: Omit<LessonTask, 'id' | 'createdAt' | 'updatedAt' | 'scheduledStartTime' | 'scheduledEndTime'> & {
-    // The create route treats null like blank (no time of its own).
+  createLesson: async (data: Omit<LessonTask, 'id' | 'createdAt' | 'updatedAt' | 'scheduledStartTime' | 'scheduledEndTime' | 'plannedStartDate'> & {
+    // The create route treats null like blank (no time / "Available from" of its own).
+    plannedStartDate?: string | null
     scheduledStartTime?: string | null
     scheduledEndTime?: string | null
     childIds?: string[]

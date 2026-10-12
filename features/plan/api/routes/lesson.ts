@@ -53,7 +53,8 @@ export async function PUT(id: string, request: Request): Promise<NextResponse<Ap
       estimatedDuration: body.estimatedDuration,
       scheduledStartTime: 'scheduledStartTime' in body ? (body.scheduledStartTime ?? null) : undefined,
       scheduledEndTime: 'scheduledEndTime' in body ? (body.scheduledEndTime ?? null) : undefined,
-      plannedStartDate: body.plannedStartDate ?? null,
+      // Only when sent: a title-only edit (or a group edit) must not wipe "Available from".
+      plannedStartDate: 'plannedStartDate' in body ? (body.plannedStartDate ?? null) : undefined,
       dueDate: body.dueDate,
       status: body.status,
       sortOrder: body.order,

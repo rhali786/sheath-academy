@@ -43,6 +43,34 @@ function makeRow(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => { mockGet.mockReset(); mockUpdate.mockReset() })
 
+describe('PUT /api/plan/lessons/:id — planned start date', () => {
+  function put(body: Record<string, unknown>) {
+    return PUT('lt_1', new Request('http://localhost/api/plan/lessons/lt_1', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }))
+  }
+
+  it('leaves plannedStartDate alone when the body does not mention it', async () => {
+    mockUpdate.mockResolvedValue(makeRow({ title: 'Renamed' }))
+    await put({ title: 'Renamed' })
+    expect(mockUpdate.mock.calls[0][2].plannedStartDate).toBeUndefined()
+  })
+
+  it('clears plannedStartDate when the body sends null', async () => {
+    mockUpdate.mockResolvedValue(makeRow())
+    await put({ plannedStartDate: null })
+    expect(mockUpdate.mock.calls[0][2].plannedStartDate).toBeNull()
+  })
+
+  it('passes applyToGroup through to the repository', async () => {
+    mockUpdate.mockResolvedValue(makeRow())
+    await put({ title: 'Renamed', applyToGroup: true })
+    expect(mockUpdate.mock.calls[0][3]).toEqual({ applyToGroup: true })
+  })
+})
+
 describe('GET /api/plan/lessons/:id', () => {
   it('returns resourceLink/lessonType/estimatedDuration when set', async () => {
     mockGet.mockResolvedValue(makeRow({

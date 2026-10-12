@@ -164,6 +164,7 @@ describe('UAT 4.5 — editing a lesson deep-linked from the Calendar or Planner'
 
   it('the inline editor that opens has Start time and End time fields', async () => {
     mockSearchParams = new URLSearchParams('editId=lesson_uat')
+    mockGetLesson.mockResolvedValue(untimedLesson()) // the page looks up a deep-linked lesson to show it
     mockGetLessons.mockResolvedValue([untimedLesson()])
     render(<LessonsPage />)
 
@@ -175,6 +176,7 @@ describe('UAT 4.5 — editing a lesson deep-linked from the Calendar or Planner'
 
   it('giving it 1:00 – 1:30 PM saves scheduledStartTime 13:00 and scheduledEndTime 13:30', async () => {
     mockSearchParams = new URLSearchParams('editId=lesson_uat')
+    mockGetLesson.mockResolvedValue(untimedLesson()) // the page looks up a deep-linked lesson to show it
     mockGetLessons.mockResolvedValue([untimedLesson()])
     render(<LessonsPage />)
 
