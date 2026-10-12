@@ -2,6 +2,10 @@
 
 **Date:** 2026-10-12 · **Branch:** `fix/shared-lessons-batch` (stacked on PR #48's branch) · **Status:** D1–D6 approved 2026-10-12
 
+## Results on dev (v2.120.0, 2026-10-12)
+
+PRs #48 and #49 merged to `dev`. Browser UAT `e2e/uat/uat-shared-lessons.spec.ts`: **24/24**. Regression: `uat-4-course-times` + `uat-5.2` **11/11** (4.5 updated: the Calendar now opens the window in place), `scripts/uat-dev.js` **39/39**. Jest incl. integration 2610/2610; build passes. First run: 4 spec mistakes (header learner pre-selected on Lessons/Calendar), fixed in the spec, not the app. One run was cut short by a local DNS outage; its leftover ZZ data was removed.
+
 ## Phase 0 findings (browser, dev.sheathacademy.com, 2026-10-12)
 
 Throwaway probe learner + course (Mon–Sun 9:00–9:45), checked **the screen**, not just the API:

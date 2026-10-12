@@ -43,14 +43,26 @@ async function createLesson(title: string, learnerIdx: number[], extra: Record<s
   return ids
 }
 
-async function openCalendarWindow(title: string) {
+/** Calendar for one learner (the header choice decides whose copies show), then that copy's pencil. */
+async function openCalendarWindow(title: string, learnerIdx = 0) {
   await page.goto(`/plan/schedule?date=${s.today}&view=day`)
+  await selectLearner(page, s.learners[learnerIdx].name)
   const row = timelineRow(page, title)
   await expect(row).toBeVisible()
   await row.getByRole('button', { name: 'Edit lesson' }).click()
   const dialog = page.getByRole('dialog', { name: 'Edit lesson' })
   await expect(dialog.getByLabel('Title', { exact: true })).toBeVisible()
   return dialog
+}
+
+/** Lessons page showing exactly these learners. The page starts with the header learner
+ * selected, so clear to "All children" first — clicking a selected chip turns it off. */
+async function showOnlyLearners(idxs: number[]) {
+  await page.goto('/lessons')
+  const filter = page.getByRole('group', { name: 'Filter by learner' })
+  await filter.getByRole('button', { name: 'All children' }).click()
+  for (const i of idxs) await filter.getByRole('button', { name: s.learners[i].name }).click()
+  for (const i of idxs) await expect(filter.getByRole('button', { name: s.learners[i].name })).toHaveAttribute('aria-pressed', 'true')
 }
 
 test.beforeAll(async ({ browser, baseURL }) => {
@@ -276,9 +288,7 @@ test('4.1 Clearing description / curriculum / chapter and unticking homework is 
 
 test('5.1 With all three learners selected, a shared lesson is ONE card with three chips', async () => {
   await createLesson('ZZ SL 5.1', [0, 1, 2])
-  await page.goto('/lessons')
-  const filter = page.getByRole('group', { name: 'Filter by learner' })
-  for (const l of s.learners) await filter.getByRole('button', { name: l.name }).click()
+  await showOnlyLearners([0, 1, 2])
   const card = page.locator('[data-shared-group]').filter({ hasText: 'ZZ SL 5.1' })
   await expect(card).toHaveCount(1)
   await expect(card.getByRole('list', { name: 'Learners' }).getByRole('listitem')).toHaveCount(3)
@@ -287,18 +297,14 @@ test('5.1 With all three learners selected, a shared lesson is ONE card with thr
 
 test('5.2 With one learner selected it is that learner\'s ordinary card', async () => {
   await createLesson('ZZ SL 5.2', [0, 1, 2])
-  await page.goto('/lessons')
-  await page.getByRole('group', { name: 'Filter by learner' }).getByRole('button', { name: s.learners[1].name }).click()
+  await showOnlyLearners([1])
   await expect(page.locator('[data-shared-group]').filter({ hasText: 'ZZ SL 5.2' })).toHaveCount(0)
   await expect(page.locator('[data-lesson-id]').filter({ hasText: 'ZZ SL 5.2' })).toHaveCount(1)
 })
 
 test('5.3 Marking one learner done from the shared card changes only their chip', async () => {
   const ids = await createLesson('ZZ SL 5.3', [0, 1])
-  await page.goto('/lessons')
-  const filter = page.getByRole('group', { name: 'Filter by learner' })
-  await filter.getByRole('button', { name: s.learners[0].name }).click()
-  await filter.getByRole('button', { name: s.learners[1].name }).click()
+  await showOnlyLearners([0, 1])
   const card = page.locator('[data-shared-group]').filter({ hasText: 'ZZ SL 5.3' })
   await card.getByRole('button', { name: 'Show learners' }).click()
   await card.locator(`[data-lesson-id="${ids[0]}"]`).getByRole('button', { name: 'Mark lesson done' }).click()
@@ -315,9 +321,10 @@ test('6.1 Delete → "Just <learner>" removes only that copy', async () => {
   await dialog.getByRole('button', { name: 'Delete this lesson' }).click()
   await dialog.getByRole('button', { name: `Just ${s.learners[0].name}` }).click()
   await expect(dialog).toHaveCount(0)
-  await expect(timelineRow(page, 'ZZ SL 6.1')).toHaveCount(2) // the Calendar shows all learners
+  await expect(timelineRow(page, 'ZZ SL 6.1')).toHaveCount(0) // gone from A's day, without a reload
   expect((await api(ctx.request, `/api/plan/lessons/${ids[0]}`)).status).toBe(404)
   expect((await api(ctx.request, `/api/plan/lessons/${ids[1]}`)).status).toBe(200)
+  expect((await api(ctx.request, `/api/plan/lessons/${ids[2]}`)).status).toBe(200)
 })
 
 test('6.2 Delete → "All learners in this group" removes every copy', async () => {
@@ -341,9 +348,7 @@ test('6.3 Cancel on the delete question deletes nothing', async () => {
 
 test('6.4 Deleting the whole shared lesson from the Lessons page says how many were deleted', async () => {
   await createLesson('ZZ SL 6.4', [0, 1, 2])
-  await page.goto('/lessons')
-  const filter = page.getByRole('group', { name: 'Filter by learner' })
-  for (const l of s.learners) await filter.getByRole('button', { name: l.name }).click()
+  await showOnlyLearners([0, 1, 2])
   const card = page.locator('[data-shared-group]').filter({ hasText: 'ZZ SL 6.4' })
   await card.getByRole('button', { name: 'Delete shared lesson' }).click()
   await page.getByRole('button', { name: 'Delete for all 3' }).click()
