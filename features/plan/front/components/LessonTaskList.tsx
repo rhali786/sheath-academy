@@ -4,6 +4,8 @@ import type { LessonTask, LessonTaskPatch } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { LessonCard } from './LessonCard'
+import { SharedLessonCard } from './SharedLessonCard'
+import { groupSharedLessons } from '@/features/plan/utils/groupSharedLessons'
 
 interface LessonTaskListProps {
   lessons: LessonTask[]
@@ -40,19 +42,31 @@ export function LessonTaskList({ lessons, children, subjects, error, onUpdate, o
 
   return (
     <div className="space-y-3">
-      {lessons.map(lesson => (
+      {groupSharedLessons(lessons).map(item => item.kind === 'shared' ? (
+        <SharedLessonCard
+          key={item.groupId}
+          copies={item.copies}
+          children={children}
+          subjects={subjects}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          onComplete={onComplete}
+          editingLessonId={editingLessonId}
+          onEditEnd={onEditEnd}
+        />
+      ) : (
         <LessonCard
-          key={lesson.id}
-          lesson={lesson}
-          childName={resolveChildName(lesson.childId)}
-          subjectName={resolveSubjectName(lesson.subjectId)}
+          key={item.lesson.id}
+          lesson={item.lesson}
+          childName={resolveChildName(item.lesson.childId)}
+          subjectName={resolveSubjectName(item.lesson.subjectId)}
           children={children}
           subjects={subjects}
           onUpdate={onUpdate}
           onEdit={onEdit}
           onDelete={onDelete}
           onComplete={onComplete}
-          defaultEditing={lesson.id === editingLessonId}
+          defaultEditing={item.lesson.id === editingLessonId}
           onEditEnd={onEditEnd}
         />
       ))}
