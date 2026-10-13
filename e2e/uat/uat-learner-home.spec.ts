@@ -38,9 +38,9 @@ test.beforeAll(async ({ browser, baseURL }) => {
   s.courseId = course.body!.data.id
   ledger.courseIds.push(s.courseId)
 
-  // The browser's today (the page builds My day for the local date).
-  const d = new Date()
-  s.today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  // My day uses the browser's date, and playwright.uat.config.ts runs the browser in UTC —
+  // so "today" is the UTC date, not this machine's (they differ in the evening in the US).
+  s.today = new Date().toISOString().slice(0, 10)
   const lesson = await api(owner.request, '/api/plan/lessons', 'POST', {
     childId: probe.id, subjectId: s.courseId, title: LESSON, dueDate: s.today, estimatedDuration: '30min',
   })
