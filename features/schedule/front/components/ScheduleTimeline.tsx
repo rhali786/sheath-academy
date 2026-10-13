@@ -22,6 +22,8 @@ interface ScheduleTimelineProps {
    * fallback jumped to /lessons?editId=, which no screen uses any more (UAT 8.2).
    */
   onEditLesson?: (id: string) => void
+  /** Shows "Mark done" on lessons not yet done or skipped (a learner's My day). */
+  onMarkDone?: (id: string) => void
 }
 
 const STATUS_PILL: Record<Exclude<TimelineDisplayStatus, 'none'>, string> = {
@@ -65,12 +67,14 @@ function TimelineRow({
   subjectsById,
   isLast,
   onEditLesson,
+  onMarkDone,
 }: {
   entry: ScheduleEntry
   currentTime: string
   subjectsById: Map<string, SubjectCourse>
   isLast: boolean
   onEditLesson?: (id: string) => void
+  onMarkDone?: (id: string) => void
 }) {
   const status = getEntryTimelineStatus(entry, currentTime)
   const isLesson = entry.kind === 'lesson'
@@ -107,6 +111,16 @@ function TimelineRow({
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <StatusPill status={status} />
+                {isLesson && onMarkDone && entry.lesson.status !== 'completed' && entry.lesson.status !== 'skipped' && (
+                  <button
+                    type="button"
+                    onClick={() => onMarkDone(entry.lesson.id)}
+                    aria-label={`Mark ${entry.lesson.title} done`}
+                    className="px-2 py-1 rounded-md text-xs font-medium border border-slate-200 text-slate-600 hover:bg-forest-50 hover:text-forest-900 transition-colors"
+                  >
+                    Mark done
+                  </button>
+                )}
                 {isLesson && onEditLesson && (
                   <button
                     onClick={() => onEditLesson(entry.lesson.id)}
@@ -132,6 +146,7 @@ export function ScheduleTimeline({
   showAdjustDay = true,
   onScheduleChange,
   onEditLesson,
+  onMarkDone,
 }: ScheduleTimelineProps) {
   const [schedule, setSchedule] = useState(initialSchedule)
   // A new schedule from the parent (e.g. refetched after an edit) replaces any local
@@ -183,6 +198,7 @@ export function ScheduleTimeline({
           subjectsById={subjectsById}
           isLast={index === entries.length - 1}
           onEditLesson={onEditLesson}
+          onMarkDone={onMarkDone}
         />
       ))}
 

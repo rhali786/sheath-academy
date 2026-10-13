@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react'
 import { getUnread } from '@/features/messaging/front/services/api'
 
-export function useUnreadMessages(): { count: number } {
+/** `enabled: false` never polls: messaging is parent-only, so a learner would get a 403 every 15 s. */
+export function useUnreadMessages({ enabled = true }: { enabled?: boolean } = {}): { count: number } {
   const [count, setCount] = useState(0)
 
   useEffect(() => {
+    if (!enabled) return
     let active = true
 
     const poll = async () => {
@@ -23,7 +25,7 @@ export function useUnreadMessages(): { count: number } {
       active = false
       clearInterval(id)
     }
-  }, [])
+  }, [enabled])
 
   return { count }
 }

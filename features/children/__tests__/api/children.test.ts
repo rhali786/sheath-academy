@@ -99,6 +99,18 @@ describe('GET /api/children/children', () => {
     expect(body.data[0].lastName).toBe('Yusuf')
     expect(body.data[0].dob).toBe('2016-05-01')
   })
+
+  // The learner policy pins a learner's read to ?childId=<own id>, so a learner's app shell
+  // knows only themselves: no sibling profiles, and the learner picker has nobody to switch to.
+  it('?childId= returns only that learner', async () => {
+    mockListLearners.mockResolvedValue([
+      NEW_LEARNER_ROW as any,
+      { ...NEW_LEARNER_ROW, id: 'learner_sibling', name: 'Omar Yusuf', firstName: 'Omar' } as any,
+    ])
+    const res = await GET(new Request('http://localhost/api/children/children?childId=learner_sibling'))
+    const body = await res.json()
+    expect(body.data.map((c: { id: string }) => c.id)).toEqual(['learner_sibling'])
+  })
 })
 
 describe('POST /api/children/children', () => {

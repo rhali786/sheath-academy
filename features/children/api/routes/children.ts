@@ -39,10 +39,13 @@ async function learnerRowToStudentProfile(row: LearnerRow): Promise<StudentProfi
 export async function GET(request: Request): Promise<NextResponse<ApiResponse<StudentProfile[]>>> {
   const url = new URL(request.url)
   const includeArchived = url.searchParams.get('includeArchived') === 'true'
+  // One learner only — the learner policy pins a learner's own read to this.
+  const childId = url.searchParams.get('childId')
 
   try {
     const { householdId } = getRequestAuthCtx()
-    const rows = includeArchived ? await listAllLearners(householdId) : await listLearners(householdId)
+    const all = includeArchived ? await listAllLearners(householdId) : await listLearners(householdId)
+    const rows = childId ? all.filter(r => r.id === childId) : all
     const profiles = await Promise.all(rows.map(learnerRowToStudentProfile))
     return NextResponse.json({ status: 'success', data: profiles, message: 'Student profiles retrieved', timestamp: new Date().toISOString() })
   } catch {
