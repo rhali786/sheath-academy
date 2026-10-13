@@ -205,9 +205,15 @@ test('2.2 Moving one learner\'s date leaves the others where they were', async (
   expect((await lessonById(ids[2])).dueDate).toBe(s.today)
 })
 
-test('2.3 "Also move the date and time for every learner" moves everyone', async () => {
+// Amir's checklist order (2026-10-12): A was already moved to tomorrow (2.2) when he ticked
+// "also move" on B's copy and changed only the time — and A was pulled back to today. The
+// old version of this step started with every copy on the same day, so it could not see that.
+test('2.3 "Also move" with only a new time moves everyone’s time but keeps a learner who was moved on their own day', async () => {
   const ids = await createLesson('ZZ SL 2.3', [0, 1, 2])
-  const dialog = await openCalendarWindow('ZZ SL 2.3')
+  const moved = await api(ctx.request, `/api/plan/lessons/${ids[0]}`, 'PUT', { dueDate: s.tomorrow })
+  expect(moved.status, `move A: ${moved.body?.message}`).toBe(200)
+  const dialog = await openCalendarWindow('ZZ SL 2.3', 1)
+  await expect(dialog.getByText('Only what you change here is copied to the other learners.')).toBeVisible()
   await dialog.getByRole('checkbox', { name: 'Also move the date and time for every learner' }).check()
   await dialog.getByLabel('Start time hour').selectOption('2')
   await dialog.getByLabel('Start time period').selectOption('PM')
@@ -216,7 +222,34 @@ test('2.3 "Also move the date and time for every learner" moves everyone', async
   await dialog.getByLabel('End time period').selectOption('PM')
   await dialog.getByRole('button', { name: 'Save changes' }).click()
   await expect(dialog).toHaveCount(0)
-  for (const id of ids) expect((await lessonById(id)).scheduledStartTime).toBe('14:00')
+  const [a, b, c] = await Promise.all(ids.map(lessonById))
+  expect([a.dueDate, b.dueDate, c.dueDate]).toEqual([s.tomorrow, s.today, s.today])
+  expect([a, b, c].map(l => l.scheduledStartTime)).toEqual(['14:00', '14:00', '14:00'])
+  expect([a, b, c].map(l => l.scheduledEndTime)).toEqual(['14:30', '14:30', '14:30'])
+})
+
+test('2.3b "Also move" with a new date moves every learner to that date', async () => {
+  const ids = await createLesson('ZZ SL 2.3b', [0, 1, 2])
+  await api(ctx.request, `/api/plan/lessons/${ids[0]}`, 'PUT', { dueDate: s.tomorrow })
+  const dialog = await openCalendarWindow('ZZ SL 2.3b', 1)
+  await dialog.getByRole('checkbox', { name: 'Also move the date and time for every learner' }).check()
+  await dialog.getByLabel('Due date').fill(s.tomorrow)
+  await dialog.getByRole('button', { name: 'Save changes' }).click()
+  await expect(dialog).toHaveCount(0)
+  const dates = await Promise.all(ids.map(async id => (await lessonById(id)).dueDate))
+  expect(dates).toEqual([s.tomorrow, s.tomorrow, s.tomorrow])
+})
+
+test('2.3c A group edit of the description keeps another learner’s own title', async () => {
+  const ids = await createLesson('ZZ SL 2.3c', [0, 1, 2])
+  await api(ctx.request, `/api/plan/lessons/${ids[2]}`, 'PUT', { title: 'ZZ SL 2.3c only C' })
+  const dialog = await openCalendarWindow('ZZ SL 2.3c', 1)
+  await dialog.getByLabel(/^Description/).fill('Bring the workbook')
+  await dialog.getByRole('button', { name: 'Save changes' }).click()
+  await expect(dialog).toHaveCount(0)
+  const [a, b, c] = await Promise.all(ids.map(lessonById))
+  expect([a.title, b.title, c.title]).toEqual(['ZZ SL 2.3c', 'ZZ SL 2.3c', 'ZZ SL 2.3c only C'])
+  expect([a, b, c].map(l => l.description)).toEqual(['Bring the workbook', 'Bring the workbook', 'Bring the workbook'])
 })
 
 test('2.4 Unticking "Apply to all learners" edits only this learner', async () => {
