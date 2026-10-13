@@ -23,6 +23,9 @@ jest.mock('@/features/children/server/repository', () => ({
 jest.mock('@/features/alerts/server/service', () => ({
   getAlerts: jest.fn(),
 }))
+jest.mock('@/features/subjects/server/repository', () => ({
+  listSubjectRows: jest.fn(),
+}))
 
 import { GET } from '@/features/dashboard/api/routes/summary'
 import { listAttendanceEvents } from '@/features/attendance/server/repository'
@@ -31,6 +34,7 @@ import { listQuranSessionRows } from '@/features/quran/server/repository'
 import { listEvidenceRows } from '@/features/portfolio/server/repository'
 import { listLearners } from '@/features/children/server/repository'
 import { getAlerts } from '@/features/alerts/server/service'
+import { listSubjectRows } from '@/features/subjects/server/repository'
 import { toDateString } from '@/features/lib/server/date'
 
 const mockListAttendanceEvents = listAttendanceEvents as jest.Mock
@@ -39,6 +43,7 @@ const mockListQuranSessionRows = listQuranSessionRows as jest.Mock
 const mockListEvidenceRows = listEvidenceRows as jest.Mock
 const mockGetAlerts = getAlerts as jest.Mock
 const mockListLearners = listLearners as jest.Mock
+const mockListSubjectRows = listSubjectRows as jest.Mock
 
 function makeRequest(url = 'http://localhost/api/dashboard/summary') {
   return new Request(url)
@@ -53,9 +58,16 @@ beforeEach(() => {
   mockListQuranSessionRows.mockResolvedValue([])
   mockListEvidenceRows.mockResolvedValue([])
   mockGetAlerts.mockResolvedValue([])
+  mockListSubjectRows.mockResolvedValue([])
 })
 
 describe('GET /api/dashboard/summary', () => {
+  test("loads the household's courses so in-progress counts use course times", async () => {
+    const res = await GET(makeRequest())
+    expect(res.status).toBe(200)
+    expect(mockListSubjectRows).toHaveBeenCalledWith('hh_01')
+  })
+
   test('returns task summary counts', async () => {
     mockListLessonTaskRows
       .mockResolvedValueOnce([

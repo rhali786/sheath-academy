@@ -9,6 +9,14 @@ export interface AuthCtx {
   householdId: string
   email?: string
   timezone?: string
+  /**
+   * This user's role in `householdId` — 'owner' | 'member' | 'teacher' | 'learner'.
+   * Already carried per-household on the session (`SessionMembership.role`); it is
+   * surfaced here so request handling can act on it. Consumed by
+   * features/auth/server/learnerPolicy.ts. Undefined means "not resolved", which
+   * every policy treats as unrestricted (i.e. not a learner).
+   */
+  role?: string
 }
 
 export type OwnershipEntityType =
@@ -132,6 +140,7 @@ export async function requireAuthCtx(request: NextRequest): Promise<AuthCtx | Re
     householdId,
     email: session.user.email,
     timezone: session.user.timezone,
+    role: session.user.memberships?.find(m => m.householdId === householdId)?.role,
   }
 }
 

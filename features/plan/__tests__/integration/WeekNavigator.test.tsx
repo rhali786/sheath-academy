@@ -113,4 +113,34 @@ describe('WeekNavigator — BUG-010 week navigation date correctness', () => {
     expect(calledDate.getMonth()).toBe(4) // May (0-indexed)
     expect(calledDate.getDate()).toBe(19)
   })
+
+  it('renders a Shift lessons toggle that calls its handler and reads Cancel when open', () => {
+    const onToggleShift = jest.fn()
+    const mockContext = {
+      lessons: [], selectedWeek: new Date('2026-05-12'), setSelectedWeek: jest.fn(),
+      selectedChildIds: [], setSelectedChildIds: jest.fn(), selectedSubjectIds: [], setSelectedSubjectIds: jest.fn(),
+      isInitializing: false, isLessonsLoading: false, isLoading: false, error: null,
+      weekStartDay: 'Monday' as const, children: mockChildren, subjects: mockSubjects,
+    }
+    const { rerender } = render(
+      <PlannerContext.Provider value={mockContext}>
+        <WeekNavigator onToggleShift={onToggleShift} showShift={false} />
+      </PlannerContext.Provider>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Shift lessons' }))
+    expect(onToggleShift).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <PlannerContext.Provider value={mockContext}>
+        <WeekNavigator onToggleShift={onToggleShift} showShift />
+      </PlannerContext.Provider>,
+    )
+    expect(screen.queryByRole('button', { name: 'Shift lessons' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel shift' })).toBeInTheDocument()
+  })
+
+  it('does not render the Shift lessons toggle without a handler', () => {
+    renderNavigator()
+    expect(screen.queryByRole('button', { name: 'Shift lessons' })).not.toBeInTheDocument()
+  })
 })

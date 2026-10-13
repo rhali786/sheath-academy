@@ -273,6 +273,17 @@ describe('BadgesPage', () => {
     await waitFor(() => expect(mockSetSettings).toHaveBeenCalledWith(false))
   })
 
+  it('reloads the badge collection after toggling platform badges, so the list actually reflects the new setting (item 15)', async () => {
+    render(<BadgesPage />)
+    await waitFor(() => expect(screen.getByLabelText('Platform badges enabled')).toBeInTheDocument())
+    const callsBeforeToggle = mockGetCollection.mock.calls.length
+
+    fireEvent.click(screen.getByLabelText('Platform badges enabled'))
+
+    await waitFor(() => expect(mockSetSettings).toHaveBeenCalledWith(false))
+    await waitFor(() => expect(mockGetCollection.mock.calls.length).toBeGreaterThan(callsBeforeToggle))
+  })
+
   // ─── G5: 'Add badge' discoverability ───────────────────────────────────────
   it('shows a clearly labeled "Add badge" control in the list header that reveals the create form', async () => {
     render(<BadgesPage />)

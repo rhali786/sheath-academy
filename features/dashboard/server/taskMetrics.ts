@@ -1,6 +1,7 @@
 import type { LessonTask } from '@/features/plan/types'
 import { buildDailySchedule } from '@/features/schedule/server/service'
 import { countInProgressLessons } from '@/features/schedule/lib/timelineStatus'
+import type { CourseTimes } from '@/features/schedule/lib/courseTimes'
 
 export interface TaskMetricsInput {
   today: string
@@ -10,6 +11,8 @@ export interface TaskMetricsInput {
   attendanceMarkedCount: number
   quranSessionCount: number
   scheduleStartTime?: string
+  /** Course recurring times, so untimed lessons are "in progress" during their course slot. */
+  courseTimes?: CourseTimes
 }
 
 
@@ -32,6 +35,8 @@ export function computeTaskMetrics(input: TaskMetricsInput): {
     transitionMinutes: 10,
     defaultDurationMinutes: 30,
     includeSyntheticBreaks: true,
+    date: input.today,
+    courseTimes: input.courseTimes,
   })
 
   const tasksInProgress = countInProgressLessons(schedule.entries, input.currentTime)

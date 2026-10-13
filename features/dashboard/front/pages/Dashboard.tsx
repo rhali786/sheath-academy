@@ -14,6 +14,7 @@ import { IslamicCalendarCard } from '@/features/islamic-calendar/front/component
 import { getIslamicCalendarCountdowns } from '@/features/islamic-calendar/front/lib/countdowns'
 import { useIslamicReminderSettings } from '@/features/islamic-calendar/front/lib/useIslamicReminderSettings'
 import { buildDailySchedule } from '@/features/schedule/server/service'
+import { courseTimesFromSubjects } from '@/features/schedule/lib/courseTimes'
 import { useContext_Dashboard } from '../context'
 import { useHousehold } from '@/features/household/front/context'
 import { HouseholdSetup } from '@/features/household/front/components/HouseholdSetup'
@@ -64,14 +65,18 @@ export default function Dashboard() {
     [allLessons, selectedDate],
   )
 
+  const courseTimes = useMemo(() => courseTimesFromSubjects(allSubjects ?? []), [allSubjects])
+
   const daySchedule = useMemo((): DaySchedule => {
     return { ...buildDailySchedule(dayLessons, {
       startTime: '08:30',
       transitionMinutes: 10,
       defaultDurationMinutes: 30,
       includeSyntheticBreaks: true,
+      date: selectedDate,
+      courseTimes,
     }), date: selectedDate }
-  }, [dayLessons, selectedDate])
+  }, [dayLessons, selectedDate, courseTimes])
 
   const fetchDayLessons = useCallback(() => {
     plannerApi.getLessons(

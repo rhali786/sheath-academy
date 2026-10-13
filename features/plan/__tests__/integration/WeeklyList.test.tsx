@@ -20,6 +20,17 @@ jest.mock('@/features/household/front/context', () => ({
     refetch: jest.fn(),
   })),
 }))
+// The Edit lesson window is tested on its own (EditLessonModal.test); here it is a stub
+// that proves the Planner opens it in place and refreshes after a save.
+jest.mock('@/features/plan/front/components/EditLessonModal', () => ({
+  EditLessonModal: ({ lessonId, onClose, onSaved }: { lessonId: string; onClose: () => void; onSaved: () => void }) => (
+    <div role="dialog" aria-label="Edit lesson" data-lesson-id={lessonId}>
+      <button type="button" onClick={() => { onSaved(); onClose() }}>Stub save</button>
+      <button type="button" onClick={onClose}>Stub close</button>
+    </div>
+  ),
+}))
+
 import type { LessonTask } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
@@ -49,6 +60,8 @@ const mockLessons: LessonTask[] = [
   },
 ]
 
+const mockRefreshLessons = jest.fn()
+
 function renderList(lessons: LessonTask[] = [], weekStartDay: 'Monday' | 'Sunday' = 'Monday') {
   const mockContext = {
     lessons,
@@ -65,6 +78,7 @@ function renderList(lessons: LessonTask[] = [], weekStartDay: 'Monday' | 'Sunday
     weekStartDay,
     children: mockChildren,
     subjects: mockSubjects,
+    refreshLessons: mockRefreshLessons,
   }
 
   return render(
@@ -148,17 +162,34 @@ describe('WeeklyList (mobile)', () => {
     expect(screen.queryByText('child_001')).not.toBeInTheDocument()
   })
 
-  it('clicking a lesson card navigates to the edit page', () => {
+  it('clicking a lesson card opens the Edit lesson window in place', () => {
     renderList(mockLessons)
 
     const buttons = screen.getAllByRole('button')
     const tuesdayButton = buttons.find(btn => btn.textContent?.includes('Tuesday'))
     fireEvent.click(tuesdayButton!)
 
-    const lessonCard = screen.getByText('Math lesson 1').closest('div[class*="bg-white"]')
-    fireEvent.click(lessonCard!)
+    fireEvent.click(screen.getByRole('button', { name: /math lesson 1/i }))
 
-    expect(mockPush).toHaveBeenCalledWith('/lessons?editId=lesson_001')
+    expect(screen.getByRole('dialog', { name: 'Edit lesson' })).toHaveAttribute('data-lesson-id', 'lesson_001')
+    expect(mockPush).not.toHaveBeenCalled()
+  })
+
+  it('a lesson card can be opened from the keyboard (Enter)', () => {
+    renderList(mockLessons)
+    const tuesdayButton = screen.getAllByRole('button').find(btn => btn.textContent?.includes('Tuesday'))
+    fireEvent.click(tuesdayButton!)
+    fireEvent.keyDown(screen.getByRole('button', { name: /math lesson 1/i }), { key: 'Enter' })
+    expect(screen.getByRole('dialog', { name: 'Edit lesson' })).toBeInTheDocument()
+  })
+
+  it('saving in the window refreshes the week', () => {
+    renderList(mockLessons)
+    const tuesdayButton = screen.getAllByRole('button').find(btn => btn.textContent?.includes('Tuesday'))
+    fireEvent.click(tuesdayButton!)
+    fireEvent.click(screen.getByRole('button', { name: /math lesson 1/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Stub save' }))
+    expect(mockRefreshLessons).toHaveBeenCalled()
   })
 
   it('lesson card shows a tap-to-edit/reschedule affordance', () => {

@@ -1,6 +1,7 @@
-import { and, eq, gte, lte, sql } from 'drizzle-orm'
+import { and, eq, gte, isNull, lte, sql } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
 import { lessonTasks, lessonSteps } from '@/db/schema'
+import { splitGroupLessonPatch, type GroupLessonPatchOptions } from './groupLessonPatch'
 
 export type LessonTaskRow = typeof lessonTasks.$inferSelect
 
@@ -33,15 +34,16 @@ export interface LessonAssignmentInput {
 
 export type SharedLessonTaskFields = Omit<CreateLessonTaskInput, 'learnerId' | 'subjectId' | 'groupId'>
 
-export interface UpdateLessonTaskOptions {
-  applyToGroup?: boolean
-}
+export type UpdateLessonTaskOptions = GroupLessonPatchOptions
 
 export interface DeleteLessonTaskOptions {
   deleteGroup?: boolean
 }
 
 export interface UpdateLessonTaskInput {
+  /** Moves this learner's copy to another learner (detaches it from its group). */
+  learnerId?: string
+  subjectId?: string
   title?: string
   description?: string
   notes?: string
@@ -244,40 +246,76 @@ export async function updateLessonTaskRow(
   const existing = await getLessonTaskRow(id, householdId)
   if (!existing) return null
 
-  const patch: Partial<LessonTaskRow> = { updatedAt: new Date() }
-  if (input.title !== undefined) patch.title = input.title
-  if (input.description !== undefined) patch.description = input.description
-  if (input.notes !== undefined) patch.notes = input.notes
-  if (input.resourceLink !== undefined) patch.resourceLink = input.resourceLink
-  if (input.lessonType !== undefined) patch.lessonType = input.lessonType
-  if (input.estimatedDuration !== undefined) patch.estimatedDuration = input.estimatedDuration
-  if (input.scheduledStartTime !== undefined) patch.scheduledStartTime = input.scheduledStartTime
-  if (input.scheduledEndTime !== undefined) patch.scheduledEndTime = input.scheduledEndTime
-  if (input.plannedStartDate !== undefined) patch.plannedStartDate = input.plannedStartDate
-  if (input.dueDate !== undefined) patch.dueDate = input.dueDate
-  if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder
-  if (input.curriculum !== undefined) patch.curriculum = input.curriculum
-  if (input.chapter !== undefined) patch.chapter = input.chapter
-  if (input.hasHomework !== undefined) patch.hasHomework = input.hasHomework
-  if (input.hasAssessment !== undefined) patch.hasAssessment = input.hasAssessment
+  // undefined = not sent; the split drops those, so only sent fields are written. Only what
+  // differs from this copy (what the parent changed) is copied to the rest of the group.
+  const { group, row } = splitGroupLessonPatch(
+    input as Record<string, unknown>,
+    existing.groupId ? options : {},
+    existing as unknown as Record<string, unknown>,
+  )
+  const now = new Date()
+  const rowPatch: Partial<LessonTaskRow> = { ...(row as Partial<LessonTaskRow>), updatedAt: now }
+  // Moved to another learner: it is now that learner's own lesson, not part of the shared one.
+  if (input.learnerId !== undefined && input.learnerId !== existing.learnerId) rowPatch.groupId = null
 
-  if (options.applyToGroup && existing.groupId) {
-    const result = await db
+  return db.transaction(async (tx) => {
+    if (existing.groupId && Object.keys(group).length > 0) {
+      await tx
+        .update(lessonTasks)
+        .set({ ...(group as Partial<LessonTaskRow>), updatedAt: now })
+        .where(and(eq(lessonTasks.householdId, householdId), eq(lessonTasks.groupId, existing.groupId)))
+    }
+    const result = await tx
       .update(lessonTasks)
-      .set(patch)
-      .where(and(eq(lessonTasks.householdId, householdId), eq(lessonTasks.groupId, existing.groupId)))
+      .set(rowPatch)
+      .where(and(eq(lessonTasks.id, id), eq(lessonTasks.householdId, householdId)))
       .returning()
-    return result.find(r => r.id === id) ?? result[0] ?? null
-  }
+    return result[0] ?? null
+  })
+}
 
-  if (input.status !== undefined) patch.status = input.status
+export interface LessonDatesChange {
+  id: string
+  from: { dueDate: string; plannedStartDate: string | null }
+  to: { dueDate: string; plannedStartDate: string | null }
+}
 
-  const result = await db
-    .update(lessonTasks)
-    .set(patch)
-    .where(and(eq(lessonTasks.id, id), eq(lessonTasks.householdId, householdId)))
-    .returning()
-  return result[0] ?? null
+/**
+ * Bulk date move for the lesson shift. In one transaction, each row is updated only if it is
+ * still not_started and its dates still equal `from` — anything edited since the preview is
+ * reported in `skipped` instead of being overwritten. Undo is the same call with from/to swapped.
+ */
+export async function updateLessonDatesIfUnchanged(
+  householdId: string,
+  changes: LessonDatesChange[],
+): Promise<{ applied: number; skipped: string[] }> {
+  if (changes.length === 0) return { applied: 0, skipped: [] }
+  const db = getDb()
+  const now = new Date()
+  const skipped: string[] = []
+  let applied = 0
+
+  await db.transaction(async (tx) => {
+    for (const change of changes) {
+      const updated = await tx
+        .update(lessonTasks)
+        .set({ dueDate: change.to.dueDate, plannedStartDate: change.to.plannedStartDate, updatedAt: now })
+        .where(and(
+          eq(lessonTasks.id, change.id),
+          eq(lessonTasks.householdId, householdId),
+          eq(lessonTasks.status, 'not_started'),
+          eq(lessonTasks.dueDate, change.from.dueDate),
+          change.from.plannedStartDate === null
+            ? isNull(lessonTasks.plannedStartDate)
+            : eq(lessonTasks.plannedStartDate, change.from.plannedStartDate),
+        ))
+        .returning({ id: lessonTasks.id })
+      if (updated.length > 0) applied++
+      else skipped.push(change.id)
+    }
+  })
+
+  return { applied, skipped }
 }
 
 export async function completeLessonTaskRow(
@@ -305,24 +343,24 @@ export async function deleteLessonTaskRow(
   id: string,
   householdId: string,
   options: DeleteLessonTaskOptions = {},
-): Promise<boolean> {
+): Promise<number> {
   const db = getDb()
   const existing = await getLessonTaskRow(id, householdId)
-  if (!existing) return false
+  if (!existing) return 0
 
   if (options.deleteGroup && existing.groupId) {
     const result = await db
       .delete(lessonTasks)
       .where(and(eq(lessonTasks.householdId, householdId), eq(lessonTasks.groupId, existing.groupId)))
-      .returning()
-    return result.length > 0
+      .returning({ id: lessonTasks.id })
+    return result.length
   }
 
   const result = await db
     .delete(lessonTasks)
     .where(and(eq(lessonTasks.id, id), eq(lessonTasks.householdId, householdId)))
-    .returning()
-  return result.length > 0
+    .returning({ id: lessonTasks.id })
+  return result.length
 }
 
 // ─── Lesson Steps ─────────────────────────────────────────────────────────────

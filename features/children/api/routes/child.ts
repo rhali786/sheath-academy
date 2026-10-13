@@ -12,22 +12,10 @@ import {
 import { archiveSubjectsByLearner } from '@/features/subjects/server/repository'
 import { guardOwnership } from '@/features/auth/server/routeOwnership'
 import { notFoundResponse } from '@/features/auth/server/context'
-import { getUserById, getMembership, addMember, deactivateMember, reactivateMember } from '@/features/household/server/repository'
-import {
-  createLearnerCredentialUser,
-  updateUserUsername,
-  updateUserPassword,
-  deactivateUserCredentials,
-  getUserByIdentifier,
-} from '@/features/auth/server/repository'
-import { hashPassword } from '@/features/auth/server/password'
-
-/** Synthesized email for username-only learner logins — users.email is NOT NULL
- *  UNIQUE and these learners have no real email. Keyed by learner id for stability
- *  and collision-safety (a learner id is unique per household by construction). */
-function placeholderLearnerEmail(learnerId: string): string {
-  return `learner.${learnerId}@no-email.local`
-}
+import { getUserById, getMembership, deactivateMember } from '@/features/household/server/repository'
+import { deactivateUserCredentials } from '@/features/auth/server/repository'
+import { provisionLearnerLogin } from '@/features/children/server/learnerLogin'
+import { logger } from '@/features/lib/logger'
 
 async function learnerRowToStudentProfile(row: LearnerRow): Promise<StudentProfile> {
   let username = ''
@@ -92,6 +80,10 @@ export async function PUT(id: string, request: Request): Promise<NextResponse> {
     if (gradeLabel !== undefined) patch.gradeLevel = gradeLabel.trim()
     if (dob !== undefined) patch.dob = dob ? dob : null
 
+    // Tracks a credential user created by *this* request, so a later failure can
+    // undo it rather than leaving its username orphaned (feedback item 5).
+    let createdUserId: string | null = null
+
     if (learnerLoginEnabled === true) {
       const trimmedUsername = username?.trim()
       if (!trimmedUsername) {
@@ -101,41 +93,33 @@ export async function PUT(id: string, request: Request): Promise<NextResponse> {
         )
       }
 
-      const currentUser = existing.userId ? await getUserById(existing.userId) : null
-      const needsPassword = !currentUser || !currentUser.passwordHash
-      if (needsPassword && !password?.trim()) {
-        return NextResponse.json(
-          { status: 'error', data: null, message: 'password is required to enable learner login', timestamp: new Date().toISOString() },
-          { status: 400 },
-        )
-      }
-
-      const dup = await getUserByIdentifier(trimmedUsername)
-      if (dup && dup.id !== existing.userId) {
-        return NextResponse.json(
-          { status: 'error', data: null, message: 'Username is already taken', timestamp: new Date().toISOString() },
-          { status: 409 },
-        )
-      }
-
-      if (!existing.userId) {
-        const passwordHash = await hashPassword(password!.trim())
-        const credUser = await createLearnerCredentialUser({
-          name: patch.name ?? existing.name,
-          email: placeholderLearnerEmail(existing.id),
+      let provisioned
+      try {
+        provisioned = await provisionLearnerLogin({
+          householdId,
+          learnerId: existing.id,
+          learnerName: patch.name ?? existing.name,
           username: trimmedUsername,
-          passwordHash,
+          password,
+          existingUserId: existing.userId ?? null,
         })
-        await addMember(householdId, credUser.id, 'learner')
-        patch.userId = credUser.id
-      } else {
-        await updateUserUsername(existing.userId, trimmedUsername)
-        if (password?.trim()) {
-          const passwordHash = await hashPassword(password.trim())
-          await updateUserPassword(existing.userId, passwordHash)
-        }
-        await reactivateMember(householdId, existing.userId)
+      } catch (err) {
+        logger.error({ householdId, learnerId: existing.id, err }, 'PUT child: failed to provision learner login')
+        return NextResponse.json(
+          { status: 'error', data: null, message: 'Could not enable learner login. Please try again.', timestamp: new Date().toISOString() },
+          { status: 500 },
+        )
       }
+
+      if (!provisioned.ok) {
+        return NextResponse.json(
+          { status: 'error', data: null, message: provisioned.message, timestamp: new Date().toISOString() },
+          { status: provisioned.status },
+        )
+      }
+
+      createdUserId = provisioned.createdUserId
+      patch.userId = provisioned.userId
     } else if (learnerLoginEnabled === false) {
       if (existing.userId) {
         await deactivateUserCredentials(existing.userId)
@@ -143,8 +127,33 @@ export async function PUT(id: string, request: Request): Promise<NextResponse> {
       }
     }
 
-    const updated = await updateLearner(id, householdId, patch)
-    if (!updated) return notFoundResponse('Student profile not found')
+    // Stands a credential user created by this request back down when the link
+    // never landed. Non-destructive: clearing the hash + deactivating the
+    // membership is the same thing "disable learner login" does, so no row is
+    // destroyed and the next attempt can adopt it (see learnerLogin.ts).
+    async function archiveUnlinkedCredential() {
+      if (!createdUserId) return
+      await deactivateUserCredentials(createdUserId)
+      await deactivateMember(householdId, createdUserId)
+    }
+
+    let updated
+    try {
+      updated = await updateLearner(id, householdId, patch)
+    } catch (err) {
+      await archiveUnlinkedCredential()
+      logger.error({ householdId, learnerId: id, err }, 'PUT child: link write failed — archived new credential user')
+      return NextResponse.json(
+        { status: 'error', data: null, message: 'Could not save changes. Please try again.', timestamp: new Date().toISOString() },
+        { status: 500 },
+      )
+    }
+
+    if (!updated) {
+      await archiveUnlinkedCredential()
+      return notFoundResponse('Student profile not found')
+    }
+
     return NextResponse.json({ status: 'success', data: await learnerRowToStudentProfile(updated), message: 'Student profile updated', timestamp: new Date().toISOString() })
   })
 }

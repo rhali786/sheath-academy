@@ -54,6 +54,17 @@ jest.mock('@/features/plan/front/services/api', () => ({
   },
 }))
 
+// The Edit lesson window is tested on its own (EditLessonModal.test); here it is a stub
+// that proves the Planner opens it in place and refreshes after a save.
+jest.mock('@/features/plan/front/components/EditLessonModal', () => ({
+  EditLessonModal: ({ lessonId, onClose, onSaved }: { lessonId: string; onClose: () => void; onSaved: () => void }) => (
+    <div role="dialog" aria-label="Edit lesson" data-lesson-id={lessonId}>
+      <button type="button" onClick={() => { onSaved(); onClose() }}>Stub save</button>
+      <button type="button" onClick={onClose}>Stub close</button>
+    </div>
+  ),
+}))
+
 import { plannerApi } from '@/features/plan/front/services/api'
 const mockUpdateLesson = plannerApi.updateLesson as jest.Mock
 
@@ -388,5 +399,20 @@ describe('WeeklyPlanner', () => {
     expect(screen.getAllByText('Layth')).toHaveLength(1)
     expect(screen.getAllByTestId('lesson-card-lesson_001')).toHaveLength(1)
     expect(screen.getAllByTestId('lesson-card-lesson_003')).toHaveLength(1)
+  })
+
+  it('clicking a lesson opens the Edit lesson window in place, without navigating', () => {
+    renderPlanner()
+    fireEvent.click(screen.getAllByTestId(/^lesson-card-/)[0])
+    expect(screen.getByRole('dialog', { name: 'Edit lesson' })).toBeInTheDocument()
+    expect(mockPush).not.toHaveBeenCalled()
+  })
+
+  it('saving in the window refreshes the week and closes it', () => {
+    renderPlanner()
+    fireEvent.click(screen.getAllByTestId(/^lesson-card-/)[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Stub save' }))
+    expect(mockRefreshLessons).toHaveBeenCalled()
+    expect(screen.queryByRole('dialog', { name: 'Edit lesson' })).not.toBeInTheDocument()
   })
 })

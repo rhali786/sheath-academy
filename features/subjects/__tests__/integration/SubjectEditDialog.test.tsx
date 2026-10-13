@@ -188,4 +188,52 @@ describe('SubjectEditDialog', () => {
     })
     expect(onSaved).toHaveBeenCalled()
   })
+
+  it('constrains the dialog panel height and scrolls the body internally when many resources are linked (items 6, 16)', async () => {
+    const manyResources: Resource[] = Array.from({ length: 25 }, (_, i) => ({
+      id: `r${i}`,
+      workspaceId: 'household_001',
+      title: `Resource ${i}`,
+      resourceType: 'textbook',
+      verificationStatus: 'verified',
+      createdAt: '2026-01-01',
+      updatedAt: '2026-01-01',
+    }))
+    resourcesApi.listResources.mockResolvedValue({
+      data: manyResources,
+      status: 'success',
+      message: '',
+      timestamp: '',
+    })
+
+    render(
+      <SubjectEditDialog
+        open
+        subject={subject}
+        childrenList={childrenList}
+        onClose={jest.fn()}
+        onSaved={jest.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Resource 24')).toBeInTheDocument()
+    })
+
+    // The panel itself is height-bounded so it can never overflow past the
+    // top and bottom of the viewport.
+    const panel = screen.getByRole('dialog')
+    expect(panel.className).toMatch(/max-h-\[90vh\]/)
+    expect(panel.className).toMatch(/flex-col/)
+
+    // A dedicated scroll region holds the long resource list.
+    const scrollBody = screen.getByTestId('subject-edit-scroll-body')
+    expect(scrollBody.className).toMatch(/overflow-y-auto/)
+    expect(scrollBody).toContainElement(screen.getByText('Resource 24'))
+
+    // The Save button stays outside the scroll region — reachable without
+    // scrolling, per the ui-style-guide footer-pinning requirement.
+    const saveButton = screen.getByRole('button', { name: 'Save' })
+    expect(scrollBody).not.toContainElement(saveButton)
+  })
 })

@@ -1,30 +1,35 @@
 'use client'
 
-import type { LessonTask } from '@/features/plan/types'
+import type { LessonTask, LessonTaskPatch } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { LessonCard } from './LessonCard'
+import { SharedLessonCard } from './SharedLessonCard'
+import { groupSharedLessons } from '@/features/plan/utils/groupSharedLessons'
 
 interface LessonTaskListProps {
   lessons: LessonTask[]
   children: StudentProfile[]
   subjects: SubjectCourse[]
   error?: string | null
-  onUpdate?: (id: string, patch: Partial<LessonTask>) => Promise<void>
+  onUpdate?: (id: string, patch: LessonTaskPatch) => Promise<void>
   /** Legacy: passed through to LessonCard when onUpdate is not available */
   onEdit?: (lesson: LessonTask) => void
-  onDelete?: (id: string) => void
+  onDelete?: (id: string, options: { deleteGroup: boolean }) => void | Promise<void>
   onComplete?: (id: string, status: 'completed') => Promise<void>
   editingLessonId?: string | null
+  /** Replaces the "No lessons yet" copy, e.g. when filters hide everything. */
+  emptyMessage?: string
+  onEditEnd?: () => void
 }
 
-export function LessonTaskList({ lessons, children, subjects, error, onUpdate, onEdit, onDelete, onComplete, editingLessonId = null }: LessonTaskListProps) {
+export function LessonTaskList({ lessons, children, subjects, error, onUpdate, onEdit, onDelete, onComplete, editingLessonId = null, emptyMessage, onEditEnd }: LessonTaskListProps) {
   if (error) {
     return <p className="text-sm text-red-600 py-4">Could not load lessons. Please refresh.</p>
   }
 
   if (lessons.length === 0) {
-    return <p className="text-sm text-slate-500 py-4">No lessons yet. Add your first one above.</p>
+    return <p className="text-sm text-slate-500 py-4">{emptyMessage ?? 'No lessons yet. Add your first one above.'}</p>
   }
 
   function resolveChildName(childId: string): string {
@@ -37,19 +42,32 @@ export function LessonTaskList({ lessons, children, subjects, error, onUpdate, o
 
   return (
     <div className="space-y-3">
-      {lessons.map(lesson => (
+      {groupSharedLessons(lessons).map(item => item.kind === 'shared' ? (
+        <SharedLessonCard
+          key={item.groupId}
+          copies={item.copies}
+          children={children}
+          subjects={subjects}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          onComplete={onComplete}
+          editingLessonId={editingLessonId}
+          onEditEnd={onEditEnd}
+        />
+      ) : (
         <LessonCard
-          key={lesson.id}
-          lesson={lesson}
-          childName={resolveChildName(lesson.childId)}
-          subjectName={resolveSubjectName(lesson.subjectId)}
+          key={item.lesson.id}
+          lesson={item.lesson}
+          childName={resolveChildName(item.lesson.childId)}
+          subjectName={resolveSubjectName(item.lesson.subjectId)}
           children={children}
           subjects={subjects}
           onUpdate={onUpdate}
           onEdit={onEdit}
           onDelete={onDelete}
           onComplete={onComplete}
-          defaultEditing={lesson.id === editingLessonId}
+          defaultEditing={item.lesson.id === editingLessonId}
+          onEditEnd={onEditEnd}
         />
       ))}
     </div>

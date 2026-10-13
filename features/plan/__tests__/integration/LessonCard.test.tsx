@@ -300,7 +300,8 @@ describe('LessonCard — phase-2 Available-from field in inline edit', () => {
     })
   })
 
-  it('saving without Available from passes plannedStartDate as undefined when field is empty', async () => {
+  // null, not undefined: the update route leaves plannedStartDate alone unless it is sent.
+  it('saving without Available from passes plannedStartDate as null when field is empty', async () => {
     const onUpdate = jest.fn().mockResolvedValue(undefined)
     render(
       <LessonCard
@@ -318,7 +319,7 @@ describe('LessonCard — phase-2 Available-from field in inline edit', () => {
 
     await waitFor(() => {
       const patch = onUpdate.mock.calls[0][1]
-      expect(patch.plannedStartDate).toBeUndefined()
+      expect(patch.plannedStartDate).toBeNull()
     })
   })
 
@@ -431,7 +432,22 @@ describe('LessonCard — grouped lessons', () => {
     expect(screen.getByRole('checkbox', { name: /apply to all learners in group/i })).toBeInTheDocument()
   })
 
-  it('passes applyToGroup when saving with checkbox checked', async () => {
+  // UAT 4.5 (Oct 10): a title edit on a shared lesson changed only one learner's copy
+  // because this box started unticked. Editing a shared lesson now edits the group.
+  it('starts with apply-to-group ticked for a grouped lesson', () => {
+    render(
+      <LessonCard
+        lesson={makeLesson({ groupId: 'group_001', title: 'Shared task' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={jest.fn().mockResolvedValue(undefined)}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(screen.getByRole('checkbox', { name: /apply to all learners in group/i })).toBeChecked()
+  })
+
+  it('passes applyToGroup by default when saving a grouped lesson', async () => {
     const onUpdate = jest.fn().mockResolvedValue(undefined)
     render(
       <LessonCard
@@ -442,7 +458,6 @@ describe('LessonCard — grouped lessons', () => {
       />
     )
     fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
-    fireEvent.click(screen.getByRole('checkbox', { name: /apply to all learners in group/i }))
     fireEvent.change(screen.getByDisplayValue('Shared task'), { target: { value: 'Updated title' } })
     fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
 
@@ -454,7 +469,7 @@ describe('LessonCard — grouped lessons', () => {
     })
   })
 
-  it('does not pass applyToGroup when saving without checkbox', async () => {
+  it('does not pass applyToGroup when the box is unticked', async () => {
     const onUpdate = jest.fn().mockResolvedValue(undefined)
     render(
       <LessonCard
@@ -465,6 +480,7 @@ describe('LessonCard — grouped lessons', () => {
       />
     )
     fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /apply to all learners in group/i }))
     fireEvent.change(screen.getByDisplayValue('Shared task'), { target: { value: 'Solo edit' } })
     fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
 
@@ -475,5 +491,258 @@ describe('LessonCard — grouped lessons', () => {
       )
       expect(onUpdate.mock.calls[0][1].applyToGroup).toBeUndefined()
     })
+  })
+
+  it('sends a cleared "Available from" date as null so the server clears it', async () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(
+      <LessonCard
+        lesson={makeLesson({ plannedStartDate: '2026-05-01' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    fireEvent.change(screen.getByDisplayValue('2026-05-01'), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => {
+      expect(onUpdate).toHaveBeenCalled()
+    })
+    expect(onUpdate.mock.calls[0][1].plannedStartDate).toBeNull()
+  })
+})
+
+// ─── Group edits: details follow the group, date/time stay with this learner ───
+// A parent moving one sick child's lesson must not move four other children.
+
+describe('LessonCard — group edit keeps date and time per learner', () => {
+  function openGroupEditor(onUpdate = jest.fn().mockResolvedValue(undefined)) {
+    render(
+      <LessonCard
+        lesson={makeLesson({ groupId: 'group_001', title: 'Shared task', dueDate: '2026-05-12' })}
+        childName="Adam"
+        subjectName="Math"
+        onUpdate={onUpdate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    return onUpdate
+  }
+
+  it('says date and time change for this learner only, with an unticked "move for everyone" box', () => {
+    openGroupEditor()
+    expect(screen.getByRole('checkbox', { name: /move the date and time for every learner/i })).not.toBeChecked()
+    expect(screen.getByText(/date and time change for adam only/i)).toBeInTheDocument()
+  })
+
+  it('saving a new date with the default boxes does not ask to move everyone', async () => {
+    const onUpdate = openGroupEditor()
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-05-13' } })
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled())
+    const patch = onUpdate.mock.calls[0][1]
+    expect(patch).toMatchObject({ dueDate: '2026-05-13', applyToGroup: true })
+    expect(patch.applyScheduleToGroup).toBeUndefined()
+  })
+
+  it('ticking "move for everyone" sends applyScheduleToGroup', async () => {
+    const onUpdate = openGroupEditor()
+    fireEvent.click(screen.getByRole('checkbox', { name: /move the date and time for every learner/i }))
+    expect(screen.queryByText(/date and time change for adam only/i)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled())
+    expect(onUpdate.mock.calls[0][1]).toMatchObject({ applyToGroup: true, applyScheduleToGroup: true })
+  })
+
+  it('unticking the group box hides "move for everyone" and sends neither flag', async () => {
+    const onUpdate = openGroupEditor()
+    fireEvent.click(screen.getByRole('checkbox', { name: /apply to all learners in group/i }))
+    expect(screen.queryByRole('checkbox', { name: /move the date and time for every learner/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled())
+    expect(onUpdate.mock.calls[0][1].applyToGroup).toBeUndefined()
+    expect(onUpdate.mock.calls[0][1].applyScheduleToGroup).toBeUndefined()
+  })
+
+  it('no group boxes on a lesson that is not shared', () => {
+    render(<LessonCard lesson={makeLesson()} childName="Adam" subjectName="Math" onUpdate={jest.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(screen.queryByRole('checkbox', { name: /apply to all learners in group/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: /move the date and time/i })).not.toBeInTheDocument()
+  })
+})
+
+// ─── Moving a lesson to another learner or course ───
+
+describe('LessonCard — changing the learner or course', () => {
+  const kids = [
+    { id: 'child_001', householdId: 'hh_001', name: 'Adam', gradeLabel: '5th', isActive: true, username: 'a', password: 'pw', createdAt: '2026-01-01T00:00:00Z' },
+    { id: 'child_002', householdId: 'hh_001', name: 'Khadijah', gradeLabel: '3rd', isActive: true, username: 'k', password: 'pw', createdAt: '2026-01-01T00:00:00Z' },
+  ]
+  const courses = [
+    { id: 'subj_001', childId: 'child_001', learnerIds: ['child_001'], name: 'Math 5', category: 'Math' as const, isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
+    { id: 'subj_002', childId: 'child_002', learnerIds: ['child_002'], name: 'Math 3', category: 'Math' as const, isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z' },
+  ]
+
+  function openEditor(onUpdate = jest.fn().mockResolvedValue(undefined)) {
+    render(
+      <LessonCard lesson={makeLesson()} childName="Adam" subjectName="Math 5"
+        children={kids} subjects={courses} onUpdate={onUpdate} />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    return onUpdate
+  }
+
+  it('moves the lesson to another learner and one of their courses', async () => {
+    const onUpdate = openEditor()
+    fireEvent.change(screen.getByLabelText(/^child$/i), { target: { value: 'child_002' } })
+    fireEvent.change(screen.getByLabelText(/^course$/i), { target: { value: 'subj_002' } })
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled())
+    expect(onUpdate.mock.calls[0][1]).toMatchObject({ childId: 'child_002', subjectId: 'subj_002' })
+  })
+
+  it("only offers the new learner's courses", () => {
+    openEditor()
+    fireEvent.change(screen.getByLabelText(/^child$/i), { target: { value: 'child_002' } })
+    const course = screen.getByLabelText(/^course$/i)
+    expect(Array.from((course as HTMLSelectElement).options).map(o => o.value)).toEqual(['', 'subj_002'])
+  })
+
+  it('asks for a course after switching learner, and saves nothing until one is chosen', async () => {
+    const onUpdate = openEditor()
+    fireEvent.change(screen.getByLabelText(/^child$/i), { target: { value: 'child_002' } })
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    expect(await screen.findByText(/choose a course for khadijah/i)).toBeInTheDocument()
+    expect(onUpdate).not.toHaveBeenCalled()
+  })
+
+  it("shows the server's reason when a save is rejected, and keeps the editor open", async () => {
+    const onUpdate = jest.fn().mockRejectedValue(new Error("Math 3 is not one of Adam's courses."))
+    openEditor(onUpdate)
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+
+    expect(await screen.findByText(/math 3 is not one of adam's courses/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /save lesson/i })).toBeInTheDocument()
+  })
+})
+
+// ─── Deleting: one learner's copy or the whole shared lesson ───
+// A 5-learner lesson used to take 5 deletes; there was no Delete inside the editor.
+
+describe('LessonCard — delete', () => {
+  function renderCard(lesson = makeLesson(), onDelete = jest.fn().mockResolvedValue(undefined)) {
+    render(<LessonCard lesson={lesson} childName="Adam" subjectName="Math" onDelete={onDelete} onUpdate={jest.fn().mockResolvedValue(undefined)} />)
+    return onDelete
+  }
+
+  it('a lesson for one learner asks once and deletes just it', async () => {
+    const onDelete = renderCard()
+    fireEvent.click(screen.getByRole('button', { name: /delete lesson/i }))
+    expect(screen.queryByRole('button', { name: /just adam/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith('lesson_001', { deleteGroup: false }))
+  })
+
+  it('a shared lesson offers "Just Adam" and "All learners in this group"', () => {
+    renderCard(makeLesson({ groupId: 'group_001' }))
+    fireEvent.click(screen.getByRole('button', { name: /delete lesson/i }))
+    expect(screen.getByText(/shared with other learners/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Just Adam' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'All learners in this group' })).toBeInTheDocument()
+  })
+
+  it('"Just Adam" deletes only this copy', async () => {
+    const onDelete = renderCard(makeLesson({ groupId: 'group_001' }))
+    fireEvent.click(screen.getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Just Adam' }))
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith('lesson_001', { deleteGroup: false }))
+  })
+
+  it('"All learners in this group" deletes every copy', async () => {
+    const onDelete = renderCard(makeLesson({ groupId: 'group_001' }))
+    fireEvent.click(screen.getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'All learners in this group' }))
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith('lesson_001', { deleteGroup: true }))
+  })
+
+  it('Cancel deletes nothing and returns to the card', () => {
+    const onDelete = renderCard(makeLesson({ groupId: 'group_001' }))
+    fireEvent.click(screen.getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(onDelete).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: /delete lesson/i })).toBeInTheDocument()
+  })
+
+  it('a failed delete shows why and keeps the choices open', async () => {
+    renderCard(makeLesson(), jest.fn().mockRejectedValue(new Error('Lesson not found')))
+    fireEvent.click(screen.getByRole('button', { name: /delete lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Lesson not found')
+  })
+
+  it('the editor has a Delete button that opens the same choices', async () => {
+    const onDelete = renderCard(makeLesson({ groupId: 'group_001' }))
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    fireEvent.click(screen.getByRole('button', { name: /delete this lesson/i }))
+    expect(screen.queryByRole('button', { name: /save lesson/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Just Adam' }))
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith('lesson_001', { deleteGroup: false }))
+  })
+
+  it('no Delete in the editor when the card cannot delete', () => {
+    render(<LessonCard lesson={makeLesson()} childName="Adam" subjectName="Math" onUpdate={jest.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(screen.queryByRole('button', { name: /delete this lesson/i })).not.toBeInTheDocument()
+  })
+})
+
+// undefined is dropped from the request body, so a cleared field used to be silently kept.
+describe('LessonCard — clearing details', () => {
+  it('a cleared description and resource link are sent as empty, not left out', async () => {
+    const onUpdate = jest.fn().mockResolvedValue(undefined)
+    render(<LessonCard lesson={makeLesson({ description: 'Pages 10-12', resourceLink: 'https://example.com' })} childName="Adam" subjectName="Math" onUpdate={onUpdate} />)
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    fireEvent.change(screen.getByDisplayValue('Pages 10-12'), { target: { value: '' } })
+    fireEvent.change(screen.getByDisplayValue('https://example.com'), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: /save lesson/i }))
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled())
+    expect(onUpdate.mock.calls[0][1]).toMatchObject({ description: '', resourceLink: '' })
+  })
+})
+
+describe('LessonCard — why this time', () => {
+  const kids = [{ id: 'child_001', householdId: 'hh_001', name: 'Adam', gradeLabel: '5th', isActive: true, username: 'a', password: 'pw', createdAt: '2026-01-01T00:00:00Z' }]
+  const math = {
+    id: 'subj_001', childId: 'child_001', learnerIds: ['child_001'], name: 'Math', category: 'Math' as const, isActive: true, order: 1, createdAt: '2026-01-01T00:00:00Z',
+    recurringSchedule: [{ daysOfWeek: ['Monday' as const], startTime: '10:15', endTime: '11:00' }],
+  }
+
+  function openOn(dueDate: string) {
+    render(<LessonCard lesson={makeLesson({ dueDate })} childName="Adam" subjectName="Math" children={kids} subjects={[math]} onUpdate={jest.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+  }
+
+  it("on a day the course has a time, says the lesson uses it", () => {
+    openOn('2026-10-12') // Monday
+    expect(screen.getByText("Uses Math's time on Mondays: 10:15 AM.")).toBeInTheDocument()
+  })
+
+  it('on a day the course has no time, explains the day order', () => {
+    openOn('2026-10-17') // Saturday
+    expect(screen.getByText(/math has no set time on saturdays/i)).toBeInTheDocument()
+  })
+
+  it('updates when the due date changes', () => {
+    openOn('2026-10-17')
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-10-19' } }) // Monday
+    expect(screen.getByText("Uses Math's time on Mondays: 10:15 AM.")).toBeInTheDocument()
   })
 })

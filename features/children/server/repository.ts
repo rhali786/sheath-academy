@@ -107,6 +107,24 @@ export async function upsertLearner(
   return inserted[0]
 }
 
+/**
+ * Returns the learner profile linked to a signed-in user within a household, or
+ * null when the user is not a learner there. This is how a learner session is
+ * narrowed to "their own" data — see features/auth/server/learnerPolicy.ts.
+ */
+export async function getLearnerByUserId(
+  householdId: string,
+  userId: string,
+): Promise<LearnerRow | null> {
+  const db = getDb()
+  const result = await db
+    .select()
+    .from(learners)
+    .where(and(eq(learners.householdId, householdId), eq(learners.userId, userId)))
+    .limit(1)
+  return result[0] ?? null
+}
+
 export async function updateLearner(
   id: string,
   householdId: string,

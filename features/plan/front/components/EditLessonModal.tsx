@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { plannerApi } from '@/features/plan/front/services/api'
 import { LessonTaskForm, type LessonFormData } from '@/features/plan/front/components/LessonTaskForm'
 import { useHousehold } from '@/features/household/front/context'
+import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import type { LessonTask } from '@/features/plan/types'
 
 export interface EditLessonModalProps {
@@ -13,10 +14,10 @@ export interface EditLessonModalProps {
 }
 
 /**
- * Inline popup for editing a Today schedule item from the Dashboard, without
- * navigating to /lessons. Reuses LessonTaskForm (the same form used by the
- * Lessons page) inside a modal, following the app's existing dialog pattern
- * (see SubjectEditDialog).
+ * The Edit lesson window, opened in place from the Dashboard, Calendar and Planner so
+ * the parent never leaves the day they are looking at. Reuses LessonTaskForm (edit
+ * mode) inside the app's dialog pattern (see SubjectEditDialog). Owned by Plan; other
+ * features compose it. Escape or a click outside closes it without saving.
  */
 export function EditLessonModal({ lessonId, onClose, onSaved }: EditLessonModalProps) {
   const { studentProfiles: children, allSubjects: subjects, householdProfile } = useHousehold()
@@ -24,6 +25,15 @@ export function EditLessonModal({ lessonId, onClose, onSaved }: EditLessonModalP
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
 
   useEffect(() => {
     let cancelled = false
@@ -49,6 +59,15 @@ export function EditLessonModal({ lessonId, onClose, onSaved }: EditLessonModalP
       cancelled = true
     }
   }, [lessonId])
+
+  // Errors propagate to the confirmation, which shows them and stays open.
+  async function handleDelete(deleteGroup: boolean) {
+    await plannerApi.deleteLesson(lessonId, { deleteGroup })
+    onSaved()
+    onClose()
+  }
+
+  const childName = children.find(c => c.id === lesson?.childId)?.name ?? 'this learner'
 
   async function handleSubmit(data: LessonFormData) {
     setSaveError(null)
@@ -83,9 +102,23 @@ export function EditLessonModal({ lessonId, onClose, onSaved }: EditLessonModalP
 
         {loading && <p className="text-sm text-slate-400">Loading…</p>}
         {!loading && error && <p className="text-sm text-red-600">{error}</p>}
-        {!loading && !error && lesson && (
+        {!loading && !error && lesson && confirmingDelete && (
+          <InlineConfirm
+            message="Delete this lesson?"
+            detail={lesson.groupId ? `“${lesson.title}” is shared with other learners.` : lesson.title}
+            {...(lesson.groupId
+              ? {
+                  confirmLabel: 'All learners in this group',
+                  secondaryAction: { label: `Just ${childName}`, onConfirm: () => handleDelete(false) },
+                }
+              : {})}
+            onConfirm={() => handleDelete(Boolean(lesson.groupId))}
+            onCancel={() => setConfirmingDelete(false)}
+          />
+        )}
+        {!loading && !error && lesson && !confirmingDelete && (
           <>
-            {saveError && <p className="text-xs text-red-600 mb-2">{saveError}</p>}
+            {saveError && <p role="alert" className="text-xs text-red-600 mb-2">{saveError}</p>}
             <LessonTaskForm
               children={children}
               subjects={subjects}
@@ -93,6 +126,8 @@ export function EditLessonModal({ lessonId, onClose, onSaved }: EditLessonModalP
               schoolDays={householdProfile?.schoolDays}
               onSubmit={handleSubmit}
               onCancel={onClose}
+              onDelete={() => setConfirmingDelete(true)}
+              autoFocusTitle
             />
           </>
         )}

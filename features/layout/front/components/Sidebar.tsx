@@ -5,9 +5,7 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import {
-  NAV_MODULES,
-  NAV_ITEMS,
-  getNavItemsBySection,
+  navForViewer,
   getModuleItems,
   isNavItemActive,
   isNavModuleActive,
@@ -18,6 +16,7 @@ import { getNavIcon, getModuleIcon } from '@/features/layout/lib/navIcons'
 import { formatHeaderDates, type HeaderDateDisplay } from '@/features/layout/lib/formatHeaderDates'
 import { useUnreadMessages } from '@/features/messaging/front/hooks/useUnreadMessages'
 import { useModuleLastDestination } from '@/features/layout/front/hooks/useModuleLastDestination'
+import { isLearnerSession } from '@/features/auth/front/viewerRole'
 import { SheathLogo } from './SheathLogo'
 
 interface SidebarProps {
@@ -139,6 +138,18 @@ function NavRow({
   )
 }
 
+/**
+ * A module remembers the last page opened in it (per browser). Use it only if that page is
+ * still shown to this viewer — a parent's last page on a shared computer may be one a
+ * learner cannot open.
+ */
+function visibleLastHref(lastHref: string | null | undefined, module: NavModuleConfig, items: NavItem[]): string {
+  if (!lastHref) return module.defaultHref
+  const path = lastHref.split('?')[0]
+  const stillShown = items.length === 0 || items.some((item) => item.href && (path === item.href || path.startsWith(`${item.href}/`)))
+  return stillShown ? lastHref : module.defaultHref
+}
+
 function ModuleNavGroup({
   module,
   pathname,
@@ -157,7 +168,7 @@ function ModuleNavGroup({
   const [lastHref, setDestination] = useModuleLastDestination(module.id)
   const items = getModuleItems(module)
   const moduleActive = isNavModuleActive(pathname, module, settingsTab)
-  const headerHref = lastHref ?? module.defaultHref
+  const headerHref = visibleLastHref(lastHref, module, items)
 
   const baseClass =
     'flex items-center gap-3 px-2.5 py-2 rounded-xl text-sm font-medium transition-colors w-full'
@@ -229,7 +240,7 @@ function CollapsedModuleFlyout({
   const [lastHref, setDestination] = useModuleLastDestination(module.id)
   const items = getModuleItems(module)
   const moduleActive = isNavModuleActive(pathname, module, settingsTab)
-  const headerHref = lastHref ?? module.defaultHref
+  const headerHref = visibleLastHref(lastHref, module, items)
 
   return (
     <div className="relative group" data-testid={`nav-module-collapsed-${module.id}`}>
@@ -273,21 +284,15 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION
   const session = useSession()
   const isAdmin = session.data?.user?.isAdmin === true
-  const { count: unreadMessages } = useUnreadMessages()
+  const isLearner = isLearnerSession(session.data)
+  const { count: unreadMessages } = useUnreadMessages({ enabled: !isLearner })
 
   useEffect(() => {
     setHeaderDates(formatHeaderDates(new Date()))
   }, [])
 
-  const filterByRole = (items: NavItem[]) => items.filter((item) => !item.adminOnly || isAdmin)
-
-  const mainModules = NAV_MODULES.filter((m) => m.section === 'main').filter(
-    (m) => !m.adminOnly || isAdmin,
-  )
-  const footerItems = filterByRole(getNavItemsBySection('footer'))
-  const standaloneMainItems = filterByRole(
-    NAV_ITEMS.filter((item) => item.section === 'main' && item.id === 'my-feedback'),
-  )
+  // Admin pages for admins only; parent pages hidden from a learner login (UAT 8.3).
+  const { modules: mainModules, footerItems, standaloneItems: standaloneMainItems } = navForViewer({ isAdmin, isLearner })
 
   const handleCollapse = useCallback(() => setCollapsed(true), [])
   const handleExpand = useCallback(() => setCollapsed(false), [])

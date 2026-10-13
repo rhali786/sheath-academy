@@ -1,4 +1,5 @@
 import type { LessonTask } from '@/features/plan/types'
+import type { CourseTimes } from '@/features/schedule/lib/courseTimes'
 
 export type InstructionMode =
   | 'teacher-led'
@@ -70,6 +71,13 @@ export interface ScheduleSettings {
   defaultDurationMinutes?: number
   /** Insert fixed break/lunch rows when lessons exist (Wave 5). */
   includeSyntheticBreaks?: boolean
+  /** YYYY-MM-DD the schedule is for. Needed to pick each course's block for that weekday. */
+  date?: string
+  /**
+   * Course id → recurring weekly blocks. A lesson without its own scheduled time is placed at
+   * its course's block for `date`'s weekday (locked); otherwise it stacks as before.
+   */
+  courseTimes?: CourseTimes
 }
 
 export interface ScheduleTemplate {

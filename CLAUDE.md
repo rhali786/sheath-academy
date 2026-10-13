@@ -70,6 +70,7 @@ Run these checks before touching any file:
 | `npm run db:studio` | Open Drizzle Studio (DB browser) |
 | `npm run db:seed:demo` | Bulk-seed two demo households into an **empty** DB |
 | `npm run feedback:pull:prod` | **Read-only.** Pull all `user_feedback` rows from prod (`DATABASE_URL_PROD`), grouped by status. Saves any attached screenshots to `feedback-screenshots/` (gitignored) as `<id>.<ext>`. `--status=<value>` to filter, `--json` for raw output. See `scripts/pull-feedback-prod.js`. |
+| `npm run uat:dev` | End-to-end UAT against **deployed dev** (`dev.sheathacademy.com`) using the NextAuth dev-bypass provider. Requires `DEV_BYPASS_SECRET` in the environment (never committed). Signs in as owner *and* as a learner to assert real API behaviour, authorization, and data correctness. **Writes data** — creates a throwaway `ZZ UAT Probe` learner and archives it afterwards; never deletes. Refuses to run against the prod host. `--base <url>` to target localhost, `--verbose` for request tracing. See `scripts/uat-dev.js`. |
 
 **Dev vs production server:** Use `npm run dev` for day-to-day work. Mixing dev and prod on the same `.next` folder causes `/_next/static` 404s — see Troubleshooting.
 

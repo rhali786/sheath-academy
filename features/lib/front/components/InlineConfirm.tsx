@@ -14,6 +14,11 @@ interface Props {
   tone?: Tone
   onConfirm: () => void | Promise<void>
   onCancel: () => void
+  /**
+   * A second destructive choice shown before the main one, e.g. "Just Hawa" next to
+   * "All learners in this group". Outlined so the two are distinguishable.
+   */
+  secondaryAction?: { label: string; onConfirm: () => void | Promise<void> }
 }
 
 const TONE_BORDER: Record<Tone, string> = {
@@ -40,19 +45,21 @@ export function InlineConfirm({
   tone = 'danger',
   onConfirm,
   onCancel,
+  secondaryAction,
 }: Props) {
-  const [pending, setPending] = useState(false)
+  const [pendingChoice, setPendingChoice] = useState<'primary' | 'secondary' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const pending = pendingChoice !== null
 
-  async function handleConfirm() {
+  async function run(choice: 'primary' | 'secondary', action: () => void | Promise<void>) {
     setError(null)
-    setPending(true)
+    setPendingChoice(choice)
     try {
-      await onConfirm()
+      await action()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
-      setPending(false)
+      setPendingChoice(null)
     }
   }
 
@@ -75,14 +82,25 @@ export function InlineConfirm({
         >
           <X className="w-3 h-3" /> {cancelLabel}
         </button>
+        {secondaryAction && (
+          <button
+            type="button"
+            onClick={() => run('secondary', secondaryAction.onConfirm)}
+            disabled={pending}
+            aria-label={secondaryAction.label}
+            className={`flex items-center gap-1 text-xs ${TONE_TEXT[tone]} bg-white border ${TONE_BORDER[tone]} hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50`}
+          >
+            {pendingChoice === 'secondary' ? pendingLabel : secondaryAction.label}
+          </button>
+        )}
         <button
           type="button"
-          onClick={handleConfirm}
+          onClick={() => run('primary', onConfirm)}
           disabled={pending}
           aria-label={confirmLabel}
           className={`flex items-center gap-1 text-xs text-white ${TONE_CONFIRM[tone]} px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50`}
         >
-          <Check className="w-3 h-3" /> {pending ? pendingLabel : confirmLabel}
+          <Check className="w-3 h-3" /> {pendingChoice === 'primary' ? pendingLabel : confirmLabel}
         </button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import type { LessonTask, LessonDuration } from '@/features/plan/types'
+import { courseTimeFor } from '@/features/schedule/lib/courseTimes'
 import type {
   ScheduleBlock,
   DaySchedule,
@@ -22,6 +23,7 @@ function fromMinutes(total: number): string {
   const m = total % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
+
 
 function parseDurationMinutes(duration: LessonDuration | undefined, fallback: number): number {
   switch (duration) {
@@ -82,16 +84,21 @@ export function buildDailySchedule(
   const blocks: ScheduleBlock[] = []
 
   for (const lesson of lessons) {
-    if (lesson.scheduledStartTime && lesson.scheduledEndTime) {
-      const overrideStart = toMinutes(lesson.scheduledStartTime)
-      const overrideEnd = toMinutes(lesson.scheduledEndTime)
+    // An explicit lesson time wins; otherwise the course's recurring time for this weekday.
+    const fixed = lesson.scheduledStartTime && lesson.scheduledEndTime
+      ? { startTime: lesson.scheduledStartTime, endTime: lesson.scheduledEndTime }
+      : courseTimeFor(settings.courseTimes, lesson.subjectId, settings.date ?? '')
+
+    if (fixed) {
+      const overrideStart = toMinutes(fixed.startTime)
+      const overrideEnd = toMinutes(fixed.endTime)
       const durationMinutes = overrideEnd - overrideStart
 
       blocks.push({
         id: `block_${lesson.id}`,
         lesson,
-        startTime: lesson.scheduledStartTime,
-        endTime: lesson.scheduledEndTime,
+        startTime: fixed.startTime,
+        endTime: fixed.endTime,
         durationMinutes,
         flexibilityState: 'locked',
       })
@@ -119,7 +126,7 @@ export function buildDailySchedule(
   const entries = mergeTimelineEntries(lessonEntries, includeSyntheticBreaks)
 
   return {
-    date: new Date().toISOString().slice(0, 10),
+    date: settings.date ?? new Date().toISOString().slice(0, 10),
     entries,
     blocks,
     isPaused: false,
