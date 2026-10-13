@@ -157,6 +157,13 @@ describe('LearnerHome ("My day")', () => {
     await waitFor(() => expect(mockGetQuran).toHaveBeenCalledTimes(2))
   })
 
+  // The to-do list's empty text was written for parents ("curriculum or supply planning").
+  it('the empty to-do list speaks to the learner', async () => {
+    render(<LearnerHome />)
+    expect(await screen.findByText('No to-dos yet — add homework or anything you want to remember.')).toBeInTheDocument()
+    expect(screen.queryByText(/supply planning/)).not.toBeInTheDocument()
+  })
+
   it('never asks for parent-only data', async () => {
     render(<LearnerHome />)
     await screen.findByText('Fractions')
