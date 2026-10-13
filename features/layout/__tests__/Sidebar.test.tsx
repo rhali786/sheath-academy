@@ -243,3 +243,38 @@ describe('Sidebar — module grouping', () => {
     expect(gradebook).toHaveAttribute('aria-current', 'page')
   })
 })
+
+// UAT 8.3 (2026-10-12): a learner's sidebar offered parent pages that are refused or empty for
+// them, and polled /api/messaging/unread (refused) every 15 seconds.
+describe('Sidebar — learner login', () => {
+  beforeEach(() => {
+    mockUsePathname.mockReturnValue('/dashboard')
+    mockUseSearchParams.mockReturnValue(new URLSearchParams())
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { email: 'learner.x@no-email.local', householdId: 'hh_a', memberships: [{ householdId: 'hh_a', householdName: 'Barakah Academy', role: 'learner' }] },
+        expires: '2099-01-01',
+      },
+      status: 'authenticated',
+    })
+    mockUseUnreadMessages.mockClear()
+  })
+
+  test('shows only pages a learner can use', () => {
+    render(<Sidebar />)
+    for (const id of ['home', 'planbook', 'growth']) expect(screen.getByTestId(`nav-module-${id}`)).toBeInTheDocument()
+    for (const id of ['records', 'people', 'messages']) expect(screen.queryByTestId(`nav-module-${id}`)).not.toBeInTheDocument()
+    for (const id of ['attendance', 'gradebook', 'grades-progress', 'reports-records', 'resources', 'compliance', 'my-feedback']) {
+      expect(screen.queryByTestId(`nav-item-${id}`)).not.toBeInTheDocument()
+    }
+    for (const id of ['calendar', 'courses', 'quran', 'learning-time', 'badges', 'settings', 'about']) {
+      expect(screen.getByTestId(`nav-item-${id}`)).toBeInTheDocument()
+    }
+    expect(screen.getByTestId('nav-module-link-growth')).toHaveAttribute('href', '/growth/badges')
+  })
+
+  test('does not poll unread messages', () => {
+    render(<Sidebar />)
+    expect(mockUseUnreadMessages).toHaveBeenCalledWith({ enabled: false })
+  })
+})

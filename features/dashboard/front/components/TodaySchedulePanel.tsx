@@ -17,9 +17,13 @@ interface TodaySchedulePanelProps {
   learnerId?: string | null
   /** Called after a lesson is saved via the inline edit popup, so the caller can refetch. */
   onLessonSaved?: () => void
+  /** False for a learner: no edit pencil (the server refuses lesson edits from learners). */
+  canEdit?: boolean
+  /** Shows "Mark done" on lessons not yet done (a learner's My day). */
+  onMarkDone?: (lessonId: string) => void
 }
 
-export function TodaySchedulePanel({ schedule, currentTime, subjects, learnerId, onLessonSaved }: TodaySchedulePanelProps) {
+export function TodaySchedulePanel({ schedule, currentTime, subjects, learnerId, onLessonSaved, canEdit = true, onMarkDone }: TodaySchedulePanelProps) {
   const [liveSchedule, setLiveSchedule] = useState(schedule)
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null)
   const [startedSession, setStartedSession] = useState(false)
@@ -45,7 +49,8 @@ export function TodaySchedulePanel({ schedule, currentTime, subjects, learnerId,
         currentTime={currentTime}
         subjects={subjects}
         onScheduleChange={setLiveSchedule}
-        onEditLesson={setEditingLessonId}
+        onEditLesson={canEdit ? setEditingLessonId : undefined}
+        onMarkDone={onMarkDone}
       />
 
       <div className="mt-4 pt-3 border-t border-slate-100">

@@ -205,3 +205,23 @@ describe('Header — alert refresh', () => {
     expect(alertsFetchCalls()).toHaveLength(2)
   })
 })
+
+// UAT 8.3 (2026-10-12): alerts are parent-only, so a learner got a 403 on every page.
+describe('Header — learner login', () => {
+  beforeEach(() => {
+    mockFetchEmpty()
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { name: 'Yusuf', email: 'learner.x@no-email.local', householdId: 'hh_a', memberships: [{ householdId: 'hh_a', householdName: 'Barakah Academy', role: 'learner' }] },
+        expires: '9999-01-01',
+      },
+      status: 'authenticated',
+    })
+  })
+
+  test('has no notification bell and never asks for alerts', () => {
+    render(<Header />)
+    expect(screen.queryByRole('button', { name: /notifications/i })).not.toBeInTheDocument()
+    expect(alertsFetchCalls()).toHaveLength(0)
+  })
+})

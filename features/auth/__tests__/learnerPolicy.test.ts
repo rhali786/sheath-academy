@@ -257,6 +257,29 @@ describe('enforceLearnerPolicy — forced self-scoping on household-wide reads',
     expect(new URL(outcome.request!.url).searchParams.get('childIds')).toBeNull()
   })
 
+  // UAT 8.3 (2026-10-12): the learner Dashboard and Learning Time read these without a
+  // learner filter, so a learner got every sibling's profile, Quran and learning time.
+  it.each([
+    [['children', 'children'], '/api/children/children', 'childId'],
+    [['quran', 'sessions'], '/api/quran/sessions', 'childId'],
+    [['quran', 'summary'], '/api/quran/summary', 'childId'],
+    [['learning-time', 'sessions'], '/api/learning-time/sessions?from=2026-10-12', 'learnerId'],
+    [['learning-time', 'sessions', 'active'], '/api/learning-time/sessions/active', 'learnerId'],
+  ])('pins %j to the learner’s own id', async (slug, url, param) => {
+    const outcome = await enforceLearnerPolicy(learnerCtx(), slug, req(url))
+    expect(outcome.allowed).toBe(true)
+    expect(new URL(outcome.request!.url).searchParams.get(param)).toBe(OWN_LEARNER_ID)
+  })
+
+  it('still refuses a sibling named explicitly on those reads', async () => {
+    const outcome = await enforceLearnerPolicy(
+      learnerCtx(),
+      ['learning-time', 'sessions'],
+      req(`/api/learning-time/sessions?learnerId=${SIBLING_LEARNER_ID}`),
+    )
+    expect(outcome.allowed).toBe(false)
+  })
+
   it('does not inject anything into routes that are not scopable', async () => {
     const outcome = await enforceLearnerPolicy(learnerCtx(), ['todos'], req('/api/todos'))
     expect(outcome.allowed).toBe(true)

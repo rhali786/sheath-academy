@@ -107,3 +107,31 @@ describe('ScheduleTimeline — takes a new schedule from its parent', () => {
     expect(screen.queryByText('Science')).not.toBeInTheDocument()
   })
 })
+
+// UAT 8.3 (2026-10-12): a learner's "My day" marks lessons done from the timeline.
+describe('ScheduleTimeline — Mark done', () => {
+  function schedule() {
+    return buildDailySchedule(
+      [makeLesson('l1', 'Mathematics', 'not_started'), makeLesson('l2', 'Science', 'completed'), makeLesson('l3', 'Art', 'skipped')],
+      { startTime: '08:30', transitionMinutes: 10 },
+    )
+  }
+
+  test('offers Mark done on a lesson that is not done yet, and calls the handler with its id', () => {
+    const onMarkDone = jest.fn()
+    render(<ScheduleTimeline schedule={schedule()} currentTime="09:00" showAdjustDay={false} onMarkDone={onMarkDone} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Mark Mathematics done' }))
+    expect(onMarkDone).toHaveBeenCalledWith('l1')
+  })
+
+  test('no Mark done on lessons already done or skipped', () => {
+    render(<ScheduleTimeline schedule={schedule()} currentTime="09:00" showAdjustDay={false} onMarkDone={jest.fn()} />)
+    expect(screen.queryByRole('button', { name: 'Mark Science done' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Mark Art done' })).not.toBeInTheDocument()
+  })
+
+  test('without a handler there is no Mark done (the parent Dashboard is unchanged)', () => {
+    render(<ScheduleTimeline schedule={schedule()} currentTime="09:00" showAdjustDay={false} onEditLesson={jest.fn()} />)
+    expect(screen.queryByRole('button', { name: /^Mark .* done$/ })).not.toBeInTheDocument()
+  })
+})

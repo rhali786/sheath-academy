@@ -7,6 +7,7 @@ import {
   isNavItemActive,
   isNavModuleActive,
   validateNavConfig,
+  navForViewer,
 } from '@/features/layout/lib/navConfig'
 
 describe('navConfig', () => {
@@ -242,5 +243,39 @@ describe('Grade-discoverability nav label', () => {
     const item = NAV_ITEMS.find(i => i.id === 'grades-progress')!
     expect(item.href).toBe('/growth/portfolio')
     expect(item.activePrefixes).toEqual(['/growth/portfolio', '/portfolio'])
+  })
+})
+
+// UAT 8.3 (2026-10-12): a learner's sidebar listed parent pages that are refused or empty
+// for them (Attendance, Gradebook, Records, People with Archive buttons, Messages…).
+describe('navForViewer', () => {
+  const ids = (nav: ReturnType<typeof navForViewer>) => ({
+    modules: nav.modules.map((m) => m.id),
+    items: nav.modules.flatMap((m) => m.itemIds),
+    footer: nav.footerItems.map((i) => i.id),
+    standalone: nav.standaloneItems.map((i) => i.id),
+  })
+
+  test('a parent sees every module and page (admin pages only for admins)', () => {
+    const nav = ids(navForViewer({ isAdmin: false, isLearner: false }))
+    expect(nav.modules).toEqual(['home', 'planbook', 'records', 'growth', 'people', 'messages'])
+    expect(nav.items).toEqual(expect.arrayContaining(['attendance', 'gradebook', 'resources', 'compliance']))
+    expect(nav.standalone).toEqual(['my-feedback'])
+    expect(nav.footer).toEqual(['settings', 'about'])
+    expect(ids(navForViewer({ isAdmin: true, isLearner: false })).footer).toEqual(['settings', 'admin', 'feedback-queue', 'about'])
+  })
+
+  test('a learner sees only pages that work for them', () => {
+    const nav = ids(navForViewer({ isAdmin: false, isLearner: true }))
+    expect(nav.modules).toEqual(['home', 'planbook', 'growth'])
+    expect(nav.items).toEqual(['calendar', 'lesson-planner', 'courses', 'quran', 'learning-time', 'badges'])
+    expect(nav.standalone).toEqual([])
+    expect(nav.footer).toEqual(['settings', 'about'])
+  })
+
+  test('a learner’s Growth opens on Badges, not the parent-only Gradebook', () => {
+    const growth = navForViewer({ isAdmin: false, isLearner: true }).modules.find((m) => m.id === 'growth')!
+    expect(growth.defaultHref).toBe('/growth/badges')
+    expect(getModuleItems(growth).map((i) => i.href)).toEqual(['/growth/badges'])
   })
 })

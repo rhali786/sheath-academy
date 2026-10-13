@@ -91,6 +91,15 @@ const LEARNER_SCOPED_READS: { pattern: SlugPattern; param: string }[] = [
   { pattern: ['plan', 'lessons'], param: 'childIds' },
   // subjects GET passes childId straight through to listSubjectRows.
   { pattern: ['subjects'], param: 'childId' },
+  // The app shell's learner list: a learner's shell knows only themselves, so no sibling
+  // profiles and nobody to switch to (UAT 8.3, 2026-10-12).
+  { pattern: ['children', 'children'], param: 'childId' },
+  // Read with no learner filter by the Dashboard and Learning Time, which handed a learner
+  // every sibling's Quran and learning time (UAT 8.3).
+  { pattern: ['quran', 'sessions'], param: 'childId' },
+  { pattern: ['quran', 'summary'], param: 'childId' },
+  { pattern: ['learning-time', 'sessions'], param: 'learnerId' },
+  { pattern: ['learning-time', 'sessions', 'active'], param: 'learnerId' },
 ]
 
 /** Query/body keys that name a learner, used to block cross-learner access. */
