@@ -77,3 +77,65 @@ describe('splitGroupLessonPatch', () => {
     expect(row).toEqual({})
   })
 })
+
+// UAT 2.4 (Amir, 2026-10-12): A was moved to tomorrow; B's time was changed with "move
+// for everyone" ticked, and A was pulled back to today. The editor sends every field, so
+// only what differs from the copy being edited is what the parent changed — and only
+// that is copied to the other learners.
+describe('splitGroupLessonPatch with the copy being edited', () => {
+  const bRow = {
+    title: 'UAT Shared 3', description: null, curriculum: null, chapter: null, estimatedDuration: '30min',
+    hasHomework: false, hasAssessment: false,
+    dueDate: '2026-10-12', plannedStartDate: null, scheduledStartTime: null, scheduledEndTime: null,
+    status: 'not_started', sortOrder: 0, learnerId: 'l_b', subjectId: 's_math',
+  }
+  // What the Edit lesson window sends after only the time was set to 2:00–2:30 PM.
+  const timeOnly = {
+    title: 'UAT Shared 3', description: '', curriculum: '', chapter: '', estimatedDuration: '30min',
+    hasHomework: false, hasAssessment: false,
+    dueDate: '2026-10-12', plannedStartDate: null, scheduledStartTime: '14:00', scheduledEndTime: '14:30',
+    status: 'not_started', learnerId: 'l_b', subjectId: 's_math',
+  }
+
+  it('a time change moves only the time for everyone, so a learner on another day keeps their day', () => {
+    const { group } = splitGroupLessonPatch(timeOnly, { applyToGroup: true, applyScheduleToGroup: true }, bRow)
+    expect(group).toEqual({ scheduledStartTime: '14:00', scheduledEndTime: '14:30' })
+  })
+
+  it('start and end go together, so every learner gets the same window', () => {
+    const current = { ...bRow, scheduledStartTime: '13:00', scheduledEndTime: '14:30' }
+    const patch = { ...timeOnly, scheduledStartTime: '14:00', scheduledEndTime: '14:30' }
+    const { group } = splitGroupLessonPatch(patch, { applyToGroup: true, applyScheduleToGroup: true }, current)
+    expect(group).toEqual({ scheduledStartTime: '14:00', scheduledEndTime: '14:30' })
+  })
+
+  it('a date change moves everyone to that date, with "Available from" alongside it', () => {
+    const patch = { ...timeOnly, scheduledStartTime: null, scheduledEndTime: null, dueDate: '2026-10-15' }
+    const { group } = splitGroupLessonPatch(patch, { applyToGroup: true, applyScheduleToGroup: true }, bRow)
+    expect(group).toEqual({ dueDate: '2026-10-15', plannedStartDate: null })
+  })
+
+  it('clearing the time for everyone sends the cleared time to the group', () => {
+    const current = { ...bRow, scheduledStartTime: '13:00', scheduledEndTime: '13:30' }
+    const patch = { ...timeOnly, scheduledStartTime: null, scheduledEndTime: null }
+    const { group } = splitGroupLessonPatch(patch, { applyToGroup: true, applyScheduleToGroup: true }, current)
+    expect(group).toEqual({ scheduledStartTime: null, scheduledEndTime: null })
+  })
+
+  it('details the parent left alone are not copied, so another learner’s own title survives', () => {
+    const patch = { ...timeOnly, scheduledStartTime: null, scheduledEndTime: null, description: 'Bring the workbook' }
+    const { group } = splitGroupLessonPatch(patch, { applyToGroup: true }, bRow)
+    expect(group).toEqual({ description: 'Bring the workbook' })
+  })
+
+  it('treats a blank field and an empty one as the same ("" vs null, false vs null)', () => {
+    const current = { ...bRow, hasHomework: null }
+    const { group } = splitGroupLessonPatch({ ...timeOnly, scheduledStartTime: null, scheduledEndTime: null }, { applyToGroup: true, applyScheduleToGroup: true }, current)
+    expect(group).toEqual({})
+  })
+
+  it('this learner’s copy still gets everything it was sent', () => {
+    const { group, row } = splitGroupLessonPatch(timeOnly, { applyToGroup: true, applyScheduleToGroup: true }, bRow)
+    expect({ ...row, ...group }).toEqual(timeOnly)
+  })
+})

@@ -51,18 +51,20 @@ describe('ScheduleTimeline', () => {
       [makeLesson('l1', 'Mathematics', 'not_started')],
       { startTime: '08:30', transitionMinutes: 10 },
     )
-    render(<ScheduleTimeline schedule={schedule} currentTime="09:00" showAdjustDay={false} />)
+    render(<ScheduleTimeline schedule={schedule} currentTime="09:00" showAdjustDay={false} onEditLesson={jest.fn()} />)
     expect(screen.getByRole('button', { name: /edit lesson/i })).toBeInTheDocument()
   })
 
-  test('clicking edit icon navigates to /lessons?editId=<id>', () => {
+  // UAT 8.2 (2026-10-12): every screen edits in place now. The old fallback sent the parent
+  // to /lessons?editId=, a page no screen links to any more — so without a handler, no pencil.
+  test('without an edit handler there is no pencil and nothing navigates to /lessons?editId=', () => {
     const schedule = buildDailySchedule(
       [makeLesson('l1', 'Mathematics', 'not_started')],
       { startTime: '08:30', transitionMinutes: 10 },
     )
     render(<ScheduleTimeline schedule={schedule} currentTime="09:00" showAdjustDay={false} />)
-    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
-    expect(mockPush).toHaveBeenCalledWith('/lessons?editId=l1')
+    expect(screen.queryByRole('button', { name: /edit lesson/i })).not.toBeInTheDocument()
+    expect(mockPush).not.toHaveBeenCalled()
   })
 
   test('an onEditLesson override is called instead of navigating', () => {

@@ -125,7 +125,8 @@ afterEach(() => {
 // ─── How Amir got to the editor ──────────────────────────────────────────────
 
 describe('UAT 4.4 → 4.5 — the Full Calendar edit pencil', () => {
-  it('opens /lessons?editId=<id> (the inline LessonCard editor) when no modal handler is given', async () => {
+  it('opens the Edit lesson window in place (it used to jump to /lessons?editId=)', async () => {
+    const onEditLesson = jest.fn()
     render(
       <ScheduleTimeline
         schedule={{
@@ -146,10 +147,12 @@ describe('UAT 4.4 → 4.5 — the Full Calendar edit pencil', () => {
         currentTime="09:00"
         subjects={courses}
         showAdjustDay={false}
+        onEditLesson={onEditLesson}
       />,
     )
     await userEvent.setup().click(screen.getByRole('button', { name: /edit lesson/i }))
-    expect(mockPush).toHaveBeenCalledWith('/lessons?editId=lesson_uat')
+    expect(onEditLesson).toHaveBeenCalledWith('lesson_uat')
+    expect(mockPush).not.toHaveBeenCalled()
   })
 })
 

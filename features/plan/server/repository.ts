@@ -246,8 +246,13 @@ export async function updateLessonTaskRow(
   const existing = await getLessonTaskRow(id, householdId)
   if (!existing) return null
 
-  // undefined = not sent; the split drops those, so only sent fields are written.
-  const { group, row } = splitGroupLessonPatch(input as Record<string, unknown>, existing.groupId ? options : {})
+  // undefined = not sent; the split drops those, so only sent fields are written. Only what
+  // differs from this copy (what the parent changed) is copied to the rest of the group.
+  const { group, row } = splitGroupLessonPatch(
+    input as Record<string, unknown>,
+    existing.groupId ? options : {},
+    existing as unknown as Record<string, unknown>,
+  )
   const now = new Date()
   const rowPatch: Partial<LessonTaskRow> = { ...(row as Partial<LessonTaskRow>), updatedAt: now }
   // Moved to another learner: it is now that learner's own lesson, not part of the shared one.

@@ -248,6 +248,46 @@ describe('lesson tasks repository', () => {
     expect(await deleteLessonTaskRow(rows[0].id, householdId, { deleteGroup: true })).toBe(2)
   })
 
+  // UAT 2.4 (Amir, 2026-10-12): the editor sends every field, so "move for everyone" used to
+  // copy B's untouched date onto A and undo A's sick-day move. Only what changed is copied.
+  itDb('"move for everyone" with only a new time keeps a learner who was moved on their own day', async () => {
+    const { createLessonTasksFanOut } = await import('../../server/repository')
+    const [a, b, c] = await createLessonTasksFanOut(
+      householdId,
+      { title: 'UAT Shared 3', dueDate: '2026-10-12' },
+      [{ learnerId }, { learnerId }, { learnerId }],
+    )
+    // 2.3: A is sick — A's copy alone moves to tomorrow.
+    await updateLessonTaskRow(a.id, householdId, { title: 'UAT Shared 3', dueDate: '2026-10-13' }, { applyToGroup: true })
+    // 2.4: on B's copy, tick "also move" and set 2:00–2:30 PM. The form sends B's date too.
+    await updateLessonTaskRow(
+      b.id, householdId,
+      { title: 'UAT Shared 3', description: '', dueDate: '2026-10-12', plannedStartDate: null, scheduledStartTime: '14:00', scheduledEndTime: '14:30' },
+      { applyToGroup: true, applyScheduleToGroup: true },
+    )
+    const rows = Object.fromEntries((await listLessonTaskRows(householdId)).filter(r => r.groupId === a.groupId).map(r => [r.id, r]))
+    expect(rows[a.id].dueDate).toBe('2026-10-13')
+    expect(rows[b.id].dueDate).toBe('2026-10-12')
+    expect(rows[c.id].dueDate).toBe('2026-10-12')
+    for (const id of [a.id, b.id, c.id]) {
+      expect(rows[id].scheduledStartTime).toBe('14:00')
+      expect(rows[id].scheduledEndTime).toBe('14:30')
+    }
+
+    // 2.5: C gets its own title; a later group edit of B's description must not undo it.
+    await updateLessonTaskRow(c.id, householdId, { title: 'Only C' })
+    await updateLessonTaskRow(
+      b.id, householdId,
+      { title: 'UAT Shared 3', description: 'Bring the workbook', dueDate: '2026-10-12', scheduledStartTime: '14:00', scheduledEndTime: '14:30' },
+      { applyToGroup: true },
+    )
+    const after = Object.fromEntries((await listLessonTaskRows(householdId)).filter(r => r.groupId === a.groupId).map(r => [r.id, r]))
+    expect(after[c.id].title).toBe('Only C')
+    expect([a.id, b.id, c.id].map(id => after[id].description)).toEqual(['Bring the workbook', 'Bring the workbook', 'Bring the workbook'])
+
+    await deleteLessonTaskRow(a.id, householdId, { deleteGroup: true })
+  })
+
   itDb('createLessonTasksFanOut with one learner leaves group_id NULL', async () => {
     const { createLessonTasksFanOut } = await import('../../server/repository')
     const rows = await createLessonTasksFanOut(

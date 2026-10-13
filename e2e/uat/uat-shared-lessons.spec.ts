@@ -43,14 +43,26 @@ async function createLesson(title: string, learnerIdx: number[], extra: Record<s
   return ids
 }
 
-async function openCalendarWindow(title: string) {
+/** Calendar for one learner (the header choice decides whose copies show), then that copy's pencil. */
+async function openCalendarWindow(title: string, learnerIdx = 0) {
   await page.goto(`/plan/schedule?date=${s.today}&view=day`)
+  await selectLearner(page, s.learners[learnerIdx].name)
   const row = timelineRow(page, title)
   await expect(row).toBeVisible()
   await row.getByRole('button', { name: 'Edit lesson' }).click()
   const dialog = page.getByRole('dialog', { name: 'Edit lesson' })
   await expect(dialog.getByLabel('Title', { exact: true })).toBeVisible()
   return dialog
+}
+
+/** Lessons page showing exactly these learners. The page starts with the header learner
+ * selected, so clear to "All children" first — clicking a selected chip turns it off. */
+async function showOnlyLearners(idxs: number[]) {
+  await page.goto('/lessons')
+  const filter = page.getByRole('group', { name: 'Filter by learner' })
+  await filter.getByRole('button', { name: 'All children' }).click()
+  for (const i of idxs) await filter.getByRole('button', { name: s.learners[i].name }).click()
+  for (const i of idxs) await expect(filter.getByRole('button', { name: s.learners[i].name })).toHaveAttribute('aria-pressed', 'true')
 }
 
 test.beforeAll(async ({ browser, baseURL }) => {
@@ -193,9 +205,15 @@ test('2.2 Moving one learner\'s date leaves the others where they were', async (
   expect((await lessonById(ids[2])).dueDate).toBe(s.today)
 })
 
-test('2.3 "Also move the date and time for every learner" moves everyone', async () => {
+// Amir's checklist order (2026-10-12): A was already moved to tomorrow (2.2) when he ticked
+// "also move" on B's copy and changed only the time — and A was pulled back to today. The
+// old version of this step started with every copy on the same day, so it could not see that.
+test('2.3 "Also move" with only a new time moves everyone’s time but keeps a learner who was moved on their own day', async () => {
   const ids = await createLesson('ZZ SL 2.3', [0, 1, 2])
-  const dialog = await openCalendarWindow('ZZ SL 2.3')
+  const moved = await api(ctx.request, `/api/plan/lessons/${ids[0]}`, 'PUT', { dueDate: s.tomorrow })
+  expect(moved.status, `move A: ${moved.body?.message}`).toBe(200)
+  const dialog = await openCalendarWindow('ZZ SL 2.3', 1)
+  await expect(dialog.getByText('Only what you change here is copied to the other learners.')).toBeVisible()
   await dialog.getByRole('checkbox', { name: 'Also move the date and time for every learner' }).check()
   await dialog.getByLabel('Start time hour').selectOption('2')
   await dialog.getByLabel('Start time period').selectOption('PM')
@@ -204,7 +222,34 @@ test('2.3 "Also move the date and time for every learner" moves everyone', async
   await dialog.getByLabel('End time period').selectOption('PM')
   await dialog.getByRole('button', { name: 'Save changes' }).click()
   await expect(dialog).toHaveCount(0)
-  for (const id of ids) expect((await lessonById(id)).scheduledStartTime).toBe('14:00')
+  const [a, b, c] = await Promise.all(ids.map(lessonById))
+  expect([a.dueDate, b.dueDate, c.dueDate]).toEqual([s.tomorrow, s.today, s.today])
+  expect([a, b, c].map(l => l.scheduledStartTime)).toEqual(['14:00', '14:00', '14:00'])
+  expect([a, b, c].map(l => l.scheduledEndTime)).toEqual(['14:30', '14:30', '14:30'])
+})
+
+test('2.3b "Also move" with a new date moves every learner to that date', async () => {
+  const ids = await createLesson('ZZ SL 2.3b', [0, 1, 2])
+  await api(ctx.request, `/api/plan/lessons/${ids[0]}`, 'PUT', { dueDate: s.tomorrow })
+  const dialog = await openCalendarWindow('ZZ SL 2.3b', 1)
+  await dialog.getByRole('checkbox', { name: 'Also move the date and time for every learner' }).check()
+  await dialog.getByLabel('Due date').fill(s.tomorrow)
+  await dialog.getByRole('button', { name: 'Save changes' }).click()
+  await expect(dialog).toHaveCount(0)
+  const dates = await Promise.all(ids.map(async id => (await lessonById(id)).dueDate))
+  expect(dates).toEqual([s.tomorrow, s.tomorrow, s.tomorrow])
+})
+
+test('2.3c A group edit of the description keeps another learner’s own title', async () => {
+  const ids = await createLesson('ZZ SL 2.3c', [0, 1, 2])
+  await api(ctx.request, `/api/plan/lessons/${ids[2]}`, 'PUT', { title: 'ZZ SL 2.3c only C' })
+  const dialog = await openCalendarWindow('ZZ SL 2.3c', 1)
+  await dialog.getByLabel(/^Description/).fill('Bring the workbook')
+  await dialog.getByRole('button', { name: 'Save changes' }).click()
+  await expect(dialog).toHaveCount(0)
+  const [a, b, c] = await Promise.all(ids.map(lessonById))
+  expect([a.title, b.title, c.title]).toEqual(['ZZ SL 2.3c', 'ZZ SL 2.3c', 'ZZ SL 2.3c only C'])
+  expect([a, b, c].map(l => l.description)).toEqual(['Bring the workbook', 'Bring the workbook', 'Bring the workbook'])
 })
 
 test('2.4 Unticking "Apply to all learners" edits only this learner', async () => {
@@ -276,9 +321,7 @@ test('4.1 Clearing description / curriculum / chapter and unticking homework is 
 
 test('5.1 With all three learners selected, a shared lesson is ONE card with three chips', async () => {
   await createLesson('ZZ SL 5.1', [0, 1, 2])
-  await page.goto('/lessons')
-  const filter = page.getByRole('group', { name: 'Filter by learner' })
-  for (const l of s.learners) await filter.getByRole('button', { name: l.name }).click()
+  await showOnlyLearners([0, 1, 2])
   const card = page.locator('[data-shared-group]').filter({ hasText: 'ZZ SL 5.1' })
   await expect(card).toHaveCount(1)
   await expect(card.getByRole('list', { name: 'Learners' }).getByRole('listitem')).toHaveCount(3)
@@ -287,18 +330,14 @@ test('5.1 With all three learners selected, a shared lesson is ONE card with thr
 
 test('5.2 With one learner selected it is that learner\'s ordinary card', async () => {
   await createLesson('ZZ SL 5.2', [0, 1, 2])
-  await page.goto('/lessons')
-  await page.getByRole('group', { name: 'Filter by learner' }).getByRole('button', { name: s.learners[1].name }).click()
+  await showOnlyLearners([1])
   await expect(page.locator('[data-shared-group]').filter({ hasText: 'ZZ SL 5.2' })).toHaveCount(0)
   await expect(page.locator('[data-lesson-id]').filter({ hasText: 'ZZ SL 5.2' })).toHaveCount(1)
 })
 
 test('5.3 Marking one learner done from the shared card changes only their chip', async () => {
   const ids = await createLesson('ZZ SL 5.3', [0, 1])
-  await page.goto('/lessons')
-  const filter = page.getByRole('group', { name: 'Filter by learner' })
-  await filter.getByRole('button', { name: s.learners[0].name }).click()
-  await filter.getByRole('button', { name: s.learners[1].name }).click()
+  await showOnlyLearners([0, 1])
   const card = page.locator('[data-shared-group]').filter({ hasText: 'ZZ SL 5.3' })
   await card.getByRole('button', { name: 'Show learners' }).click()
   await card.locator(`[data-lesson-id="${ids[0]}"]`).getByRole('button', { name: 'Mark lesson done' }).click()
@@ -315,9 +354,10 @@ test('6.1 Delete → "Just <learner>" removes only that copy', async () => {
   await dialog.getByRole('button', { name: 'Delete this lesson' }).click()
   await dialog.getByRole('button', { name: `Just ${s.learners[0].name}` }).click()
   await expect(dialog).toHaveCount(0)
-  await expect(timelineRow(page, 'ZZ SL 6.1')).toHaveCount(2) // the Calendar shows all learners
+  await expect(timelineRow(page, 'ZZ SL 6.1')).toHaveCount(0) // gone from A's day, without a reload
   expect((await api(ctx.request, `/api/plan/lessons/${ids[0]}`)).status).toBe(404)
   expect((await api(ctx.request, `/api/plan/lessons/${ids[1]}`)).status).toBe(200)
+  expect((await api(ctx.request, `/api/plan/lessons/${ids[2]}`)).status).toBe(200)
 })
 
 test('6.2 Delete → "All learners in this group" removes every copy', async () => {
@@ -341,9 +381,7 @@ test('6.3 Cancel on the delete question deletes nothing', async () => {
 
 test('6.4 Deleting the whole shared lesson from the Lessons page says how many were deleted', async () => {
   await createLesson('ZZ SL 6.4', [0, 1, 2])
-  await page.goto('/lessons')
-  const filter = page.getByRole('group', { name: 'Filter by learner' })
-  for (const l of s.learners) await filter.getByRole('button', { name: l.name }).click()
+  await showOnlyLearners([0, 1, 2])
   const card = page.locator('[data-shared-group]').filter({ hasText: 'ZZ SL 6.4' })
   await card.getByRole('button', { name: 'Delete shared lesson' }).click()
   await page.getByRole('button', { name: 'Delete for all 3' }).click()

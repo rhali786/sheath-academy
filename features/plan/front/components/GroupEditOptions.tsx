@@ -12,7 +12,8 @@ interface GroupEditOptionsProps {
 /**
  * Shared-lesson save options, used by both lesson editors (inline card and Edit lesson
  * window). Title and details go to every learner by default; date and time stay with
- * this learner unless the parent asks to move everyone.
+ * this learner unless the parent asks to move everyone. Either way only the fields the
+ * parent changed are copied, so another learner's own day or title is kept.
  */
 export function GroupEditOptions({
   childName,
@@ -35,6 +36,7 @@ export function GroupEditOptions({
       </label>
       {applyToGroup && (
         <div className="pl-6 space-y-1">
+          <p className="text-xs text-slate-500">Only what you change here is copied to the other learners.</p>
           <label className="flex items-center gap-2 text-xs text-slate-600">
             <input
               type="checkbox"

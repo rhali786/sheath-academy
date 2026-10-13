@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Check, ChevronRight, Pencil } from 'lucide-react'
 import type { DaySchedule, ScheduleEntry } from '@/features/schedule/types'
 import type { SubjectCourse } from '@/features/subjects/types'
@@ -18,7 +17,10 @@ interface ScheduleTimelineProps {
   subjects?: SubjectCourse[]
   showAdjustDay?: boolean
   onScheduleChange?: (schedule: DaySchedule) => void
-  /** Override for the edit (pencil) action. Defaults to navigating to /lessons?editId=<id>. */
+  /**
+   * Opens the editor for a lesson, in place. Without it rows have no pencil: the old
+   * fallback jumped to /lessons?editId=, which no screen uses any more (UAT 8.2).
+   */
   onEditLesson?: (id: string) => void
 }
 
@@ -68,7 +70,7 @@ function TimelineRow({
   currentTime: string
   subjectsById: Map<string, SubjectCourse>
   isLast: boolean
-  onEditLesson: (id: string) => void
+  onEditLesson?: (id: string) => void
 }) {
   const status = getEntryTimelineStatus(entry, currentTime)
   const isLesson = entry.kind === 'lesson'
@@ -105,7 +107,7 @@ function TimelineRow({
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <StatusPill status={status} />
-                {isLesson && (
+                {isLesson && onEditLesson && (
                   <button
                     onClick={() => onEditLesson(entry.lesson.id)}
                     aria-label="Edit lesson"
@@ -140,8 +142,6 @@ export function ScheduleTimeline({
     setPrevInitialSchedule(initialSchedule)
     setSchedule(initialSchedule)
   }
-  const router = useRouter()
-  const handleEditLesson = onEditLesson ?? (id => router.push('/lessons?editId=' + id))
 
   function handleScheduleChange(next: DaySchedule) {
     setSchedule(next)
@@ -182,7 +182,7 @@ export function ScheduleTimeline({
           currentTime={currentTime}
           subjectsById={subjectsById}
           isLast={index === entries.length - 1}
-          onEditLesson={handleEditLesson}
+          onEditLesson={onEditLesson}
         />
       ))}
 

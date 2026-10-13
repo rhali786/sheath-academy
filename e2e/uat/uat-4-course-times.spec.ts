@@ -135,21 +135,22 @@ test('4.5 — from the Full Calendar, edit that lesson and give it its own time,
   const row = timelineRow(page, LESSON_TITLE)
   await expect(row).toBeVisible()
   await row.getByRole('button', { name: 'Edit lesson' }).click()
-  await page.waitForURL(/\/lessons\?editId=/)
-
-  const editor = page.locator(`[data-lesson-id="${state.lessonId}"]`)
-  await expect(editor).toBeVisible()
+  // Since the shared-lessons batch the Calendar opens the Edit lesson window in place
+  // (it used to navigate to /lessons?editId=).
+  const editor = page.getByRole('dialog', { name: 'Edit lesson' })
+  await expect(editor.getByLabel('Start time hour')).toBeVisible()
   await editor.getByLabel('Start time hour').selectOption('1')
   await editor.getByLabel('Start time minute').selectOption('00')
   await editor.getByLabel('Start time period').selectOption('PM')
   await editor.getByLabel('End time hour').selectOption('1')
   await editor.getByLabel('End time minute').selectOption('30')
   await editor.getByLabel('End time period').selectOption('PM')
-  await editor.getByRole('button', { name: /save/i }).click()
+  await editor.getByRole('button', { name: 'Save changes' }).click()
+  await expect(editor).toHaveCount(0)
 
   await expect.poll(async () => (await api(ctx.request, `/api/plan/lessons/${state.lessonId}`)).body?.data?.scheduledStartTime)
     .toBe('13:00')
-  await page.goto(`/plan/schedule?date=${state.today}`)
+  // Shows on the Calendar without a reload (UAT 3.8).
   await expect(timelineRow(page, LESSON_TITLE)).toContainText('1:00 PM')
 })
 
