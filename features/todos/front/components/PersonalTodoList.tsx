@@ -30,7 +30,10 @@ function CardShell({ count, children }: { count?: number; children: React.ReactN
   )
 }
 
-export function PersonalTodoList() {
+const PARENT_EMPTY_HINT = 'No to-dos yet — add one for curriculum or supply planning'
+
+/** `emptyHint` replaces the parent-oriented empty text (a learner's My day passes its own). */
+export function PersonalTodoList({ emptyHint = PARENT_EMPTY_HINT }: { emptyHint?: string } = {}) {
   const [todos, setTodos] = useState<PersonalTodo[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -110,7 +113,7 @@ export function PersonalTodoList() {
   return (
     <CardShell count={todos.length}>
       {todos.length === 0 ? (
-        <p className="text-sm text-slate-400 mb-4">No to-dos yet — add one for curriculum or supply planning</p>
+        <p className="text-sm text-slate-400 mb-4">{emptyHint}</p>
       ) : (
         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 mb-4">
           {todos.map(todo => (

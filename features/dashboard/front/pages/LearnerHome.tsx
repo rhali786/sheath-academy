@@ -166,7 +166,7 @@ export function LearnerHome() {
           <LearningTimeWeekCard />
           <IslamicCalendarCard events={islamicEvents} />
         </div>
-        <PersonalTodoList />
+        <PersonalTodoList emptyHint="No to-dos yet — add homework or anything you want to remember." />
       </div>
     </div>
   )

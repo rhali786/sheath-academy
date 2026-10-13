@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { useHousehold } from '@/features/household/front/context'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { schoolYearApi } from '@/features/school-year/front/services/api'
+import { useViewerRole } from '@/features/auth/front/viewerRole'
 import { NowCard } from '@/features/learning-time/front/components/NowCard'
 import { SessionHistoryList } from '@/features/learning-time/front/components/SessionHistoryList'
 import type { SubjectCourse } from '@/features/subjects/types'
@@ -16,13 +17,21 @@ export function LearningTimePage() {
   const [selectedCourseName, setSelectedCourseName] = useState('')
   const [activeSchoolYearId, setActiveSchoolYearId] = useState<string | null>(null)
   const [schoolYearLoaded, setSchoolYearLoaded] = useState(false)
+  const { isLearner, known: roleKnown } = useViewerRole()
 
   useEffect(() => {
+    if (!roleKnown) return
+    // The school year is parent-only (UAT 5.2): a learner would only get a 403. Without it the
+    // course list is what it was when the request was refused.
+    if (isLearner) {
+      setSchoolYearLoaded(true)
+      return
+    }
     schoolYearApi.getActiveSchoolYear()
       .then(res => setActiveSchoolYearId(res.data?.id ?? null))
       .catch(() => setActiveSchoolYearId(null))
       .finally(() => setSchoolYearLoaded(true))
-  }, [])
+  }, [roleKnown, isLearner])
 
   const activeChildren = children.filter(c => c.isActive)
   // Rollover clones a course into the new school year but leaves the source row active too,

@@ -80,6 +80,7 @@ test('LH.1 A learner’s Home is "My day" and loads with nothing refused', async
   })
   await expect(page.getByText('Error Loading Dashboard')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: /^Marhaba/ })).toBeVisible()
+  await expect(page.getByText('No to-dos yet — add homework or anything you want to remember.')).toBeVisible()
   expect(refused).toEqual([])
 })
 
@@ -109,7 +110,7 @@ test('LH.4 A sibling left selected in the tab is replaced, so Learning Time load
     await page.goto('/learning-time')
     await page.waitForLoadState('networkidle')
   })
-  expect(refused.filter(r => !r.includes('/school-years/'))).toEqual([])
+  expect(refused).toEqual([])
   await expect(page.getByText('Learners can only access their own information.')).toHaveCount(0)
   expect(await page.evaluate(() => sessionStorage.getItem('sheath.selectedChildId'))).toBe(s.id)
 })

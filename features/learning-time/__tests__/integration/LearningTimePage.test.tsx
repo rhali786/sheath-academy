@@ -39,6 +39,7 @@ jest.mock('@/features/school-year/front/services/api', () => ({
 }))
 
 import { useHousehold } from '@/features/household/front/context'
+import { useSession } from 'next-auth/react'
 import { learningTimeApi } from '@/features/learning-time/front/services/api'
 import { plannerApi } from '@/features/plan/front/services/api'
 import { schoolYearApi } from '@/features/school-year/front/services/api'
@@ -1021,5 +1022,34 @@ describe('LearningTimePage — session history', () => {
     await waitFor(() => {
       expect(mockList).toHaveBeenCalledWith({ learnerId: 'child_002' })
     })
+  })
+})
+
+// UAT 8.3 follow-up (2026-10-13): the school year is parent-only (UAT 5.2 keeps it that way),
+// so a learner's Learning Time page got a 403 on every visit. It does not ask for a learner;
+// without a school year the course list is the same as when the request was refused.
+describe('LearningTimePage — learner login', () => {
+
+  beforeEach(() => {
+    ;(useSession as jest.Mock).mockReturnValue({
+      data: { user: { email: 'learner.x@no-email.local', householdId: 'hh_001', memberships: [{ householdId: 'hh_001', householdName: 'Barakah Academy', role: 'learner' }] }, expires: '2099-01-01' },
+      status: 'authenticated',
+    })
+  })
+
+  afterEach(() => {
+    ;(useSession as jest.Mock).mockReturnValue({ data: null, status: 'unauthenticated' })
+  })
+
+  it('never asks for the parent-only school year, and still works', async () => {
+    renderPage()
+    expect(await screen.findByText(/nothing assigned now/i)).toBeInTheDocument()
+    expect(mockGetActiveSchoolYear).not.toHaveBeenCalled()
+  })
+
+  it('a parent still loads the school year', async () => {
+    ;(useSession as jest.Mock).mockReturnValue({ data: null, status: 'unauthenticated' })
+    renderPage()
+    await waitFor(() => expect(mockGetActiveSchoolYear).toHaveBeenCalledTimes(1))
   })
 })
