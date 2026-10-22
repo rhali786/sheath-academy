@@ -149,6 +149,7 @@ export default function Dashboard() {
                 subjects={allSubjects}
                 learnerId={selectedChildId}
                 onLessonSaved={fetchDayLessons}
+                learners={!selectedChildId && studentProfiles.length > 1 ? studentProfiles : undefined}
               />
             </div>
             <aside data-testid="dashboard-attention-hub">

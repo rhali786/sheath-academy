@@ -73,17 +73,19 @@ function mergeTimelineEntries(lessonEntries: LessonScheduleEntry[], includeBreak
 
 /**
  * Builds a DaySchedule from an ordered list of lessons, placing each block
- * back-to-back with a configurable transition gap between them.
+ * back-to-back with a configurable transition gap between them. Each learner has their own
+ * day: untimed lessons stack after that learner's earlier lessons, not after everyone's.
  */
 export function buildDailySchedule(
   lessons: LessonTask[],
   settings: ScheduleSettings,
 ): DaySchedule {
   const { startTime, transitionMinutes, defaultDurationMinutes = 30, includeSyntheticBreaks = false } = settings
-  let cursor = toMinutes(startTime)
+  const cursors = new Map<string, number>()
   const blocks: ScheduleBlock[] = []
 
   for (const lesson of lessons) {
+    const cursor = cursors.get(lesson.childId) ?? toMinutes(startTime)
     // An explicit lesson time wins; otherwise the course's recurring time for this weekday.
     const fixed = lesson.scheduledStartTime && lesson.scheduledEndTime
       ? { startTime: lesson.scheduledStartTime, endTime: lesson.scheduledEndTime }
@@ -103,7 +105,7 @@ export function buildDailySchedule(
         flexibilityState: 'locked',
       })
 
-      cursor = Math.max(cursor, overrideEnd + transitionMinutes)
+      cursors.set(lesson.childId, Math.max(cursor, overrideEnd + transitionMinutes))
       continue
     }
 
@@ -119,7 +121,7 @@ export function buildDailySchedule(
       durationMinutes,
     })
 
-    cursor = blockEnd + transitionMinutes
+    cursors.set(lesson.childId, blockEnd + transitionMinutes)
   }
 
   const lessonEntries = blocks.map(blockToLessonEntry)
@@ -152,25 +154,28 @@ export function reflow(
 
   if (action === 'compress') {
     const blocks = [...schedule.blocks]
-    let cursor = currentMinutes
+    // One cursor per learner, so compressing doesn't chain every learner's lessons together.
+    const cursors = new Map<string, number>()
 
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i]
       if (toMinutes(block.startTime) <= currentMinutes) continue // already past
 
+      const childId = block.lesson.childId
       if (block.flexibilityState === 'locked') {
         // Locked block stays; move cursor past it
-        cursor = toMinutes(block.endTime)
+        cursors.set(childId, toMinutes(block.endTime))
         continue
       }
 
+      const cursor = cursors.get(childId) ?? currentMinutes
       const duration = block.durationMinutes
       blocks[i] = {
         ...block,
         startTime: fromMinutes(cursor),
         endTime: fromMinutes(cursor + duration),
       }
-      cursor = cursor + duration
+      cursors.set(childId, cursor + duration)
     }
 
     return {

@@ -32,8 +32,9 @@ jest.mock('@/features/schedule/front/components/MonthCalendarView', () => ({
 }))
 
 jest.mock('@/features/schedule/front/components/ScheduleTimeline', () => ({
-  ScheduleTimeline: ({ schedule }: { schedule: { blocks: { lesson: { title: string }; startTime: string }[] } }) => (
+  ScheduleTimeline: ({ schedule, learners }: { schedule: { blocks: { lesson: { title: string }; startTime: string }[] }; learners?: { name: string }[] }) => (
     <div data-testid="schedule-timeline">
+      {learners && <span data-testid="timeline-learners">{learners.map(l => l.name).join(', ')}</span>}
       {schedule.blocks.map(b => (
         <div key={b.lesson.title}>
           <span>{b.startTime}</span>
@@ -158,7 +159,7 @@ describe('ScheduleNowNextCard', () => {
 
 describe('SchedulePage', () => {
   beforeEach(() => {
-    mockUseHousehold.mockImplementation(() => ({ allSubjects: [], householdProfile: null }))
+    mockUseHousehold.mockImplementation(() => ({ allSubjects: [], householdProfile: null, studentProfiles: [] }))
     mockGetLessons.mockResolvedValue([])
   })
 
@@ -203,6 +204,7 @@ describe('SchedulePage', () => {
           recurringSchedule: [{ daysOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], startTime: '10:15', endTime: '11:00' }],
         }],
         householdProfile: null,
+        studentProfiles: [],
       }))
       mockGetLessons.mockResolvedValue([
         { id: 'l1', childId: 'c1', subjectId: 's_math', householdId: 'h1', title: 'Math lesson', dueDate: '2026-10-13', status: 'not_started', order: 1, estimatedDuration: '30min', createdAt: '', updatedAt: '' },
@@ -217,6 +219,29 @@ describe('SchedulePage', () => {
     } finally {
       mockUseSearchParams.mockReturnValue(new URLSearchParams())
     }
+  })
+
+  // Feedback d0d386a4: with every learner in view the day's rows name who each lesson is for.
+  it('with all children in view the timeline is given every learner', async () => {
+    sessionStorage.clear()
+    mockUseHousehold.mockImplementation(() => ({
+      allSubjects: [], householdProfile: null,
+      studentProfiles: [{ id: 'c1', name: 'Hawa' }, { id: 'c2', name: 'Hamza' }],
+    }))
+    renderSchedulePage()
+    expect(await screen.findByTestId('timeline-learners')).toHaveTextContent('Hawa, Hamza')
+  })
+
+  it('with one learner selected the timeline is not given learners', async () => {
+    sessionStorage.setItem('sheath.selectedChildId', 'c1')
+    mockUseHousehold.mockImplementation(() => ({
+      allSubjects: [], householdProfile: null,
+      studentProfiles: [{ id: 'c1', name: 'Hawa' }, { id: 'c2', name: 'Hamza' }],
+    }))
+    renderSchedulePage()
+    await screen.findByTestId('schedule-timeline')
+    expect(screen.queryByTestId('timeline-learners')).not.toBeInTheDocument()
+    sessionStorage.clear()
   })
 
   it('day mode: fetch uses [selectedDate, selectedDate] as the window', async () => {
@@ -295,6 +320,7 @@ describe('SchedulePage', () => {
     mockUseHousehold.mockImplementation(() => ({
       allSubjects: [],
       householdProfile: { schoolDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] },
+      studentProfiles: [],
     }))
     mockUseSearchParams.mockReturnValue(new URLSearchParams('date=2026-06-06')) // Saturday, but a school day here
     renderSchedulePage()

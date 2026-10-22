@@ -144,6 +144,7 @@ export function SchedulePage() {
                 subjects={allSubjects}
                 showAdjustDay
                 onEditLesson={setEditingLessonId}
+                learners={!selectedChildId && studentProfiles.length > 1 ? studentProfiles : undefined}
               />
             )}
           </div>
