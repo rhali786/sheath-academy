@@ -19,6 +19,7 @@ import Dashboard from '@/features/dashboard/front/pages/Dashboard'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { plannerApi } from '@/features/plan/front/services/api'
 import { alertsApi } from '@/features/alerts/front/services/api'
+import { childrenApi } from '@/features/children/front/services/api'
 
 jest.mock('next/navigation', () => ({
   usePathname: jest.fn(() => '/'),
@@ -49,8 +50,12 @@ jest.mock('@/features/todos/front/components/PersonalTodoList', () => ({
   PersonalTodoList: () => <div data-testid="personal-todo-list" />,
 }))
 
+const mockTimelineProps: { learners?: { id: string; name: string }[] }[] = []
 jest.mock('@/features/schedule/front/components/ScheduleTimeline', () => ({
-  ScheduleTimeline: () => <div data-testid="schedule-timeline" />,
+  ScheduleTimeline: (props: { learners?: { id: string; name: string }[] }) => {
+    mockTimelineProps.push(props)
+    return <div data-testid="schedule-timeline" />
+  },
 }))
 
 const HOUSEHOLD_ALERT = {
@@ -290,6 +295,33 @@ describe('Dashboard Page Integration', () => {
   test('ScheduleTimeline is rendered inside the schedule panel', async () => {
     await renderLoaded()
     expect(screen.getByTestId('schedule-timeline')).toBeInTheDocument()
+  })
+
+  // Feedback d0d386a4: with "All children" the schedule must say who does each class.
+  test('with all children in view the schedule is given every learner, to name them on each row', async () => {
+    sessionStorage.clear()
+    ;(childrenApi.getAllChildren as jest.Mock).mockImplementation(() => Promise.resolve({
+      data: [
+        { id: 'c1', householdId: 'h1', name: 'Alice', gradeLabel: '1', isActive: true, createdAt: '2026-01-01' },
+        { id: 'c2', householdId: 'h1', name: 'Bob', gradeLabel: '2', isActive: true, createdAt: '2026-01-01' },
+      ],
+    }))
+    mockTimelineProps.length = 0
+    await renderLoaded()
+    await waitFor(() => {
+      expect(mockTimelineProps.at(-1)?.learners?.map(l => l.name)).toEqual(['Alice', 'Bob'])
+    })
+    ;(childrenApi.getAllChildren as jest.Mock).mockImplementation(() => Promise.resolve({ data: [] }))
+  })
+
+  test('with one learner selected the schedule is not given learners (no names, as before)', async () => {
+    sessionStorage.setItem('sheath.selectedChildId', 'c1')
+    mockTimelineProps.length = 0
+    await renderLoaded()
+    await waitFor(() => expect(mockTimelineProps.length).toBeGreaterThan(0))
+    expect(mockTimelineProps.at(-1)?.learners).toBeUndefined()
+    sessionStorage.clear()
+    ;(childrenApi.getAllChildren as jest.Mock).mockImplementation(() => Promise.resolve({ data: [] }))
   })
 
   test('dashboard header renders without child selector when household has fewer than two children', async () => {

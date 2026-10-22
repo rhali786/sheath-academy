@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import type { DaySchedule } from '@/features/schedule/types'
 import type { SubjectCourse } from '@/features/subjects/types'
+import type { StudentProfile } from '@/features/lib/types'
 import { getScheduleFooterCounts } from '@/features/schedule/lib/scheduleFooterCounts'
 import { ScheduleTimeline } from '@/features/schedule/front/components/ScheduleTimeline'
 import { EditLessonModal } from '@/features/plan/front/components/EditLessonModal'
@@ -21,9 +22,11 @@ interface TodaySchedulePanelProps {
   canEdit?: boolean
   /** Shows "Mark done" on lessons not yet done (a learner's My day). */
   onMarkDone?: (lessonId: string) => void
+  /** Every learner in view ("All children"): rows name who each lesson is for. */
+  learners?: Pick<StudentProfile, 'id' | 'name'>[]
 }
 
-export function TodaySchedulePanel({ schedule, currentTime, subjects, learnerId, onLessonSaved, canEdit = true, onMarkDone }: TodaySchedulePanelProps) {
+export function TodaySchedulePanel({ schedule, currentTime, subjects, learnerId, onLessonSaved, canEdit = true, onMarkDone, learners }: TodaySchedulePanelProps) {
   const [liveSchedule, setLiveSchedule] = useState(schedule)
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null)
   const [startedSession, setStartedSession] = useState(false)
@@ -51,6 +54,7 @@ export function TodaySchedulePanel({ schedule, currentTime, subjects, learnerId,
         onScheduleChange={setLiveSchedule}
         onEditLesson={canEdit ? setEditingLessonId : undefined}
         onMarkDone={onMarkDone}
+        learners={learners}
       />
 
       <div className="mt-4 pt-3 border-t border-slate-100">

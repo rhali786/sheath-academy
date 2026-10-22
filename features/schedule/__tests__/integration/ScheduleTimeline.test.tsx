@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { buildDailySchedule } from '@/features/schedule/server/service'
 import { ScheduleTimeline } from '@/features/schedule/front/components/ScheduleTimeline'
 import type { LessonTask } from '@/features/plan/types'
@@ -133,5 +133,76 @@ describe('ScheduleTimeline — Mark done', () => {
   test('without a handler there is no Mark done (the parent Dashboard is unchanged)', () => {
     render(<ScheduleTimeline schedule={schedule()} currentTime="09:00" showAdjustDay={false} onEditLesson={jest.fn()} />)
     expect(screen.queryByRole('button', { name: /^Mark .* done$/ })).not.toBeInTheDocument()
+  })
+})
+
+// Feedback d0d386a4 (2026-10-13): with "All children" selected the schedule showed classes but
+// not who was doing them. With `learners` given, each lesson row names its learner(s).
+describe('ScheduleTimeline — learner names (all children in view)', () => {
+  const LEARNERS = [{ id: 'c1', name: 'Hawa' }, { id: 'c2', name: 'Hamza' }]
+
+  function forChild(l: LessonTask, childId: string, overrides: Partial<LessonTask> = {}): LessonTask {
+    return { ...l, childId, ...overrides }
+  }
+
+  test("each lesson row names its learner", () => {
+    const schedule = buildDailySchedule(
+      [forChild(makeLesson('l1', 'Mathematics'), 'c1'), forChild(makeLesson('l2', 'Reading'), 'c2')],
+      { startTime: '08:30', transitionMinutes: 10 },
+    )
+    render(<ScheduleTimeline schedule={schedule} currentTime="08:00" showAdjustDay={false} learners={LEARNERS} />)
+    expect(within(screen.getByTestId('timeline-entry-block_l1')).getByRole('list', { name: 'Learners' })).toHaveTextContent('Hawa')
+    expect(within(screen.getByTestId('timeline-entry-block_l2')).getByRole('list', { name: 'Learners' })).toHaveTextContent('Hamza')
+  })
+
+  test('a shared lesson at the same time shows once, naming every learner', () => {
+    const schedule = buildDailySchedule(
+      [
+        forChild(makeLesson('l1', 'Seerah'), 'c1', { groupId: 'g1' }),
+        forChild(makeLesson('l2', 'Seerah'), 'c2', { groupId: 'g1' }),
+      ],
+      { startTime: '08:30', transitionMinutes: 10 },
+    )
+    render(<ScheduleTimeline schedule={schedule} currentTime="08:00" showAdjustDay={false} learners={LEARNERS} />)
+    expect(screen.getAllByText('Seerah')).toHaveLength(1)
+    const chips = within(screen.getByRole('list', { name: 'Learners' })).getAllByRole('listitem')
+    expect(chips.map(c => c.textContent)).toEqual(['Hawa', 'Hamza'])
+  })
+
+  test("a shared lesson's chips show each learner's status when they differ", () => {
+    const schedule = buildDailySchedule(
+      [
+        forChild(makeLesson('l1', 'Seerah', 'completed'), 'c1', { groupId: 'g1' }),
+        forChild(makeLesson('l2', 'Seerah'), 'c2', { groupId: 'g1' }),
+      ],
+      { startTime: '08:30', transitionMinutes: 10 },
+    )
+    render(<ScheduleTimeline schedule={schedule} currentTime="08:00" showAdjustDay={false} learners={LEARNERS} />)
+    expect(screen.getByRole('listitem', { name: 'Hawa: Completed' })).toBeInTheDocument()
+    expect(screen.getByRole('listitem', { name: 'Hamza: Planned' })).toBeInTheDocument()
+    expect(screen.queryByTestId('timeline-status-completed')).not.toBeInTheDocument()
+  })
+
+  test("editing a shared row opens the first learner's copy", () => {
+    const onEditLesson = jest.fn()
+    const schedule = buildDailySchedule(
+      [
+        forChild(makeLesson('l1', 'Seerah'), 'c1', { groupId: 'g1' }),
+        forChild(makeLesson('l2', 'Seerah'), 'c2', { groupId: 'g1' }),
+      ],
+      { startTime: '08:30', transitionMinutes: 10 },
+    )
+    render(<ScheduleTimeline schedule={schedule} currentTime="08:00" showAdjustDay={false} learners={LEARNERS} onEditLesson={onEditLesson} />)
+    fireEvent.click(screen.getByRole('button', { name: /edit lesson/i }))
+    expect(onEditLesson).toHaveBeenCalledWith('l1')
+  })
+
+  test('without learners (one learner selected) rows show no names and shared copies are not merged', () => {
+    const schedule = buildDailySchedule(
+      [forChild(makeLesson('l1', 'Seerah'), 'c1', { groupId: 'g1' })],
+      { startTime: '08:30', transitionMinutes: 10 },
+    )
+    render(<ScheduleTimeline schedule={schedule} currentTime="08:00" showAdjustDay={false} />)
+    expect(screen.queryByRole('list', { name: 'Learners' })).not.toBeInTheDocument()
   })
 })

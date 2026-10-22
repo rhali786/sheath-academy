@@ -99,3 +99,45 @@ describe('courseTimesFromSubjects', () => {
     ])).toEqual({ math: [MATH_BLOCK] })
   })
 })
+
+// Feedback d0d386a4 (2026-10-13): with "All children" in view, untimed lessons were stacked one
+// after another across every learner, as if one person did them all. Each learner has their
+// own day: their untimed lessons start at the school start time and stack after their own.
+describe('buildDailySchedule — one day per learner', () => {
+  it("starts each learner's untimed lessons at the start time", () => {
+    const schedule = buildDailySchedule(
+      [
+        lesson('a-math', 'math', { childId: 'a' }),
+        lesson('b-read', 'read', { childId: 'b' }),
+        lesson('a-sci', 'sci', { childId: 'a' }),
+        lesson('b-art', 'art', { childId: 'b' }),
+      ],
+      BASE,
+    )
+    expect(block(schedule, 'a-math')).toMatchObject({ startTime: '08:30', endTime: '09:00' })
+    expect(block(schedule, 'b-read')).toMatchObject({ startTime: '08:30', endTime: '09:00' })
+    expect(block(schedule, 'a-sci')).toMatchObject({ startTime: '09:10', endTime: '09:40' })
+    expect(block(schedule, 'b-art')).toMatchObject({ startTime: '09:10', endTime: '09:40' })
+  })
+
+  it("a timed lesson pushes back only its own learner's untimed lessons", () => {
+    const schedule = buildDailySchedule(
+      [
+        lesson('a-math', 'math', { childId: 'a', scheduledStartTime: '08:30', scheduledEndTime: '09:30' }),
+        lesson('a-sci', 'sci', { childId: 'a' }),
+        lesson('b-read', 'read', { childId: 'b' }),
+      ],
+      BASE,
+    )
+    expect(block(schedule, 'a-sci')).toMatchObject({ startTime: '09:40' })
+    expect(block(schedule, 'b-read')).toMatchObject({ startTime: '08:30' })
+  })
+
+  it('orders entries by time across learners', () => {
+    const schedule = buildDailySchedule(
+      [lesson('a1', 'math', { childId: 'a' }), lesson('a2', 'sci', { childId: 'a' }), lesson('b1', 'read', { childId: 'b' })],
+      BASE,
+    )
+    expect(schedule.entries.map(e => e.id)).toEqual(['block_a1', 'block_b1', 'block_a2'])
+  })
+})

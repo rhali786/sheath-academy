@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from 'react'
 import { Check, ChevronRight, Pencil } from 'lucide-react'
-import type { DaySchedule, ScheduleEntry } from '@/features/schedule/types'
+import type { DaySchedule, LessonScheduleEntry, ScheduleEntry } from '@/features/schedule/types'
 import type { SubjectCourse } from '@/features/subjects/types'
+import type { StudentProfile } from '@/features/lib/types'
 import { getEntryTimelineStatus, type TimelineDisplayStatus } from '@/features/schedule/lib/timelineStatus'
+import { groupTimelineEntries, type TimelineItem } from '@/features/schedule/lib/groupTimelineEntries'
 import {
   getBreakEntryStyle,
   getSubjectScheduleStyleBySubjectId,
@@ -24,6 +26,11 @@ interface ScheduleTimelineProps {
   onEditLesson?: (id: string) => void
   /** Shows "Mark done" on lessons not yet done or skipped (a learner's My day). */
   onMarkDone?: (id: string) => void
+  /**
+   * Every learner in view ("All children"). When given, each lesson row names its learner(s)
+   * and a shared lesson's copies at the same time are one row (feedback d0d386a4).
+   */
+  learners?: Pick<StudentProfile, 'id' | 'name'>[]
 }
 
 const STATUS_PILL: Record<Exclude<TimelineDisplayStatus, 'none'>, string> = {
@@ -61,22 +68,61 @@ function StatusPill({ status }: { status: TimelineDisplayStatus }) {
   )
 }
 
+function LearnerChips({
+  copies,
+  currentTime,
+  learnerNames,
+  showStatus,
+}: {
+  copies: LessonScheduleEntry[]
+  currentTime: string
+  learnerNames: Map<string, string>
+  showStatus: boolean
+}) {
+  return (
+    <ul aria-label="Learners" className="flex flex-wrap gap-1 mt-1">
+      {copies.map(copy => {
+        const name = learnerNames.get(copy.lesson.childId) ?? 'Learner'
+        const status = getEntryTimelineStatus(copy, currentTime)
+        const label = showStatus && status !== 'none' ? STATUS_LABEL[status] : null
+        return (
+          <li
+            key={copy.id}
+            aria-label={label ? `${name}: ${label}` : name}
+            className={`text-xs px-2 py-0.5 rounded-full font-medium ${label && status !== 'none' ? STATUS_PILL[status] : 'bg-slate-100 text-slate-600'}`}
+          >
+            {name}
+            {label && <span aria-hidden="true"> · {label}</span>}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 function TimelineRow({
   entry,
+  copies,
   currentTime,
   subjectsById,
+  learnerNames,
   isLast,
   onEditLesson,
   onMarkDone,
 }: {
   entry: ScheduleEntry
+  copies: LessonScheduleEntry[]
   currentTime: string
   subjectsById: Map<string, SubjectCourse>
+  learnerNames?: Map<string, string>
   isLast: boolean
   onEditLesson?: (id: string) => void
   onMarkDone?: (id: string) => void
 }) {
-  const status = getEntryTimelineStatus(entry, currentTime)
+  const copyStatuses = new Set(copies.map(c => getEntryTimelineStatus(c, currentTime)))
+  // A shared row whose learners are at different stages shows each one's status on their chip.
+  const mixedStatus = copyStatuses.size > 1
+  const status = mixedStatus ? 'none' : getEntryTimelineStatus(entry, currentTime)
   const isLesson = entry.kind === 'lesson'
   const style = isLesson
     ? getSubjectScheduleStyleBySubjectId(entry.lesson.subjectId, subjectsById)
@@ -107,6 +153,14 @@ function TimelineRow({
                 <p className="text-sm font-semibold text-slate-900 truncate">{title}</p>
                 {subtitle && (
                   <p className="text-xs text-slate-500 mt-0.5 truncate">{subtitle}</p>
+                )}
+                {learnerNames && copies.length > 0 && (
+                  <LearnerChips
+                    copies={copies}
+                    currentTime={currentTime}
+                    learnerNames={learnerNames}
+                    showStatus={mixedStatus}
+                  />
                 )}
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -147,6 +201,7 @@ export function ScheduleTimeline({
   onScheduleChange,
   onEditLesson,
   onMarkDone,
+  learners,
 }: ScheduleTimelineProps) {
   const [schedule, setSchedule] = useState(initialSchedule)
   // A new schedule from the parent (e.g. refetched after an edit) replaces any local
@@ -180,6 +235,16 @@ export function ScheduleTimeline({
     flexibilityState: b.flexibilityState,
   }))
 
+  const learnerNames = useMemo(
+    () => (learners ? new Map(learners.map(l => [l.id, l.name])) : undefined),
+    [learners],
+  )
+
+  // Shared lessons merge into one row only when rows name their learners.
+  const items: TimelineItem[] = learnerNames
+    ? groupTimelineEntries(entries)
+    : entries.map(entry => ({ entry, copies: entry.kind === 'lesson' ? [entry] : [] }))
+
   if (entries.length === 0) {
     return (
       <p className="text-sm text-slate-400" data-testid="schedule-timeline-empty">
@@ -190,13 +255,15 @@ export function ScheduleTimeline({
 
   return (
     <div data-testid="schedule-timeline">
-      {entries.map((entry, index) => (
+      {items.map(({ entry, copies }, index) => (
         <TimelineRow
           key={entry.id}
           entry={entry}
+          copies={copies}
           currentTime={currentTime}
           subjectsById={subjectsById}
-          isLast={index === entries.length - 1}
+          learnerNames={learnerNames}
+          isLast={index === items.length - 1}
           onEditLesson={onEditLesson}
           onMarkDone={onMarkDone}
         />

@@ -59,16 +59,26 @@ const KNOWN_ITEMS = [
   { prefix: '62ac99a0', action: 'ship', version: '2.114.0', prNumber: 41, wave: '0802-P3', description: 'Weekly Planner integrated "By day" view across learners' },
   { prefix: '57b14788', action: 'ship', version: '2.114.0', prNumber: 41, wave: '0802-P4', description: 'Badge progress tracking' },
   { prefix: 'e6c64a05', action: 'ship', version: '2.114.0', prNumber: 41, wave: '0802-P5', description: 'Recurring weekly time per course (data + Learning Time; schedule wiring still open)' },
-  // PR #43 (fix/feedback-wave1-20260928) — merged to dev, v2.116.0
-  { prefix: 'ec67f864', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W1', description: 'Learning Time added to Planbook nav (item 1)' },
-  { prefix: 'bdaa53a4', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W1', description: 'Course edit dialog scrolls (item 6)' },
-  { prefix: 'f5b49b97', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W1', description: 'Course edit dialog scrolls — screenshot (item 16)' },
-  { prefix: 'e41b3d34', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W1', description: 'Platform badges checkbox now filters (item 15)' },
-  { prefix: '04a1beb3', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W1', description: '"Overdue" in lesson status filter (item 25)' },
-  { prefix: '7f96d574', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W2', description: 'Gradebook shows all enrolled courses (item 14)' },
-  { prefix: '38c77fc2', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W2', description: 'Gradebook missing courses (item 23; grade-per-lesson half still open)' },
-  { prefix: '52f1ac5b', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W2', description: 'Learner login enable works (item 5)' },
-  { prefix: '9e850827', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W2', description: 'Learner accounts gated by role policy (item 11)' },
+  // PR #43 (fix/feedback-wave1-20260928) — live on master via #45, v2.123.0
+  { prefix: 'ec67f864', action: 'ship', version: '2.123.0', prNumber: 43, wave: '0928-W1', description: 'Learning Time added to Planbook nav (item 1)' },
+  { prefix: 'bdaa53a4', action: 'ship', version: '2.123.0', prNumber: 43, wave: '0928-W1', description: 'Course edit dialog scrolls (item 6)' },
+  { prefix: 'f5b49b97', action: 'ship', version: '2.123.0', prNumber: 43, wave: '0928-W1', description: 'Course edit dialog scrolls — screenshot (item 16)' },
+  { prefix: 'e41b3d34', action: 'ship', version: '2.123.0', prNumber: 43, wave: '0928-W1', description: 'Platform badges checkbox now filters (item 15)' },
+  { prefix: '04a1beb3', action: 'ship', version: '2.123.0', prNumber: 43, wave: '0928-W1', description: '"Overdue" in lesson status filter (item 25)' },
+  { prefix: '7f96d574', action: 'ship', version: '2.123.0', prNumber: 43, wave: '0928-W2', description: 'Gradebook shows all enrolled courses (item 14)' },
+  { prefix: '38c77fc2', action: 'ship', version: '2.123.0', prNumber: 43, wave: '0928-W2', description: 'Gradebook missing courses (item 23; grade-per-lesson half still open)' },
+  { prefix: '52f1ac5b', action: 'ship', version: '2.123.0', prNumber: 43, wave: '0928-W2', description: 'Learner login enable works (item 5)' },
+  { prefix: '9e850827', action: 'ship', version: '2.123.0', prNumber: 43, wave: '0928-W2', description: 'Learner accounts gated by role policy (item 11)' },
+  // PR #46 (fix/blockers-20261007) — live on master via #45, v2.123.0
+  { prefix: '5dd1dafd', action: 'ship', version: '2.123.0', prNumber: 46, wave: '1007-P1', description: 'Quick start by course resumes/finishes an active session instead of failing' },
+  { prefix: '03a84383', action: 'ship', version: '2.123.0', prNumber: 46, wave: '1007-P2', description: 'Shift all coursework for all learners by a week (lesson shift)' },
+  { prefix: 'ef9163fd', action: 'ship', version: '2.123.0', prNumber: 46, wave: '1007-P2', description: 'Schedule breaks/holidays and move lessons out of them' },
+  { prefix: 'b8be399a', action: 'ship', version: '2.123.0', prNumber: 46, wave: '1007-P2', description: 'Shift the school year around break times' },
+  { prefix: 'b01b66f0', action: 'ship', version: '2.123.0', prNumber: 46, wave: '1007-P2', description: 'Enter break ranges (edit breaks in Settings)' },
+  { prefix: '5116ae4f', action: 'ship', version: '2.123.0', prNumber: 46, wave: '1007-P3', description: 'Course recurring time applies to its lessons on the schedule' },
+  { prefix: '4ee15e76', action: 'ship', version: '2.123.0', prNumber: 46, wave: '1007-P3', description: 'Set lesson duration / start & end time on the schedule' },
+  // PR #47 (fix/uat-learner-error-lesson-time) — live on master via #45, v2.123.0
+  { prefix: 'ea034318', action: 'ship', version: '2.123.0', prNumber: 47, wave: '1008-UAT', description: 'Lesson editor can adjust lesson times (UAT 4.5)' },
 ];
 
 

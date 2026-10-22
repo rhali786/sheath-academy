@@ -155,6 +155,22 @@ describe('reflow', () => {
     expect(compressed.blocks.find(b => b.lesson.id === 'L3')!.startTime).toBe('09:35')
   })
 
+  // Feedback d0d386a4: with all learners in view, compress re-times each learner's day on
+  // its own instead of chaining every learner's lessons into one line.
+  it("compress: re-times each learner's remaining lessons separately", () => {
+    const lessons = [
+      makeLesson('A1', 'A Math', '30min'),
+      makeLesson('A2', 'A Science', '30min'),
+      { ...makeLesson('B1', 'B Reading', '30min'), childId: 'child_002' },
+      { ...makeLesson('B2', 'B Art', '30min'), childId: 'child_002' },
+    ]
+    const schedule = buildDailySchedule(lessons, DEFAULT_SETTINGS)
+    // Each learner: 08:30-09:00, 09:10-09:40
+    const compressed = reflow('compress', schedule, '09:05')
+    expect(compressed.blocks.find(b => b.lesson.id === 'A2')!.startTime).toBe('09:05')
+    expect(compressed.blocks.find(b => b.lesson.id === 'B2')!.startTime).toBe('09:05')
+  })
+
   it('reflow does not move locked blocks', () => {
     const schedule = makeSchedule()
     // Mark block 2 as locked
