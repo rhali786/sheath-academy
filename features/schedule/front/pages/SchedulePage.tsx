@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { plannerApi } from '@/features/plan/front/services/api'
 import { buildDailySchedule } from '@/features/schedule/server/service'
+import { courseTimesFromSubjects } from '@/features/schedule/lib/courseTimes'
 import { ScheduleTimeline } from '@/features/schedule/front/components/ScheduleTimeline'
 import { useHousehold } from '@/features/household/front/context'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
@@ -13,6 +14,7 @@ import { CalendarNav } from '@/features/schedule/front/components/CalendarNav'
 import { WeekCalendarView } from '@/features/schedule/front/components/WeekCalendarView'
 import { MonthCalendarView } from '@/features/schedule/front/components/MonthCalendarView'
 import { ScheduleAttendanceCapture } from '@/features/schedule/front/components/ScheduleAttendanceCapture'
+import { EditLessonModal } from '@/features/plan/front/components/EditLessonModal'
 import type { ViewMode } from '@/features/schedule/front/lib/calendarRange'
 import type { LessonTask } from '@/features/plan/types'
 import type { DaySchedule } from '@/features/schedule/types'
@@ -55,6 +57,8 @@ export function SchedulePage() {
   const { selectedChildId } = useLearner()
   const [lessons, setLessons] = useState<LessonTask[]>([])
   const [loading, setLoading] = useState(true)
+  // Edit in place: the pencil opens the Edit lesson window over the Calendar.
+  const [editingLessonId, setEditingLessonId] = useState<string | null>(null)
 
   const selectedDate = useMemo(() => {
     const p = searchParams.get('date')
@@ -78,17 +82,25 @@ export function SchedulePage() {
     [selectedDate, viewMode, weekStartDay],
   )
 
-  useEffect(() => {
-    setLoading(true)
+  // "Loading…" is set by the caller for a new range only; a refresh after an edit keeps
+  // the timeline on screen.
+  const loadLessons = useCallback(() => {
     const childIds = selectedChildId ? [selectedChildId] : undefined
-    plannerApi
+    return plannerApi
       .getLessons(undefined, childIds, undefined, range.startDate, range.endDate)
       .then(data => setLessons(data))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [range.startDate, range.endDate, selectedChildId])
 
+  useEffect(() => {
+    setLoading(true)
+    loadLessons()
+  }, [loadLessons])
+
   const lessonsByDate = useMemo(() => groupByDate(lessons), [lessons])
+
+  const courseTimes = useMemo(() => courseTimesFromSubjects(allSubjects ?? []), [allSubjects])
 
   const schedule: DaySchedule = useMemo(() => ({
     ...buildDailySchedule(lessonsByDate.get(selectedDate) ?? [], {
@@ -96,9 +108,11 @@ export function SchedulePage() {
       transitionMinutes: 10,
       defaultDurationMinutes: 30,
       includeSyntheticBreaks: true,
+      date: selectedDate,
+      courseTimes,
     }),
     date: selectedDate,
-  }), [lessonsByDate, selectedDate])
+  }), [lessonsByDate, selectedDate, courseTimes])
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8" data-testid="schedule-page">
@@ -129,6 +143,7 @@ export function SchedulePage() {
                 currentTime={getCurrentTime()}
                 subjects={allSubjects}
                 showAdjustDay
+                onEditLesson={setEditingLessonId}
               />
             )}
           </div>
@@ -156,6 +171,13 @@ export function SchedulePage() {
           lessonsByDate={lessonsByDate}
           focusedMonth={range.focusedMonth}
           loading={loading}
+        />
+      )}
+      {editingLessonId && (
+        <EditLessonModal
+          lessonId={editingLessonId}
+          onClose={() => setEditingLessonId(null)}
+          onSaved={() => { loadLessons() }}
         />
       )}
     </div>

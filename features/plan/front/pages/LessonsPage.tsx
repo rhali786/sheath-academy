@@ -1,16 +1,19 @@
 'use client'
 
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { plannerApi } from '@/features/plan/front/services/api'
 import { LessonTaskForm, type LessonFormData } from '@/features/plan/front/components/LessonTaskForm'
 import { LessonTaskList } from '@/features/plan/front/components/LessonTaskList'
-import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
+import type { LessonTask, LessonTaskPatch } from '@/features/plan/types'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { useHousehold } from '@/features/household/front/context'
 import { useLearner } from '@/features/layout/front/context/LearnerContext'
 import { TodayLessonCard } from '@/features/plan/front/components/TodayLessonCard'
+import { InlineSuccess } from '@/features/lib/front/components/InlineSuccess'
+import { matchesStatusFilter, type LessonStatusFilter } from '@/features/plan/utils/lessonStatusFilter'
+import { LESSON_LIST_RANGES, lessonRangeStart, type LessonListRange } from '@/features/plan/utils/lessonListRange'
 
 function todayLocal(): string {
   const d = new Date()
@@ -22,24 +25,37 @@ function todayLocal(): string {
 
 type DateSort = 'asc' | 'desc'
 
+function chipClass(active: boolean): string {
+  return `px-3 py-1.5 text-sm font-medium rounded-full border focus:outline-none focus:ring-2 focus:ring-forest-900 ${
+    active ? 'bg-forest-900 border-forest-900 text-white' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+  }`
+}
+
 export function LessonsPage() {
   const { householdProfile, studentProfiles: children, allSubjects: subjects } = useHousehold()
   const { selectedChildId } = useLearner()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [lessons, setLessons] = useState<LessonTask[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  // Only the first load shows "Loading…". Later refreshes keep the list mounted, so an
+  // open editor isn't torn down and a deep-linked one doesn't reopen after Save.
+  const [hasLoaded, setHasLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Filters
-  const [filterChildId, setFilterChildId] = useState<string>('')
-  const [filterStatus, setFilterStatus] = useState<LessonTaskStatus | ''>('')
+  // Filters — learners and date range are applied by the server, so the page never
+  // loads every lesson ever created. No learners selected = all children.
+  const [filterChildIds, setFilterChildIds] = useState<string[]>(selectedChildId ? [selectedChildId] : [])
+  const [range, setRange] = useState<LessonListRange>('week')
+  const [filterStatus, setFilterStatus] = useState<LessonStatusFilter>('')
   const [dateSort, setDateSort] = useState<DateSort>('desc')
   const [showForm, setShowForm] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [deleteNotice, setDeleteNotice] = useState<string | null>(null)
 
   // Keep page filter in sync with header learner (null = All children)
   useEffect(() => {
-    setFilterChildId(selectedChildId ?? '')
+    setFilterChildIds(selectedChildId ? [selectedChildId] : [])
   }, [selectedChildId])
 
   useEffect(() => {
@@ -50,14 +66,20 @@ export function LessonsPage() {
 
   const editingLessonId = searchParams.get('editId')
 
-  // Ensure deep-linked lesson is visible in the list
+  // Make a deep-linked lesson visible: select its learner and widen the range if it is older.
   useEffect(() => {
-    if (!editingLessonId || lessons.length === 0) return
-    const lesson = lessons.find(l => l.id === editingLessonId)
-    if (lesson) {
-      setFilterChildId(lesson.childId)
-    }
-  }, [editingLessonId, lessons])
+    if (!editingLessonId) return
+    let cancelled = false
+    plannerApi.getLesson(editingLessonId).then(lesson => {
+      if (cancelled || !lesson) return
+      setFilterChildIds([lesson.childId])
+      setRange(r => {
+        const start = lessonRangeStart(r, todayLocal())
+        return start && lesson.dueDate < start ? 'all' : r
+      })
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [editingLessonId])
 
   // Scroll to the lesson card when opened from /plan
   useEffect(() => {
@@ -66,33 +88,61 @@ export function LessonsPage() {
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [editingLessonId, isLoading, lessons])
 
-  async function fetchLessons() {
+  // Overdue means "anything past due", so it ignores the date range.
+  const showsEveryDate = filterStatus === 'overdue'
+  const startDate = showsEveryDate ? undefined : lessonRangeStart(range, todayLocal())
+  const childKey = filterChildIds.join(',')
+
+  // Filters change faster than responses arrive; only the latest request may set state.
+  const latestRequest = useRef(0)
+  const fetchLessons = useCallback(async () => {
+    const request = ++latestRequest.current
     try {
       setIsLoading(true)
       setError(null)
-      const all = await plannerApi.getLessons()
-      setLessons(all)
+      const list = await plannerApi.getLessons(undefined, childKey ? childKey.split(',') : undefined, undefined, startDate)
+      if (request === latestRequest.current) { setLessons(list); setHasLoaded(true) }
     } catch {
-      setError('Failed to load lessons')
+      if (request === latestRequest.current) setError('Failed to load lessons')
     } finally {
-      setIsLoading(false)
+      if (request === latestRequest.current) setIsLoading(false)
     }
-  }
+  }, [childKey, startDate])
 
   useEffect(() => {
     fetchLessons()
-  }, [])
+  }, [fetchLessons])
+
+  // The deep-linked editor closed (saved or cancelled): drop editId so it stays closed,
+  // including on reload. Other params (e.g. ?add=1) are kept.
+  function clearEditId() {
+    if (!editingLessonId) return
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('editId')
+    const rest = params.toString()
+    router.replace(rest ? `/lessons?${rest}` : '/lessons')
+  }
+
+  function toggleChild(childId: string) {
+    setFilterChildIds(prev => {
+      const next = prev.includes(childId) ? prev.filter(id => id !== childId) : [...prev, childId]
+      return children.map(c => c.id).filter(id => next.includes(id))
+    })
+  }
+
+  const filtersNarrow = filterChildIds.length > 0 || filterStatus !== '' || startDate !== undefined
 
   const filteredLessons = useMemo(() => {
+    const today = todayLocal()
     let list = lessons
-    if (filterChildId) list = list.filter(l => l.childId === filterChildId)
-    if (filterStatus)  list = list.filter(l => l.status === filterStatus)
+    if (childKey) list = list.filter(l => childKey.split(',').includes(l.childId))
+    list = list.filter(l => matchesStatusFilter(l, filterStatus, today))
     list = [...list].sort((a, b) => {
       const cmp = a.dueDate.localeCompare(b.dueDate)
       return dateSort === 'asc' ? cmp : -cmp
     })
     return list
-  }, [lessons, filterChildId, filterStatus, dateSort])
+  }, [lessons, childKey, filterStatus, dateSort])
 
   async function handleSubmit(data: LessonFormData) {
     const householdId = householdProfile?.id ?? ''
@@ -102,13 +152,22 @@ export function LessonsPage() {
     setSuccessMsg('Lesson added!')
   }
 
-  async function handleUpdate(id: string, patch: Partial<LessonTask>) {
+  async function handleUpdate(id: string, patch: LessonTaskPatch) {
     await plannerApi.updateLesson(id, patch)
     await fetchLessons()
   }
 
-  async function handleDelete(id: string) {
-    await plannerApi.deleteLesson(id)
+  // Errors propagate to the delete confirmation, which shows them and stays open.
+  async function handleDelete(id: string, options: { deleteGroup: boolean }) {
+    const lesson = lessons.find(l => l.id === id)
+    const deleted = await plannerApi.deleteLesson(id, options)
+    if (lesson) {
+      const name = children.find(c => c.id === lesson.childId)?.name
+      const who = options.deleteGroup
+        ? (deleted > 1 ? ` for ${deleted} learners` : '')
+        : (lesson.groupId && name ? ` for ${name}` : '')
+      setDeleteNotice(`“${lesson.title}” deleted${who}`)
+    }
     await fetchLessons()
   }
 
@@ -161,26 +220,28 @@ export function LessonsPage() {
           <h2 className="text-lg font-bold text-slate-900">All lessons</h2>
 
           <div className="flex flex-wrap gap-2">
-            {/* Child filter */}
+            {/* Date range */}
             <select
-              value={filterChildId}
-              onChange={e => setFilterChildId(e.target.value)}
-              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
+              aria-label="Date range"
+              value={range}
+              onChange={e => setRange(e.target.value as LessonListRange)}
+              disabled={showsEveryDate}
+              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900 disabled:opacity-50"
             >
-              <option value="">All children</option>
-              {children.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+              {LESSON_LIST_RANGES.map(r => (
+                <option key={r.value} value={r.value}>{r.label}</option>
               ))}
             </select>
 
             {/* Status filter */}
             <select
               value={filterStatus}
-              onChange={e => setFilterStatus(e.target.value as LessonTaskStatus | '')}
+              onChange={e => setFilterStatus(e.target.value as LessonStatusFilter)}
               className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-forest-900"
             >
               <option value="">All statuses</option>
               <option value="not_started">Not started</option>
+              <option value="overdue">Overdue</option>
               <option value="completed">Completed</option>
               <option value="skipped">Skipped</option>
             </select>
@@ -197,7 +258,42 @@ export function LessonsPage() {
           </div>
         </div>
 
-        {isLoading ? (
+        {deleteNotice && (
+          <div className="mb-4">
+            <InlineSuccess message={deleteNotice} onDismiss={() => setDeleteNotice(null)} />
+          </div>
+        )}
+
+        {/* Learner filter — pick any number; none picked = all children */}
+        {children.length > 1 && (
+          <div role="group" aria-label="Filter by learner" className="flex flex-wrap gap-2 mb-4">
+            <button
+              type="button"
+              aria-pressed={filterChildIds.length === 0}
+              onClick={() => setFilterChildIds([])}
+              className={chipClass(filterChildIds.length === 0)}
+            >
+              All children
+            </button>
+            {children.map(c => (
+              <button
+                key={c.id}
+                type="button"
+                aria-pressed={filterChildIds.includes(c.id)}
+                onClick={() => toggleChild(c.id)}
+                className={chipClass(filterChildIds.includes(c.id))}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {showsEveryDate && (
+          <p className="text-xs text-slate-500 -mt-2 mb-4">Overdue shows every date, not just the selected range.</p>
+        )}
+
+        {isLoading && !hasLoaded ? (
           <p className="text-sm text-slate-400 py-4">Loading…</p>
         ) : (
           <LessonTaskList
@@ -209,6 +305,8 @@ export function LessonsPage() {
             onDelete={handleDelete}
             onComplete={handleComplete}
             editingLessonId={editingLessonId}
+            onEditEnd={clearEditId}
+            emptyMessage={filtersNarrow ? 'No lessons match these filters. Try another learner or a wider date range.' : undefined}
           />
         )}
       </div>

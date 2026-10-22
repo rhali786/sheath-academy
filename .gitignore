@@ -11,6 +11,7 @@ build/
 .next/
 *.tsbuildinfo
 e2e/results/
+e2e/results-uat/
 test-results/
 package-lock.json
 features/dashboard/frontend/node_modules

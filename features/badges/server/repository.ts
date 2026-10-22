@@ -18,6 +18,7 @@ import type {
   BadgeVisibility,
 } from '@/features/badges/types'
 import type { GradeBand } from '@/features/gradebook/types'
+import { filterDefinitionsBySettings } from '@/features/badges/server/visibility'
 
 // ─── Row types ────────────────────────────────────────────────────────────────
 
@@ -92,17 +93,19 @@ export async function listBadgeCollection(
   householdId: string,
   learnerId: string,
 ): Promise<BadgeCollectionItem[]> {
-  const [definitions, awards] = await Promise.all([
+  const [definitions, awards, settings] = await Promise.all([
     listBadgeDefinitions(householdId),
     listBadgeAwards(householdId, learnerId),
+    getBadgeSettings(householdId),
   ])
+  const visibleDefinitions = filterDefinitionsBySettings(definitions, settings)
 
   const awardMap = new Map<string, BadgeAward>()
   for (const award of awards) {
     awardMap.set(award.badgeId, award)
   }
 
-  return definitions.map(definition => {
+  return visibleDefinitions.map(definition => {
     const award = awardMap.get(definition.id) ?? null
     return {
       definition,

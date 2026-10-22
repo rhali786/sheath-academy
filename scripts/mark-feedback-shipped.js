@@ -10,6 +10,7 @@
  * Usage:
  *   node scripts/mark-feedback-shipped.js           # dry-run (no writes)
  *   node scripts/mark-feedback-shipped.js --apply   # write to prod DB
+ *   node scripts/mark-feedback-shipped.js --pr=41 [--apply]   # only items from PR #41
  */
 
 const fs = require('fs');
@@ -44,58 +45,32 @@ if (!connStr) {
 }
 
 const APPLY = process.argv.includes('--apply');
-const VERSION = '2.86.0';
+// --pr=<n> limits the run to items from one PR (e.g. ship what's live while another PR awaits master)
+const PR_FILTER = (process.argv.find((a) => a.startsWith('--pr=')) || '').slice(5);
 
-// Items to mark shipped — action: 'ship'
+// Items to mark shipped — action: 'ship'   (needs version; optional prNumber)
 // Items to mark cancelled — action: 'cancel'
+// Previous batches are in git history (v2.86.0 waves 1-5, FQ-1..3).
 const KNOWN_ITEMS = [
-  // Wave 1a — subject list refetch after subject mutations
-  { prefix: '50774221', action: 'ship', wave: '1a', description: 'Subject list refetch after mutation (1/2)' },
-  { prefix: 'fcee6fd0', action: 'ship', wave: '1a', description: 'Subject list refetch after mutation (2/2)' },
-  // Wave 1a follow-up — user confirmation that the fix worked
-  { prefix: 'dddb6466', action: 'ship', wave: '1a', description: 'Follow-up: subject list now showing correctly' },
-  // Wave 1a retraction — user said "please ignore my last feedback"
-  { prefix: 'd883f50c', action: 'cancel', wave: '1a', description: 'Retraction: user asked to ignore previous feedback' },
-  // Wave 1b — Generate lessons → Save to plan
-  { prefix: 'e534c6cc', action: 'ship', wave: '1b', description: 'Generate lessons → Save to plan' },
-  // Wave 2a — Quran session-type label clarity
-  { prefix: '80f04cd0', action: 'ship', wave: '2a', description: 'Quran session-type label clarity' },
-  // Wave 2b — Lesson generation pacing/cadence
-  { prefix: '3c4cc9a2', action: 'ship', wave: '2b', description: 'Lesson generation pacing/cadence' },
-  // Wave 3 — Subject → resource linking
-  { prefix: '23cd6909', action: 'ship', wave: '3',  description: 'Subject → resource linking' },
-  // Wave 4a — Attendance alert clears after logging
-  { prefix: '9937be68', action: 'ship', wave: '4a', description: 'Attendance alert clears after logging' },
-  // Wave 4b — Clickable setup link on dashboard
-  { prefix: '9bb8370e', action: 'ship', wave: '4b', description: 'Clickable setup link on dashboard' },
-  // Wave 5 — Learning Time Screen (phases 1-5 done; phase 6 e2e was a pre-existing env issue)
-  { prefix: '46a51bee', action: 'ship', wave: '5',  description: 'Learning Time screen' },
-  // Lesson quick-actions — Phase 1: date terminology clarity
-  { prefix: 'e3729b25', action: 'ship', wave: 'QA-1', description: 'Difference between start date and planned date' },
-  // Lesson quick-actions — Phase 2: Available-from inline edit
-  { prefix: '42af5ab9', action: 'ship', wave: 'QA-2', description: 'Cannot edit planned date in lesson inline edit' },
-  // Lesson quick-actions — Phase 3: mark-done icon on lessons page
-  { prefix: 'b67114eb', action: 'ship', wave: 'QA-3', description: 'No way to mark a lesson complete from lessons page' },
-  // Lesson quick-actions — Phase 4: dashboard edit button (addresses "change times for classes")
-  { prefix: 'a47b444e', action: 'ship', wave: 'QA-4', description: 'Not sure how to change times for classes on dashboard' },
-  // Growth wave — feature briefs built out across layer1/layer2/layer3-db (commits 6/27–6/30)
-  { prefix: '78ec6a48', action: 'ship', wave: 'Growth-Compliance', description: 'Compliance system brief — deadline/submission CRUD + ruleset config' },
-  { prefix: 'c71a4161', action: 'ship', wave: 'Growth-Badges',     description: 'Badge system brief — award lifecycle, evidence link, custom badge authoring' },
-  { prefix: '1032a087', action: 'ship', wave: 'Growth-Gradebook',  description: 'Gradebook brief — score CRUD, grading scales, aggregation rules, GPA' },
-  { prefix: '418c2940', action: 'ship', wave: 'Growth-Planner',    description: 'Lesson Planner v2 brief — lesson steps CRUD + author UI (grid/reschedule partial)' },
-  // Feedback Queue (2026-07-06) — task-1-bugs
-  { prefix: 'cb15ba12', action: 'ship', wave: 'FQ-1', description: 'Evidence subject dropdown missing course for secondary-enrolled learner' },
-  { prefix: '713d0753', action: 'ship', wave: 'FQ-1', description: 'Generated lesson due dates ignored household school days' },
-  // Feedback Queue (2026-07-06) — task-2-ux
-  { prefix: 'c75d361b', action: 'ship', wave: 'FQ-2', description: 'Save-to-plan hidden until lessons generated' },
-  { prefix: '36f30694', action: 'ship', wave: 'FQ-2', description: 'Scheduled Start/End time read as a recurring schedule' },
-  { prefix: 'ba88751d', action: 'ship', wave: 'FQ-2', description: 'Records Readiness tiles missing current-week scope label' },
-  // Feedback Queue (2026-07-06) — task-3-resources
-  { prefix: '2bc4d916', action: 'ship', wave: 'FQ-3', description: 'No way to start lesson generation from a chosen chapter/page' },
-  { prefix: 'adfe3188', action: 'ship', wave: 'FQ-3', description: 'No way to choose which weekdays a generated course is taught' },
-  { prefix: 'bb573f78', action: 'ship', wave: 'FQ-3', description: 'No way to link a resource to an enrolled course' },
-  { prefix: '3a73264e', action: 'ship', wave: 'FQ-3', description: 'Resource form had no enrolled-course dropdown' },
+  // PR #41 (feature/feedback-batch-20260802-open-gaps) — live on master via #42, v2.114.0
+  { prefix: 'a9c34993', action: 'ship', version: '2.114.0', prNumber: 41, wave: '0802-P1', description: '12-hour AM/PM time picker on lesson form' },
+  { prefix: '66087f44', action: 'ship', version: '2.114.0', prNumber: 41, wave: '0802-P2', description: 'Learning Time: start by course, not just learner' },
+  { prefix: '781f32fe', action: 'ship', version: '2.114.0', prNumber: 41, wave: '0802-P3', description: 'Weekly Planner drag-to-move lessons' },
+  { prefix: '62ac99a0', action: 'ship', version: '2.114.0', prNumber: 41, wave: '0802-P3', description: 'Weekly Planner integrated "By day" view across learners' },
+  { prefix: '57b14788', action: 'ship', version: '2.114.0', prNumber: 41, wave: '0802-P4', description: 'Badge progress tracking' },
+  { prefix: 'e6c64a05', action: 'ship', version: '2.114.0', prNumber: 41, wave: '0802-P5', description: 'Recurring weekly time per course (data + Learning Time; schedule wiring still open)' },
+  // PR #43 (fix/feedback-wave1-20260928) — merged to dev, v2.116.0
+  { prefix: 'ec67f864', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W1', description: 'Learning Time added to Planbook nav (item 1)' },
+  { prefix: 'bdaa53a4', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W1', description: 'Course edit dialog scrolls (item 6)' },
+  { prefix: 'f5b49b97', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W1', description: 'Course edit dialog scrolls — screenshot (item 16)' },
+  { prefix: 'e41b3d34', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W1', description: 'Platform badges checkbox now filters (item 15)' },
+  { prefix: '04a1beb3', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W1', description: '"Overdue" in lesson status filter (item 25)' },
+  { prefix: '7f96d574', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W2', description: 'Gradebook shows all enrolled courses (item 14)' },
+  { prefix: '38c77fc2', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W2', description: 'Gradebook missing courses (item 23; grade-per-lesson half still open)' },
+  { prefix: '52f1ac5b', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W2', description: 'Learner login enable works (item 5)' },
+  { prefix: '9e850827', action: 'ship', version: '2.116.0', prNumber: 43, wave: '0928-W2', description: 'Learner accounts gated by role policy (item 11)' },
 ];
+
 
 async function main() {
   const sql = postgres(connStr, { ssl: 'require', max: 1 });
@@ -114,7 +89,8 @@ async function main() {
     const matched = [];
     const unmatched = [];
 
-    for (const item of KNOWN_ITEMS) {
+    const items = PR_FILTER ? KNOWN_ITEMS.filter((i) => String(i.prNumber) === PR_FILTER) : KNOWN_ITEMS;
+    for (const item of items) {
       const row = rows.find((r) => r.id.startsWith(item.prefix));
       if (row) {
         matched.push({ ...item, row });
@@ -125,7 +101,7 @@ async function main() {
 
     // Print matched results
     console.log('='.repeat(72));
-    console.log(`MATCHED (${matched.length} of ${KNOWN_ITEMS.length} known items):`);
+    console.log(`MATCHED (${matched.length} of ${items.length} known items):`);
     console.log('='.repeat(72));
     for (const m of matched) {
       const alreadyShipped = m.row.status === 'shipped';
@@ -155,23 +131,26 @@ async function main() {
     console.log('\n' + '='.repeat(72));
     if (!APPLY) {
       console.log(`DRY RUN — ${toShip.length} row(s) would be marked shipped, ${toCancel.length} cancelled.`);
-      console.log(`  shipped version_resolved = ${VERSION}`);
+      for (const m of toShip) console.log(`  ${m.row.id.slice(0, 8)}  v${m.version}  PR #${m.prNumber ?? '-'}  (${m.description})`);
       console.log("Re-run with --apply to write.\n");
     } else {
       const now = new Date();
       if (toShip.length > 0) {
-        const ids = toShip.map((m) => m.row.id);
-        await sql`
-          UPDATE user_feedback
-          SET
-            status           = 'shipped',
-            version_resolved = ${VERSION},
-            resolved_at      = ${now}
-          WHERE id = ANY(${sql.array(ids)})
-        `;
-        console.log(`SHIPPED — ${ids.length} row(s):`);
-        for (const m of toShip) console.log(`  ${m.row.id}  (${m.description})`);
-        console.log(`  version_resolved = ${VERSION}, resolved_at = ${now.toISOString()}`);
+        await sql.begin(async (tx) => {
+          for (const m of toShip) {
+            await tx`
+              UPDATE user_feedback
+              SET
+                status           = 'shipped',
+                version_resolved = ${m.version},
+                pr_number        = ${m.prNumber ?? null},
+                resolved_at      = ${now}
+              WHERE id = ${m.row.id}
+            `;
+          }
+        });
+        console.log(`SHIPPED — ${toShip.length} row(s), resolved_at = ${now.toISOString()}:`);
+        for (const m of toShip) console.log(`  ${m.row.id}  v${m.version}  (${m.description})`);
       }
       if (toCancel.length > 0) {
         const ids = toCancel.map((m) => m.row.id);

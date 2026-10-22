@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Check, ChevronRight, Pencil } from 'lucide-react'
 import type { DaySchedule, ScheduleEntry } from '@/features/schedule/types'
 import type { SubjectCourse } from '@/features/subjects/types'
@@ -18,8 +17,13 @@ interface ScheduleTimelineProps {
   subjects?: SubjectCourse[]
   showAdjustDay?: boolean
   onScheduleChange?: (schedule: DaySchedule) => void
-  /** Override for the edit (pencil) action. Defaults to navigating to /lessons?editId=<id>. */
+  /**
+   * Opens the editor for a lesson, in place. Without it rows have no pencil: the old
+   * fallback jumped to /lessons?editId=, which no screen uses any more (UAT 8.2).
+   */
   onEditLesson?: (id: string) => void
+  /** Shows "Mark done" on lessons not yet done or skipped (a learner's My day). */
+  onMarkDone?: (id: string) => void
 }
 
 const STATUS_PILL: Record<Exclude<TimelineDisplayStatus, 'none'>, string> = {
@@ -63,12 +67,14 @@ function TimelineRow({
   subjectsById,
   isLast,
   onEditLesson,
+  onMarkDone,
 }: {
   entry: ScheduleEntry
   currentTime: string
   subjectsById: Map<string, SubjectCourse>
   isLast: boolean
-  onEditLesson: (id: string) => void
+  onEditLesson?: (id: string) => void
+  onMarkDone?: (id: string) => void
 }) {
   const status = getEntryTimelineStatus(entry, currentTime)
   const isLesson = entry.kind === 'lesson'
@@ -105,7 +111,17 @@ function TimelineRow({
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <StatusPill status={status} />
-                {isLesson && (
+                {isLesson && onMarkDone && entry.lesson.status !== 'completed' && entry.lesson.status !== 'skipped' && (
+                  <button
+                    type="button"
+                    onClick={() => onMarkDone(entry.lesson.id)}
+                    aria-label={`Mark ${entry.lesson.title} done`}
+                    className="px-2 py-1 rounded-md text-xs font-medium border border-slate-200 text-slate-600 hover:bg-forest-50 hover:text-forest-900 transition-colors"
+                  >
+                    Mark done
+                  </button>
+                )}
+                {isLesson && onEditLesson && (
                   <button
                     onClick={() => onEditLesson(entry.lesson.id)}
                     aria-label="Edit lesson"
@@ -130,10 +146,17 @@ export function ScheduleTimeline({
   showAdjustDay = true,
   onScheduleChange,
   onEditLesson,
+  onMarkDone,
 }: ScheduleTimelineProps) {
   const [schedule, setSchedule] = useState(initialSchedule)
-  const router = useRouter()
-  const handleEditLesson = onEditLesson ?? (id => router.push('/lessons?editId=' + id))
+  // A new schedule from the parent (e.g. refetched after an edit) replaces any local
+  // "adjust day" changes. Without this the timeline kept drawing its first schedule
+  // until a page reload (UAT 3.8).
+  const [prevInitialSchedule, setPrevInitialSchedule] = useState(initialSchedule)
+  if (initialSchedule !== prevInitialSchedule) {
+    setPrevInitialSchedule(initialSchedule)
+    setSchedule(initialSchedule)
+  }
 
   function handleScheduleChange(next: DaySchedule) {
     setSchedule(next)
@@ -174,7 +197,8 @@ export function ScheduleTimeline({
           currentTime={currentTime}
           subjectsById={subjectsById}
           isLast={index === entries.length - 1}
-          onEditLesson={handleEditLesson}
+          onEditLesson={onEditLesson}
+          onMarkDone={onMarkDone}
         />
       ))}
 

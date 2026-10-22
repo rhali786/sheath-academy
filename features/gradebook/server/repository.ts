@@ -1,6 +1,6 @@
-import { eq, and } from 'drizzle-orm'
+import { eq, and, inArray } from 'drizzle-orm'
 import { getDb } from '@/features/lib/server/db'
-import { learners, subjects, scores, gradingScales, aggregationRules, schoolYears } from '@/db/schema'
+import { learners, subjects, subjectLearners, scores, gradingScales, aggregationRules, schoolYears } from '@/db/schema'
 import { aggregateScore, gradeFromBands, computeGpaFromPoints, decayStatus } from './aggregation'
 import type {
   GradebookSummary,
@@ -215,6 +215,31 @@ export async function listGradebookSummaries(householdId: string): Promise<Grade
     return s.schoolYearId === activeYearId || s.schoolYearId === null || s.schoolYearId === undefined
   })
 
+  // Per-learner scoping below previously checked only the primary
+  // `subjects.learnerId` column. That column is just the *first* learner
+  // (learnerIds[0]) — a course shared with additional learners records them
+  // in the subject_learners join table, exactly like
+  // features/subjects/server/repository.ts's listSubjectRows/hydrateMany
+  // already read. Without this join, a course shared with a second learner
+  // via SubjectEditDialog's Learner(s) checkboxes showed up in Settings (via
+  // listSubjectRows) but silently vanished from that learner's Gradebook —
+  // items 14/23. Read the join table and fall back to the primary column
+  // only for rows with no join rows at all (pre-join-table legacy data).
+  const subjectIds = subjectRows.map((s) => s.id)
+  const learnerJoinRows = subjectIds.length > 0
+    ? await db.select().from(subjectLearners).where(inArray(subjectLearners.subjectId, subjectIds))
+    : []
+  const enrolledLearnerIdsBySubject = new Map<string, string[]>()
+  for (const jr of learnerJoinRows) {
+    const list = enrolledLearnerIdsBySubject.get(jr.subjectId) ?? []
+    list.push(jr.learnerId)
+    enrolledLearnerIdsBySubject.set(jr.subjectId, list)
+  }
+  function learnerIdsForSubject(s: (typeof subjectRows)[number]): string[] {
+    const enrolled = enrolledLearnerIdsBySubject.get(s.id) ?? []
+    return enrolled.length > 0 ? enrolled : s.learnerId ? [s.learnerId] : []
+  }
+
   // Reference maps for the per-subject grading scale + aggregation rule.
   const scaleBands = new Map<string, GradingScaleBand[]>()
   for (const row of scaleRows) scaleBands.set(row.id, (row.bands as GradingScaleBand[]) ?? [])
@@ -245,7 +270,7 @@ export async function listGradebookSummaries(householdId: string): Promise<Grade
 
   return learnerRows.map(learner => {
     const learnerSubjects = scopedSubjectRows.filter(
-      s => s.learnerId === learner.id || s.learnerId === null,
+      s => learnerIdsForSubject(s).includes(learner.id),
     )
 
     const gpaEntries: { creditHours: number; points: number }[] = []

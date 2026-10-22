@@ -272,6 +272,90 @@ describe('ChildForm — Wave 7 FB-002', () => {
   })
 })
 
+/**
+ * Item 5 — "learner login won't enable … still shows disabled".
+ *
+ * ChildList swallowed every save error (console.error only), so ChildForm's
+ * `await onSubmit(...)` resolved as success even on a 400/409/500. On that false
+ * success ChildForm ran its reset block — including setLearnerLoginEnabled(false),
+ * flipping the checkbox back off — and never cleared `saving`, leaving the button
+ * stuck on "Saving…". Net effect: blank form, unchecked box, dead button, no error,
+ * nothing persisted.
+ */
+describe('Learner login save failures are visible (item 5)', () => {
+  const onCancel = jest.fn()
+
+  beforeEach(() => jest.clearAllMocks())
+
+  test('a server rejection during save is surfaced in the form rather than swallowed', async () => {
+    const updateChild = jest.fn().mockRejectedValue(new Error('Username is already taken'))
+    renderWithContext(<ChildList />, makeContext({ children: [profileWithFullName], updateChild }))
+
+    fireEvent.click(screen.getByRole('button', { name: /edit profile/i }))
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Username is already taken')).toBeInTheDocument()
+    })
+  })
+
+  test('a failed save through ChildList leaves the form usable — values kept, checkbox still on, button re-enabled', async () => {
+    const updateChild = jest.fn().mockRejectedValue(new Error('Username is already taken'))
+    renderWithContext(<ChildList />, makeContext({ children: [profileWithFullName], updateChild }))
+
+    fireEvent.click(screen.getByRole('button', { name: /edit profile/i }))
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    // Wait on the surfaced error so every state update has settled before we
+    // assert — otherwise this races the reset block and passes vacuously.
+    await waitFor(() => expect(screen.getByText('Username is already taken')).toBeInTheDocument())
+
+    expect(screen.getByLabelText(/First name/i)).toHaveValue('Adam')
+    expect(screen.getByLabelText(/Last name/i)).toHaveValue('Al-Rashid')
+    expect(screen.getByLabelText(/Allow learner to sign in/i)).toBeChecked()
+    expect(screen.getByRole('button', { name: /save changes/i })).toBeEnabled()
+  })
+
+  test('a failed create through ChildList surfaces the error too', async () => {
+    const createChild = jest.fn().mockRejectedValue(new Error('Username is already taken'))
+    renderWithContext(<ChildList />, makeContext({ createChild }))
+
+    fireEvent.click(screen.getByText('+ Add child'))
+    fireEvent.change(screen.getByLabelText(/First name/i), { target: { value: 'Sara' } })
+    fireEvent.change(screen.getByLabelText(/Last name/i), { target: { value: 'Yusuf' } })
+    fireEvent.change(screen.getByLabelText(/Grade\/Level/i), { target: { value: 'PK' } })
+    fireEvent.click(screen.getByRole('button', { name: /add child/i }))
+
+    await waitFor(() => expect(screen.getByText('Username is already taken')).toBeInTheDocument())
+  })
+
+  test('editing an already-enabled learner does not require retyping the password', async () => {
+    // The API never echoes a password back (`password: ''`), so requiring one on
+    // every edit blocked unrelated changes behind a misleading validation error.
+    const alreadyEnabled = { ...profileWithFullName, password: '' }
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(<ChildForm householdId="workspace_test" child={alreadyEnabled} onSubmit={onSubmit} onCancel={onCancel} />)
+
+    fireEvent.change(screen.getByLabelText(/Grade\/Level/i), { target: { value: 'Grade 6' } })
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled())
+    expect(screen.queryByText(/fill in all required fields/i)).not.toBeInTheDocument()
+  })
+
+  test('newly enabling login still requires a password', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+    render(<ChildForm householdId="workspace_test" child={profileWithLoginDisabled} onSubmit={onSubmit} onCancel={onCancel} />)
+
+    fireEvent.click(screen.getByLabelText(/Allow learner to sign in/i))
+    fireEvent.change(screen.getByLabelText(/Username/i), { target: { value: 'sara.student' } })
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByText(/fill in all required fields/i)).toBeInTheDocument()
+  })
+})
+
 describe('ChildCard — Wave 7 FB-002', () => {
   const onEdit = jest.fn()
   const onArchive = jest.fn()

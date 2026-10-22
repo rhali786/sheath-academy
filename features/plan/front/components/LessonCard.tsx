@@ -4,11 +4,14 @@ import { useEffect, useState } from 'react'
 import { Pencil, Trash2, Check, X, ListChecks } from 'lucide-react'
 import { InlineConfirm } from '@/features/lib/front/components/InlineConfirm'
 import { LessonSteps } from '@/features/plan/front/components/LessonSteps'
-import type { LessonTask, LessonTaskStatus } from '@/features/plan/types'
+import type { LessonTask, LessonTaskPatch, LessonTaskStatus } from '@/features/plan/types'
 import { formatCompletionWindow } from '@/features/plan/utils/lessonCompletionWindow'
 import type { StudentProfile } from '@/features/lib/types'
 import type { SubjectCourse } from '@/features/subjects/types'
 import { filterSubjectsForLearner } from '@/features/subjects/lib/enrollment'
+import { LessonTimeFields, validateLessonTimes } from '@/features/plan/front/components/LessonTimeFields'
+import { GroupEditOptions } from '@/features/plan/front/components/GroupEditOptions'
+import { describeLessonTime } from '@/features/schedule/lib/courseTimes'
 
 const STATUS_LABELS: Record<LessonTaskStatus, string> = {
   not_started: 'Not started',
@@ -39,17 +42,20 @@ interface LessonCardProps {
   /** If provided, list of all subjects (for edit form selects) */
   subjects?: SubjectCourse[]
   /** Called with the updated patch when save is pressed */
-  onUpdate?: (id: string, patch: Partial<LessonTask> & { applyToGroup?: boolean }) => Promise<void>
+  onUpdate?: (id: string, patch: LessonTaskPatch) => Promise<void>
   /** Legacy: called when Edit button is clicked (top-form pattern) — kept for backward compatibility */
   onEdit?: (lesson: LessonTask) => void
-  onDelete?: (id: string) => void
+  /** deleteGroup: remove every learner's copy of a shared lesson, not just this one. */
+  onDelete?: (id: string, options: { deleteGroup: boolean }) => void | Promise<void>
   /** When provided and lesson is not_started, shows a Check icon button to mark the lesson done. */
   onComplete?: (id: string, status: 'completed') => Promise<void>
   /** Open inline edit on mount (e.g. deep-linked from /plan). */
   defaultEditing?: boolean
+  /** Called when the inline editor closes (saved or cancelled), e.g. to clear a deep link. */
+  onEditEnd?: () => void
 }
 
-export function LessonCard({ lesson, childName, subjectName, children, subjects, onUpdate, onEdit, onDelete, onComplete, defaultEditing = false }: LessonCardProps) {
+export function LessonCard({ lesson, childName, subjectName, children, subjects, onUpdate, onEdit, onDelete, onComplete, defaultEditing = false, onEditEnd }: LessonCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -65,8 +71,16 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
   const [editStatus, setEditStatus] = useState<LessonTaskStatus>(lesson.status)
   const [editDescription, setEditDescription] = useState(lesson.description ?? '')
   const [editResourceLink, setEditResourceLink] = useState(lesson.resourceLink ?? '')
-  const [applyToGroup, setApplyToGroup] = useState(false)
+  const [editStartTime, setEditStartTime] = useState(lesson.scheduledStartTime ?? '')
+  const [editEndTime, setEditEndTime] = useState(lesson.scheduledEndTime ?? '')
+  const [timeError, setTimeError] = useState('')
+  // Ticked by default: editing a shared lesson edits every learner's copy unless unticked.
+  const [applyToGroup, setApplyToGroup] = useState(true)
+  // Date/time stay with this learner unless the parent asks to move everyone.
+  const [applyScheduleToGroup, setApplyScheduleToGroup] = useState(false)
   const [titleError, setTitleError] = useState('')
+  const [courseError, setCourseError] = useState('')
+  const [saveError, setSaveError] = useState('')
 
   // Sync local status when lesson.status updates from parent (e.g., after refetch)
   useEffect(() => {
@@ -110,8 +124,14 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     setEditStatus(lesson.status)
     setEditDescription(lesson.description ?? '')
     setEditResourceLink(lesson.resourceLink ?? '')
-    setApplyToGroup(false)
+    setEditStartTime(lesson.scheduledStartTime ?? '')
+    setEditEndTime(lesson.scheduledEndTime ?? '')
+    setApplyToGroup(true)
+    setApplyScheduleToGroup(false)
     setTitleError('')
+    setTimeError('')
+    setCourseError('')
+    setSaveError('')
     // If inline edit is available (onUpdate provided), use it; otherwise fall back to legacy onEdit
     if (onUpdate) {
       setIsEditing(true)
@@ -130,7 +150,11 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
 
   function cancelEdit() {
     setIsEditing(false)
+    onEditEnd?.()
     setTitleError('')
+    setTimeError('')
+    setCourseError('')
+    setSaveError('')
   }
 
   async function saveEdit() {
@@ -139,28 +163,55 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
       setTitleError('Title is required')
       return
     }
+    const timeProblem = validateLessonTimes(editStartTime, editEndTime)
+    if (timeProblem) {
+      setTimeError(timeProblem)
+      return
+    }
+    setTimeError('')
+    // Switching learner clears the course; the new learner needs one of their own.
+    if (subjects && subjects.length > 0 && !editSubjectId) {
+      const name = children?.find(c => c.id === editChildId)?.name ?? childName
+      setCourseError(`Choose a course for ${name}`)
+      return
+    }
+    setCourseError('')
     if (!onUpdate) return
     setSaving(true)
+    setSaveError('')
     try {
       await onUpdate(lesson.id, {
         title: trimmed,
         childId: editChildId,
         subjectId: editSubjectId,
-        plannedStartDate: editPlannedStartDate || undefined,
+        // null, not undefined: the route only touches plannedStartDate when it is sent.
+        plannedStartDate: editPlannedStartDate || null,
         dueDate: editDueDate,
         status: editStatus,
-        description: editDescription.trim() || undefined,
-        resourceLink: editResourceLink.trim() || undefined,
+        // '' not undefined: undefined is dropped from the body, so a cleared field was kept.
+        description: editDescription.trim(),
+        resourceLink: editResourceLink.trim(),
+        // null, not undefined: blank must clear the lesson's own time on the server.
+        scheduledStartTime: editStartTime.trim() || null,
+        scheduledEndTime: editEndTime.trim() || null,
         ...(lesson.groupId && applyToGroup ? { applyToGroup: true } : {}),
+        ...(lesson.groupId && applyToGroup && applyScheduleToGroup ? { applyScheduleToGroup: true } : {}),
       })
       setIsEditing(false)
       setTitleError('')
-    } catch {
-      // keep form open on error
+      onEditEnd?.()
+    } catch (err) {
+      // Keep the form open and say why, e.g. the course is not one of this learner's.
+      setSaveError(err instanceof Error && err.message ? err.message : 'Could not save changes')
     } finally {
       setSaving(false)
     }
   }
+
+  const editCourse = subjects?.find(s => s.id === editSubjectId)
+  const timeHint = editCourse
+    ? describeLessonTime({ courseName: editCourse.name, blocks: editCourse.recurringSchedule, date: editDueDate, ownStart: editStartTime, ownEnd: editEndTime })
+    : null
 
   const filteredSubjects = subjects && editChildId
     ? filterSubjectsForLearner(subjects, editChildId)
@@ -173,8 +224,9 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {children && children.length > 0 && (
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Child</label>
+                <label htmlFor={`edit-child-${lesson.id}`} className="block text-xs font-medium text-slate-500 mb-1">Child</label>
                 <select
+                  id={`edit-child-${lesson.id}`}
                   value={editChildId}
                   onChange={e => { setEditChildId(e.target.value); setEditSubjectId('') }}
                   className="w-full text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-forest-500"
@@ -188,18 +240,20 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
             )}
             {subjects && (
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Subject</label>
+                <label htmlFor={`edit-course-${lesson.id}`} className="block text-xs font-medium text-slate-500 mb-1">Course</label>
                 <select
+                  id={`edit-course-${lesson.id}`}
                   value={editSubjectId}
-                  onChange={e => setEditSubjectId(e.target.value)}
+                  onChange={e => { setEditSubjectId(e.target.value); setCourseError('') }}
                   disabled={!editChildId}
                   className="w-full text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-forest-500 disabled:opacity-50"
                 >
-                  <option value="">Select subject</option>
+                  <option value="">Select course</option>
                   {filteredSubjects.map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
+                {courseError && <p className="text-xs text-red-600 mt-1">{courseError}</p>}
               </div>
             )}
           </div>
@@ -250,6 +304,15 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
               </select>
             </div>
           </div>
+          <LessonTimeFields
+            idPrefix={`lesson-card-${lesson.id}`}
+            start={editStartTime}
+            end={editEndTime}
+            onStartChange={setEditStartTime}
+            onEndChange={setEditEndTime}
+            error={timeError}
+            hint={timeHint}
+          />
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Description <span className="font-normal text-slate-400">(optional)</span></label>
             <textarea
@@ -269,18 +332,26 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
             />
           </div>
           {lesson.groupId && (
-            <label className="flex items-center gap-2 text-xs text-slate-600">
-              <input
-                type="checkbox"
-                checked={applyToGroup}
-                onChange={e => setApplyToGroup(e.target.checked)}
-                aria-label="Apply to all learners in group"
-                className="rounded border-slate-300 text-forest-900 focus:ring-forest-500"
-              />
-              Apply changes to all learners in this group
-            </label>
+            <GroupEditOptions
+              childName={childName}
+              applyToGroup={applyToGroup}
+              applyScheduleToGroup={applyScheduleToGroup}
+              onApplyToGroupChange={setApplyToGroup}
+              onApplyScheduleToGroupChange={setApplyScheduleToGroup}
+            />
           )}
+          {saveError && <p role="alert" className="text-xs text-red-600">{saveError}</p>}
           <div className="flex gap-2 justify-end">
+            {onDelete && (
+              <button
+                type="button"
+                onClick={() => { setIsEditing(false); setConfirmDelete(true); onEditEnd?.() }}
+                aria-label="Delete this lesson"
+                className="mr-auto flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-3 h-3" /> Delete
+              </button>
+            )}
             <button
               onClick={cancelEdit}
               aria-label="Cancel edit"
@@ -306,8 +377,14 @@ export function LessonCard({ lesson, childName, subjectName, children, subjects,
     return (
       <InlineConfirm
         message="Delete this lesson?"
-        detail={lesson.title}
-        onConfirm={() => { if (onDelete) onDelete(lesson.id) }}
+        detail={lesson.groupId ? `“${lesson.title}” is shared with other learners.` : lesson.title}
+        {...(lesson.groupId
+          ? {
+              confirmLabel: 'All learners in this group',
+              secondaryAction: { label: `Just ${childName}`, onConfirm: () => onDelete?.(lesson.id, { deleteGroup: false }) },
+            }
+          : {})}
+        onConfirm={() => onDelete?.(lesson.id, { deleteGroup: Boolean(lesson.groupId) })}
         onCancel={() => setConfirmDelete(false)}
       />
     )

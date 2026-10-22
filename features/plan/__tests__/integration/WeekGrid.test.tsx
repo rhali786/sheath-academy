@@ -59,6 +59,17 @@ jest.mock('@/features/plan/front/services/api', () => ({
   },
 }))
 
+// The Edit lesson window is tested on its own (EditLessonModal.test); here it is a stub
+// that proves the Planner opens it in place and refreshes after a save.
+jest.mock('@/features/plan/front/components/EditLessonModal', () => ({
+  EditLessonModal: ({ lessonId, onClose, onSaved }: { lessonId: string; onClose: () => void; onSaved: () => void }) => (
+    <div role="dialog" aria-label="Edit lesson" data-lesson-id={lessonId}>
+      <button type="button" onClick={() => { onSaved(); onClose() }}>Stub save</button>
+      <button type="button" onClick={onClose}>Stub close</button>
+    </div>
+  ),
+}))
+
 import { plannerApi } from '@/features/plan/front/services/api'
 const mockUpdateLesson = plannerApi.updateLesson as jest.Mock
 
@@ -166,12 +177,28 @@ describe('WeekGrid (desktop)', () => {
     expect(screen.getByText('Algebra basics')).toBeInTheDocument()
   })
 
-  it('clicking a lesson navigates to the edit page', () => {
+  // Used to send the parent to /lessons?editId= and lose their place in the week.
+  it('clicking a lesson opens the Edit lesson window in place, without navigating', () => {
     renderGrid(mockLessons)
-
     fireEvent.click(screen.getByText('Math lesson 1'))
+    expect(screen.getByRole('dialog', { name: 'Edit lesson' })).toHaveAttribute('data-lesson-id', 'lesson_001')
+    expect(mockPush).not.toHaveBeenCalled()
+  })
 
-    expect(mockPush).toHaveBeenCalledWith('/lessons?editId=lesson_001')
+  it('saving in the window refreshes the week and closes it', () => {
+    renderGrid(mockLessons)
+    fireEvent.click(screen.getByText('Math lesson 1'))
+    fireEvent.click(screen.getByRole('button', { name: 'Stub save' }))
+    expect(mockRefreshLessons).toHaveBeenCalled()
+    expect(screen.queryByRole('dialog', { name: 'Edit lesson' })).not.toBeInTheDocument()
+  })
+
+  it('closing the window without saving does not refresh', () => {
+    renderGrid(mockLessons)
+    fireEvent.click(screen.getByText('Math lesson 1'))
+    fireEvent.click(screen.getByRole('button', { name: 'Stub close' }))
+    expect(mockRefreshLessons).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog', { name: 'Edit lesson' })).not.toBeInTheDocument()
   })
 
   it('lesson card shows a drag-to-reschedule affordance', () => {

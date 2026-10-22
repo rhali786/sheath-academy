@@ -6,9 +6,11 @@ import { usePlanner } from '../context/PlannerContext'
 interface WeekNavigatorProps {
   onToggleAddLesson?: () => void
   showAddForm?: boolean
+  onToggleShift?: () => void
+  showShift?: boolean
 }
 
-export function WeekNavigator({ onToggleAddLesson, showAddForm = false }: WeekNavigatorProps) {
+export function WeekNavigator({ onToggleAddLesson, showAddForm = false, onToggleShift, showShift = false }: WeekNavigatorProps) {
   const { selectedWeek, setSelectedWeek, weekStartDay } = usePlanner()
   const [showDatePicker, setShowDatePicker] = useState(false)
 
@@ -106,6 +108,16 @@ export function WeekNavigator({ onToggleAddLesson, showAddForm = false }: WeekNa
             >
               Today
             </button>
+            {onToggleShift && (
+              <button
+                type="button"
+                onClick={onToggleShift}
+                aria-label={showShift ? 'Cancel shift' : undefined}
+                className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2 transition-colors"
+              >
+                {showShift ? 'Cancel' : 'Shift lessons'}
+              </button>
+            )}
             {onToggleAddLesson && (
               <button
                 type="button"

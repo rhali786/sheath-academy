@@ -9,6 +9,8 @@ import { listEvidenceRows } from '@/features/portfolio/server/repository'
 import { listLearners } from '@/features/children/server/repository'
 import { toDateString, toTimeString } from '@/features/lib/server/date'
 import { computeTaskMetrics } from '@/features/dashboard/server/taskMetrics'
+import { listSubjectRows } from '@/features/subjects/server/repository'
+import { courseTimesFromSubjects } from '@/features/schedule/lib/courseTimes'
 import type { LessonTask } from '@/features/plan/types'
 
 const EMPTY_METRICS: DashboardMetrics = {
@@ -49,7 +51,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Da
     const today = toDateString(now, tz)
     const currentTime = toTimeString(now, tz)
 
-    const [activeLearners, todayAttendance, todayLessonRows, overdueLessonRows, todayQuran, portfolioRows, alerts] =
+    const [activeLearners, todayAttendance, todayLessonRows, overdueLessonRows, todayQuran, portfolioRows, alerts, subjectRows] =
       await Promise.all([
         listLearners(householdId),
         listAttendanceEvents(householdId, { learnerId: childId, date: today }),
@@ -58,6 +60,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Da
         listQuranSessionRows(householdId, { learnerId: childId, startDate: today, endDate: today }),
         listEvidenceRows(householdId, { learnerId: childId }),
         getAlerts(householdId, childId),
+        listSubjectRows(householdId),
       ])
 
     const totalChildren = childId ? 1 : activeLearners.length
@@ -73,6 +76,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Da
       overdueLessons,
       attendanceMarkedCount: readyCount,
       quranSessionCount: todayQuran.length,
+      courseTimes: courseTimesFromSubjects(subjectRows),
     })
 
     const metrics: DashboardMetrics = {

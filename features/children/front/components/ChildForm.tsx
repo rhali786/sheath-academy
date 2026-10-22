@@ -32,13 +32,24 @@ export function ChildForm({ householdId, child, onSubmit, onCancel }: ChildFormP
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // A learner whose login is already enabled has a password stored server-side,
+  // but the API never echoes it back (it always returns `password: ''`). Demanding
+  // one on every edit blocked unrelated changes behind a misleading "fill in all
+  // required fields". Only require a password when login is being newly turned on.
+  const loginAlreadyEnabled = !!child?.learnerLoginEnabled
+  const passwordRequired = learnerLoginEnabled && !loginAlreadyEnabled
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!firstName.trim() || !lastName.trim() || !gradeLabel.trim()) {
       setError('Please fill in all required fields')
       return
     }
-    if (learnerLoginEnabled && (!username.trim() || !password.trim())) {
+    if (learnerLoginEnabled && !username.trim()) {
+      setError('Please fill in all required fields')
+      return
+    }
+    if (passwordRequired && !password.trim()) {
       setError('Please fill in all required fields')
       return
     }
@@ -57,6 +68,8 @@ export function ChildForm({ householdId, child, onSubmit, onCancel }: ChildFormP
         username: learnerLoginEnabled ? username.trim() : '',
         password: learnerLoginEnabled ? password.trim() : '',
       })
+      // Only clear on a genuine success. Resetting after a failed save was what
+      // silently unchecked "Allow learner to sign in" and wiped the form (item 5).
       setFirstName('')
       setLastName('')
       setGradeLabel('')
@@ -66,6 +79,9 @@ export function ChildForm({ householdId, child, onSubmit, onCancel }: ChildFormP
       setPassword('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      // Must run on both paths — when this was only in the catch, a swallowed
+      // error left the button stuck on "Saving…" forever.
       setSaving(false)
     }
   }
@@ -164,7 +180,7 @@ export function ChildForm({ householdId, child, onSubmit, onCancel }: ChildFormP
           </div>
           <div>
             <label htmlFor="password" className="block text-xs font-medium text-slate-600 mb-1.5">
-              Password *
+              {passwordRequired ? 'Password *' : 'Password'}
             </label>
             <div className="relative">
               <input
@@ -185,6 +201,9 @@ export function ChildForm({ householdId, child, onSubmit, onCancel }: ChildFormP
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
+            {!passwordRequired && (
+              <p className="text-xs text-slate-400 mt-1">Leave blank to keep the current password.</p>
+            )}
           </div>
         </div>
       )}

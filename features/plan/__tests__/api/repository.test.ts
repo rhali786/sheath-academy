@@ -131,7 +131,7 @@ describe('lesson tasks repository', () => {
 
   itDb('deleteLessonTaskRow removes the row', async () => {
     const deleted = await deleteLessonTaskRow(taskId, householdId)
-    expect(deleted).toBe(true)
+    expect(deleted).toBe(1)
     const rows = await listLessonTaskRows(householdId)
     expect(rows.some(r => r.id === taskId)).toBe(false)
   })
@@ -220,6 +220,74 @@ describe('lesson tasks repository', () => {
     expect(afterDelete.some(r => r.groupId === rows[0].groupId)).toBe(false)
   })
 
+  // A sick child's lesson moves alone: details follow the group, date/time/status do not.
+  itDb('group edit renames every copy but moves the date and status of one copy only', async () => {
+    const { createLessonTasksFanOut } = await import('../../server/repository')
+    const rows = await createLessonTasksFanOut(
+      householdId,
+      { title: 'Shared reading', dueDate: '2026-07-01' },
+      [{ learnerId }, { learnerId }],
+    )
+    await updateLessonTaskRow(
+      rows[0].id, householdId,
+      { title: 'Shared reading ch. 2', dueDate: '2026-07-02', status: 'completed' },
+      { applyToGroup: true },
+    )
+    const after = (await listLessonTaskRows(householdId)).filter(r => r.groupId === rows[0].groupId)
+    expect(after.every(r => r.title === 'Shared reading ch. 2')).toBe(true)
+    const byId = Object.fromEntries(after.map(r => [r.id, r]))
+    expect(byId[rows[0].id].dueDate).toBe('2026-07-02')
+    expect(byId[rows[0].id].status).toBe('completed')
+    expect(byId[rows[1].id].dueDate).toBe('2026-07-01')
+    expect(byId[rows[1].id].status).toBe('not_started')
+
+    await updateLessonTaskRow(rows[1].id, householdId, { dueDate: '2026-07-03' }, { applyToGroup: true, applyScheduleToGroup: true })
+    const moved = (await listLessonTaskRows(householdId)).filter(r => r.groupId === rows[0].groupId)
+    expect(moved.every(r => r.dueDate === '2026-07-03')).toBe(true)
+
+    expect(await deleteLessonTaskRow(rows[0].id, householdId, { deleteGroup: true })).toBe(2)
+  })
+
+  // UAT 2.4 (Amir, 2026-10-12): the editor sends every field, so "move for everyone" used to
+  // copy B's untouched date onto A and undo A's sick-day move. Only what changed is copied.
+  itDb('"move for everyone" with only a new time keeps a learner who was moved on their own day', async () => {
+    const { createLessonTasksFanOut } = await import('../../server/repository')
+    const [a, b, c] = await createLessonTasksFanOut(
+      householdId,
+      { title: 'UAT Shared 3', dueDate: '2026-10-12' },
+      [{ learnerId }, { learnerId }, { learnerId }],
+    )
+    // 2.3: A is sick — A's copy alone moves to tomorrow.
+    await updateLessonTaskRow(a.id, householdId, { title: 'UAT Shared 3', dueDate: '2026-10-13' }, { applyToGroup: true })
+    // 2.4: on B's copy, tick "also move" and set 2:00–2:30 PM. The form sends B's date too.
+    await updateLessonTaskRow(
+      b.id, householdId,
+      { title: 'UAT Shared 3', description: '', dueDate: '2026-10-12', plannedStartDate: null, scheduledStartTime: '14:00', scheduledEndTime: '14:30' },
+      { applyToGroup: true, applyScheduleToGroup: true },
+    )
+    const rows = Object.fromEntries((await listLessonTaskRows(householdId)).filter(r => r.groupId === a.groupId).map(r => [r.id, r]))
+    expect(rows[a.id].dueDate).toBe('2026-10-13')
+    expect(rows[b.id].dueDate).toBe('2026-10-12')
+    expect(rows[c.id].dueDate).toBe('2026-10-12')
+    for (const id of [a.id, b.id, c.id]) {
+      expect(rows[id].scheduledStartTime).toBe('14:00')
+      expect(rows[id].scheduledEndTime).toBe('14:30')
+    }
+
+    // 2.5: C gets its own title; a later group edit of B's description must not undo it.
+    await updateLessonTaskRow(c.id, householdId, { title: 'Only C' })
+    await updateLessonTaskRow(
+      b.id, householdId,
+      { title: 'UAT Shared 3', description: 'Bring the workbook', dueDate: '2026-10-12', scheduledStartTime: '14:00', scheduledEndTime: '14:30' },
+      { applyToGroup: true },
+    )
+    const after = Object.fromEntries((await listLessonTaskRows(householdId)).filter(r => r.groupId === a.groupId).map(r => [r.id, r]))
+    expect(after[c.id].title).toBe('Only C')
+    expect([a.id, b.id, c.id].map(id => after[id].description)).toEqual(['Bring the workbook', 'Bring the workbook', 'Bring the workbook'])
+
+    await deleteLessonTaskRow(a.id, householdId, { deleteGroup: true })
+  })
+
   itDb('createLessonTasksFanOut with one learner leaves group_id NULL', async () => {
     const { createLessonTasksFanOut } = await import('../../server/repository')
     const rows = await createLessonTasksFanOut(
@@ -230,5 +298,37 @@ describe('lesson tasks repository', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].groupId).toBeNull()
     await deleteLessonTaskRow(rows[0].id, householdId)
+  })
+})
+
+describe('updateLessonDatesIfUnchanged', () => {
+  itDb('moves only rows whose dates and status still match the preview, scoped to the household', async () => {
+    const { updateLessonDatesIfUnchanged } = await import('../../server/repository')
+    const same = await createLessonTaskRow(householdId, { learnerId, title: 'Shift me', dueDate: '2026-11-20', plannedStartDate: '2026-11-19' })
+    const edited = await createLessonTaskRow(householdId, { learnerId, title: 'Edited since preview', dueDate: '2026-11-21' })
+    const done = await createLessonTaskRow(householdId, { learnerId, title: 'Done since preview', dueDate: '2026-11-20' })
+    await completeLessonTaskRow(done.id, householdId, 'completed')
+
+    const result = await updateLessonDatesIfUnchanged(householdId, [
+      { id: same.id, from: { dueDate: '2026-11-20', plannedStartDate: '2026-11-19' }, to: { dueDate: '2026-11-23', plannedStartDate: '2026-11-20' } },
+      { id: edited.id, from: { dueDate: '2026-11-20', plannedStartDate: null }, to: { dueDate: '2026-11-23', plannedStartDate: null } },
+      { id: done.id, from: { dueDate: '2026-11-20', plannedStartDate: null }, to: { dueDate: '2026-11-23', plannedStartDate: null } },
+    ])
+
+    expect(result.applied).toBe(1)
+    expect(result.skipped.sort()).toEqual([edited.id, done.id].sort())
+    const rows = await listLessonTaskRows(householdId)
+    const byId = Object.fromEntries(rows.map(r => [r.id, r]))
+    expect(byId[same.id].dueDate).toBe('2026-11-23')
+    expect(byId[same.id].plannedStartDate).toBe('2026-11-20')
+    expect(byId[edited.id].dueDate).toBe('2026-11-21')
+    expect(byId[done.id].dueDate).toBe('2026-11-20')
+
+    const otherHousehold = await updateLessonDatesIfUnchanged('hh_someone_else', [
+      { id: same.id, from: { dueDate: '2026-11-23', plannedStartDate: '2026-11-20' }, to: { dueDate: '2026-12-01', plannedStartDate: null } },
+    ])
+    expect(otherHousehold).toEqual({ applied: 0, skipped: [same.id] })
+
+    for (const r of [same, edited, done]) await deleteLessonTaskRow(r.id, householdId)
   })
 })

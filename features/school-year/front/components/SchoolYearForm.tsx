@@ -70,8 +70,9 @@ export function SchoolYearForm({ onSuccess, embedded }: SchoolYearFormProps) {
       })
       setName('')
       onSuccess?.()
-    } catch {
-      setError('Something went wrong. Please try again.')
+    } catch (err) {
+      // The service carries the server's reason (e.g. a learner-policy refusal).
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
       setSaving(false)
     }

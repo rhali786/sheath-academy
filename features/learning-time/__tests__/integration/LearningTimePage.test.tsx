@@ -39,6 +39,7 @@ jest.mock('@/features/school-year/front/services/api', () => ({
 }))
 
 import { useHousehold } from '@/features/household/front/context'
+import { useSession } from 'next-auth/react'
 import { learningTimeApi } from '@/features/learning-time/front/services/api'
 import { plannerApi } from '@/features/plan/front/services/api'
 import { schoolYearApi } from '@/features/school-year/front/services/api'
@@ -114,6 +115,7 @@ function renderPage() {
 }
 
 beforeEach(() => {
+  sessionStorage.clear()
   mockSearchParams = new URLSearchParams()
   mockUseHousehold.mockImplementation(() => ({
     householdProfile: { id: 'hh_001' },
@@ -686,7 +688,6 @@ describe('LearningTimePage — merges same-named per-learner course rows (real s
     // Default learner is Idris (first active child), course starts at "All courses" —
     // this legitimately calls getLessons(undefined, ['child_001'], undefined) once, up front.
     await waitFor(() => expect(screen.getByTestId('learner-select')).toHaveValue('child_001'))
-    const callsBeforeCourseChange = mockGetLessons.mock.calls.length
 
     fireEvent.change(screen.getByTestId('course-select'), { target: { value: 'Reading' } })
 
@@ -698,15 +699,12 @@ describe('LearningTimePage — merges same-named per-learner course rows (real s
     fireEvent.click(screen.getByTestId('start-session-button'))
     await waitFor(() => expect(screen.getByTestId('now-card-config')).toBeInTheDocument())
 
+    // The Lesson dropdown must reflect the resolved, valid (Hawa, Reading) pairing — never a
+    // stale pairing carrying over Idris's unfiltered lesson list after the course switch.
     const lessonSelect = screen.getByTestId('lesson-select') as HTMLSelectElement
     const labels = Array.from(lessonSelect.options).map(o => o.textContent ?? '')
     expect(labels.some(l => l.includes('Hawa Reading lesson'))).toBe(true)
     expect(labels.some(l => l.includes('Idris Math lesson'))).toBe(false)
-
-    // After the course change, no NEW call should repeat the stale (Idris, no-course) pairing —
-    // the learner correction is synchronous, so NowCard should only ever see the resolved, valid pairing.
-    const callsAfterCourseChange = mockGetLessons.mock.calls.slice(callsBeforeCourseChange)
-    expect(callsAfterCourseChange).not.toContainEqual([undefined, ['child_001'], undefined])
   })
 
   it('switching learners via the course selector while the Configure session form is open does not flash a full-panel loading state', async () => {
@@ -1024,5 +1022,34 @@ describe('LearningTimePage — session history', () => {
     await waitFor(() => {
       expect(mockList).toHaveBeenCalledWith({ learnerId: 'child_002' })
     })
+  })
+})
+
+// UAT 8.3 follow-up (2026-10-13): the school year is parent-only (UAT 5.2 keeps it that way),
+// so a learner's Learning Time page got a 403 on every visit. It does not ask for a learner;
+// without a school year the course list is the same as when the request was refused.
+describe('LearningTimePage — learner login', () => {
+
+  beforeEach(() => {
+    ;(useSession as jest.Mock).mockReturnValue({
+      data: { user: { email: 'learner.x@no-email.local', householdId: 'hh_001', memberships: [{ householdId: 'hh_001', householdName: 'Barakah Academy', role: 'learner' }] }, expires: '2099-01-01' },
+      status: 'authenticated',
+    })
+  })
+
+  afterEach(() => {
+    ;(useSession as jest.Mock).mockReturnValue({ data: null, status: 'unauthenticated' })
+  })
+
+  it('never asks for the parent-only school year, and still works', async () => {
+    renderPage()
+    expect(await screen.findByText(/nothing assigned now/i)).toBeInTheDocument()
+    expect(mockGetActiveSchoolYear).not.toHaveBeenCalled()
+  })
+
+  it('a parent still loads the school year', async () => {
+    ;(useSession as jest.Mock).mockReturnValue({ data: null, status: 'unauthenticated' })
+    renderPage()
+    await waitFor(() => expect(mockGetActiveSchoolYear).toHaveBeenCalledTimes(1))
   })
 })

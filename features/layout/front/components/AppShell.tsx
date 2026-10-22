@@ -7,6 +7,7 @@ import { FeedbackButton } from '@/features/feedback/front/components/FeedbackBut
 import { ShellAuthGuard } from './ShellAuthGuard'
 import { Header } from './Header'
 import { Sidebar } from './Sidebar'
+import { LearnerSelfSelect } from './LearnerSelfSelect'
 
 function ShellLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -30,6 +31,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <ShellAuthGuard>
       <HouseholdProvider>
         <LearnerProvider>
+        <LearnerSelfSelect />
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-forest-900 focus:text-white focus:rounded-lg focus:text-sm"

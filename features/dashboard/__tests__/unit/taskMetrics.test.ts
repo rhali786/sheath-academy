@@ -18,6 +18,22 @@ function lesson(overrides: Partial<LessonTask> = {}): LessonTask {
 }
 
 describe('computeTaskMetrics', () => {
+  test("does not count a lesson as started before its course's recurring time", () => {
+    const base = {
+      today: '2026-10-13', // Tuesday
+      currentTime: '09:00',
+      todayLessons: [lesson({ subjectId: 'math', dueDate: '2026-10-13' })],
+      overdueLessons: [],
+      attendanceMarkedCount: 0,
+      quranSessionCount: 0,
+    }
+    expect(computeTaskMetrics(base).tasksInProgress).toBe(1) // untimed: stacks from 08:30, so already started
+    expect(computeTaskMetrics({
+      ...base,
+      courseTimes: { math: [{ daysOfWeek: ['Tuesday'], startTime: '10:15', endTime: '11:00' }] },
+    }).tasksInProgress).toBe(0) // Math slot starts 10:15
+  })
+
   test('returns zero counts when nothing is done today', () => {
     const result = computeTaskMetrics({
       today: '2026-05-24',

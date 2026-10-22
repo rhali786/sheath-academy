@@ -10,6 +10,7 @@ import { LearnerSwitcher } from '@/features/layout/front/components/LearnerSwitc
 import { pickGreeting } from '@/features/layout/lib/greetings'
 import { NotificationBellDropdown } from '@/features/dashboard/front/components/NotificationBellDropdown'
 import type { Alert } from '@/features/alerts/types'
+import { isLearnerSession } from '@/features/auth/front/viewerRole'
 
 interface HeaderProps {
   onMenuOpen?: () => void
@@ -22,15 +23,18 @@ export function Header({ onMenuOpen }: HeaderProps) {
   const displayName = session?.user?.name ?? null
   const [alerts, setAlerts] = useState<Alert[]>([])
   const pathname = usePathname()
+  // Alerts are parent-only: a learner has no bell and never asks (UAT 8.3).
+  const isLearner = isLearnerSession(session)
 
   useSyncAppHeaderHeight(headerRef)
 
   const loadAlerts = useCallback(() => {
+    if (isLearner) return
     fetch('/api/alerts')
       .then(r => r.ok ? r.json() : { data: [] })
       .then(res => setAlerts(Array.isArray(res.data) ? res.data : []))
       .catch(() => {})
-  }, [])
+  }, [isLearner])
 
   useEffect(() => {
     loadAlerts()
@@ -62,7 +66,7 @@ export function Header({ onMenuOpen }: HeaderProps) {
               <LearnerSwitcher />
             </div>
           )}
-          <NotificationBellDropdown alerts={alerts} onOpen={loadAlerts} />
+          {!isLearner && <NotificationBellDropdown alerts={alerts} onOpen={loadAlerts} />}
           {session ? (
             <div className="flex items-center gap-2">
               <div className="hidden sm:flex flex-col items-end" data-testid="user-greeting-line">

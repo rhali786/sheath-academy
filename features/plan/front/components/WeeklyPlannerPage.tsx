@@ -15,6 +15,7 @@ import { WeeklyPlanner } from './WeeklyPlanner'
 import { EmptyWeekState } from './EmptyWeekState'
 import { LessonTaskForm, type LessonFormData } from './LessonTaskForm'
 import { PlannerViewToggle, type PlannerView } from './PlannerViewToggle'
+import { ShiftLessonsPanel } from './ShiftLessonsPanel'
 
 const PLANNER_VIEW_SETTINGS_KEY = 'planner.defaultView'
 const DEFAULT_PLANNER_VIEW: PlannerView = 'planner'
@@ -26,6 +27,7 @@ export function WeeklyPlannerPage() {
   const router = useRouter()
   const [isMobile, setIsMobile] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showShift, setShowShift] = useState(false)
   const [plannerView, setPlannerView] = useState<PlannerView>(DEFAULT_PLANNER_VIEW)
 
   useEffect(() => {
@@ -96,9 +98,25 @@ export function WeeklyPlannerPage() {
   return (
     <div className="flex flex-col h-screen bg-slate-50">
       <WeekNavigator
-        onToggleAddLesson={() => setShowAddForm(v => !v)}
+        onToggleAddLesson={() => { setShowAddForm(v => !v); setShowShift(false) }}
         showAddForm={showAddForm}
+        onToggleShift={() => { setShowShift(v => !v); setShowAddForm(false) }}
+        showShift={showShift}
       />
+      {showShift && (
+        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 border-b border-slate-200 bg-white">
+          <h2 className="form-section-heading">Shift lessons</h2>
+          <div className="add-form-card">
+            <ShiftLessonsPanel
+              learners={studentProfiles.filter(c => c.isActive !== false).map(c => ({ id: c.id, name: c.name }))}
+              courses={allSubjects.filter(s => s.isActive !== false).map(s => ({ id: s.id, name: s.name }))}
+              schoolDays={householdProfile?.schoolDays}
+              onShifted={() => refreshLessons?.()}
+              onClose={() => setShowShift(false)}
+            />
+          </div>
+        </div>
+      )}
       {showAddForm && (
         <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 border-b border-slate-200 bg-white">
           <h2 className="form-section-heading">Add lesson</h2>

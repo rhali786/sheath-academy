@@ -80,6 +80,14 @@ export const NAV_ITEMS: NavItem[] = [
     activePrefixes: ['/people'],
   },
   { id: 'resources', label: 'Resources', href: '/resources', section: 'main', module: 'Planbook' },
+  {
+    id: 'learning-time',
+    label: 'Learning Time',
+    href: '/learning-time',
+    section: 'main',
+    module: 'Planbook',
+    activePrefixes: ['/learning-time'],
+  },
   { id: 'quran', label: 'Quran', href: '/quran', section: 'main', module: 'Planbook' },
   {
     id: 'messages',
@@ -124,7 +132,7 @@ export const NAV_MODULES: NavModuleConfig[] = [
     id: 'planbook',
     label: 'Planbook',
     defaultHref: '/plan/schedule',
-    itemIds: ['calendar', 'lesson-planner', 'courses', 'quran', 'resources'],
+    itemIds: ['calendar', 'lesson-planner', 'courses', 'quran', 'resources', 'learning-time'],
     section: 'main',
   },
   {
@@ -151,6 +159,50 @@ export const NAV_MODULES: NavModuleConfig[] = [
     section: 'footer',
   },
 ]
+
+/**
+ * Pages a learner login cannot use: the server refuses their data (learnerPolicy), or they
+ * are parent tools (People lists every child with Archive buttons). UAT 8.3, 2026-10-12.
+ */
+const LEARNER_HIDDEN_ITEMS = new Set([
+  'attendance', 'grades-progress', 'gradebook', 'reports-records', 'people', 'resources',
+  'messages', 'finances', 'compliance', 'my-feedback',
+])
+/** Modules with no sub-pages that are parent-only. */
+const LEARNER_HIDDEN_MODULES = new Set<NavModuleId>(['people', 'messages'])
+
+export interface ViewerNav {
+  /** Main-section modules, with `itemIds` and `defaultHref` narrowed to this viewer. */
+  modules: NavModuleConfig[]
+  footerItems: NavItem[]
+  standaloneItems: NavItem[]
+}
+
+/** The sidebar for this viewer: admin pages for admins only, parent pages hidden from learners. */
+export function navForViewer({ isAdmin, isLearner }: { isAdmin: boolean; isLearner: boolean }): ViewerNav {
+  const visible = (item: NavItem) => (!item.adminOnly || isAdmin) && !(isLearner && LEARNER_HIDDEN_ITEMS.has(item.id))
+
+  const modules: NavModuleConfig[] = []
+  for (const module of NAV_MODULES) {
+    if (module.section !== 'main' || (module.adminOnly && !isAdmin)) continue
+    if (isLearner && LEARNER_HIDDEN_MODULES.has(module.id)) continue
+    const items = getModuleItems(module).filter(visible)
+    // A module whose every page is hidden goes too (a learner's Records).
+    if (module.itemIds.length > 0 && items.length === 0) continue
+    const defaultStillVisible = module.itemIds.length === 0 || items.some(i => i.href === module.defaultHref)
+    modules.push({
+      ...module,
+      itemIds: items.map(i => i.id),
+      defaultHref: defaultStillVisible ? module.defaultHref : items[0].href!,
+    })
+  }
+
+  return {
+    modules,
+    footerItems: getNavItemsBySection('footer').filter(visible),
+    standaloneItems: NAV_ITEMS.filter(item => item.section === 'main' && item.id === 'my-feedback').filter(visible),
+  }
+}
 
 export function getModuleItems(module: NavModuleConfig): NavItem[] {
   return module.itemIds
